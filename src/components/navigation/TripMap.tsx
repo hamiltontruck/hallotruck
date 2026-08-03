@@ -30,21 +30,22 @@ export function TripMap({ routeGeometry, driverPosition }: TripMapProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !routeGeometry) return;
+    const activeMap = map;
 
     function draw() {
-      if (map.getSource("trip-route")) {
-        (map.getSource("trip-route") as maplibregl.GeoJSONSource).setData({
+      if (activeMap.getSource("trip-route")) {
+        (activeMap.getSource("trip-route") as maplibregl.GeoJSONSource).setData({
           type: "Feature",
           properties: {},
           geometry: routeGeometry!,
         });
         return;
       }
-      map.addSource("trip-route", {
+      activeMap.addSource("trip-route", {
         type: "geojson",
         data: { type: "Feature", properties: {}, geometry: routeGeometry! },
       });
-      map.addLayer({
+      activeMap.addLayer({
         id: "trip-route",
         type: "line",
         source: "trip-route",
@@ -55,7 +56,7 @@ export function TripMap({ routeGeometry, driverPosition }: TripMapProps) {
         (b, c) => b.extend(c),
         new maplibregl.LngLatBounds(coords[0], coords[0]),
       );
-      map.fitBounds(bounds, { padding: 50 });
+      activeMap.fitBounds(bounds, { padding: 50 });
     }
 
     if (map.isStyleLoaded()) draw();
