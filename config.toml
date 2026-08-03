@@ -1,0 +1,22 @@
+project_id = "hallo-truck"
+
+[functions.quote]
+verify_jwt = false
+
+[functions.orders]
+verify_jwt = false
+
+[functions.tracking]
+verify_jwt = false
+
+[functions."driver-documents"]
+verify_jwt = false
+
+[functions."admin-drivers"]
+verify_jwt = false
+
+[functions.payments]
+verify_jwt = false
+
+[functions.navigation]
+verify_jwt = false

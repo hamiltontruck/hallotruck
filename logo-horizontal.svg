@@ -1,0 +1,30 @@
+<svg width="560" height="140" viewBox="0 0 560 140" xmlns="http://www.w3.org/2000/svg">
+  <!-- Mark, scaled down and inlined -->
+  <g transform="translate(0,0) scale(0.5)">
+    <rect x="8" y="8" width="240" height="240" rx="28" fill="#1C2128"/>
+    <rect x="8" y="8" width="240" height="240" rx="28" fill="none" stroke="#E8A33D" stroke-width="4"/>
+    <path d="M8 40 V8 H40" fill="none" stroke="#E8A33D" stroke-width="4"/>
+    <path d="M248 40 V8 H216" fill="none" stroke="#E8A33D" stroke-width="4"/>
+    <path d="M8 216 V248 H40" fill="none" stroke="#E8A33D" stroke-width="4"/>
+    <path d="M248 216 V248 H216" fill="none" stroke="#E8A33D" stroke-width="4"/>
+    <line x1="36" y1="200" x2="220" y2="200" stroke="#5B6472" stroke-width="6"/>
+    <line x1="36" y1="200" x2="220" y2="200" stroke="#E8A33D" stroke-width="4" stroke-dasharray="10 10"/>
+    <g fill="#F3EEE3">
+      <rect x="52" y="100" width="94" height="60" rx="4"/>
+      <path d="M146 120 h34 l18 24 v16 h-52 z"/>
+      <path d="M168 124 l12 16 h-12 z" fill="#1C2128"/>
+    </g>
+    <circle cx="82" cy="168" r="14" fill="#1C2128" stroke="#F3EEE3" stroke-width="4"/>
+    <circle cx="126" cy="168" r="14" fill="#1C2128" stroke="#F3EEE3" stroke-width="4"/>
+    <circle cx="182" cy="168" r="14" fill="#1C2128" stroke="#F3EEE3" stroke-width="4"/>
+    <circle cx="196" cy="144" r="4" fill="#FF5A1F"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="150" y="82" font-family="'Space Grotesk', Arial, sans-serif" font-weight="700" font-size="52" fill="#1C2128" letter-spacing="-1">
+    HALLO<tspan fill="#FF5A1F">TRUCK</tspan>
+  </text>
+  <text x="151" y="106" font-family="'JetBrains Mono', monospace" font-weight="600" font-size="15" fill="#5B6472" letter-spacing="2">
+    SMARTER LOGISTICS, SIMPLE &amp; BEST
+  </text>
+</svg>

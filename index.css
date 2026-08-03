@@ -1,0 +1,50 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #f3eee3;
+  color: #1c2128;
+}
+
+/* Cargo plate: the signature element for tracking IDs / prices / manifest data */
+.cargo-plate {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: #1c2128;
+  color: #e8a33d;
+  border: 1px solid #e8a33d;
+  padding: 0.35rem 0.75rem;
+  position: relative;
+  display: inline-block;
+}
+.cargo-plate::before,
+.cargo-plate::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border: 1px solid #e8a33d;
+  top: -1px;
+}
+.cargo-plate::before {
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+.cargo-plate::after {
+  right: -1px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.route-line {
+  height: 2px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #e8a33d 0 10px,
+    transparent 10px 18px
+  );
+}
