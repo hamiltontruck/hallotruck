@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { JobBoard } from "./pages/JobBoard";
@@ -8,7 +8,7 @@ import { Earnings } from "./pages/Earnings";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="min-h-screen bg-bone">
         <OfflineBanner />
         <Header />
@@ -20,6 +20,6 @@ export default function App() {
           <Route path="/earnings" element={<Earnings />} />
         </Routes>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
