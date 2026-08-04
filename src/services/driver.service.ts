@@ -40,23 +40,28 @@ export async function getAvailableJobs(): Promise<AvailableJob[]> {
   return data ?? [];
 }
 
-export async function acceptJob(orderId: string, driverId: string) {
-  const { error } = await supabase
-    .from("orders")
-    .update({ driver_id: driverId, status: "accepted", accepted_at: new Date().toISOString() })
-    .eq("id", orderId)
-    .is("driver_id", null); // prevents two drivers grabbing the same job
+export async function acceptJob(orderId: string) {
+  const { data, error } = await supabase.rpc("claim_order", {
+    p_order_id: orderId,
+  });
 
   if (error) throw new Error(error.message);
+
+  if (!data) {
+    throw new Error("Someone else already took this load.");
+  }
 }
 
 export async function markDelivered(orderId: string) {
-  const { error } = await supabase
-    .from("orders")
-    .update({ status: "delivered", delivered_at: new Date().toISOString() })
-    .eq("id", orderId);
+  const { data, error } = await supabase.rpc("complete_order", {
+    p_order_id: orderId,
+  });
 
   if (error) throw new Error(error.message);
+
+  if (!data) {
+    throw new Error("This trip could not be marked as delivered.");
+  }
 }
 
 export async function sendGpsPing(params: {
