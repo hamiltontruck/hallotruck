@@ -30,9 +30,12 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build
+            - name: Build
         run: npm run build
-
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
