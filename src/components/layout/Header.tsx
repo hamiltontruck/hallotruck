@@ -3,10 +3,10 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
 
 const links = [
-  { to: "/jobs", label: "Job board" },
-  { to: "/trip", label: "Active trip" },
-  { to: "/documents", label: "Documents" },
-  { to: "/earnings", label: "Earnings" },
+  { to: "/driver/jobs", label: "Job board" },
+  { to: "/driver/trip", label: "Active trip" },
+  { to: "/driver/documents", label: "Documents" },
+  { to: "/driver/earnings", label: "Earnings" },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -21,7 +21,7 @@ export function Header() {
   async function logout() {
     await supabase.auth.signOut();
     setMenuOpen(false);
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
   }
 
   return (

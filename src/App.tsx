@@ -1,25 +1,34 @@
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
+import { SmartLogistics } from "./pages/SmartLogistics";
 import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
 import { Earnings } from "./pages/Earnings";
 
+function DriverShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-bone">
+      <OfflineBanner />
+      <Header />
+      {children}
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <HashRouter>
-      <div className="min-h-screen bg-bone">
-        <OfflineBanner />
-        <Header />
-        <Routes>
-          <Route path="/" element={<Navigate to="/jobs" replace />} />
-          <Route path="/jobs" element={<JobBoard />} />
-          <Route path="/trip" element={<ActiveTrip />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/earnings" element={<Earnings />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/" element={<SmartLogistics />} />
+        <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
+        <Route path="/driver/jobs" element={<DriverShell><JobBoard /></DriverShell>} />
+        <Route path="/driver/trip" element={<DriverShell><ActiveTrip /></DriverShell>} />
+        <Route path="/driver/documents" element={<DriverShell><Documents /></DriverShell>} />
+        <Route path="/driver/earnings" element={<DriverShell><Earnings /></DriverShell>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </HashRouter>
   );
 }

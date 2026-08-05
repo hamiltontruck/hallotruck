@@ -39,7 +39,7 @@ export function JobBoard() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Sign in required.");
       await acceptJob(job.id);
-      navigate("/trip");
+      navigate("/driver/trip");
     } catch (err) {
       setError(
         err instanceof Error
