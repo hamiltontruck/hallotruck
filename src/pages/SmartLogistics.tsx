@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../services/supabase.client";
+import { AdminOrder, Customer, DashboardMetrics, Payment, Truck, createCustomer, createOrder, createTruck, getDashboardData, subscribeToAdminData } from "../services/admin.service";
 
 type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "bell" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
 
@@ -28,24 +30,35 @@ const nav = [
   ["Customers", "users"], ["Finance", "wallet"], ["Reports", "chart"],
 ] as const;
 
-const orders = [
-  { id: "HT-8042", from: "Addis Ababa", to: "Adama", cargo: "Consumer goods", price: "ETB 12,850", status: "In transit", tone: "amber" },
-  { id: "HT-8039", from: "Hawassa", to: "Addis Ababa", cargo: "Fresh produce", price: "ETB 18,400", status: "Loading", tone: "blue" },
-  { id: "HT-8036", from: "Bishoftu", to: "Dire Dawa", cargo: "Construction", price: "ETB 32,700", status: "Delivered", tone: "green" },
-  { id: "HT-8031", from: "Addis Ababa", to: "Jimma", cargo: "Medical supply", price: "ETB 24,200", status: "Pending", tone: "gray" },
-];
-
-const fleet = [
-  { plate: "ET-3-44821", driver: "Dawit Bekele", route: "Addis → Adama", status: "On route", pct: 72 },
-  { plate: "ET-3-90214", driver: "Marta Tesfaye", route: "Hawassa → Addis", status: "Loading", pct: 31 },
-  { plate: "ET-3-22107", driver: "Abdi Kemal", route: "Dire Dawa", status: "Available", pct: 0 },
-];
+const emptyMetrics: DashboardMetrics = { totalOrders: 0, activeOrders: 0, deliveredOrders: 0, availableTrucks: 0, totalCustomers: 0, revenueEtb: 0 };
 
 export function SmartLogistics() {
   const [section, setSection] = useState("Overview");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [modal, setModal] = useState<"order" | "customer" | "truck" | null>(null);
+  const [metrics, setMetrics] = useState(emptyMetrics);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [trucks, setTrucks] = useState<Truck[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const select = (label: string) => { setSection(label); setMenuOpen(false); };
+
+  const load = useCallback(async () => {
+    try {
+      const data = await getDashboardData();
+      setMetrics(data.metrics); setOrders(data.orders); setCustomers(data.customers); setTrucks(data.trucks); setPayments(data.payments); setError("");
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not load dashboard data."); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const channel = subscribeToAdminData(load);
+    return () => { supabase.removeChannel(channel); };
+  }, [load]);
 
   return (
     <div className="min-h-screen bg-[#f5f3ed] text-asphalt font-body lg:flex">
@@ -73,7 +86,7 @@ export function SmartLogistics() {
           </Link>
           <div className="flex items-center gap-3 px-2 pt-5 pb-1">
             <div className="w-9 h-9 bg-amber text-asphalt font-display font-bold flex items-center justify-center">HT</div>
-            <div><p className="text-sm font-medium">Hamilton Truck</p><p className="text-[11px] text-white/40">Administrator</p></div>
+          <div className="min-w-0"><p className="text-sm font-medium">Hamilton Truck</p><button onClick={() => supabase.auth.signOut()} className="text-[11px] text-white/40 hover:text-amber">Sign out</button></div>
           </div>
         </div>
       </aside>
@@ -87,51 +100,54 @@ export function SmartLogistics() {
           <div className="flex items-center gap-2 sm:gap-4">
             <label className="hidden md:flex items-center gap-2 bg-[#f5f3ed] px-3 py-2.5 w-60 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label="Search" className="bg-transparent outline-none text-sm w-full" placeholder="Search orders, drivers..." /></label>
             <button className="relative border border-asphalt/10 p-2.5 text-steel"><Icon name="bell" className="w-5 h-5"/><span className="absolute top-2 right-2 w-2 h-2 bg-route rounded-full border border-white" /></button>
-            <button className="bg-asphalt text-white font-semibold text-sm px-4 sm:px-5 py-3 hover:bg-line">+ New order</button>
+            <button onClick={() => setModal("order")} className="bg-asphalt text-white font-semibold text-sm px-4 sm:px-5 py-3 hover:bg-line">+ New order</button>
           </div>
         </header>
 
         <div className="p-5 sm:p-8 max-w-[1500px] mx-auto">
-          {section === "Overview" ? <Overview onOpen={select} /> : <ModulePage section={section} />}
+          {error && <p className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5">{error}</p>}
+          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} onAdd={(kind) => setModal(kind)} />}
         </div>
       </main>
+      {modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
     </div>
   );
 }
 
-function Overview({ onOpen }: { onOpen: (name: string) => void }) {
+function Overview({ onOpen, metrics, orders, trucks }: { onOpen: (name: string) => void; metrics: DashboardMetrics; orders: AdminOrder[]; trucks: Truck[] }) {
   return <>
     <section className="bg-asphalt text-white relative overflow-hidden p-6 sm:p-9 mb-7">
       <div className="absolute -right-12 -top-24 w-72 h-72 border-[48px] border-amber/10 rounded-full" />
       <div className="relative max-w-2xl"><span className="font-mono text-[10px] tracking-[.2em] text-amber">OPERATIONS CONTROL</span><h1 className="font-display font-bold text-3xl sm:text-4xl mt-3">Move smarter. Deliver better.</h1><p className="text-white/55 mt-3 text-sm sm:text-base leading-relaxed">Your logistics network at a glance — orders, live vehicles, delivery performance and revenue in one place.</p></div>
     </section>
     <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5 mb-7">
-      <Kpi label="Active orders" value="128" delta="+12.4%" icon="box" />
-      <Kpi label="Trucks on road" value="46" delta="+5 today" icon="truck" />
-      <Kpi label="On-time delivery" value="94.8%" delta="+2.1%" icon="clock" />
-      <Kpi label="Revenue this month" value="ETB 2.4M" delta="+18.6%" icon="wallet" />
+      <Kpi label="Total orders" value={String(metrics.totalOrders)} delta={`${metrics.activeOrders} active`} icon="box" />
+      <Kpi label="Available trucks" value={String(metrics.availableTrucks)} delta={`${trucks.length} fleet`} icon="truck" />
+      <Kpi label="Delivered orders" value={String(metrics.deliveredOrders)} delta="Live" icon="clock" />
+      <Kpi label="Released revenue" value={`ETB ${compactMoney(metrics.revenueEtb)}`} delta="Live" icon="wallet" />
     </section>
     <section className="grid xl:grid-cols-[1.55fr_1fr] gap-5 mb-7">
       <div className="bg-white border border-asphalt/10">
         <SectionHead title="Active shipments" action="View all" onClick={() => onOpen("Orders")} />
         <div className="divide-y divide-asphalt/10">
           {orders.slice(0,3).map((o) => <OrderRow key={o.id} order={o} />)}
+          {orders.length === 0 && <Empty label="No orders yet. Use + New order to create the first one." />}
         </div>
       </div>
       <div className="bg-asphalt text-white border border-asphalt">
-        <div className="p-5 sm:p-6 flex justify-between"><div><p className="font-display font-semibold text-lg">Live network</p><p className="text-xs text-white/40 mt-1">46 vehicles currently active</p></div><span className="flex items-center gap-2 text-xs text-amber"><i className="w-2 h-2 bg-amber rounded-full animate-pulse"/>LIVE</span></div>
+        <div className="p-5 sm:p-6 flex justify-between"><div><p className="font-display font-semibold text-lg">Live network</p><p className="text-xs text-white/40 mt-1">{metrics.activeOrders} shipments currently active</p></div><span className="flex items-center gap-2 text-xs text-amber"><i className="w-2 h-2 bg-amber rounded-full animate-pulse"/>LIVE</span></div>
         <div className="relative h-56 bg-[#252b33] overflow-hidden">
           <div className="absolute inset-0 opacity-20" style={{backgroundImage:"linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",backgroundSize:"42px 42px"}} />
           <svg viewBox="0 0 500 220" className="absolute inset-0 w-full h-full"><path d="M-20 180 C80 130 110 190 190 110 S330 55 520 80" fill="none" stroke="#e8a33d" strokeWidth="3" strokeDasharray="8 8"/><path d="M30 30 C110 90 210 30 280 120 S420 190 520 150" fill="none" stroke="#fff" strokeOpacity=".12" strokeWidth="2"/></svg>
           {[["21%","62%"],["50%","43%"],["72%","25%"],["82%","60%"]].map((p,i)=><span key={i} className="absolute w-4 h-4 bg-amber border-[3px] border-asphalt rounded-full shadow-[0_0_0_5px_rgba(232,163,61,.18)]" style={{left:p[0],top:p[1]}} />)}
-          <div className="absolute bottom-4 left-4 bg-white text-asphalt px-3 py-2 text-xs"><b>HT-8042</b><span className="text-steel ml-2">42 km to Adama</span></div>
+          <div className="absolute bottom-4 left-4 bg-white text-asphalt px-3 py-2 text-xs"><b>{orders[0]?.tracking_id ?? "NO ACTIVE TRIPS"}</b><span className="text-steel ml-2">{orders[0]?.dropoff_address ?? "Waiting for orders"}</span></div>
         </div>
         <button onClick={() => onOpen("Live trips")} className="w-full p-4 text-sm text-amber hover:bg-white/5 flex items-center justify-center gap-2">Open live tracking <Icon name="arrow" className="w-4 h-4" /></button>
       </div>
     </section>
     <section className="grid xl:grid-cols-[1.55fr_1fr] gap-5">
-      <div className="bg-white border border-asphalt/10"><SectionHead title="Fleet activity" action="Manage fleet" onClick={() => onOpen("Fleet & drivers")} /><div className="divide-y divide-asphalt/10">{fleet.map((f)=><div key={f.plate} className="p-4 sm:px-6 flex items-center gap-4"><div className="w-10 h-10 bg-[#f5f3ed] flex items-center justify-center text-amber"><Icon name="truck" /></div><div className="min-w-0 flex-1"><div className="flex justify-between gap-3"><p className="font-mono text-xs font-semibold">{f.plate}</p><span className="text-[11px] text-steel">{f.status}</span></div><p className="text-xs text-steel mt-1 truncate">{f.driver} · {f.route}</p><div className="h-1 bg-asphalt/10 mt-3"><div className="h-full bg-amber" style={{width:`${f.pct}%`}} /></div></div></div>)}</div></div>
-      <div className="bg-amber p-6 sm:p-7 flex flex-col justify-between min-h-64"><div><span className="font-mono text-[10px] tracking-[.18em]">MONTHLY TARGET</span><p className="font-display font-bold text-4xl mt-5">78%</p><p className="text-sm mt-2 opacity-70">ETB 2.4M of ETB 3.1M</p></div><div><div className="h-2 bg-asphalt/20 mb-4"><div className="h-full bg-asphalt w-[78%]" /></div><p className="text-xs leading-relaxed opacity-70">You are ETB 680K away from this month’s revenue target.</p></div></div>
+      <div className="bg-white border border-asphalt/10"><SectionHead title="Fleet activity" action="Manage fleet" onClick={() => onOpen("Fleet & drivers")} /><div className="divide-y divide-asphalt/10">{trucks.slice(0,4).map((truck)=><div key={truck.id} className="p-4 sm:px-6 flex items-center gap-4"><div className="w-10 h-10 bg-[#f5f3ed] flex items-center justify-center text-amber"><Icon name="truck" /></div><div className="min-w-0 flex-1"><div className="flex justify-between gap-3"><p className="font-mono text-xs font-semibold">{truck.plate_number}</p><span className="text-[11px] text-steel capitalize">{truck.status}</span></div><p className="text-xs text-steel mt-1 truncate">{truck.vehicle_type} · {truck.capacity_tons ?? "—"} tons</p></div></div>)}{trucks.length === 0 && <Empty label="No trucks registered yet." />}</div></div>
+      <div className="bg-amber p-6 sm:p-7 flex flex-col justify-between min-h-64"><div><span className="font-mono text-[10px] tracking-[.18em]">LIVE REVENUE</span><p className="font-display font-bold text-4xl mt-5">ETB {compactMoney(metrics.revenueEtb)}</p><p className="text-sm mt-2 opacity-70">Released customer payments</p></div><div><div className="h-2 bg-asphalt/20 mb-4"><div className="h-full bg-asphalt" style={{width: `${Math.min(100, metrics.revenueEtb / 50000)}%`}} /></div><p className="text-xs leading-relaxed opacity-70">Updated automatically when payment events change in Supabase.</p></div></div>
     </section>
   </>;
 }
@@ -144,16 +160,43 @@ function SectionHead({ title, action, onClick }: { title:string; action:string; 
   return <div className="p-5 sm:px-6 border-b border-asphalt/10 flex items-center justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><button onClick={onClick} className="text-xs font-semibold text-amber-dim flex items-center gap-1">{action}<Icon name="arrow" className="w-3.5 h-3.5"/></button></div>;
 }
 
-function OrderRow({ order:o }: { order: typeof orders[number] }) {
-  const color = o.tone === "green" ? "bg-emerald-100 text-emerald-800" : o.tone === "blue" ? "bg-sky-100 text-sky-800" : o.tone === "amber" ? "bg-amber/20 text-amber-dim" : "bg-asphalt/5 text-steel";
-  return <div className="p-4 sm:px-6 grid grid-cols-[1fr_auto] sm:grid-cols-[90px_1fr_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="text-sm font-medium flex items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.from} <span className="text-steel">→</span> {o.to}</p><p className="text-[11px] text-steel mt-1">{o.cargo}</p></div><span className="hidden sm:block font-mono text-xs">{o.price}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 ${color}`}>{o.status}</span></div>;
+function OrderRow({ order:o }: { order: AdminOrder }) {
+  const color = o.status === "delivered" ? "bg-emerald-100 text-emerald-800" : o.status === "in_transit" ? "bg-amber/20 text-amber-dim" : o.status === "accepted" ? "bg-sky-100 text-sky-800" : "bg-asphalt/5 text-steel";
+  return <div className="p-4 sm:px-6 grid grid-cols-[1fr_auto] sm:grid-cols-[100px_1fr_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="text-sm font-medium flex items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p></div><span className="hidden sm:block font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 capitalize ${color}`}>{o.status.replace("_", " ")}</span></div>;
 }
 
-function ModulePage({ section }: { section:string }) {
+function ModulePage({ section, orders, customers, trucks, payments, onAdd }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; onAdd:(kind:"order"|"customer"|"truck")=>void }) {
   const descriptions:Record<string,string> = {Orders:"Create, assign and monitor every customer order.","Live trips":"Track active vehicles and delivery progress in real time.","Fleet & drivers":"Manage trucks, drivers, availability and documents.",Customers:"View accounts, order history and customer value.",Finance:"Monitor revenue, payouts, invoices and payment status.",Reports:"Measure delivery performance and business growth."};
+  const addKind = section === "Customers" ? "customer" : section === "Fleet & drivers" ? "truck" : "order";
   return <div>
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div><button className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button></div>
-    {section === "Orders" ? <div className="bg-white border border-asphalt/10"><SectionHead title="All orders" action="Export CSV" onClick={()=>{}} />{orders.map(o=><OrderRow key={o.id} order={o}/>)}</div> :
-    <div className="grid md:grid-cols-3 gap-5"><div className="md:col-span-2 bg-white border border-asphalt/10 p-8 min-h-[420px]"><div className="w-12 h-12 bg-amber/20 text-amber-dim flex items-center justify-center"><Icon name={section === "Finance" ? "wallet" : section === "Customers" ? "users" : section === "Reports" ? "chart" : "truck"}/></div><h2 className="font-display font-bold text-2xl mt-6">{section} workspace</h2><p className="text-steel mt-3 max-w-lg leading-relaxed">This workspace is ready for live Supabase data. Connect its tables and policies to replace the demonstration metrics with your real operation.</p><div className="grid grid-cols-2 gap-4 mt-10"><div className="bg-[#f5f3ed] p-5"><p className="font-display font-bold text-2xl">46</p><p className="text-xs text-steel mt-1">Active records</p></div><div className="bg-[#f5f3ed] p-5"><p className="font-display font-bold text-2xl">94.8%</p><p className="text-xs text-steel mt-1">Performance</p></div></div></div><div className="bg-amber p-7 min-h-64"><p className="font-mono text-[10px] tracking-[.2em]">QUICK ACTIONS</p><div className="mt-7 space-y-3">{["Create record","Download report","Invite team member"].map(x=><button key={x} className="w-full bg-white/40 hover:bg-white/60 p-4 text-left text-sm font-semibold flex justify-between">{x}<Icon name="arrow" className="w-4 h-4"/></button>)}</div></div></div>}
+    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div>{["Orders","Customers","Fleet & drivers"].includes(section) && <button onClick={() => onAdd(addKind)} className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button>}</div>
+    {section === "Orders" && <DataPanel title="All orders" empty="No orders yet.">{orders.map(o=><OrderRow key={o.id} order={o}/>)}</DataPanel>}
+    {section === "Customers" && <DataPanel title="Customers" empty="No customers yet.">{customers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
+    {section === "Fleet & drivers" && <DataPanel title="Registered fleet" empty="No trucks yet.">{trucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel>}
+    {section === "Finance" && <DataPanel title="Payment ledger" empty="No payments yet.">{payments.map(p=><SimpleRow key={p.id} title={`ETB ${Number(p.amount_etb).toLocaleString()}`} subtitle={`${p.provider}${p.provider_ref ? ` · ${p.provider_ref}` : ""}`} badge={p.event} />)}</DataPanel>}
+    {section === "Live trips" && <DataPanel title="Active trips" empty="No active trips right now.">{orders.filter(o=>["accepted","in_transit"].includes(o.status)).map(o=><OrderRow key={o.id} order={o}/>)}</DataPanel>}
+    {section === "Reports" && <div className="grid sm:grid-cols-3 gap-5"><ReportCard label="Orders" value={orders.length}/><ReportCard label="Customers" value={customers.length}/><ReportCard label="Fleet" value={trucks.length}/></div>}
   </div>;
 }
+
+function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="bg-white border border-asphalt/10"><div className="p-5 sm:px-6 border-b border-asphalt/10 flex justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><span className="font-mono text-xs text-steel">{count} records</span></div>{count ? children : <Empty label={empty}/>}</div>; }
+function SimpleRow({ title, subtitle, badge }: { title:string; subtitle:string; badge:string }) { return <div className="p-4 sm:px-6 border-b border-asphalt/10 last:border-0 flex items-center justify-between gap-4"><div><p className="font-semibold text-sm">{title}</p><p className="text-xs text-steel mt-1">{subtitle}</p></div><span className="text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{badge.replace("_"," ")}</span></div>; }
+function ReportCard({ label, value }: { label:string; value:number }) { return <div className="bg-white border border-asphalt/10 p-7"><p className="text-xs text-steel">{label}</p><p className="font-display font-bold text-4xl mt-4">{value}</p><p className="text-[11px] text-emerald-700 mt-4">Live from Supabase</p></div>; }
+function Empty({ label }: { label:string }) { return <p className="p-8 text-center text-sm text-steel">{label}</p>; }
+function compactMoney(value:number) { return value >= 1_000_000 ? `${(value/1_000_000).toFixed(1)}M` : value >= 1_000 ? `${(value/1_000).toFixed(1)}K` : value.toLocaleString(); }
+
+function CreateModal({ kind, onClose, onSaved }: { kind:"order"|"customer"|"truck"; onClose:()=>void; onSaved:()=>void }) {
+  const [saving,setSaving]=useState(false); const [error,setError]=useState("");
+  async function submit(event:FormEvent<HTMLFormElement>) { event.preventDefault(); setSaving(true); setError(""); const form=new FormData(event.currentTarget); try {
+    if(kind==="order") await createOrder({customerName:String(form.get("customerName")),customerPhone:String(form.get("customerPhone")),pickupAddress:String(form.get("pickupAddress")),dropoffAddress:String(form.get("dropoffAddress")),cargoDescription:String(form.get("cargoDescription")||""),vehicleType:String(form.get("vehicleType")),priceEtb:Number(form.get("priceEtb"))});
+    if(kind==="customer") await createCustomer({fullName:String(form.get("fullName")),phone:String(form.get("phone")),email:String(form.get("email")||""),companyName:String(form.get("companyName")||"")});
+    if(kind==="truck") await createTruck({plateNumber:String(form.get("plateNumber")),vehicleType:String(form.get("vehicleType")),capacityTons:Number(form.get("capacityTons")||0)});
+    onSaved();
+  } catch(err){setError(err instanceof Error?err.message:"Save failed."); setSaving(false);} }
+  return <div className="fixed inset-0 z-50 bg-asphalt/70 p-4 grid place-items-center"><form onSubmit={submit} className="bg-white w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-8"><div className="flex justify-between items-center"><h2 className="font-display font-bold text-2xl capitalize">New {kind}</h2><button type="button" onClick={onClose}><Icon name="close"/></button></div>{error&&<p className="mt-4 text-route text-sm bg-route/10 p-3">{error}</p>}<div className="grid sm:grid-cols-2 gap-4 mt-6">
+    {kind==="order"&&<><Field name="customerName" label="Customer name"/><Field name="customerPhone" label="Phone"/><Field name="pickupAddress" label="Pickup address"/><Field name="dropoffAddress" label="Delivery address"/><Field name="cargoDescription" label="Cargo description"/><Field name="vehicleType" label="Vehicle type"/><Field name="priceEtb" label="Price ETB" type="number"/></>}
+    {kind==="customer"&&<><Field name="fullName" label="Full name"/><Field name="phone" label="Phone"/><Field name="email" label="Email" type="email" required={false}/><Field name="companyName" label="Company" required={false}/></>}
+    {kind==="truck"&&<><Field name="plateNumber" label="Plate number"/><Field name="vehicleType" label="Vehicle type"/><Field name="capacityTons" label="Capacity (tons)" type="number" required={false}/></>}
+  </div><button disabled={saving} className="w-full bg-asphalt text-white py-4 mt-6 font-semibold disabled:opacity-50">{saving?"Saving…":"Save to Supabase"}</button></form></div>;
+}
+function Field({name,label,type="text",required=true}:{name:string;label:string;type?:string;required?:boolean}) { return <label className="text-xs font-semibold">{label}<input name={name} type={type} required={required} min={type==="number"?0:undefined} className="block w-full border border-asphalt/20 px-3 py-3 mt-2 outline-none focus:border-amber font-normal text-sm"/></label>; }
