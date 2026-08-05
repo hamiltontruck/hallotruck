@@ -23,6 +23,10 @@ export interface AdminOrder {
   price_etb: number | null;
   status: string;
   payment_status: string;
+  driver_id: string | null;
+  truck_id: string | null;
+  accepted_at: string | null;
+  delivered_at: string | null;
   created_at: string;
 }
 
@@ -45,6 +49,13 @@ export interface Truck {
   created_at: string;
 }
 
+export interface Driver {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  driver_status: string | null;
+}
+
 export interface Payment {
   id: string;
   order_id: string;
@@ -58,20 +69,22 @@ export interface Payment {
 function fail(message: string): never { throw new Error(message); }
 
 export async function getDashboardData() {
-  const [ordersResult, trucksResult, customersResult, paymentsResult] = await Promise.all([
-    supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,created_at").order("created_at", { ascending: false }).limit(100),
+  const [ordersResult, trucksResult, customersResult, paymentsResult, driversResult] = await Promise.all([
+    supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,created_at").order("created_at", { ascending: false }).limit(100),
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }),
     supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,created_at").order("created_at", { ascending: false }).limit(100),
+    supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name"),
   ]);
 
-  const error = ordersResult.error || trucksResult.error || customersResult.error || paymentsResult.error;
+  const error = ordersResult.error || trucksResult.error || customersResult.error || paymentsResult.error || driversResult.error;
   if (error) fail(error.message);
 
   const orders = (ordersResult.data ?? []) as AdminOrder[];
   const trucks = (trucksResult.data ?? []) as Truck[];
   const customers = (customersResult.data ?? []) as Customer[];
   const payments = (paymentsResult.data ?? []) as Payment[];
+  const drivers = (driversResult.data ?? []) as Driver[];
   const releasedPayments = payments.filter((payment) => payment.event === "released");
 
   const metrics: DashboardMetrics = {
@@ -83,7 +96,30 @@ export async function getDashboardData() {
     revenueEtb: releasedPayments.reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0),
   };
 
-  return { metrics, orders, trucks, customers, payments };
+  return { metrics, orders, trucks, customers, payments, drivers };
+}
+
+export async function assignOrder(orderId: string, truckId: string, driverId: string) {
+  const { error } = await supabase.rpc("admin_assign_order", { p_order_id: orderId, p_truck_id: truckId, p_driver_id: driverId });
+  if (error) fail(error.message);
+}
+
+export async function transitionOrder(orderId: string, status: "accepted" | "in_transit" | "delivered") {
+  const { error } = await supabase.rpc("admin_transition_order", { p_order_id: orderId, p_status: status });
+  if (error) fail(error.message);
+}
+
+export async function recordPayment(input: { orderId:string; provider:string; providerRef?:string; amountEtb:number; event:"initiated"|"held_escrow"|"released"|"refunded"|"failed" }) {
+  const { error } = await supabase.rpc("admin_record_payment", { p_order_id:input.orderId, p_provider:input.provider, p_provider_ref:input.providerRef || null, p_amount_etb:input.amountEtb, p_event:input.event });
+  if (error) fail(error.message);
+}
+
+export function printInvoice(order: AdminOrder, truck?: Truck, driver?: Driver, payments: Payment[] = []) {
+  const paid = payments.filter(p => p.order_id === order.id && p.event === "released").reduce((sum,p) => sum + Number(p.amount_etb), 0);
+  const html = `<!doctype html><html><head><title>${order.tracking_id} invoice</title><style>body{font:14px Arial;color:#1d222a;padding:40px;max-width:760px;margin:auto}h1{font-size:28px}.brand{color:#d68e25}.row{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:12px 0}.total{font-size:20px;font-weight:bold}.muted{color:#68707c}@media print{button{display:none}}</style></head><body><h1>HALLO<span class="brand">TRUCK</span></h1><p class="muted">Smart Logistics invoice / receipt</p><div class="row"><b>Tracking</b><span>${order.tracking_id}</span></div><div class="row"><b>Customer</b><span>${order.customer_name ?? "—"} · ${order.customer_phone ?? "—"}</span></div><div class="row"><b>Route</b><span>${order.pickup_address} → ${order.dropoff_address}</span></div><div class="row"><b>Truck / driver</b><span>${truck?.plate_number ?? "Unassigned"} · ${driver?.full_name ?? "Unassigned"}</span></div><div class="row"><b>Status</b><span>${order.status.replace("_"," ")}</span></div><div class="row total"><b>Invoice total</b><span>ETB ${Number(order.price_etb ?? 0).toLocaleString()}</span></div><div class="row"><b>Verified paid</b><span>ETB ${paid.toLocaleString()}</span></div><p class="muted">Generated ${new Date().toLocaleString()}</p><button onclick="window.print()">Print / Save PDF</button><script>setTimeout(()=>window.print(),300)</script></body></html>`;
+  const popup = window.open("", "_blank", "noopener,noreferrer");
+  if (!popup) fail("Allow pop-ups to generate the PDF.");
+  popup.document.write(html); popup.document.close();
 }
 
 export interface NewOrderInput {

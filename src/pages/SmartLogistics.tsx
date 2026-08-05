@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
-import { AdminOrder, Customer, DashboardMetrics, Payment, Truck, createCustomer, createOrder, createTruck, getDashboardData, subscribeToAdminData } from "../services/admin.service";
+import { AdminOrder, Customer, DashboardMetrics, Driver, Payment, Truck, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, printInvoice, recordPayment, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
 type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "bell" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
 
@@ -41,6 +41,8 @@ export function SmartLogistics() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [managedOrder, setManagedOrder] = useState<AdminOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -49,7 +51,7 @@ export function SmartLogistics() {
   const load = useCallback(async () => {
     try {
       const data = await getDashboardData();
-      setMetrics(data.metrics); setOrders(data.orders); setCustomers(data.customers); setTrucks(data.trucks); setPayments(data.payments); setError("");
+      setMetrics(data.metrics); setOrders(data.orders); setCustomers(data.customers); setTrucks(data.trucks); setPayments(data.payments); setDrivers(data.drivers); setError("");
     } catch (err) { setError(err instanceof Error ? err.message : "Could not load dashboard data."); }
     finally { setLoading(false); }
   }, []);
@@ -92,24 +94,25 @@ export function SmartLogistics() {
       </aside>
 
       <main className="min-w-0 flex-1">
-        <header className="h-20 bg-white border-b border-asphalt/10 px-5 sm:px-8 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-4">
+        <header className="h-20 bg-white border-b border-asphalt/10 px-3 sm:px-8 flex items-center justify-between sticky top-0 z-20">
+          <div className="flex items-center gap-3 min-w-0">
             <button className="lg:hidden border border-asphalt/15 p-2" onClick={() => setMenuOpen(true)}><Icon name="menu" /></button>
-            <div><p className="font-display font-semibold text-lg">{section}</p><p className="hidden sm:block text-xs text-steel mt-0.5">Tuesday, 4 August 2026</p></div>
+            <div className="hidden sm:block min-w-0"><p className="font-display font-semibold text-lg truncate">{section}</p><p className="hidden md:block text-xs text-steel mt-0.5">Live operations</p></div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <label className="hidden md:flex items-center gap-2 bg-[#f5f3ed] px-3 py-2.5 w-60 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label="Search" className="bg-transparent outline-none text-sm w-full" placeholder="Search orders, drivers..." /></label>
             <button className="relative border border-asphalt/10 p-2.5 text-steel"><Icon name="bell" className="w-5 h-5"/><span className="absolute top-2 right-2 w-2 h-2 bg-route rounded-full border border-white" /></button>
-            <button onClick={() => setModal("order")} className="bg-asphalt text-white font-semibold text-sm px-4 sm:px-5 py-3 hover:bg-line">+ New order</button>
+            <button onClick={() => setModal("order")} className="bg-asphalt text-white font-semibold text-xs sm:text-sm px-3 sm:px-5 py-3 hover:bg-line whitespace-nowrap"><span className="sm:hidden">+ Order</span><span className="hidden sm:inline">+ New order</span></button>
           </div>
         </header>
 
         <div className="p-5 sm:p-8 max-w-[1500px] mx-auto">
           {error && <p className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5">{error}</p>}
-          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} onAdd={(kind) => setModal(kind)} />}
+          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} />}
         </div>
       </main>
       {modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
+      {managedOrder && <ManageOrderModal order={managedOrder} trucks={trucks} drivers={drivers} payments={payments} onClose={() => setManagedOrder(null)} onSaved={async () => { await load(); setManagedOrder(null); }} />}
     </div>
   );
 }
@@ -160,30 +163,48 @@ function SectionHead({ title, action, onClick }: { title:string; action:string; 
   return <div className="p-5 sm:px-6 border-b border-asphalt/10 flex items-center justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><button onClick={onClick} className="text-xs font-semibold text-amber-dim flex items-center gap-1">{action}<Icon name="arrow" className="w-3.5 h-3.5"/></button></div>;
 }
 
-function OrderRow({ order:o }: { order: AdminOrder }) {
+function OrderRow({ order:o, onManage }: { order: AdminOrder; onManage?: (order:AdminOrder)=>void }) {
   const color = o.status === "delivered" ? "bg-emerald-100 text-emerald-800" : o.status === "in_transit" ? "bg-amber/20 text-amber-dim" : o.status === "accepted" ? "bg-sky-100 text-sky-800" : "bg-asphalt/5 text-steel";
-  return <div className="p-4 sm:px-6 grid grid-cols-[1fr_auto] sm:grid-cols-[100px_1fr_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="text-sm font-medium flex items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p></div><span className="hidden sm:block font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 capitalize ${color}`}>{o.status.replace("_", " ")}</span></div>;
+  return <div className="p-4 sm:px-6 grid grid-cols-[1fr_auto] sm:grid-cols-[100px_1fr_auto_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="text-sm font-medium flex items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p></div><span className="hidden sm:block font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 capitalize ${color}`}>{o.status.replace("_", " ")}</span>{onManage&&<button onClick={()=>onManage(o)} className="text-xs font-semibold text-amber-dim">Manage</button>}</div>;
 }
 
-function ModulePage({ section, orders, customers, trucks, payments, onAdd }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; onAdd:(kind:"order"|"customer"|"truck")=>void }) {
+function ModulePage({ section, orders, customers, trucks, payments, onAdd, onManage }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void }) {
   const descriptions:Record<string,string> = {Orders:"Create, assign and monitor every customer order.","Live trips":"Track active vehicles and delivery progress in real time.","Fleet & drivers":"Manage trucks, drivers, availability and documents.",Customers:"View accounts, order history and customer value.",Finance:"Monitor revenue, payouts, invoices and payment status.",Reports:"Measure delivery performance and business growth."};
   const addKind = section === "Customers" ? "customer" : section === "Fleet & drivers" ? "truck" : "order";
   return <div>
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div>{["Orders","Customers","Fleet & drivers"].includes(section) && <button onClick={() => onAdd(addKind)} className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button>}</div>
-    {section === "Orders" && <DataPanel title="All orders" empty="No orders yet.">{orders.map(o=><OrderRow key={o.id} order={o}/>)}</DataPanel>}
+    {section === "Orders" && <DataPanel title="All orders" empty="No orders yet.">{orders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>}
     {section === "Customers" && <DataPanel title="Customers" empty="No customers yet.">{customers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
     {section === "Fleet & drivers" && <DataPanel title="Registered fleet" empty="No trucks yet.">{trucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel>}
     {section === "Finance" && <DataPanel title="Payment ledger" empty="No payments yet.">{payments.map(p=><SimpleRow key={p.id} title={`ETB ${Number(p.amount_etb).toLocaleString()}`} subtitle={`${p.provider}${p.provider_ref ? ` · ${p.provider_ref}` : ""}`} badge={p.event} />)}</DataPanel>}
-    {section === "Live trips" && <DataPanel title="Active trips" empty="No active trips right now.">{orders.filter(o=>["accepted","in_transit"].includes(o.status)).map(o=><OrderRow key={o.id} order={o}/>)}</DataPanel>}
+    {section === "Live trips" && <DataPanel title="Active trips" empty="No active trips right now.">{orders.filter(o=>["accepted","in_transit"].includes(o.status)).map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>}
     {section === "Reports" && <div className="grid sm:grid-cols-3 gap-5"><ReportCard label="Orders" value={orders.length}/><ReportCard label="Customers" value={customers.length}/><ReportCard label="Fleet" value={trucks.length}/></div>}
   </div>;
 }
 
-function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="bg-white border border-asphalt/10"><div className="p-5 sm:px-6 border-b border-asphalt/10 flex justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><span className="font-mono text-xs text-steel">{count} records</span></div>{count ? children : <Empty label={empty}/>}</div>; }
+function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="bg-white border border-asphalt/10"><div className="p-5 sm:px-6 border-b border-asphalt/10 flex justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><span className="font-mono text-xs text-steel">{count} {count===1?"record":"records"}</span></div>{count ? children : <Empty label={empty}/>}</div>; }
 function SimpleRow({ title, subtitle, badge }: { title:string; subtitle:string; badge:string }) { return <div className="p-4 sm:px-6 border-b border-asphalt/10 last:border-0 flex items-center justify-between gap-4"><div><p className="font-semibold text-sm">{title}</p><p className="text-xs text-steel mt-1">{subtitle}</p></div><span className="text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{badge.replace("_"," ")}</span></div>; }
 function ReportCard({ label, value }: { label:string; value:number }) { return <div className="bg-white border border-asphalt/10 p-7"><p className="text-xs text-steel">{label}</p><p className="font-display font-bold text-4xl mt-4">{value}</p><p className="text-[11px] text-emerald-700 mt-4">Live from Supabase</p></div>; }
 function Empty({ label }: { label:string }) { return <p className="p-8 text-center text-sm text-steel">{label}</p>; }
 function compactMoney(value:number) { return value >= 1_000_000 ? `${(value/1_000_000).toFixed(1)}M` : value >= 1_000 ? `${(value/1_000).toFixed(1)}K` : value.toLocaleString(); }
+
+function ManageOrderModal({ order, trucks, drivers, payments, onClose, onSaved }: { order:AdminOrder; trucks:Truck[]; drivers:Driver[]; payments:Payment[]; onClose:()=>void; onSaved:()=>void }) {
+  const [saving,setSaving]=useState(false); const [error,setError]=useState("");
+  const availableTrucks=trucks.filter(t=>t.status==="available"||t.id===order.truck_id);
+  const orderPayments=payments.filter(p=>p.order_id===order.id);
+  async function run(action:()=>Promise<void>){setSaving(true);setError("");try{await action();await onSaved();}catch(err){setError(err instanceof Error?err.message:"Update failed.");setSaving(false);}}
+  async function assign(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);await run(()=>assignOrder(order.id,String(form.get("truckId")),String(form.get("driverId"))));}
+  async function pay(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);await run(()=>recordPayment({orderId:order.id,provider:String(form.get("provider")),providerRef:String(form.get("providerRef")||""),amountEtb:Number(form.get("amountEtb")),event:String(form.get("event")) as "initiated"|"held_escrow"|"released"|"refunded"|"failed"}));}
+  const truck=trucks.find(t=>t.id===order.truck_id); const driver=drivers.find(d=>d.id===order.driver_id);
+  return <div className="fixed inset-0 z-50 bg-asphalt/70 p-3 grid place-items-center"><div className="bg-white w-full max-w-2xl max-h-[94vh] overflow-y-auto p-5 sm:p-8"><div className="flex justify-between gap-3"><div><p className="font-mono text-xs text-amber-dim">{order.tracking_id}</p><h2 className="font-display font-bold text-2xl mt-1">Manage order</h2></div><button onClick={onClose}><Icon name="close"/></button></div>{error&&<p className="mt-4 text-route text-sm bg-route/10 p-3">{error}</p>}
+    <div className="mt-6 border border-asphalt/10 p-4"><p className="text-xs text-steel">Current workflow</p><div className="flex flex-wrap gap-2 mt-3">{["placed","accepted","in_transit","delivered"].map(s=><span key={s} className={`px-3 py-2 text-xs capitalize ${order.status===s?"bg-amber text-asphalt font-semibold":"bg-[#f5f3ed] text-steel"}`}>{s.replace("_"," ")}</span>)}</div>{order.status==="accepted"&&<button disabled={saving} onClick={()=>run(()=>transitionOrder(order.id,"in_transit"))} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4">Start transit</button>}{order.status==="in_transit"&&<button disabled={saving} onClick={()=>run(()=>transitionOrder(order.id,"delivered"))} className="bg-emerald-700 text-white px-4 py-3 text-sm font-semibold mt-4">Mark delivered</button>}</div>
+    <form onSubmit={assign} className="mt-5 border border-asphalt/10 p-4"><h3 className="font-semibold">Assign truck & driver</h3><div className="grid sm:grid-cols-2 gap-3 mt-4"><Select name="truckId" label="Truck" defaultValue={order.truck_id??""} options={availableTrucks.map(t=>[t.id,`${t.plate_number} · ${t.status}`])}/><Select name="driverId" label="Driver" defaultValue={order.driver_id??""} options={drivers.map(d=>[d.id,d.full_name||d.phone||"Driver"])} /></div>{drivers.length===0&&<p className="text-xs text-route mt-3">No driver profiles found. Create an Auth user with profile role “driver” first.</p>}<button disabled={saving||!availableTrucks.length||!drivers.length} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4 disabled:opacity-40">Assign & accept</button></form>
+    <form onSubmit={pay} className="mt-5 border border-asphalt/10 p-4"><h3 className="font-semibold">Payment & verification</h3><div className="grid sm:grid-cols-2 gap-3 mt-4"><Field name="provider" label="Provider"/><Field name="providerRef" label="Reference" required={false}/><Field name="amountEtb" label="Amount ETB" type="number"/><Select name="event" label="Payment event" defaultValue="released" options={[["initiated","Initiated"],["held_escrow","Held in escrow"],["released","Verified / released"],["refunded","Refunded"],["failed","Failed"]]}/></div><button disabled={saving} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4">Save payment event</button></form>
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-steel">{orderPayments.length} {orderPayments.length===1?"payment record":"payment records"} · {order.payment_status.replace("_"," ")}</p><button onClick={()=>printInvoice(order,truck,driver,orderPayments)} className="border border-asphalt px-4 py-3 text-sm font-semibold">Invoice / receipt PDF</button></div>
+  </div></div>;
+}
+
+function Select({name,label,options,defaultValue}:{name:string;label:string;options:string[][];defaultValue:string}){return <label className="text-xs font-semibold">{label}<select name={name} required defaultValue={defaultValue} className="block w-full border border-asphalt/20 px-3 py-3 mt-2 bg-white text-sm"><option value="" disabled>Select {label.toLowerCase()}</option>{options.map(([value,text])=><option key={value} value={value}>{text}</option>)}</select></label>}
 
 function CreateModal({ kind, onClose, onSaved }: { kind:"order"|"customer"|"truck"; onClose:()=>void; onSaved:()=>void }) {
   const [saving,setSaving]=useState(false); const [error,setError]=useState("");
