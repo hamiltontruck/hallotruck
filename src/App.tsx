@@ -7,6 +7,8 @@ import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
 import { Earnings } from "./pages/Earnings";
 import { AdminGate } from "./components/auth/AdminGate";
+import { DriverGate } from "./components/auth/DriverGate";
+import { Login } from "./pages/Login";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
   return (
@@ -23,11 +25,12 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<AdminGate><SmartLogistics /></AdminGate>} />
+        <Route path="/driver/login" element={<Login />} />
         <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
-        <Route path="/driver/jobs" element={<DriverShell><JobBoard /></DriverShell>} />
-        <Route path="/driver/trip" element={<DriverShell><ActiveTrip /></DriverShell>} />
-        <Route path="/driver/documents" element={<DriverShell><Documents /></DriverShell>} />
-        <Route path="/driver/earnings" element={<DriverShell><Earnings /></DriverShell>} />
+        <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
+        <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
+        <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
+        <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>

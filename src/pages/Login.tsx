@@ -40,7 +40,7 @@ export function Login() {
         if (signupError) throw signupError;
 
         if (data.session) {
-          navigate("/jobs", { replace: true });
+          navigate("/driver/jobs", { replace: true });
         } else {
           setMessage("Account created. Check your email to confirm your account.");
         }
@@ -51,7 +51,12 @@ export function Login() {
         });
 
         if (loginError) throw loginError;
-        navigate("/jobs", { replace: true });
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session?.user.app_metadata?.role !== "driver") {
+          await supabase.auth.signOut();
+          throw new Error("This account does not have Driver access.");
+        }
+        navigate("/driver/jobs", { replace: true });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
@@ -140,7 +145,7 @@ export function Login() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route"
-              minLength={6}
+              minLength={10}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               required
             />

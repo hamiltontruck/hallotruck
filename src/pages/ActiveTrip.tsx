@@ -87,7 +87,7 @@ export function ActiveTrip() {
     try {
       await markDelivered(order.id);
       stopSharing();
-      navigate("/jobs");
+      navigate("/driver/jobs");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't mark delivered.");
     } finally {
@@ -101,7 +101,7 @@ export function ActiveTrip() {
     return (
       <div className="max-w-2xl mx-auto px-6 py-16 text-center">
         <p className="font-body text-steel mb-4">You don't have an active trip.</p>
-        <Button onClick={() => navigate("/jobs")}>Browse the job board →</Button>
+        <Button onClick={() => navigate("/driver/jobs")}>Browse the job board →</Button>
       </div>
     );
   }

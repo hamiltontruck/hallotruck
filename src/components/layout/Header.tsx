@@ -21,7 +21,7 @@ export function Header() {
   async function logout() {
     await supabase.auth.signOut();
     setMenuOpen(false);
-    navigate("/", { replace: true });
+    navigate("/driver/login", { replace: true });
   }
 
   return (
