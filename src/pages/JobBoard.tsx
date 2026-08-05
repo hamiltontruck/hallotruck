@@ -45,7 +45,7 @@ export function JobBoard() {
 
     <section className="grid grid-cols-3 gap-3 sm:gap-5 my-5">
       <Stat value={String(jobs.length)} label="Open loads"/>
-      <Stat value={jobs.length?formatKm(Math.min(...jobs.map(j=>Number(j.distance_km||0)))):"—"} label="Nearest"/>
+      <Stat value={jobs.some(j=>Number(j.distance_km)>0)?formatKm(Math.min(...jobs.filter(j=>Number(j.distance_km)>0).map(j=>Number(j.distance_km)))):"Pending"} label="Nearest"/>
       <Stat value={potential?`ETB ${compact(potential)}`:"—"} label="Available value"/>
     </section>
 
