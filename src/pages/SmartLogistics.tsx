@@ -1,7 +1,7 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
-import { AdminOrder, Customer, DashboardMetrics, Driver, Payment, Truck, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, printInvoice, recordPayment, subscribeToAdminData, transitionOrder } from "../services/admin.service";
+import { AdminOrder, Customer, DashboardMetrics, DeliveryProof, Driver, Payment, Truck, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, openDeliveryProof, printInvoice, recordPayment, submitDeliveryProof, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
 type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "bell" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
 
@@ -42,6 +42,7 @@ export function SmartLogistics() {
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [deliveryProofs, setDeliveryProofs] = useState<DeliveryProof[]>([]);
   const [managedOrder, setManagedOrder] = useState<AdminOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,7 +52,7 @@ export function SmartLogistics() {
   const load = useCallback(async () => {
     try {
       const data = await getDashboardData();
-      setMetrics(data.metrics); setOrders(data.orders); setCustomers(data.customers); setTrucks(data.trucks); setPayments(data.payments); setDrivers(data.drivers); setError("");
+      setMetrics(data.metrics); setOrders(data.orders); setCustomers(data.customers); setTrucks(data.trucks); setPayments(data.payments); setDrivers(data.drivers); setDeliveryProofs(data.deliveryProofs); setError("");
     } catch (err) { setError(err instanceof Error ? err.message : "Could not load dashboard data."); }
     finally { setLoading(false); }
   }, []);
@@ -112,7 +113,7 @@ export function SmartLogistics() {
         </div>
       </main>
       {modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
-      {managedOrder && <ManageOrderModal order={managedOrder} trucks={trucks} drivers={drivers} payments={payments} onClose={() => setManagedOrder(null)} onSaved={async () => { await load(); setManagedOrder(null); }} />}
+      {managedOrder && <ManageOrderModal order={managedOrder} trucks={trucks} drivers={drivers} payments={payments} proof={deliveryProofs.find(p=>p.order_id===managedOrder.id)} onClose={() => setManagedOrder(null)} onSaved={async () => { await load(); setManagedOrder(null); }} />}
     </div>
   );
 }
@@ -188,7 +189,7 @@ function ReportCard({ label, value }: { label:string; value:number }) { return <
 function Empty({ label }: { label:string }) { return <p className="p-8 text-center text-sm text-steel">{label}</p>; }
 function compactMoney(value:number) { return value >= 1_000_000 ? `${(value/1_000_000).toFixed(1)}M` : value >= 1_000 ? `${(value/1_000).toFixed(1)}K` : value.toLocaleString(); }
 
-function ManageOrderModal({ order, trucks, drivers, payments, onClose, onSaved }: { order:AdminOrder; trucks:Truck[]; drivers:Driver[]; payments:Payment[]; onClose:()=>void; onSaved:()=>void }) {
+function ManageOrderModal({ order, trucks, drivers, payments, proof, onClose, onSaved }: { order:AdminOrder; trucks:Truck[]; drivers:Driver[]; payments:Payment[]; proof?:DeliveryProof; onClose:()=>void; onSaved:()=>void }) {
   const [saving,setSaving]=useState(false); const [error,setError]=useState("");
   const availableTrucks=trucks.filter(t=>t.status==="available"||t.id===order.truck_id);
   const orderPayments=payments.filter(p=>p.order_id===order.id);
@@ -197,7 +198,9 @@ function ManageOrderModal({ order, trucks, drivers, payments, onClose, onSaved }
   async function pay(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);await run(()=>recordPayment({orderId:order.id,provider:String(form.get("provider")),providerRef:String(form.get("providerRef")||""),amountEtb:Number(form.get("amountEtb")),event:String(form.get("event")) as "initiated"|"held_escrow"|"released"|"refunded"|"failed"}));}
   const truck=trucks.find(t=>t.id===order.truck_id); const driver=drivers.find(d=>d.id===order.driver_id);
   return <div className="fixed inset-0 z-50 bg-asphalt/70 p-3 grid place-items-center"><div className="bg-white w-full max-w-2xl max-h-[94vh] overflow-y-auto p-5 sm:p-8"><div className="flex justify-between gap-3"><div><p className="font-mono text-xs text-amber-dim">{order.tracking_id}</p><h2 className="font-display font-bold text-2xl mt-1">Manage order</h2></div><button onClick={onClose}><Icon name="close"/></button></div>{error&&<p className="mt-4 text-route text-sm bg-route/10 p-3">{error}</p>}
-    <div className="mt-6 border border-asphalt/10 p-4"><p className="text-xs text-steel">Current workflow</p><div className="flex flex-wrap gap-2 mt-3">{["placed","accepted","in_transit","delivered"].map(s=><span key={s} className={`px-3 py-2 text-xs capitalize ${order.status===s?"bg-amber text-asphalt font-semibold":"bg-[#f5f3ed] text-steel"}`}>{s.replace("_"," ")}</span>)}</div>{order.status==="accepted"&&<button disabled={saving} onClick={()=>run(()=>transitionOrder(order.id,"in_transit"))} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4">Start transit</button>}{order.status==="in_transit"&&<button disabled={saving} onClick={()=>run(()=>transitionOrder(order.id,"delivered"))} className="bg-emerald-700 text-white px-4 py-3 text-sm font-semibold mt-4">Mark delivered</button>}</div>
+    <div className="mt-6 border border-asphalt/10 p-4"><p className="text-xs text-steel">Current workflow</p><div className="flex flex-wrap gap-2 mt-3">{["placed","accepted","in_transit","delivered"].map(s=><span key={s} className={`px-3 py-2 text-xs capitalize ${order.status===s?"bg-amber text-asphalt font-semibold":"bg-[#f5f3ed] text-steel"}`}>{s.replace("_"," ")}</span>)}</div>{order.status==="accepted"&&<button disabled={saving} onClick={()=>run(()=>transitionOrder(order.id,"in_transit"))} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4">Start transit</button>}</div>
+    {order.status==="in_transit"&&<ProofOfDeliveryForm orderId={order.id} saving={saving} onSubmit={(input)=>run(()=>submitDeliveryProof(input))}/>}
+    {proof&&<div className="mt-5 border border-emerald-700/30 bg-emerald-50 p-4"><h3 className="font-semibold text-emerald-800">Proof of delivery recorded</h3><p className="text-sm mt-2">Received by {proof.recipient_name} · {new Date(proof.delivered_at).toLocaleString()}</p>{proof.delivery_note&&<p className="text-xs text-steel mt-2">{proof.delivery_note}</p>}<div className="flex gap-4 mt-3"><button onClick={()=>openDeliveryProof(proof.photo_path)} className="text-xs font-semibold text-amber-dim">View photo</button><button onClick={()=>openDeliveryProof(proof.signature_path)} className="text-xs font-semibold text-amber-dim">View signature</button></div></div>}
     <form onSubmit={assign} className="mt-5 border border-asphalt/10 p-4"><h3 className="font-semibold">Assign truck & driver</h3><div className="grid sm:grid-cols-2 gap-3 mt-4"><Select name="truckId" label="Truck" defaultValue={order.truck_id??""} options={availableTrucks.map(t=>[t.id,`${t.plate_number} · ${t.status}`])}/><Select name="driverId" label="Driver" defaultValue={order.driver_id??""} options={drivers.map(d=>[d.id,d.full_name||d.phone||"Driver"])} /></div>{drivers.length===0&&<p className="text-xs text-route mt-3">No driver profiles found. Create an Auth user with profile role “driver” first.</p>}<button disabled={saving||!availableTrucks.length||!drivers.length} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4 disabled:opacity-40">Assign & accept</button></form>
     <form onSubmit={pay} className="mt-5 border border-asphalt/10 p-4"><h3 className="font-semibold">Payment & verification</h3><div className="grid sm:grid-cols-2 gap-3 mt-4"><Field name="provider" label="Provider"/><Field name="providerRef" label="Reference" required={false}/><Field name="amountEtb" label="Amount ETB" type="number"/><Select name="event" label="Payment event" defaultValue="released" options={[["initiated","Initiated"],["held_escrow","Held in escrow"],["released","Verified / released"],["refunded","Refunded"],["failed","Failed"]]}/></div><button disabled={saving} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4">Save payment event</button></form>
     <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-steel">{orderPayments.length} {orderPayments.length===1?"payment record":"payment records"} · {order.payment_status.replace("_"," ")}</p><button onClick={()=>printInvoice(order,truck,driver,orderPayments)} className="border border-asphalt px-4 py-3 text-sm font-semibold">Invoice / receipt PDF</button></div>
@@ -205,6 +208,17 @@ function ManageOrderModal({ order, trucks, drivers, payments, onClose, onSaved }
 }
 
 function Select({name,label,options,defaultValue}:{name:string;label:string;options:string[][];defaultValue:string}){return <label className="text-xs font-semibold">{label}<select name={name} required defaultValue={defaultValue} className="block w-full border border-asphalt/20 px-3 py-3 mt-2 bg-white text-sm"><option value="" disabled>Select {label.toLowerCase()}</option>{options.map(([value,text])=><option key={value} value={value}>{text}</option>)}</select></label>}
+
+function ProofOfDeliveryForm({orderId,saving,onSubmit}:{orderId:string;saving:boolean;onSubmit:(input:{orderId:string;recipientName:string;deliveryNote:string;photo:File;signature:Blob})=>void}){
+  const canvas=useRef<HTMLCanvasElement>(null); const drawing=useRef(false); const [signed,setSigned]=useState(false); const [error,setError]=useState("");
+  function point(event:PointerEvent<HTMLCanvasElement>){const target=canvas.current!;const rect=target.getBoundingClientRect();return {x:(event.clientX-rect.left)*(target.width/rect.width),y:(event.clientY-rect.top)*(target.height/rect.height)}}
+  function start(event:PointerEvent<HTMLCanvasElement>){event.currentTarget.setPointerCapture(event.pointerId);drawing.current=true;const context=canvas.current?.getContext("2d");const p=point(event);context?.beginPath();context?.moveTo(p.x,p.y);setSigned(true)}
+  function move(event:PointerEvent<HTMLCanvasElement>){if(!drawing.current)return;const context=canvas.current?.getContext("2d");const p=point(event);if(context){context.lineWidth=3;context.lineCap="round";context.strokeStyle="#1d222a";context.lineTo(p.x,p.y);context.stroke()}}
+  function stop(){drawing.current=false}
+  function clear(){const target=canvas.current;target?.getContext("2d")?.clearRect(0,0,target.width,target.height);setSigned(false)}
+  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();setError("");const form=new FormData(event.currentTarget);const photo=form.get("photo");if(!(photo instanceof File)||!photo.size){setError("Delivery photo is required.");return}if(!signed||!canvas.current){setError("Recipient signature is required.");return}canvas.current.toBlob(blob=>{if(!blob){setError("Could not save signature.");return}onSubmit({orderId,recipientName:String(form.get("recipientName")),deliveryNote:String(form.get("deliveryNote")||""),photo,signature:blob})},"image/png")}
+  return <form onSubmit={submit} className="mt-5 border-2 border-emerald-700/30 p-4"><h3 className="font-semibold text-emerald-800">Proof of delivery</h3><p className="text-xs text-steel mt-1">Photo and signature are required before delivery is completed.</p>{error&&<p className="text-xs text-route bg-route/10 p-2 mt-3">{error}</p>}<div className="grid sm:grid-cols-2 gap-3 mt-4"><Field name="recipientName" label="Received by"/><label className="text-xs font-semibold">Delivery photo<input name="photo" type="file" accept="image/*" capture="environment" required className="block w-full border border-asphalt/20 px-3 py-3 mt-2 text-sm"/></label></div><label className="block text-xs font-semibold mt-3">Delivery note<textarea name="deliveryNote" rows={3} className="block w-full border border-asphalt/20 px-3 py-3 mt-2 text-sm" placeholder="Package condition, recipient comment…"/></label><div className="mt-3"><div className="flex justify-between"><span className="text-xs font-semibold">Recipient signature</span><button type="button" onClick={clear} className="text-xs text-route">Clear</button></div><canvas ref={canvas} width={600} height={180} onPointerDown={start} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop} className="w-full h-36 border border-asphalt/20 bg-white mt-2 touch-none"/></div><button disabled={saving} className="w-full bg-emerald-700 text-white py-4 mt-4 font-semibold disabled:opacity-40">{saving?"Uploading proof…":"Submit proof & mark delivered"}</button></form>
+}
 
 function CreateModal({ kind, onClose, onSaved }: { kind:"order"|"customer"|"truck"; onClose:()=>void; onSaved:()=>void }) {
   const [saving,setSaving]=useState(false); const [error,setError]=useState("");

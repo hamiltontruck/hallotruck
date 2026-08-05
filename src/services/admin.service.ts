@@ -66,18 +66,29 @@ export interface Payment {
   created_at: string;
 }
 
+export interface DeliveryProof {
+  id: string;
+  order_id: string;
+  recipient_name: string;
+  delivery_note: string | null;
+  photo_path: string;
+  signature_path: string;
+  delivered_at: string;
+}
+
 function fail(message: string): never { throw new Error(message); }
 
 export async function getDashboardData() {
-  const [ordersResult, trucksResult, customersResult, paymentsResult, driversResult] = await Promise.all([
+  const [ordersResult, trucksResult, customersResult, paymentsResult, driversResult, proofsResult] = await Promise.all([
     supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,created_at").order("created_at", { ascending: false }).limit(100),
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }),
     supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,created_at").order("created_at", { ascending: false }).limit(100),
     supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name"),
+    supabase.from("delivery_proofs").select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at").order("delivered_at", { ascending:false }).limit(100),
   ]);
 
-  const error = ordersResult.error || trucksResult.error || customersResult.error || paymentsResult.error || driversResult.error;
+  const error = ordersResult.error || trucksResult.error || customersResult.error || paymentsResult.error || driversResult.error || proofsResult.error;
   if (error) fail(error.message);
 
   const orders = (ordersResult.data ?? []) as AdminOrder[];
@@ -85,6 +96,7 @@ export async function getDashboardData() {
   const customers = (customersResult.data ?? []) as Customer[];
   const payments = (paymentsResult.data ?? []) as Payment[];
   const drivers = (driversResult.data ?? []) as Driver[];
+  const deliveryProofs = (proofsResult.data ?? []) as DeliveryProof[];
   const releasedPayments = payments.filter((payment) => payment.event === "released");
 
   const metrics: DashboardMetrics = {
@@ -96,7 +108,7 @@ export async function getDashboardData() {
     revenueEtb: releasedPayments.reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0),
   };
 
-  return { metrics, orders, trucks, customers, payments, drivers };
+  return { metrics, orders, trucks, customers, payments, drivers, deliveryProofs };
 }
 
 export async function assignOrder(orderId: string, truckId: string, driverId: string) {
@@ -112,6 +124,33 @@ export async function transitionOrder(orderId: string, status: "accepted" | "in_
 export async function recordPayment(input: { orderId:string; provider:string; providerRef?:string; amountEtb:number; event:"initiated"|"held_escrow"|"released"|"refunded"|"failed" }) {
   const { error } = await supabase.rpc("admin_record_payment", { p_order_id:input.orderId, p_provider:input.provider, p_provider_ref:input.providerRef || null, p_amount_etb:input.amountEtb, p_event:input.event });
   if (error) fail(error.message);
+}
+
+export async function submitDeliveryProof(input: { orderId:string; recipientName:string; deliveryNote:string; photo:File; signature:Blob }) {
+  if (!input.photo.type.startsWith("image/")) fail("Delivery photo must be an image.");
+  if (input.photo.size > 8 * 1024 * 1024) fail("Delivery photo must be smaller than 8 MB.");
+  const stamp = Date.now();
+  const extension = input.photo.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const photoPath = `${input.orderId}/${stamp}-delivery.${extension}`;
+  const signaturePath = `${input.orderId}/${stamp}-signature.png`;
+  const uploaded:string[] = [];
+  try {
+    const photoUpload = await supabase.storage.from("delivery-proofs").upload(photoPath, input.photo, { contentType:input.photo.type, upsert:false });
+    if (photoUpload.error) fail(photoUpload.error.message); uploaded.push(photoPath);
+    const signatureUpload = await supabase.storage.from("delivery-proofs").upload(signaturePath, input.signature, { contentType:"image/png", upsert:false });
+    if (signatureUpload.error) fail(signatureUpload.error.message); uploaded.push(signaturePath);
+    const { error } = await supabase.rpc("submit_delivery_proof", { p_order_id:input.orderId, p_recipient_name:input.recipientName, p_delivery_note:input.deliveryNote || null, p_photo_path:photoPath, p_signature_path:signaturePath });
+    if (error) fail(error.message);
+  } catch (error) {
+    if (uploaded.length) await supabase.storage.from("delivery-proofs").remove(uploaded);
+    throw error;
+  }
+}
+
+export async function openDeliveryProof(path:string) {
+  const { data, error } = await supabase.storage.from("delivery-proofs").createSignedUrl(path, 300);
+  if (error) fail(error.message);
+  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
 
 export function printInvoice(order: AdminOrder, truck?: Truck, driver?: Driver, payments: Payment[] = []) {
@@ -183,5 +222,6 @@ export function subscribeToAdminData(onChange: () => void) {
     .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "trucks" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "delivery_proofs" }, onChange)
     .subscribe();
 }
