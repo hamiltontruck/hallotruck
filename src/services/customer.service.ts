@@ -64,6 +64,8 @@ export async function createCustomerOrder(input: {
   dropoffAddress: string;
   vehicleType: string;
   distanceKm: number;
+  pickup: [number, number];
+  dropoff: [number, number];
 }) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Customer session expired.");
@@ -83,7 +85,9 @@ export async function createCustomerOrder(input: {
     customer_name: profile?.full_name ?? auth.user.email ?? "Customer",
     customer_phone: profile?.phone ?? "",
     pickup_address: input.pickupAddress.trim(),
+    pickup: `POINT(${input.pickup[0]} ${input.pickup[1]})`,
     dropoff_address: input.dropoffAddress.trim(),
+    dropoff: `POINT(${input.dropoff[0]} ${input.dropoff[1]})`,
     vehicle_type: input.vehicleType,
     distance_km: input.distanceKm,
     price_etb: priceEtb,
