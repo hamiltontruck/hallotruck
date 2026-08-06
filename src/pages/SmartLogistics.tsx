@@ -1,5 +1,4 @@
 import { FormEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { AdminOrder, Customer, DashboardMetrics, DeliveryProof, Driver, Payment, Truck, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, openDeliveryProof, printInvoice, recordPayment, submitDeliveryProof, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
@@ -83,10 +82,6 @@ export function SmartLogistics() {
           ))}
         </nav>
         <div className="p-4 border-t border-white/10">
-          <Link to="/driver" className="flex items-center justify-between bg-white/5 hover:bg-white/10 p-4 group">
-            <div><p className="text-sm font-semibold">Driver portal</p><p className="text-xs text-white/40 mt-1">Open mobile workspace</p></div>
-            <Icon name="arrow" className="w-4 h-4 text-amber group-hover:translate-x-1 transition" />
-          </Link>
           <div className="flex items-center gap-3 px-2 pt-5 pb-1">
             <div className="w-9 h-9 bg-amber text-asphalt font-display font-bold flex items-center justify-center">HT</div>
           <div className="min-w-0"><p className="text-sm font-medium">Hamilton Truck</p><button onClick={() => supabase.auth.signOut()} className="text-[11px] text-white/40 hover:text-amber">Sign out</button></div>
