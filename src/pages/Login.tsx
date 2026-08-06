@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 
@@ -12,6 +12,14 @@ export function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user.app_metadata?.role === "driver") {
+        navigate("/driver/jobs", { replace: true });
+      }
+    });
+  }, [navigate]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,20 +47,24 @@ export function Login() {
 
         if (signupError) throw signupError;
 
-        if (data.session) {
+        if (data.session?.user.app_metadata?.role === "driver") {
           navigate("/driver/jobs", { replace: true });
         } else {
-          setMessage("Account created. Check your email to confirm your account.");
+          if (data.session) await supabase.auth.signOut();
+          setMessage(
+            data.user
+              ? "Account created. Driver access is pending approval."
+              : "Account created. Check your email to confirm your account.",
+          );
         }
       } else {
-        const { error: loginError } = await supabase.auth.signInWithPassword({
+        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
 
         if (loginError) throw loginError;
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session?.user.app_metadata?.role !== "driver") {
+        if (loginData.user.app_metadata?.role !== "driver") {
           await supabase.auth.signOut();
           throw new Error("This account does not have Driver access.");
         }

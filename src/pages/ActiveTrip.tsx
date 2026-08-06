@@ -150,7 +150,9 @@ export function ActiveTrip() {
           <div className="p-5 flex items-center justify-between gap-4">
             <div>
               <span className="font-mono text-xs uppercase text-steel block mb-1">
-                Step {currentStepIndex + 1} of {route.steps.length}
+                {route.steps.length
+                  ? `Step ${currentStepIndex + 1} of ${route.steps.length}`
+                  : "Route overview"}
               </span>
               <p className="font-display font-semibold text-asphalt">
                 {route.steps[currentStepIndex]?.instruction ?? "Arrived"}
@@ -163,7 +165,7 @@ export function ActiveTrip() {
             </div>
             <button
               onClick={() => setCurrentStepIndex((i) => Math.min(i + 1, route.steps.length - 1))}
-              disabled={currentStepIndex >= route.steps.length - 1}
+              disabled={route.steps.length <= 1 || currentStepIndex >= route.steps.length - 1}
               className="font-body text-sm text-route underline disabled:text-steel disabled:no-underline"
             >
               Next step →
