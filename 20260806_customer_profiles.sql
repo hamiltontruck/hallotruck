@@ -44,3 +44,6 @@ begin
   return new;
 end;
 $$;
+
+-- The function is trigger-only and must not be callable through PostgREST RPC.
+revoke execute on function public.handle_new_driver() from public, anon, authenticated;
