@@ -1,0 +1,14 @@
+<svg width="64" height="64" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified for tiny sizes: drop the corner notches and dashed line detail,
+       keep only the badge + truck silhouette + one accent dot -->
+  <rect x="8" y="8" width="240" height="240" rx="40" fill="#1C2128"/>
+  <g fill="#E8A33D">
+    <rect x="52" y="96" width="94" height="66" rx="6"/>
+    <path d="M146 116 h36 l20 26 v20 h-56 z"/>
+  </g>
+  <path d="M168 120 l14 18 h-14 z" fill="#1C2128"/>
+  <circle cx="82" cy="168" r="16" fill="#1C2128" stroke="#F3EEE3" stroke-width="5"/>
+  <circle cx="126" cy="168" r="16" fill="#1C2128" stroke="#F3EEE3" stroke-width="5"/>
+  <circle cx="182" cy="168" r="16" fill="#1C2128" stroke="#F3EEE3" stroke-width="5"/>
+  <circle cx="198" cy="140" r="5" fill="#FF5A1F"/>
+</svg>
