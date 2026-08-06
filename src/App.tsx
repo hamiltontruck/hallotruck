@@ -6,7 +6,11 @@ import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
 import { Earnings } from "./pages/Earnings";
-import { RoleHome } from "./components/auth/RoleHome";
+import { AdminGate } from "./components/auth/AdminGate";
+import { CustomerGate } from "./components/auth/CustomerGate";
+import { PortalLanding } from "./pages/PortalLanding";
+import { CustomerLogin } from "./pages/CustomerLogin";
+import { CustomerPortal } from "./pages/CustomerPortal";
 import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
 
@@ -24,7 +28,10 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<RoleHome><SmartLogistics /></RoleHome>} />
+        <Route path="/" element={<PortalLanding />} />
+        <Route path="/admin" element={<AdminGate><SmartLogistics /></AdminGate>} />
+        <Route path="/customer/login" element={<CustomerLogin />} />
+        <Route path="/customer" element={<CustomerGate><CustomerPortal /></CustomerGate>} />
         <Route path="/driver/login" element={<Login />} />
         <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
         <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
