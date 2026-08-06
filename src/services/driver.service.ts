@@ -126,11 +126,34 @@ export interface NavigationRoute {
 }
 
 export async function getNavigation(orderId: string): Promise<NavigationRoute> {
-  const res = await fetch(`${FUNCTIONS_URL}/navigation?orderId=${orderId}`, {
-    headers: await authHeaders(),
-  });
-  if (!res.ok) throw new Error((await res.json()).error ?? "Couldn't load route");
-  return res.json();
+  if (!FUNCTIONS_URL) {
+    throw new Error("Navigation service is not configured.");
+  }
+
+  const res = await fetch(
+    `${FUNCTIONS_URL}/navigation?orderId=${encodeURIComponent(orderId)}`,
+    { headers: await authHeaders() },
+  );
+
+  const contentType = res.headers.get("content-type") ?? "";
+  const payload = contentType.includes("application/json")
+    ? await res.json()
+    : null;
+
+  if (!res.ok) {
+    throw new Error(
+      payload?.error ??
+        (res.status === 404
+          ? "Navigation service is not deployed."
+          : "Couldn't load route."),
+    );
+  }
+
+  if (!payload) {
+    throw new Error("Navigation service returned an invalid response.");
+  }
+
+  return payload as NavigationRoute;
 }
 
 export interface MyOrder {
