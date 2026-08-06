@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { calculateQuote, createCustomerOrder, getCustomerPortalData, openCustomerProof, type CustomerPortalData } from "../services/customer.service";
+import { calculateQuote, createCustomerOrder, getCustomerPortalData, openCustomerProof, printCustomerInvoice, submitCustomerPayment, type CustomerOrder, type CustomerPortalData } from "../services/customer.service";
 import { supabase } from "../services/supabase.client";
 import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/CustomerQuoteMap";
 
-const emptyData: CustomerPortalData = { orders: [], proofs: [] };
+const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [] };
 
 export function CustomerPortal() {
   const navigate = useNavigate();
   const [data, setData] = useState(emptyData);
   const [showOrder, setShowOrder] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState<CustomerOrder | null>(null);
   const [routePoints, setRoutePoints] = useState<QuotePoints | null>(null);
   const distance = routePoints?.distanceKm ?? 0;
   const [vehicle, setVehicle] = useState("Dry Cargo");
@@ -31,7 +32,10 @@ export function CustomerPortal() {
 
   useEffect(() => {
     void load();
-    const channel = supabase.channel("customer-portal").on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => void load()).subscribe();
+    const channel = supabase.channel("customer-portal")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => void load())
+      .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, []);
 
@@ -51,9 +55,31 @@ export function CustomerPortal() {
         dropoff: routePoints.dropoff,
       });
       setShowOrder(false);
+      setRoutePoints(null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Order could not be created.");
+      setBusy(false);
+    }
+  }
+
+  async function pay(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!paymentOrder) return;
+    setBusy(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      await submitCustomerPayment({
+        orderId: paymentOrder.id,
+        provider: String(form.get("provider")),
+        providerRef: String(form.get("providerRef")),
+        amountEtb: Number(form.get("amountEtb")),
+      });
+      setPaymentOrder(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payment could not be submitted.");
       setBusy(false);
     }
   }
@@ -74,8 +100,8 @@ export function CustomerPortal() {
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="font-mono text-xs tracking-[.2em] text-amber-dim">MY LOGISTICS</p>
-            <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">Orders & tracking</h1>
-            <p className="mt-2 text-sm text-steel">Book transport and follow every delivery milestone.</p>
+            <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">Orders, payments & tracking</h1>
+            <p className="mt-2 text-sm text-steel">Book transport, submit payment references and follow every delivery milestone.</p>
           </div>
           <button onClick={async () => { await supabase.auth.signOut(); navigate("/", { replace: true }); }} className="self-start text-sm text-route">Sign out</button>
         </div>
@@ -86,6 +112,8 @@ export function CustomerPortal() {
             {data.orders.length === 0 && <div className="border border-asphalt/10 bg-white p-10 text-center"><p className="font-display text-xl font-semibold">No orders yet</p><p className="mt-2 text-sm text-steel">Create your first smart transport request.</p></div>}
             {data.orders.map((order) => {
               const proof = data.proofs.find((item) => item.order_id === order.id);
+              const orderPayments = data.payments.filter((item) => item.order_id === order.id);
+              const pending = orderPayments.some((item) => ["initiated", "held_escrow"].includes(item.event));
               return <article key={order.id} className="border border-asphalt/10 bg-white p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div><p className="font-mono text-sm font-semibold">{order.tracking_id}</p><p className="mt-2 text-sm">{order.pickup_address} <span className="text-steel">→</span> {order.dropoff_address}</p></div>
@@ -94,8 +122,13 @@ export function CustomerPortal() {
                 <div className="mt-5 grid grid-cols-2 gap-4 border-t border-asphalt/10 pt-5 text-sm sm:grid-cols-4">
                   <Info label="Quote" value={`ETB ${Number(order.price_etb ?? 0).toLocaleString()}`} />
                   <Info label="Distance" value={order.distance_km ? `${order.distance_km} km` : "Pending"} />
-                  <Info label="Payment" value={order.payment_status.replace("_", " ")} />
+                  <Info label="Payment" value={pending ? "Pending verification" : order.payment_status.replace("_", " ")} />
                   <Info label="Vehicle" value={order.vehicle_type} />
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3 border-t border-asphalt/10 pt-5">
+                  <button onClick={() => setPaymentOrder(order)} className="bg-asphalt px-4 py-3 text-xs font-semibold text-white">Submit payment</button>
+                  <button onClick={() => printCustomerInvoice(order, orderPayments)} className="border border-asphalt px-4 py-3 text-xs font-semibold">Invoice / receipt PDF</button>
+                  {orderPayments.length > 0 && <span className="self-center text-xs text-steel">{orderPayments.length} payment record{orderPayments.length === 1 ? "" : "s"}</span>}
                 </div>
                 {proof && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 bg-emerald-50 p-4 text-sm"><span>Delivered to <strong>{proof.recipient_name}</strong></span><div className="flex gap-4"><button onClick={() => void openCustomerProof(proof.photo_path)} className="font-semibold text-emerald-800">Photo</button><button onClick={() => void openCustomerProof(proof.signature_path)} className="font-semibold text-emerald-800">Signature</button></div></div>}
               </article>;
@@ -115,6 +148,19 @@ export function CustomerPortal() {
           <div className="mt-5"><CustomerQuoteMap onChange={updateRoute} /></div>
           <div className="mt-6 bg-asphalt p-5 text-white"><p className="font-mono text-[10px] tracking-widest text-white/45">ESTIMATED SMART QUOTE</p><p className="mt-2 font-display text-3xl font-bold text-amber">{quote ? `ETB ${quote.toLocaleString()}` : "Select route"}</p><p className="mt-2 text-xs text-white/45">Final price is confirmed after route verification.</p></div>
           <button disabled={busy || !routePoints} className="mt-5 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-50">{busy ? "Creating…" : "Confirm & create order"}</button>
+        </form>
+      </div>}
+
+      {paymentOrder && <div className="fixed inset-0 z-50 grid place-items-center bg-asphalt/70 p-4">
+        <form onSubmit={pay} className="w-full max-w-md bg-white p-6 sm:p-8">
+          <div className="flex justify-between gap-4"><div><p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">PAYMENT SUBMISSION</p><h2 className="mt-2 font-display text-2xl font-bold">{paymentOrder.tracking_id}</h2></div><button type="button" onClick={() => setPaymentOrder(null)} className="text-2xl">×</button></div>
+          <p className="mt-3 text-sm text-steel">Enter the exact provider transaction reference. Admin or Finance will verify it before the payment status changes.</p>
+          <div className="mt-6 grid gap-4">
+            <label className="text-sm">Provider<select name="provider" required className="mt-2 block w-full border border-line bg-white px-4 py-3"><option value="telebirr">Telebirr</option><option value="mpesa">M-Pesa</option><option value="bank">Bank transfer</option><option value="cash">Cash deposit</option></select></label>
+            <Field name="providerRef" label="Transaction ID / reference" placeholder="Transaction reference" />
+            <label className="text-sm">Amount ETB<input required min="1" max={Number(paymentOrder.price_etb ?? undefined)} name="amountEtb" type="number" defaultValue={Number(paymentOrder.price_etb ?? 0) || undefined} className="mt-2 block w-full border border-line px-4 py-3" /></label>
+          </div>
+          <button disabled={busy} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-50">{busy ? "Submitting…" : "Submit for verification"}</button>
         </form>
       </div>}
     </main>
