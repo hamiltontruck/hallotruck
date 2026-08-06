@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateQuote, createCustomerOrder, getCustomerPortalData, openCustomerProof, type CustomerPortalData } from "../services/customer.service";
 import { supabase } from "../services/supabase.client";
+import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/CustomerQuoteMap";
 
 const emptyData: CustomerPortalData = { orders: [], proofs: [] };
 
@@ -9,11 +10,13 @@ export function CustomerPortal() {
   const navigate = useNavigate();
   const [data, setData] = useState(emptyData);
   const [showOrder, setShowOrder] = useState(false);
-  const [distance, setDistance] = useState(100);
+  const [routePoints, setRoutePoints] = useState<QuotePoints | null>(null);
+  const distance = routePoints?.distanceKm ?? 0;
   const [vehicle, setVehicle] = useState("Dry Cargo");
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
-  const quote = useMemo(() => calculateQuote(distance, vehicle), [distance, vehicle]);
+  const quote = useMemo(() => distance ? calculateQuote(distance, vehicle) : 0, [distance, vehicle]);
+  const updateRoute = useCallback((points: QuotePoints | null) => setRoutePoints(points), []);
 
   async function load() {
     try {
@@ -38,11 +41,14 @@ export function CustomerPortal() {
     setError("");
     const form = new FormData(event.currentTarget);
     try {
+      if (!routePoints) throw new Error("Select pickup and drop-off points on the map.");
       await createCustomerOrder({
         pickupAddress: String(form.get("pickup")),
         dropoffAddress: String(form.get("dropoff")),
         vehicleType: vehicle,
         distanceKm: distance,
+        pickup: routePoints.pickup,
+        dropoff: routePoints.dropoff,
       });
       setShowOrder(false);
       await load();
@@ -104,10 +110,11 @@ export function CustomerPortal() {
             <Field name="pickup" label="Pickup address" placeholder="Addis Ababa" />
             <Field name="dropoff" label="Drop-off address" placeholder="Djibouti" />
             <label className="text-sm">Vehicle<select value={vehicle} onChange={(e) => setVehicle(e.target.value)} className="mt-2 block w-full border border-line bg-white px-4 py-3"><option>Pickup</option><option>Van</option><option>Dry Cargo</option><option>Refrigerated</option><option>Trailer</option></select></label>
-            <label className="text-sm">Estimated distance (km)<input required type="number" min="1" max="5000" value={distance} onChange={(e) => setDistance(Number(e.target.value))} className="mt-2 block w-full border border-line px-4 py-3" /></label>
+            <div className="flex items-end border border-line bg-bone px-4 py-3"><div><p className="text-xs text-steel">Estimated road distance</p><p className="mt-1 font-mono font-semibold">{distance ? `${distance} km` : "Select map points"}</p></div></div>
           </div>
-          <div className="mt-6 bg-asphalt p-5 text-white"><p className="font-mono text-[10px] tracking-widest text-white/45">ESTIMATED SMART QUOTE</p><p className="mt-2 font-display text-3xl font-bold text-amber">ETB {quote.toLocaleString()}</p><p className="mt-2 text-xs text-white/45">Final price is confirmed after route verification.</p></div>
-          <button disabled={busy} className="mt-5 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-50">{busy ? "Creating…" : "Confirm & create order"}</button>
+          <div className="mt-5"><CustomerQuoteMap onChange={updateRoute} /></div>
+          <div className="mt-6 bg-asphalt p-5 text-white"><p className="font-mono text-[10px] tracking-widest text-white/45">ESTIMATED SMART QUOTE</p><p className="mt-2 font-display text-3xl font-bold text-amber">{quote ? `ETB ${quote.toLocaleString()}` : "Select route"}</p><p className="mt-2 text-xs text-white/45">Final price is confirmed after route verification.</p></div>
+          <button disabled={busy || !routePoints} className="mt-5 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-50">{busy ? "Creating…" : "Confirm & create order"}</button>
         </form>
       </div>}
     </main>
