@@ -43,12 +43,11 @@ export function CustomerPortal() {
     event.preventDefault();
     setBusy(true);
     setError("");
-    const form = new FormData(event.currentTarget);
     try {
-      if (!routePoints) throw new Error("Select pickup and drop-off points on the map.");
+      if (!routePoints) throw new Error("Find or select both pickup and drop-off places.");
       await createCustomerOrder({
-        pickupAddress: String(form.get("pickup")),
-        dropoffAddress: String(form.get("dropoff")),
+        pickupAddress: routePoints.pickupAddress,
+        dropoffAddress: routePoints.dropoffAddress,
         vehicleType: vehicle,
         distanceKm: distance,
         pickup: routePoints.pickup,
@@ -139,14 +138,12 @@ export function CustomerPortal() {
       {showOrder && <div className="fixed inset-0 z-50 grid place-items-center bg-asphalt/70 p-4">
         <form onSubmit={create} className="max-h-[94vh] w-full max-w-xl overflow-y-auto bg-white p-6 sm:p-8">
           <div className="flex justify-between"><div><p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">SMART QUOTE</p><h2 className="mt-2 font-display text-2xl font-bold">New transport order</h2></div><button type="button" onClick={() => setShowOrder(false)} className="text-2xl">×</button></div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <Field name="pickup" label="Pickup address" placeholder="Addis Ababa" />
-            <Field name="dropoff" label="Drop-off address" placeholder="Djibouti" />
+          <div className="mt-6"><CustomerQuoteMap onChange={updateRoute} /></div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <label className="text-sm">Vehicle<select value={vehicle} onChange={(e) => setVehicle(e.target.value)} className="mt-2 block w-full border border-line bg-white px-4 py-3"><option>Pickup</option><option>Van</option><option>Dry Cargo</option><option>Refrigerated</option><option>Trailer</option></select></label>
-            <div className="flex items-end border border-line bg-bone px-4 py-3"><div><p className="text-xs text-steel">Estimated road distance</p><p className="mt-1 font-mono font-semibold">{distance ? `${distance} km` : "Select map points"}</p></div></div>
+            <div className="flex items-end border border-line bg-bone px-4 py-3"><div><p className="text-xs text-steel">Estimated road distance</p><p className="mt-1 font-mono font-semibold">{distance ? `${distance} km` : "Find pickup & drop-off"}</p></div></div>
           </div>
-          <div className="mt-5"><CustomerQuoteMap onChange={updateRoute} /></div>
-          <div className="mt-6 bg-asphalt p-5 text-white"><p className="font-mono text-[10px] tracking-widest text-white/45">ESTIMATED SMART QUOTE</p><p className="mt-2 font-display text-3xl font-bold text-amber">{quote ? `ETB ${quote.toLocaleString()}` : "Select route"}</p><p className="mt-2 text-xs text-white/45">Final price is confirmed after route verification.</p></div>
+          <div className="mt-6 bg-asphalt p-5 text-white"><p className="font-mono text-[10px] tracking-widest text-white/45">ESTIMATED SMART QUOTE</p><p className="mt-2 font-display text-3xl font-bold text-amber">{quote ? `ETB ${quote.toLocaleString()}` : "Select route"}</p><p className="mt-2 text-xs text-white/45">Quote updates automatically from the selected distance and vehicle. Final price is confirmed after route verification.</p></div>
           <button disabled={busy || !routePoints} className="mt-5 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-50">{busy ? "Creating…" : "Confirm & create order"}</button>
         </form>
       </div>}
