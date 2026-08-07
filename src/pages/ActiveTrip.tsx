@@ -24,6 +24,7 @@ export function ActiveTrip() {
   const [loading, setLoading] = useState(true);
   const [gpsSharing, setGpsSharing] = useState(false);
   const [lastPing, setLastPing] = useState<string | null>(null);
+  const [speedKmh, setSpeedKmh] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
   const watchIdRef = useRef<number | null>(null);
@@ -51,31 +52,66 @@ export function ActiveTrip() {
       setError("GPS isn't available on this device.");
       return;
     }
+
+    setError(null);
     setGpsSharing(true);
+
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
         const coords: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+        const currentSpeedKmh =
+          pos.coords.speed !== null && Number.isFinite(pos.coords.speed)
+            ? Math.max(0, pos.coords.speed * 3.6)
+            : null;
+
         setDriverPosition(coords);
+        setSpeedKmh(currentSpeedKmh);
+
         try {
           await sendOrQueuePing({
             orderId: order.id,
             lng: coords[0],
             lat: coords[1],
             heading: pos.coords.heading ?? undefined,
-            speedKmh: pos.coords.speed ? pos.coords.speed * 3.6 : undefined,
+            speedKmh: currentSpeedKmh ?? undefined,
           });
+
           setLastPing(new Date().toLocaleTimeString());
+          setError(null);
+          setOrder((current) =>
+            current && current.id === order.id && current.status === "accepted"
+              ? { ...current, status: "in_transit" }
+              : current,
+          );
         } catch (err) {
           setError(err instanceof Error ? err.message : "GPS ping failed.");
         }
       },
-      () => setError("Location permission denied. Enable GPS to share your position."),
+      (geoError) => {
+        setGpsSharing(false);
+        watchIdRef.current = null;
+
+        if (geoError.code === geoError.PERMISSION_DENIED) {
+          setError("Location permission denied. Allow location access and try again.");
+          return;
+        }
+        if (geoError.code === geoError.POSITION_UNAVAILABLE) {
+          setError("GPS position is unavailable. Check device Location settings and try again.");
+          return;
+        }
+        if (geoError.code === geoError.TIMEOUT) {
+          setError("GPS timed out before a position was found. Try again in an open area.");
+          return;
+        }
+        setError("Couldn't read your GPS position.");
+      },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
     );
   }
 
   function stopSharing() {
     if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    watchIdRef.current = null;
     setGpsSharing(false);
   }
 
@@ -186,8 +222,17 @@ export function ActiveTrip() {
         ) : (
           <>
             <p className="font-body text-xs text-steel mb-3">
-              {lastPing ? `Last update: ${lastPing}` : "Waiting for GPS…"} — the customer can see
-              your truck moving live.
+              {lastPing ? (
+                <>
+                  GPS connected · Last update: {lastPing}
+                  {speedKmh !== null ? ` · ${speedKmh.toFixed(1)} km/h` : ""}
+                </>
+              ) : (
+                "Finding your GPS position…"
+              )}
+            </p>
+            <p className="font-body text-xs text-steel mb-3">
+              The customer can see your truck moving live.
             </p>
             <Button variant="ghost" onClick={stopSharing} className="w-full">
               Stop sharing
