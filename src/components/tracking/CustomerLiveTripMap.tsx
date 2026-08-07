@@ -92,33 +92,34 @@ export function CustomerLiveTripMap({ orderId, totalDistanceKm }: { orderId: str
   }, []);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !trip) return;
+    const currentMap = mapRef.current;
+    if (!currentMap || !trip) return;
+    const activeMap: maplibregl.Map = currentMap;
     const pickup: [number, number] = [trip.pickup_lng, trip.pickup_lat];
     const dropoff: [number, number] = [trip.dropoff_lng, trip.dropoff_lat];
     const truck = trip.truck_lng != null && trip.truck_lat != null ? [trip.truck_lng, trip.truck_lat] as [number, number] : null;
 
     async function render() {
-      if (!map.isStyleLoaded()) {
-        await new Promise<void>((resolve) => map.once("load", () => resolve()));
+      if (!activeMap.isStyleLoaded()) {
+        await new Promise<void>((resolve) => activeMap.once("load", () => resolve()));
       }
 
       endpointMarkers.current.forEach((marker) => marker.remove());
       endpointMarkers.current = [
-        new maplibregl.Marker({ color: "#1d222a" }).setLngLat(pickup).addTo(map),
-        new maplibregl.Marker({ color: "#d68e25" }).setLngLat(dropoff).addTo(map),
+        new maplibregl.Marker({ color: "#1d222a" }).setLngLat(pickup).addTo(activeMap),
+        new maplibregl.Marker({ color: "#d68e25" }).setLngLat(dropoff).addTo(activeMap),
       ];
 
       const route = await fetchRoute(pickup, dropoff);
       const sourceId = "customer-live-route";
-      if (map.getLayer(sourceId)) map.removeLayer(sourceId);
-      if (map.getSource(sourceId)) map.removeSource(sourceId);
+      if (activeMap.getLayer(sourceId)) activeMap.removeLayer(sourceId);
+      if (activeMap.getSource(sourceId)) activeMap.removeSource(sourceId);
       if (route) {
-        map.addSource(sourceId, {
+        activeMap.addSource(sourceId, {
           type: "geojson",
           data: { type: "Feature", properties: {}, geometry: route.geometry },
         });
-        map.addLayer({
+        activeMap.addLayer({
           id: sourceId,
           type: "line",
           source: sourceId,
@@ -129,14 +130,14 @@ export function CustomerLiveTripMap({ orderId, totalDistanceKm }: { orderId: str
 
       const bounds = new maplibregl.LngLatBounds(pickup, pickup).extend(dropoff);
       if (truck) bounds.extend(truck);
-      map.fitBounds(bounds, { padding: 55, maxZoom: 12 });
+      activeMap.fitBounds(bounds, { padding: 55, maxZoom: 12 });
 
       if (truck) {
         if (!truckMarker.current) {
           const element = document.createElement("div");
           element.className = "grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-emerald-700 font-mono text-[10px] font-bold text-white shadow-lg";
           element.textContent = "TRK";
-          truckMarker.current = new maplibregl.Marker({ element }).setLngLat(truck).addTo(map);
+          truckMarker.current = new maplibregl.Marker({ element }).setLngLat(truck).addTo(activeMap);
         } else {
           truckMarker.current.setLngLat(truck);
         }
