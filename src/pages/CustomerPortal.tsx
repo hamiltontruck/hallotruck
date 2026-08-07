@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { calculateQuote, createCustomerOrder, getCustomerPortalData, openCustomerProof, printCustomerInvoice, submitCustomerPayment, type CustomerOrder, type CustomerPortalData } from "../services/customer.service";
 import { supabase } from "../services/supabase.client";
 import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/CustomerQuoteMap";
+import { CustomerLiveTripMap } from "../components/tracking/CustomerLiveTripMap";
 
 const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [] };
 
@@ -11,6 +12,7 @@ export function CustomerPortal() {
   const [data, setData] = useState(emptyData);
   const [showOrder, setShowOrder] = useState(false);
   const [paymentOrder, setPaymentOrder] = useState<CustomerOrder | null>(null);
+  const [trackingOrder, setTrackingOrder] = useState<CustomerOrder | null>(null);
   const [routePoints, setRoutePoints] = useState<QuotePoints | null>(null);
   const distance = routePoints?.distanceKm ?? 0;
   const [vehicle, setVehicle] = useState("Dry Cargo");
@@ -113,6 +115,7 @@ export function CustomerPortal() {
               const proof = data.proofs.find((item) => item.order_id === order.id);
               const orderPayments = data.payments.filter((item) => item.order_id === order.id);
               const pending = orderPayments.some((item) => ["initiated", "held_escrow"].includes(item.event));
+              const trackable = ["accepted", "in_transit", "delivered"].includes(order.status);
               return <article key={order.id} className="border border-asphalt/10 bg-white p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div><p className="font-mono text-sm font-semibold">{order.tracking_id}</p><p className="mt-2 text-sm">{order.pickup_address} <span className="text-steel">→</span> {order.dropoff_address}</p></div>
@@ -125,6 +128,7 @@ export function CustomerPortal() {
                   <Info label="Vehicle" value={order.vehicle_type} />
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3 border-t border-asphalt/10 pt-5">
+                  {trackable && <button onClick={() => setTrackingOrder(order)} className="bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">Live trip tracking</button>}
                   <button onClick={() => setPaymentOrder(order)} className="bg-asphalt px-4 py-3 text-xs font-semibold text-white">Submit payment</button>
                   <button onClick={() => printCustomerInvoice(order, orderPayments)} className="border border-asphalt px-4 py-3 text-xs font-semibold">Invoice / receipt PDF</button>
                   {orderPayments.length > 0 && <span className="self-center text-xs text-steel">{orderPayments.length} payment record{orderPayments.length === 1 ? "" : "s"}</span>}
@@ -134,6 +138,16 @@ export function CustomerPortal() {
             })}
           </div>}
       </section>
+
+      {trackingOrder && <div className="fixed inset-0 z-50 grid place-items-center bg-asphalt/70 p-4">
+        <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto bg-white p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div><p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">LIVE TRIP</p><h2 className="mt-2 font-display text-2xl font-bold">{trackingOrder.tracking_id}</h2><p className="mt-2 text-sm text-steel">{trackingOrder.pickup_address} → {trackingOrder.dropoff_address}</p></div>
+            <button type="button" onClick={() => setTrackingOrder(null)} className="text-2xl">×</button>
+          </div>
+          <div className="mt-6"><CustomerLiveTripMap orderId={trackingOrder.id} totalDistanceKm={trackingOrder.distance_km} /></div>
+        </div>
+      </div>}
 
       {showOrder && <div className="fixed inset-0 z-50 grid place-items-center bg-asphalt/70 p-4">
         <form onSubmit={create} className="max-h-[94vh] w-full max-w-xl overflow-y-auto bg-white p-6 sm:p-8">
