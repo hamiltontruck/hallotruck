@@ -62,11 +62,20 @@ Deno.serve(async (req) => {
   const route = payload?.routes?.[0];
   if (!route?.geometry) return json({ error: "No driving route found" }, 404);
 
-  const steps = (route.legs ?? []).flatMap((leg: any) => leg.steps ?? []).map((step: any) => ({
-    instruction: stepInstruction(step),
-    distanceM: Number(step.distance ?? 0),
-    durationSec: Number(step.duration ?? 0),
-  }));
+  const steps = (route.legs ?? []).flatMap((leg: any) => leg.steps ?? []).map((step: any) => {
+    const maneuverLocation = step?.maneuver?.location;
+    const location =
+      Array.isArray(maneuverLocation) && maneuverLocation.length >= 2
+        ? [Number(maneuverLocation[0]), Number(maneuverLocation[1])]
+        : null;
+
+    return {
+      instruction: stepInstruction(step),
+      distanceM: Number(step.distance ?? 0),
+      durationSec: Number(step.duration ?? 0),
+      location,
+    };
+  });
 
   return json({
     geometry: route.geometry,

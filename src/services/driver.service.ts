@@ -23,9 +23,6 @@ export interface AvailableJob {
   cargo_description: string | null;
 }
 
-// Job board reads directly from Supabase (RLS-scoped) rather than a
-// dedicated edge function — orders with status 'placed' and no driver
-// assigned are visible to any approved driver.
 export async function getAvailableJobs(): Promise<AvailableJob[]> {
   const { data, error } = await supabase
     .from("orders")
@@ -46,10 +43,7 @@ export async function acceptJob(orderId: string) {
   });
 
   if (error) throw new Error(error.message);
-
-  if (!data) {
-    throw new Error("Someone else already took this load.");
-  }
+  if (!data) throw new Error("Someone else already took this load.");
 }
 
 export async function markDelivered(orderId: string) {
@@ -58,10 +52,7 @@ export async function markDelivered(orderId: string) {
   });
 
   if (error) throw new Error(error.message);
-
-  if (!data) {
-    throw new Error("This trip could not be marked as delivered.");
-  }
+  if (!data) throw new Error("This trip could not be marked as delivered.");
 }
 
 export async function sendGpsPing(params: {
@@ -116,6 +107,7 @@ export interface NavigationStep {
   instruction: string;
   distanceM: number;
   durationSec: number;
+  location: [number, number] | null;
 }
 
 export interface NavigationRoute {

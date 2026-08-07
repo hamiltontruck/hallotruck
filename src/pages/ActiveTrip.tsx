@@ -18,6 +18,21 @@ const STATUS_LABEL: Record<string, string> = {
   in_transit: "On the road",
 };
 
+const AUTO_ADVANCE_METERS = 45;
+
+function distanceMeters(a: [number, number], b: [number, number]) {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const earthRadiusM = 6_371_000;
+  const dLat = toRad(b[1] - a[1]);
+  const dLng = toRad(b[0] - a[0]);
+  const lat1 = toRad(a[1]);
+  const lat2 = toRad(b[1]);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * earthRadiusM * Math.asin(Math.sqrt(h));
+}
+
 export function ActiveTrip() {
   const navigate = useNavigate();
   const [order, setOrder] = useState<MyOrder | null>(null);
@@ -42,10 +57,23 @@ export function ActiveTrip() {
 
   useEffect(() => {
     if (!order) return;
+    setCurrentStepIndex(0);
     getNavigation(order.id)
       .then(setRoute)
       .catch((err) => setRouteError(err instanceof Error ? err.message : "Couldn't load route."));
-  }, [order]);
+  }, [order?.id]);
+
+  useEffect(() => {
+    if (!route || !driverPosition || route.steps.length < 2) return;
+    const nextStepIndex = Math.min(currentStepIndex + 1, route.steps.length - 1);
+    if (nextStepIndex === currentStepIndex) return;
+    const nextManeuver = route.steps[nextStepIndex]?.location;
+    if (!nextManeuver) return;
+
+    if (distanceMeters(driverPosition, nextManeuver) <= AUTO_ADVANCE_METERS) {
+      setCurrentStepIndex(nextStepIndex);
+    }
+  }, [route, driverPosition, currentStepIndex]);
 
   function startSharing() {
     if (!order || !navigator.geolocation) {
@@ -198,13 +226,18 @@ export function ActiveTrip() {
                   {Math.round(route.steps[currentStepIndex].distanceM)} m
                 </span>
               )}
+              {gpsSharing && route.steps.length > 1 && (
+                <span className="font-mono text-[10px] uppercase text-steel block mt-2">
+                  Auto GPS step advance on
+                </span>
+              )}
             </div>
             <button
               onClick={() => setCurrentStepIndex((i) => Math.min(i + 1, route.steps.length - 1))}
               disabled={route.steps.length <= 1 || currentStepIndex >= route.steps.length - 1}
               className="font-body text-sm text-route underline disabled:text-steel disabled:no-underline"
             >
-              Next step →
+              Skip step →
             </button>
           </div>
         </div>
