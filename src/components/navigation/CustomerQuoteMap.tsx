@@ -22,18 +22,27 @@ interface GeocodingFeature {
   center?: [number, number];
 }
 
+interface RoadRoute {
+  distanceKm: number;
+  durationMinutes: number;
+  coordinates: [number, number][];
+}
+
+interface OsrmRouteResponse {
+  code?: string;
+  routes?: Array<{
+    distance?: number;
+    duration?: number;
+    geometry?: {
+      type?: string;
+      coordinates?: [number, number][];
+    };
+  }>;
+}
+
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
 const style = `https://api.maptiler.com/maps/basic-v2/style.json?key=${mapTilerKey ?? ""}`;
-
-function distanceKm(a: [number, number], b: [number, number]) {
-  const radians = (value: number) => value * Math.PI / 180;
-  const lat1 = radians(a[1]);
-  const lat2 = radians(b[1]);
-  const dLat = radians(b[1] - a[1]);
-  const dLng = radians(b[0] - a[0]);
-  const value = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
-}
+const routingBaseUrl = "https://router.project-osrm.org";
 
 async function geocode(query: string, signal?: AbortSignal) {
   if (!mapTilerKey || query.trim().length < 2) return [] as GeocodingFeature[];
@@ -59,6 +68,31 @@ async function reverseGeocode(coordinates: [number, number]) {
   if (!response.ok) return `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`;
   const result = await response.json() as { features?: GeocodingFeature[] };
   return result.features?.[0]?.place_name ?? result.features?.[0]?.text ?? `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`;
+}
+
+async function fetchRoadRoute(pickup: [number, number], dropoff: [number, number], signal?: AbortSignal): Promise<RoadRoute> {
+  const coordinates = `${pickup[0]},${pickup[1]};${dropoff[0]},${dropoff[1]}`;
+  const url = new URL(`/route/v1/driving/${coordinates}`, routingBaseUrl);
+  url.searchParams.set("overview", "full");
+  url.searchParams.set("geometries", "geojson");
+  url.searchParams.set("steps", "false");
+  url.searchParams.set("alternatives", "false");
+
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error("Live road routing is temporarily unavailable.");
+
+  const result = await response.json() as OsrmRouteResponse;
+  const route = result.routes?.[0];
+  const routeCoordinates = route?.geometry?.coordinates;
+  if (result.code !== "Ok" || !route || !Array.isArray(routeCoordinates) || !routeCoordinates.length || !Number.isFinite(route.distance)) {
+    throw new Error("No drivable road route was found between these places.");
+  }
+
+  return {
+    distanceKm: Number(((route.distance ?? 0) / 1000).toFixed(1)),
+    durationMinutes: Math.max(1, Math.round((route.duration ?? 0) / 60)),
+    coordinates: routeCoordinates,
+  };
 }
 
 function PlaceSearch({
@@ -155,6 +189,9 @@ export function CustomerQuoteMap({ onChange }: { onChange: (points: QuotePoints 
   const [dropoff, setDropoff] = useState<SelectedPlace | null>(null);
   const [pickupQuery, setPickupQuery] = useState("");
   const [dropoffQuery, setDropoffQuery] = useState("");
+  const [roadRoute, setRoadRoute] = useState<RoadRoute | null>(null);
+  const [routing, setRouting] = useState(false);
+  const [routingError, setRoutingError] = useState("");
 
   const choosePickup = useCallback((place: SelectedPlace) => {
     setPickup(place);
@@ -202,6 +239,43 @@ export function CustomerQuoteMap({ onChange }: { onChange: (points: QuotePoints 
   }, []);
 
   useEffect(() => {
+    if (!pickup || !dropoff) {
+      setRoadRoute(null);
+      setRouting(false);
+      setRoutingError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    setRoadRoute(null);
+    setRouting(true);
+    setRoutingError("");
+    onChange(null);
+
+    void fetchRoadRoute(pickup.coordinates, dropoff.coordinates, controller.signal)
+      .then((route) => {
+        setRoadRoute(route);
+        onChange({
+          pickup: pickup.coordinates,
+          dropoff: dropoff.coordinates,
+          pickupAddress: pickup.label,
+          dropoffAddress: dropoff.label,
+          distanceKm: route.distanceKm,
+        });
+      })
+      .catch((error) => {
+        if ((error as Error).name === "AbortError") return;
+        setRoutingError(error instanceof Error ? error.message : "Live road routing failed.");
+        onChange(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRouting(false);
+      });
+
+    return () => controller.abort();
+  }, [dropoff, onChange, pickup]);
+
+  useEffect(() => {
     const instance = map.current;
     if (!instance || !mapReady) return;
 
@@ -220,41 +294,49 @@ export function CustomerQuoteMap({ onChange }: { onChange: (points: QuotePoints 
     if (instance.getSource(sourceId)) instance.removeSource(sourceId);
 
     if (pickup && dropoff) {
-      const route = {
+      const coordinates = roadRoute?.coordinates ?? [pickup.coordinates, dropoff.coordinates];
+      const routeFeature = {
         type: "Feature" as const,
         properties: {},
         geometry: {
           type: "LineString" as const,
-          coordinates: [pickup.coordinates, dropoff.coordinates],
+          coordinates,
         },
       };
-      instance.addSource(sourceId, { type: "geojson", data: route });
+      instance.addSource(sourceId, { type: "geojson", data: routeFeature });
       instance.addLayer({
         id: sourceId,
         type: "line",
         source: sourceId,
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#d68e25", "line-width": 5, "line-opacity": 0.85 },
+        paint: {
+          "line-color": routingError ? "#c65d3b" : "#d68e25",
+          "line-width": roadRoute ? 5 : 3,
+          "line-opacity": roadRoute ? 0.9 : 0.45,
+          "line-dasharray": roadRoute ? [1, 0] : [2, 2],
+        },
       });
-      const km = distanceKm(pickup.coordinates, dropoff.coordinates);
-      onChange({
-        pickup: pickup.coordinates,
-        dropoff: dropoff.coordinates,
-        pickupAddress: pickup.label,
-        dropoffAddress: dropoff.label,
-        distanceKm: Number((km * 1.18).toFixed(1)),
-      });
-      instance.fitBounds(new maplibregl.LngLatBounds(pickup.coordinates, dropoff.coordinates), { padding: 55 });
-    } else {
-      onChange(null);
+
+      if (roadRoute?.coordinates.length) {
+        const bounds = roadRoute.coordinates.reduce(
+          (current, point) => current.extend(point),
+          new maplibregl.LngLatBounds(roadRoute.coordinates[0], roadRoute.coordinates[0]),
+        );
+        instance.fitBounds(bounds, { padding: 55 });
+      } else {
+        instance.fitBounds(new maplibregl.LngLatBounds(pickup.coordinates, dropoff.coordinates), { padding: 55 });
+      }
     }
-  }, [dropoff, mapReady, onChange, pickup]);
+  }, [dropoff, mapReady, pickup, roadRoute, routingError]);
 
   function reset() {
     setPickup(null);
     setDropoff(null);
     setPickupQuery("");
     setDropoffQuery("");
+    setRoadRoute(null);
+    setRouting(false);
+    setRoutingError("");
     onChange(null);
   }
 
@@ -285,11 +367,16 @@ export function CustomerQuoteMap({ onChange }: { onChange: (points: QuotePoints 
         />
       </div>
       <div className="mb-2 mt-4 flex items-center justify-between gap-3">
-        <p className="text-xs text-steel">{!pickup ? "Search or tap the pickup location" : !dropoff ? "Now search or tap the drop-off location" : "Pickup, drop-off and route selected"}</p>
+        <p className="text-xs text-steel">
+          {!pickup ? "Search or tap the pickup location" : !dropoff ? "Now search or tap the drop-off location" : routing ? "Calculating live road route…" : routingError ? "Road route unavailable" : "Live road route selected"}
+        </p>
         {(pickup || dropoff) && <button type="button" onClick={reset} className="text-xs font-semibold text-route">Reset route</button>}
       </div>
       {mapTilerKey ? <div ref={container} className="h-64 w-full border border-line bg-[#e9e5da]" /> : <div className="grid h-64 place-items-center border border-route/30 bg-route/5 p-6 text-center text-sm text-route">Map key is not configured. Add VITE_MAPTILER_KEY to enable place search and mapping.</div>}
-      <p className="mt-2 text-[11px] text-steel">P = pickup · D = drop-off · line shows the selected route corridor. Distance uses the existing estimated-road factor until live road routing is connected.</p>
+      {routing && <p className="mt-2 text-[11px] font-semibold text-amber-dim">Calculating distance on the road network…</p>}
+      {routingError && <p className="mt-2 text-[11px] font-semibold text-route">{routingError} Choose another nearby place or retry.</p>}
+      {roadRoute && <p className="mt-2 text-[11px] font-semibold text-emerald-700">Live road distance: {roadRoute.distanceKm.toLocaleString()} km · estimated driving time: {Math.floor(roadRoute.durationMinutes / 60)}h {roadRoute.durationMinutes % 60}m</p>}
+      <p className="mt-2 text-[11px] text-steel">P = pickup · D = drop-off · the line follows the live drivable road route. The smart quote uses the road-route distance returned by the routing service.</p>
     </div>
   );
 }
