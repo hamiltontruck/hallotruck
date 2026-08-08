@@ -104,7 +104,7 @@ export function SmartLogistics() {
 
         <div className="p-5 sm:p-8 max-w-[1500px] mx-auto">
           {error && <p className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5">{error}</p>}
-          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} />}
+          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
         </div>
       </main>
       {modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
@@ -164,15 +164,15 @@ function OrderRow({ order:o, onManage }: { order: AdminOrder; onManage?: (order:
   return <div className="p-4 sm:px-6 grid grid-cols-[1fr_auto] sm:grid-cols-[100px_1fr_auto_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="text-sm font-medium flex items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p></div><span className="hidden sm:block font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 capitalize ${color}`}>{o.status.replace("_", " ")}</span>{onManage&&<button onClick={()=>onManage(o)} className="text-xs font-semibold text-amber-dim">Manage</button>}</div>;
 }
 
-function ModulePage({ section, orders, customers, trucks, payments, onAdd, onManage }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void }) {
-  const descriptions:Record<string,string> = {Orders:"Create, assign and monitor every customer order.","Live trips":"Track active vehicles and delivery progress in real time.","Fleet & drivers":"Manage trucks, drivers, availability and documents.",Customers:"View accounts, order history and customer value.",Finance:"Monitor revenue, payouts, invoices and payment status.",Reports:"Measure delivery performance and business growth."};
+function ModulePage({ section, orders, customers, trucks, payments, drivers, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+  const descriptions:Record<string,string> = {Orders:"Create, assign and monitor every customer order.","Live trips":"Track active vehicles and delivery progress in real time.","Fleet & drivers":"Manage trucks, drivers, availability and documents.",Customers:"View accounts, order history and customer value.",Finance:"Verify customer payments, link each payment to its order and driver, then release eligible payouts.",Reports:"Measure delivery performance and business growth."};
   const addKind = section === "Customers" ? "customer" : section === "Fleet & drivers" ? "truck" : "order";
   return <div>
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div>{["Orders","Customers","Fleet & drivers"].includes(section) && <button onClick={() => onAdd(addKind)} className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button>}</div>
     {section === "Orders" && <DataPanel title="All orders" empty="No orders yet.">{orders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>}
     {section === "Customers" && <DataPanel title="Customers" empty="No customers yet.">{customers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
     {section === "Fleet & drivers" && <DataPanel title="Registered fleet" empty="No trucks yet.">{trucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel>}
-    {section === "Finance" && <DataPanel title="Payment ledger" empty="No payments yet.">{payments.map(p=><SimpleRow key={p.id} title={`ETB ${Number(p.amount_etb).toLocaleString()}`} subtitle={`${p.provider}${p.provider_ref ? ` · ${p.provider_ref}` : ""}`} badge={p.event} />)}</DataPanel>}
+    {section === "Finance" && <DataPanel title="Payment ledger" empty="No payments yet.">{payments.map(p=><FinancePaymentRow key={p.id} payment={p} order={orders.find(o=>o.id===p.order_id)} driver={drivers.find(d=>d.id===orders.find(o=>o.id===p.order_id)?.driver_id)} onManage={onManage} onReload={onReload} />)}</DataPanel>}
     {section === "Live trips" && <DataPanel title="Active trips" empty="No active trips right now.">{orders.filter(o=>["accepted","in_transit"].includes(o.status)).map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>}
     {section === "Reports" && <div className="grid sm:grid-cols-3 gap-5"><ReportCard label="Orders" value={orders.length}/><ReportCard label="Customers" value={customers.length}/><ReportCard label="Fleet" value={trucks.length}/></div>}
   </div>;
@@ -180,6 +180,38 @@ function ModulePage({ section, orders, customers, trucks, payments, onAdd, onMan
 
 function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="bg-white border border-asphalt/10"><div className="p-5 sm:px-6 border-b border-asphalt/10 flex justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><span className="font-mono text-xs text-steel">{count} {count===1?"record":"records"}</span></div>{count ? children : <Empty label={empty}/>}</div>; }
 function SimpleRow({ title, subtitle, badge }: { title:string; subtitle:string; badge:string }) { return <div className="p-4 sm:px-6 border-b border-asphalt/10 last:border-0 flex items-center justify-between gap-4"><div><p className="font-semibold text-sm">{title}</p><p className="text-xs text-steel mt-1">{subtitle}</p></div><span className="text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{badge.replace("_"," ")}</span></div>; }
+
+function FinancePaymentRow({ payment, order, driver, onManage, onReload }: { payment:Payment; order?:AdminOrder; driver?:Driver; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+  const [saving,setSaving]=useState(false);
+  const [error,setError]=useState("");
+  const nextEvent = payment.event === "initiated" ? "held_escrow" : payment.event === "held_escrow" ? "released" : null;
+  const canRelease = nextEvent !== "released" || order?.status === "delivered";
+  async function advance(){
+    if(!nextEvent) return;
+    setSaving(true); setError("");
+    const { error:rpcError } = await supabase.rpc("admin_update_payment_event", { p_payment_id:payment.id, p_event:nextEvent });
+    if(rpcError){ setError(rpcError.message); setSaving(false); return; }
+    await onReload(); setSaving(false);
+  }
+  return <div className="p-4 sm:px-6 border-b border-asphalt/10 last:border-0">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-base">ETB {Number(payment.amount_etb).toLocaleString()}</p><span className="text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{payment.event.replace("_"," ")}</span></div>
+        <p className="font-mono text-xs text-asphalt mt-2">{order?.tracking_id ?? "Order not found"}</p>
+        <p className="text-xs text-steel mt-1">{order ? `${order.pickup_address} → ${order.dropoff_address}` : "This payment is not linked to a visible order."}</p>
+        <p className="text-xs text-steel mt-1">Driver: {driver?.full_name ?? driver?.phone ?? (order?.driver_id ? "Driver profile unavailable" : "Unassigned")}</p>
+        <p className="text-xs text-steel mt-1">{payment.provider}{payment.provider_ref ? ` · ${payment.provider_ref}` : ""}</p>
+        {nextEvent === "released" && order?.status !== "delivered" && <p className="text-xs text-route mt-2">Release is locked until this order is delivered.</p>}
+        {error && <p className="text-xs text-route mt-2">{error}</p>}
+      </div>
+      <div className="flex sm:flex-col gap-2 shrink-0">
+        {order && <button onClick={()=>onManage(order)} className="border border-asphalt/20 px-3 py-2 text-xs font-semibold">Open order</button>}
+        {nextEvent && <button disabled={saving||!canRelease} onClick={advance} className="bg-asphalt text-white px-3 py-2 text-xs font-semibold disabled:opacity-35">{saving?"Saving…":nextEvent==="held_escrow"?"Hold in escrow":"Release payment"}</button>}
+      </div>
+    </div>
+  </div>;
+}
+
 function ReportCard({ label, value }: { label:string; value:number }) { return <div className="bg-white border border-asphalt/10 p-7"><p className="text-xs text-steel">{label}</p><p className="font-display font-bold text-4xl mt-4">{value}</p><p className="text-[11px] text-emerald-700 mt-4">Live from Supabase</p></div>; }
 function Empty({ label }: { label:string }) { return <p className="p-8 text-center text-sm text-steel">{label}</p>; }
 function compactMoney(value:number) { return value >= 1_000_000 ? `${(value/1_000_000).toFixed(1)}M` : value >= 1_000 ? `${(value/1_000).toFixed(1)}K` : value.toLocaleString(); }
