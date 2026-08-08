@@ -1,5 +1,6 @@
 import { FormEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../services/supabase.client";
+import { AdminLiveTripsPanel } from "../components/admin/AdminLiveTripsPanel";
 import { AdminOrder, Customer, DashboardMetrics, DeliveryProof, Driver, Payment, Truck, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, openDeliveryProof, printInvoice, recordPayment, refundOverpaymentCredit, submitDeliveryProof, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
 type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "bell" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
@@ -101,7 +102,6 @@ export function SmartLogistics() {
             <button onClick={() => setModal("order")} className="bg-asphalt text-white font-semibold text-xs sm:text-sm px-3 sm:px-5 py-3 hover:bg-line whitespace-nowrap"><span className="sm:hidden">+ Order</span><span className="hidden sm:inline">+ New order</span></button>
           </div>
         </header>
-
         <div className="p-5 sm:p-8 max-w-[1500px] mx-auto">
           {error && <p className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5">{error}</p>}
           {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
@@ -114,6 +114,8 @@ export function SmartLogistics() {
 }
 
 function Overview({ onOpen, metrics, orders, trucks }: { onOpen: (name: string) => void; metrics: DashboardMetrics; orders: AdminOrder[]; trucks: Truck[] }) {
+  const activeOrders = orders.filter((order) => ["accepted", "in_transit"].includes(order.status));
+  const leadActive = activeOrders[0];
   return <>
     <section className="bg-asphalt text-white relative overflow-hidden p-6 sm:p-9 mb-7">
       <div className="absolute -right-12 -top-24 w-72 h-72 border-[48px] border-amber/10 rounded-full" />
@@ -127,21 +129,16 @@ function Overview({ onOpen, metrics, orders, trucks }: { onOpen: (name: string) 
     </section>
     <section className="grid xl:grid-cols-[1.55fr_1fr] gap-5 mb-7">
       <div className="bg-white border border-asphalt/10">
-        <SectionHead title="Active shipments" action="View all" onClick={() => onOpen("Orders")} />
+        <SectionHead title="Active shipments" action="Track all" onClick={() => onOpen("Live trips")} />
         <div className="divide-y divide-asphalt/10">
-          {orders.slice(0,3).map((o) => <OrderRow key={o.id} order={o} />)}
-          {orders.length === 0 && <Empty label="No orders yet. Use + New order to create the first one." />}
+          {activeOrders.slice(0,3).map((o) => <OrderRow key={o.id} order={o} />)}
+          {activeOrders.length === 0 && <Empty label="No active shipments right now." />}
         </div>
       </div>
       <div className="bg-asphalt text-white border border-asphalt">
-        <div className="p-5 sm:p-6 flex justify-between"><div><p className="font-display font-semibold text-lg">Live network</p><p className="text-xs text-white/40 mt-1">{metrics.activeOrders} shipments currently active</p></div><span className="flex items-center gap-2 text-xs text-amber"><i className="w-2 h-2 bg-amber rounded-full animate-pulse"/>LIVE</span></div>
-        <div className="relative h-56 bg-[#252b33] overflow-hidden">
-          <div className="absolute inset-0 opacity-20" style={{backgroundImage:"linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",backgroundSize:"42px 42px"}} />
-          <svg viewBox="0 0 500 220" className="absolute inset-0 w-full h-full"><path d="M-20 180 C80 130 110 190 190 110 S330 55 520 80" fill="none" stroke="#e8a33d" strokeWidth="3" strokeDasharray="8 8"/><path d="M30 30 C110 90 210 30 280 120 S420 190 520 150" fill="none" stroke="#fff" strokeOpacity=".12" strokeWidth="2"/></svg>
-          {[["21%","62%"],["50%","43%"],["72%","25%"],["82%","60%"]].map((p,i)=><span key={i} className="absolute w-4 h-4 bg-amber border-[3px] border-asphalt rounded-full shadow-[0_0_0_5px_rgba(232,163,61,.18)]" style={{left:p[0],top:p[1]}} />)}
-          <div className="absolute bottom-4 left-4 bg-white text-asphalt px-3 py-2 text-xs"><b>{orders[0]?.tracking_id ?? "NO ACTIVE TRIPS"}</b><span className="text-steel ml-2">{orders[0]?.dropoff_address ?? "Waiting for orders"}</span></div>
-        </div>
-        <button onClick={() => onOpen("Live trips")} className="w-full p-4 text-sm text-amber hover:bg-white/5 flex items-center justify-center gap-2">Open live tracking <Icon name="arrow" className="w-4 h-4" /></button>
+        <div className="p-5 sm:p-6 flex justify-between"><div><p className="font-display font-semibold text-lg">Live network</p><p className="text-xs text-white/40 mt-1">{activeOrders.length} shipments currently active</p></div><span className={`flex items-center gap-2 text-xs ${leadActive ? "text-amber" : "text-white/40"}`}><i className={`w-2 h-2 rounded-full ${leadActive ? "bg-amber animate-pulse" : "bg-white/20"}`}/>{leadActive ? "LIVE" : "IDLE"}</span></div>
+        {leadActive ? <div className="min-h-56 bg-[#252b33] p-6 flex flex-col justify-center"><p className="font-mono text-sm text-amber">{leadActive.tracking_id}</p><p className="font-display text-xl font-semibold mt-3">{leadActive.pickup_address} → {leadActive.dropoff_address}</p><p className="text-xs text-white/50 mt-3">{leadActive.vehicle_type} · <span className="capitalize">{leadActive.status.replace("_", " ")}</span></p><p className="text-xs text-white/40 mt-5">Open Live trips for the latest GPS marker, remaining distance, ETA and trip progress.</p></div> : <div className="min-h-56 bg-[#252b33] p-6 flex flex-col items-center justify-center text-center"><div className="grid h-12 w-12 place-items-center rounded-full bg-emerald-700/20 text-emerald-400">✓</div><p className="font-display text-xl font-semibold mt-4">No active trips</p><p className="text-xs text-white/45 mt-2 max-w-xs">Live GPS tracking will appear after a driver accepts a new load.</p></div>}
+        <button onClick={() => onOpen("Live trips")} className="w-full p-4 text-sm text-amber hover:bg-white/5 flex items-center justify-center gap-2">{leadActive ? "Open live tracking" : "View live trips"} <Icon name="arrow" className="w-4 h-4" /></button>
       </div>
     </section>
     <section className="grid xl:grid-cols-[1.55fr_1fr] gap-5">
@@ -173,7 +170,7 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, onA
     {section === "Customers" && <DataPanel title="Customers" empty="No customers yet.">{customers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
     {section === "Fleet & drivers" && <DataPanel title="Registered fleet" empty="No trucks yet.">{trucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel>}
     {section === "Finance" && <DataPanel title="Payment ledger" empty="No payments yet.">{payments.map(p=><FinancePaymentRow key={p.id} payment={p} order={orders.find(o=>o.id===p.order_id)} driver={drivers.find(d=>d.id===orders.find(o=>o.id===p.order_id)?.driver_id)} allPayments={payments} onManage={onManage} onReload={onReload} />)}</DataPanel>}
-    {section === "Live trips" && <DataPanel title="Active trips" empty="No active trips right now.">{orders.filter(o=>["accepted","in_transit"].includes(o.status)).map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>}
+    {section === "Live trips" && <AdminLiveTripsPanel orders={orders} trucks={trucks} drivers={drivers} onManage={onManage} />}
     {section === "Reports" && <div className="grid sm:grid-cols-3 gap-5"><ReportCard label="Orders" value={orders.length}/><ReportCard label="Customers" value={customers.length}/><ReportCard label="Fleet" value={trucks.length}/></div>}
   </div>;
 }
