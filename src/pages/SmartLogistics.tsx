@@ -190,6 +190,7 @@ function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onRe
   const orderCreditRefunded = order ? allPayments.filter(p=>p.order_id===order.id&&p.event==="refunded"&&p.provider==="credit_refund").reduce((sum,p)=>sum+Number(p.amount_etb||0),0) : 0;
   const overpaymentCredit = order ? Math.max(0, orderReleased-orderCreditRefunded-Number(order.price_etb??0)) : 0;
   const showRefundCredit = Boolean(order && overpaymentCredit > 0 && payment.event === "released" && allPayments.filter(p=>p.order_id===order.id&&p.event==="released")[0]?.id===payment.id);
+  const deliveryLocked = nextEvent === "released" && order?.status !== "delivered";
   async function advance(){
     if(!nextEvent) return;
     setSaving(true); setError("");
@@ -218,8 +219,8 @@ function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onRe
         <p className="text-xs text-steel mt-1">Driver: {driver?.full_name ?? driver?.phone ?? (order?.driver_id ? "Driver profile unavailable" : "Unassigned")}</p>
         <p className="text-xs text-steel mt-1">{payment.provider}{payment.provider_ref ? ` · Transaction ID: ${payment.provider_ref}` : " · No transaction ID"}</p>
         {showRefundCredit && <p className="text-xs text-amber-dim font-semibold mt-2">Overpayment credit: ETB {overpaymentCredit.toLocaleString()}</p>}
-        {nextEvent === "released" && order?.status !== "delivered" && <p className="text-xs text-route mt-2">Release is locked until this order is delivered.</p>}
-        {error && <p className="text-xs text-route mt-2">{error}</p>}
+        {deliveryLocked && <p className="text-xs text-route mt-2">Release is locked until this order is delivered.</p>}
+        {error && !deliveryLocked && <p className="text-xs text-route mt-2">{error}</p>}
       </div>
       <div className="flex sm:flex-col gap-2 shrink-0 flex-wrap">
         {order && <button onClick={()=>onManage(order)} className="border border-asphalt/20 px-3 py-2 text-xs font-semibold">Open order</button>}
