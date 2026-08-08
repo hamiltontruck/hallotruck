@@ -4,24 +4,33 @@ const portals = [
   {
     label: "ADMIN / CEO",
     title: "Control Center",
-    description: "Orders, live operations, fleet, finance and business reports.",
+    description: "Orders, live operations, fleet, finance, delivery proof and business reports.",
     path: "/admin",
     accent: "bg-amber text-asphalt",
   },
   {
     label: "DRIVER",
     title: "Mobile Workspace",
-    description: "Find loads, manage active trips, documents and earnings.",
+    description: "Find loads, share live GPS, follow turn-by-turn routes, manage trips, documents and earnings.",
     path: "/driver/login",
     accent: "bg-route text-white",
   },
   {
     label: "CUSTOMER",
     title: "Smart Portal",
-    description: "Request transport, follow orders, payments and delivery proof.",
+    description: "Request transport, get route-aware quotes, follow the truck live, submit payments and view delivery proof.",
     path: "/customer/login",
     accent: "bg-emerald-700 text-white",
   },
+];
+
+const liveCapabilities = [
+  "Live driver GPS",
+  "Customer truck tracking",
+  "Route-aware quotes",
+  "Turn-by-turn navigation",
+  "Automatic route steps",
+  "Secure payment flow",
 ];
 
 export function PortalLanding() {
@@ -49,8 +58,22 @@ export function PortalLanding() {
             Logistics built around every role.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-7 text-white/55 sm:text-lg">
-            Secure, focused portals for leadership, drivers and customers—connected by one live transport network.
+            Secure portals for leadership, drivers and customers—connected by live GPS, road routing, payments and one shared transport network.
           </p>
+        </div>
+
+        <div className="mb-8 border-y border-white/10 py-5">
+          <p className="mb-3 font-mono text-[10px] tracking-[.2em] text-white/35">LIVE PLATFORM CAPABILITIES</p>
+          <div className="flex flex-wrap gap-2">
+            {liveCapabilities.map((capability) => (
+              <span
+                key={capability}
+                className="border border-white/15 bg-white/[.04] px-3 py-2 font-mono text-[10px] tracking-wide text-white/65"
+              >
+                {capability}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
