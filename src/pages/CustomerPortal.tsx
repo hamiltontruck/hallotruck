@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { calculateQuote, createCustomerOrder, getCustomerPortalData, openCustomerProof, printCustomerInvoice, submitCustomerPayment, type CustomerOrder, type CustomerPortalData } from "../services/customer.service";
+import { calculateQuote, createCustomerOrder, getCustomerPortalData, openCustomerProof, openCustomerTruckPhoto, printCustomerInvoice, submitCustomerPayment, type CustomerOrder, type CustomerPortalData } from "../services/customer.service";
 import { supabase } from "../services/supabase.client";
 import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/CustomerQuoteMap";
 import { CustomerLiveTripMap } from "../components/tracking/CustomerLiveTripMap";
 
-const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [] };
+const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [], assignments: [] };
 
 export function CustomerPortal() {
   const navigate = useNavigate();
@@ -113,6 +113,7 @@ export function CustomerPortal() {
             {data.orders.length === 0 && <div className="border border-asphalt/10 bg-white p-10 text-center"><p className="font-display text-xl font-semibold">No orders yet</p><p className="mt-2 text-sm text-steel">Create your first smart transport request.</p></div>}
             {data.orders.map((order) => {
               const proof = data.proofs.find((item) => item.order_id === order.id);
+              const assignment = data.assignments.find((item) => item.order_id === order.id);
               const orderPayments = data.payments.filter((item) => item.order_id === order.id);
               const pending = orderPayments.some((item) => ["initiated", "held_escrow"].includes(item.event));
               const trackable = ["accepted", "in_transit", "delivered"].includes(order.status);
@@ -127,6 +128,22 @@ export function CustomerPortal() {
                   <Info label="Payment" value={pending ? "Pending verification" : order.payment_status.replace("_", " ")} />
                   <Info label="Vehicle" value={order.vehicle_type} />
                 </div>
+
+                {assignment && <div className="mt-5 border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div><p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">ASSIGNED DRIVER & TRUCK</p><p className="mt-1 font-display text-lg font-semibold">{assignment.driver_name}</p><a href={`tel:${assignment.driver_phone}`} className="mt-1 inline-block text-sm font-semibold text-emerald-800">{assignment.driver_phone}</a></div>
+                    <span className={`px-3 py-2 text-[10px] font-semibold uppercase ${assignment.driver_verified ? "bg-emerald-700 text-white" : "border border-amber/30 bg-amber/10 text-amber-dim"}`}>{assignment.driver_verified ? "✓ Verified driver" : "Verification pending"}</span>
+                  </div>
+                  <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                    <SafeInfo label="License" value={assignment.license_verified ? "Verified" : "Pending"} />
+                    <SafeInfo label="National ID" value={assignment.national_id_verified ? "Verified" : "Pending"} />
+                    <SafeInfo label="Truck plate" value={assignment.plate_number ?? "Pending"} />
+                    <SafeInfo label="Truck" value={`${assignment.vehicle_type ?? order.vehicle_type}${assignment.capacity_tons ? ` · ${assignment.capacity_tons} tons` : ""}`} />
+                  </div>
+                  {assignment.truck_photo_path && <button onClick={() => void openCustomerTruckPhoto(assignment.truck_photo_path!)} className="mt-4 border border-emerald-700 px-4 py-2.5 text-xs font-semibold text-emerald-800">View verified truck photo</button>}
+                  <p className="mt-3 text-[10px] leading-relaxed text-emerald-900/65">For privacy and fraud prevention, license and national-ID files stay private. You see their verified status only.</p>
+                </div>}
+
                 <div className="mt-5 flex flex-wrap gap-3 border-t border-asphalt/10 pt-5">
                   {trackable && <button onClick={() => setTrackingOrder(order)} className="bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">Live trip tracking</button>}
                   <button onClick={() => setPaymentOrder(order)} className="bg-asphalt px-4 py-3 text-xs font-semibold text-white">Submit payment</button>
@@ -179,4 +196,5 @@ export function CustomerPortal() {
 }
 
 function Info({ label, value }: { label: string; value: string }) { return <div><p className="text-xs text-steel">{label}</p><p className="mt-1 font-semibold capitalize">{value}</p></div>; }
+function SafeInfo({ label, value }: { label: string; value: string }) { return <div className="bg-white/70 p-3"><p className="text-[10px] uppercase tracking-wider text-emerald-900/55">{label}</p><p className="mt-1 font-semibold text-emerald-950">{value}</p></div>; }
 function Field({ name, label, placeholder }: { name: string; label: string; placeholder: string }) { return <label className="text-sm">{label}<input required name={name} placeholder={placeholder} className="mt-2 block w-full border border-line px-4 py-3" /></label>; }
