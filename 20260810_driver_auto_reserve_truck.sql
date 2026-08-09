@@ -16,6 +16,7 @@ declare
   assigned_truck_id uuid;
   assigned_vehicle_type text;
   affected_rows integer;
+  auto_reserved boolean := false;
 begin
   if current_user_id is null then
     raise exception 'Authentication required';
@@ -100,6 +101,7 @@ begin
         driver_id = current_user_id,
         updated_at = now()
     where id = selected_truck_id;
+    auto_reserved := true;
   end if;
 
   update public.orders
@@ -114,19 +116,21 @@ begin
   get diagnostics affected_rows = row_count;
 
   if affected_rows <> 1 then
-    -- Defensive cleanup only for a truck auto-reserved by this attempt and not used by an active trip.
-    update public.trucks t
-    set status = 'available',
-        driver_id = null,
-        updated_at = now()
-    where t.id = selected_truck_id
-      and t.driver_id = current_user_id
-      and not exists (
-        select 1
-        from public.orders active_order
-        where active_order.truck_id = t.id
-          and active_order.status in ('accepted'::public.order_status, 'in_transit'::public.order_status)
-      );
+    -- Only undo a truck reservation made by this claim attempt.
+    if auto_reserved then
+      update public.trucks t
+      set status = 'available',
+          driver_id = null,
+          updated_at = now()
+      where t.id = selected_truck_id
+        and t.driver_id = current_user_id
+        and not exists (
+          select 1
+          from public.orders active_order
+          where active_order.truck_id = t.id
+            and active_order.status in ('accepted'::public.order_status, 'in_transit'::public.order_status)
+        );
+    end if;
     return false;
   end if;
 
