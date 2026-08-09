@@ -34,10 +34,24 @@ export interface CustomerPayment {
   created_at: string;
 }
 
+export interface CustomerDriverAssignment {
+  order_id: string;
+  driver_name: string;
+  driver_phone: string;
+  driver_verified: boolean;
+  license_verified: boolean;
+  national_id_verified: boolean;
+  plate_number: string | null;
+  vehicle_type: string | null;
+  capacity_tons: number | null;
+  truck_photo_path: string | null;
+}
+
 export interface CustomerPortalData {
   orders: CustomerOrder[];
   proofs: CustomerProof[];
   payments: CustomerPayment[];
+  assignments: CustomerDriverAssignment[];
 }
 
 const vehicleRates: Record<string, number> = {
@@ -61,9 +75,9 @@ export async function getCustomerPortalData(): Promise<CustomerPortalData> {
   if (error) throw new Error(error.message);
 
   const ids = (orders ?? []).map((order) => order.id);
-  if (!ids.length) return { orders: [], proofs: [], payments: [] };
+  if (!ids.length) return { orders: [], proofs: [], payments: [], assignments: [] };
 
-  const [proofResult, paymentResult] = await Promise.all([
+  const [proofResult, paymentResult, assignmentResult] = await Promise.all([
     supabase
       .from("delivery_proofs")
       .select("order_id, recipient_name, delivery_note, photo_path, signature_path, delivered_at")
@@ -73,6 +87,7 @@ export async function getCustomerPortalData(): Promise<CustomerPortalData> {
       .select("id, order_id, provider, provider_ref, amount_etb, event, created_at")
       .in("order_id", ids)
       .order("created_at", { ascending: false }),
+    supabase.rpc("customer_driver_assignment_cards"),
   ]);
 
   if (proofResult.error) throw new Error(proofResult.error.message);
@@ -82,6 +97,8 @@ export async function getCustomerPortalData(): Promise<CustomerPortalData> {
     orders: orders ?? [],
     proofs: proofResult.data ?? [],
     payments: paymentResult.data ?? [],
+    // Keep the customer portal operational before the optional verification migration is applied.
+    assignments: assignmentResult.error ? [] : ((assignmentResult.data ?? []) as CustomerDriverAssignment[]),
   };
 }
 
@@ -173,6 +190,12 @@ export function printCustomerInvoice(order: CustomerOrder, payments: CustomerPay
 
 export async function openCustomerProof(path: string) {
   const { data, error } = await supabase.storage.from("delivery-proofs").createSignedUrl(path, 300);
+  if (error) throw new Error(error.message);
+  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+}
+
+export async function openCustomerTruckPhoto(path: string) {
+  const { data, error } = await supabase.storage.from("driver-verification").createSignedUrl(path, 300);
   if (error) throw new Error(error.message);
   window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
