@@ -147,6 +147,11 @@ export function ActiveTrip() {
 
   async function handleDeliver() {
     if (!order) return;
+    if (order.status !== "in_transit") {
+      setError("Delivery is locked until the trip is in transit. Start live GPS and wait for the first successful update.");
+      return;
+    }
+
     setFinishing(true);
     try {
       await markDelivered(order.id);
@@ -249,9 +254,16 @@ export function ActiveTrip() {
           <span className={`w-2 h-2 rounded-full ${gpsSharing ? "bg-route animate-pulse" : "bg-steel"}`} />
         </div>
         {!gpsSharing ? (
-          <Button onClick={startSharing} className="w-full">
-            Start sharing my location
-          </Button>
+          <>
+            {order.status === "accepted" && (
+              <p className="font-body text-xs text-steel mb-3">
+                Start live GPS to begin this trip. The first successful GPS update moves the order to In Transit and unlocks delivery completion.
+              </p>
+            )}
+            <Button onClick={startSharing} className="w-full">
+              Start sharing my location
+            </Button>
+          </>
         ) : (
           <>
             <p className="font-body text-xs text-steel mb-3">
@@ -274,9 +286,18 @@ export function ActiveTrip() {
         )}
       </div>
 
-      <Button onClick={handleDeliver} disabled={finishing} className="w-full">
-        {finishing ? "Confirming…" : "Mark as delivered"}
-      </Button>
+      {order.status === "in_transit" ? (
+        <Button onClick={handleDeliver} disabled={finishing} className="w-full">
+          {finishing ? "Confirming…" : "Mark as delivered"}
+        </Button>
+      ) : (
+        <div className="border border-line bg-white px-5 py-4 text-center">
+          <p className="font-display font-semibold text-asphalt">Delivery locked</p>
+          <p className="font-body text-xs text-steel mt-1">
+            Complete the pickup/start-trip step by sending a successful live GPS update first.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
