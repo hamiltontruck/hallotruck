@@ -13,9 +13,14 @@ export interface AdminSmartOrderInput {
   distanceKm: number;
 }
 
+const ethiopianMobilePattern = /^(?:09\d{8}|\+2519\d{8})$/;
+
 export async function createAdminSmartOrder(input: AdminSmartOrderInput) {
-  if (!input.customerName.trim()) throw new Error("Customer name is required.");
-  if (!input.customerPhone.trim()) throw new Error("Customer phone is required.");
+  const customerName = input.customerName.trim();
+  const customerPhone = input.customerPhone.trim();
+
+  if (!customerName) throw new Error("Customer name is required.");
+  if (!ethiopianMobilePattern.test(customerPhone)) throw new Error("Phone must be 09xxxxxxxx or +2519xxxxxxxx.");
   if (!input.vehicleType.trim()) throw new Error("Vehicle type is required.");
   if (!Number.isFinite(input.distanceKm) || input.distanceKm <= 0) throw new Error("Choose a valid pickup and drop-off route first.");
 
@@ -26,8 +31,8 @@ export async function createAdminSmartOrder(input: AdminSmartOrderInput) {
     .from("orders")
     .insert({
       tracking_id: trackingId,
-      customer_name: input.customerName.trim(),
-      customer_phone: input.customerPhone.trim(),
+      customer_name: customerName,
+      customer_phone: customerPhone,
       pickup_address: input.pickupAddress.trim(),
       pickup: `POINT(${input.pickup[0]} ${input.pickup[1]})`,
       dropoff_address: input.dropoffAddress.trim(),
