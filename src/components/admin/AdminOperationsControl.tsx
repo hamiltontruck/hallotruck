@@ -26,7 +26,7 @@ function money(value: number) {
 }
 
 function label(value: string) {
-  return value.replaceAll("_", " ");
+  return value.replace(/_/g, " ");
 }
 
 function dateTime(value?: string | null) {
