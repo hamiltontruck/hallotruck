@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getMyActiveOrders,
-  markDelivered,
   getNavigation,
   MyOrder,
   NavigationRoute,
@@ -12,6 +11,7 @@ import { formatEtb } from "../utils/currency";
 import { Button } from "../components/ui/Button";
 import { CargoPlate } from "../components/ui/CargoPlate";
 import { TripMap } from "../components/navigation/TripMap";
+import { DriverDeliveryProofForm } from "../components/driver/DriverDeliveryProofForm";
 
 const STATUS_LABEL: Record<string, string> = {
   accepted: "Assigned — head to pickup",
@@ -41,7 +41,6 @@ export function ActiveTrip() {
   const [lastPing, setLastPing] = useState<string | null>(null);
   const [speedKmh, setSpeedKmh] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [finishing, setFinishing] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const [route, setRoute] = useState<NavigationRoute | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -145,20 +144,6 @@ export function ActiveTrip() {
 
   useEffect(() => () => stopSharing(), []);
 
-  async function handleDeliver() {
-    if (!order) return;
-    setFinishing(true);
-    try {
-      await markDelivered(order.id);
-      stopSharing();
-      navigate("/driver/jobs");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't mark delivered.");
-    } finally {
-      setFinishing(false);
-    }
-  }
-
   if (loading) return <div className="max-w-2xl mx-auto px-6 py-16 font-body text-steel">Loading…</div>;
 
   if (!order) {
@@ -249,9 +234,16 @@ export function ActiveTrip() {
           <span className={`w-2 h-2 rounded-full ${gpsSharing ? "bg-route animate-pulse" : "bg-steel"}`} />
         </div>
         {!gpsSharing ? (
-          <Button onClick={startSharing} className="w-full">
-            Start sharing my location
-          </Button>
+          <>
+            {order.status === "accepted" && (
+              <p className="font-body text-xs text-steel mb-3">
+                Start live GPS to begin this trip. The first successful GPS update moves the order to In Transit and unlocks delivery completion.
+              </p>
+            )}
+            <Button onClick={startSharing} className="w-full">
+              Start sharing my location
+            </Button>
+          </>
         ) : (
           <>
             <p className="font-body text-xs text-steel mb-3">
@@ -274,9 +266,22 @@ export function ActiveTrip() {
         )}
       </div>
 
-      <Button onClick={handleDeliver} disabled={finishing} className="w-full">
-        {finishing ? "Confirming…" : "Mark as delivered"}
-      </Button>
+      {order.status === "in_transit" ? (
+        <DriverDeliveryProofForm
+          orderId={order.id}
+          onDelivered={() => {
+            stopSharing();
+            navigate("/driver/jobs");
+          }}
+        />
+      ) : (
+        <div className="border border-line bg-white px-5 py-4 text-center">
+          <p className="font-display font-semibold text-asphalt">Delivery locked</p>
+          <p className="font-body text-xs text-steel mt-1">
+            Complete the pickup/start-trip step by sending a successful live GPS update first.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
