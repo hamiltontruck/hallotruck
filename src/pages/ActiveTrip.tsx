@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getMyActiveOrders,
-  markDelivered,
   getNavigation,
   MyOrder,
   NavigationRoute,
@@ -12,6 +11,7 @@ import { formatEtb } from "../utils/currency";
 import { Button } from "../components/ui/Button";
 import { CargoPlate } from "../components/ui/CargoPlate";
 import { TripMap } from "../components/navigation/TripMap";
+import { DriverDeliveryProofForm } from "../components/driver/DriverDeliveryProofForm";
 
 const STATUS_LABEL: Record<string, string> = {
   accepted: "Assigned — head to pickup",
@@ -41,7 +41,6 @@ export function ActiveTrip() {
   const [lastPing, setLastPing] = useState<string | null>(null);
   const [speedKmh, setSpeedKmh] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [finishing, setFinishing] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const [route, setRoute] = useState<NavigationRoute | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -144,25 +143,6 @@ export function ActiveTrip() {
   }
 
   useEffect(() => () => stopSharing(), []);
-
-  async function handleDeliver() {
-    if (!order) return;
-    if (order.status !== "in_transit") {
-      setError("Delivery is locked until the trip is in transit. Start live GPS and wait for the first successful update.");
-      return;
-    }
-
-    setFinishing(true);
-    try {
-      await markDelivered(order.id);
-      stopSharing();
-      navigate("/driver/jobs");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't mark delivered.");
-    } finally {
-      setFinishing(false);
-    }
-  }
 
   if (loading) return <div className="max-w-2xl mx-auto px-6 py-16 font-body text-steel">Loading…</div>;
 
@@ -287,9 +267,13 @@ export function ActiveTrip() {
       </div>
 
       {order.status === "in_transit" ? (
-        <Button onClick={handleDeliver} disabled={finishing} className="w-full">
-          {finishing ? "Confirming…" : "Mark as delivered"}
-        </Button>
+        <DriverDeliveryProofForm
+          orderId={order.id}
+          onDelivered={() => {
+            stopSharing();
+            navigate("/driver/jobs");
+          }}
+        />
       ) : (
         <div className="border border-line bg-white px-5 py-4 text-center">
           <p className="font-display font-semibold text-asphalt">Delivery locked</p>
