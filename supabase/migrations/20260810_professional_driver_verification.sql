@@ -70,11 +70,19 @@ create policy "driver verification leadership manage"
   using (coalesce(auth.jwt()->'app_metadata'->>'role','') in ('admin','ceo'))
   with check (coalesce(auth.jwt()->'app_metadata'->>'role','') in ('admin','ceo'));
 
--- Drivers need read access to the fleet truck currently assigned to them.
+-- Drivers may read a truck that is assigned to them or that appears on one of their trips.
 drop policy if exists "trucks driver reads assigned" on public.trucks;
 create policy "trucks driver reads assigned"
   on public.trucks for select to authenticated
-  using (driver_id = auth.uid());
+  using (
+    driver_id = auth.uid()
+    or exists (
+      select 1
+      from public.orders o
+      where o.truck_id = trucks.id
+        and o.driver_id = auth.uid()
+    )
+  );
 
 -- Private verification storage. Customer visibility is restricted to a verified truck-front photo.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
