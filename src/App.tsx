@@ -15,6 +15,7 @@ import { CustomerLogin } from "./pages/CustomerLogin";
 import { CustomerPortal } from "./pages/CustomerPortal";
 import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
+import { LanguageProvider } from "./i18n/LanguageProvider";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
   return (
@@ -37,21 +38,23 @@ function AdminWorkspace() {
 
 export default function App() {
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<PortalLanding />} />
-        <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
-        <Route path="/admin/driver-compliance" element={<AdminGate><AdminDriverCompliance /></AdminGate>} />
-        <Route path="/customer/login" element={<CustomerLogin />} />
-        <Route path="/customer" element={<CustomerGate><CustomerPortal /></CustomerGate>} />
-        <Route path="/driver/login" element={<Login />} />
-        <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
-        <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
-        <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
-        <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
-        <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </HashRouter>
+    <LanguageProvider>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<PortalLanding />} />
+          <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
+          <Route path="/admin/driver-compliance" element={<AdminGate><AdminDriverCompliance /></AdminGate>} />
+          <Route path="/customer/login" element={<CustomerLogin />} />
+          <Route path="/customer" element={<CustomerGate><CustomerPortal /></CustomerGate>} />
+          <Route path="/driver/login" element={<Login />} />
+          <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
+          <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
+          <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
+          <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
+          <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </HashRouter>
+    </LanguageProvider>
   );
 }
