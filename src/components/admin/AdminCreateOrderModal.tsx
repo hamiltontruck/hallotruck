@@ -46,9 +46,14 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
     [orders],
   );
 
+  const approvedDrivers = useMemo(
+    () => drivers.filter((driver) => driver.driver_status === "approved"),
+    [drivers],
+  );
+
   const availableDrivers = useMemo(
-    () => drivers.filter((driver) => !busyDriverIds.has(driver.id)),
-    [busyDriverIds, drivers],
+    () => approvedDrivers.filter((driver) => !busyDriverIds.has(driver.id)),
+    [approvedDrivers, busyDriverIds],
   );
 
   const matchingTrucks = useMemo(
@@ -79,7 +84,7 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
       return;
     }
     if ((truckId && !driverId) || (!truckId && driverId)) {
-      setError("To assign now, select both a truck and a driver. Otherwise leave both as Assign later.");
+      setError("To assign now, select both a truck and an approved free driver. Otherwise leave both as Assign later.");
       return;
     }
 
@@ -102,7 +107,7 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
           await assignOrder(created.id, truckId, driverId);
         } catch (assignError) {
           setCreatedTrackingId(created.tracking_id);
-          setError(`Order ${created.tracking_id} was created, but assignment failed: ${assignError instanceof Error ? assignError.message : "Unknown assignment error"}. Close this form and assign it from Orders.`);
+          setError(`Order ${created.tracking_id} was created, but assignment failed: ${assignError instanceof Error ? assignError.message : "Unknown assignment error"}. Close this form and assign it from Orders when a matching truck and approved driver are free.`);
           setSaving(false);
           return;
         }
@@ -114,6 +119,12 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
       setSaving(false);
     }
   }
+
+  const driverAvailabilityMessage = approvedDrivers.length === 0
+    ? "No approved drivers. Verify a driver in Driver & vehicle compliance first."
+    : availableDrivers.length === 0
+      ? "All approved drivers are currently on active trips."
+      : "";
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-asphalt/70 p-3 sm:p-4">
@@ -159,8 +170,13 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
         </div>
 
         <div className="mt-5 border border-asphalt/10 p-4 sm:p-5">
-          <h3 className="font-semibold">Truck & driver assignment</h3>
-          <p className="mt-1 text-[11px] text-steel">Optional. Only an available truck matching the selected vehicle type and a driver without an active trip can be assigned.</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">Truck & driver assignment</h3>
+              <p className="mt-1 text-[11px] text-steel">Optional. Assignment requires a matching available truck and an approved driver with no active trip.</p>
+            </div>
+            {!assignmentLoading && <span className="bg-[#f5f3ed] px-3 py-2 font-mono text-[10px] text-steel">{matchingTrucks.length} trucks · {availableDrivers.length} drivers ready</span>}
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="text-xs font-semibold">
               Truck
@@ -168,17 +184,22 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
                 <option value="">Assign later</option>
                 {matchingTrucks.map((truck) => <option key={truck.id} value={truck.id}>{truck.plate_number} · {truck.vehicle_type} · {truck.capacity_tons ?? "—"} tons</option>)}
               </select>
-              {!assignmentLoading && vehicleType && matchingTrucks.length === 0 && <span className="mt-1 block text-[11px] text-route">No available {vehicleType} truck right now.</span>}
+              {!assignmentLoading && vehicleType && matchingTrucks.length === 0 && <span className="mt-1 block text-[11px] text-route">No available {vehicleType} truck. Finish an active trip or add another matching truck.</span>}
             </label>
             <label className="text-xs font-semibold">
-              Driver
-              <select name="driverId" defaultValue="" disabled={assignmentLoading} className="mt-2 block w-full border border-asphalt/20 bg-white px-3 py-3 text-sm disabled:opacity-50">
+              Approved driver
+              <select name="driverId" defaultValue="" disabled={assignmentLoading || availableDrivers.length === 0} className="mt-2 block w-full border border-asphalt/20 bg-white px-3 py-3 text-sm disabled:opacity-50">
                 <option value="">Assign later</option>
                 {availableDrivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name ?? driver.phone ?? "Driver"}</option>)}
               </select>
-              {!assignmentLoading && availableDrivers.length === 0 && <span className="mt-1 block text-[11px] text-route">No free driver right now.</span>}
+              {!assignmentLoading && driverAvailabilityMessage && <span className="mt-1 block text-[11px] text-route">{driverAvailabilityMessage}</span>}
             </label>
           </div>
+          {!assignmentLoading && (matchingTrucks.length === 0 || availableDrivers.length === 0) && (
+            <div className="mt-4 border border-amber/30 bg-amber/10 p-3 text-xs leading-relaxed text-asphalt">
+              Dispatch can be left as <strong>Assign later</strong>. The order is still created normally and can be assigned when both a compatible truck and approved free driver are available.
+            </div>
+          )}
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3 border border-asphalt/10 bg-[#f5f3ed] p-4 sm:grid-cols-3">
