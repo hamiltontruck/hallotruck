@@ -19,8 +19,9 @@ jobs:
           ref: agent/finance-ledger-verification
           fetch-depth: 0
       - name: Patch finance ledger UI
-        shell: python
+        shell: bash
         run: |
+          python3 <<'PY'
           from pathlib import Path
 
           path = Path("src/pages/SmartLogistics.tsx")
@@ -99,7 +100,9 @@ jobs:
           text = text.replace(old, new, 1)
 
           path.write_text(text)
+          PY
       - name: Commit patched UI
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
