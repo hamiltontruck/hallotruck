@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabase.client";
 import type { DriverVerificationFile } from "../services/driver.service";
+import { formatEtb } from "../utils/currency";
+import { HALLO_SMART_COMMISSION_PERCENT, splitHalloCommission } from "../utils/commission";
 
 type DriverRow = {
   id: string;
@@ -20,6 +22,48 @@ type TruckRow = {
   driver_id: string | null;
 };
 
+type DriverOrderRow = {
+  id: string;
+  tracking_id: string;
+  driver_id: string | null;
+  truck_id: string | null;
+  pickup_address: string;
+  dropoff_address: string;
+  vehicle_type: string;
+  price_etb: number | null;
+  status: string;
+  payment_status: string;
+  accepted_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+};
+
+type PaymentRow = {
+  order_id: string;
+  provider: string;
+  amount_etb: number | null;
+  event: string;
+};
+
+type DriverVerificationHistoryRow = {
+  id: string;
+  source_document_id: string;
+  driver_id: string;
+  truck_id: string | null;
+  document_key: string;
+  file_path: string;
+  original_name: string;
+  mime_type: string;
+  expiry_date: string | null;
+  status: string;
+  rejection_reason: string | null;
+  reviewed_at: string | null;
+  source_created_at: string | null;
+  source_updated_at: string | null;
+  archive_reason: string;
+  archived_at: string;
+};
+
 const identityRequired = ["driver_photo", "license_front", "license_back", "national_id_front", "national_id_back"];
 
 const labels: Record<string, string> = {
@@ -37,36 +81,99 @@ const labels: Record<string, string> = {
   truck_loading_area: "Loading area photo",
 };
 
+function money(value: number | null | undefined) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+}
+
+function when(value: string | null | undefined) {
+  return value ? new Date(value).toLocaleString() : "—";
+}
+
+function releasedForOrder(order: DriverOrderRow, payments: PaymentRow[]) {
+  const rows = payments.filter((payment) => payment.order_id === order.id);
+  const released = rows
+    .filter((payment) => payment.event === "released")
+    .reduce((sum, payment) => sum + money(payment.amount_etb), 0);
+  const creditRefunded = rows
+    .filter((payment) => payment.event === "refunded" && payment.provider === "credit_refund")
+    .reduce((sum, payment) => sum + money(payment.amount_etb), 0);
+  return Math.min(money(order.price_etb), Math.max(0, released - creditRefunded));
+}
+
+function statusBadge(status: string | null | undefined) {
+  if (status === "approved" || status === "verified" || status === "delivered") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  if (status === "rejected" || status === "suspended" || status === "failed") return "border-route/30 bg-route/5 text-route";
+  return "border-amber/30 bg-amber/10 text-amber-dim";
+}
+
 export function AdminDriverCompliance() {
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [trucks, setTrucks] = useState<TruckRow[]>([]);
   const [documents, setDocuments] = useState<DriverVerificationFile[]>([]);
+  const [history, setHistory] = useState<DriverVerificationHistoryRow[]>([]);
+  const [orders, setOrders] = useState<DriverOrderRow[]>([]);
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [historyAvailable, setHistoryAvailable] = useState(true);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [expandedDriverId, setExpandedDriverId] = useState<string | null>(null);
   const [busy, setBusy] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   async function load() {
     setLoading(true);
-    const [driverResult, truckResult, documentResult] = await Promise.all([
+    const [driverResult, truckResult, documentResult, orderResult, paymentResult] = await Promise.all([
       supabase.from("profiles").select("id,full_name,phone,email,home_address,driver_status").eq("role", "driver").order("full_name"),
       supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,driver_id").order("plate_number"),
       supabase.from("driver_verification_files").select("id,driver_id,truck_id,document_key,file_path,original_name,mime_type,expiry_date,status,rejection_reason,reviewed_at,created_at,updated_at").order("updated_at", { ascending: false }),
+      supabase.from("orders").select("id,tracking_id,driver_id,truck_id,pickup_address,dropoff_address,vehicle_type,price_etb,status,payment_status,accepted_at,delivered_at,created_at").not("driver_id", "is", null).order("created_at", { ascending: false }).limit(1000),
+      supabase.from("payments").select("order_id,provider,amount_etb,event").order("created_at", { ascending: false }).limit(2000),
     ]);
-    const queryError = driverResult.error || truckResult.error || documentResult.error;
-    if (queryError) setError(queryError.message);
-    else {
-      setDrivers((driverResult.data ?? []) as DriverRow[]);
-      setTrucks((truckResult.data ?? []) as TruckRow[]);
-      setDocuments((documentResult.data ?? []) as DriverVerificationFile[]);
-      setError("");
+
+    const queryError = driverResult.error || truckResult.error || documentResult.error || orderResult.error || paymentResult.error;
+    if (queryError) {
+      setError(queryError.message);
+      setLoading(false);
+      return;
     }
+
+    setDrivers((driverResult.data ?? []) as DriverRow[]);
+    setTrucks((truckResult.data ?? []) as TruckRow[]);
+    setDocuments((documentResult.data ?? []) as DriverVerificationFile[]);
+    setOrders((orderResult.data ?? []) as DriverOrderRow[]);
+    setPayments((paymentResult.data ?? []) as PaymentRow[]);
+    setError("");
+
+    const historyResult = await supabase
+      .from("driver_verification_history")
+      .select("id,source_document_id,driver_id,truck_id,document_key,file_path,original_name,mime_type,expiry_date,status,rejection_reason,reviewed_at,source_created_at,source_updated_at,archive_reason,archived_at")
+      .order("archived_at", { ascending: false })
+      .limit(2000);
+
+    if (historyResult.error) {
+      setHistory([]);
+      setHistoryAvailable(false);
+    } else {
+      setHistory((historyResult.data ?? []) as DriverVerificationHistoryRow[]);
+      setHistoryAvailable(true);
+    }
+
     setLoading(false);
   }
 
   useEffect(() => { void load(); }, []);
 
-  const visibleDrivers = useMemo(() => filter === "all" ? drivers : drivers.filter((driver) => documents.some((doc) => doc.driver_id === driver.id && doc.status === "pending")), [drivers, documents, filter]);
+  const visibleDrivers = useMemo(
+    () => filter === "all" ? drivers : drivers.filter((driver) => documents.some((doc) => doc.driver_id === driver.id && doc.status === "pending")),
+    [drivers, documents, filter],
+  );
+
+  const globalReleased = useMemo(
+    () => orders.reduce((sum, order) => sum + releasedForOrder(order, payments), 0),
+    [orders, payments],
+  );
+  const globalCommission = splitHalloCommission(globalReleased);
 
   async function openFile(path: string) {
     const { data, error } = await supabase.storage.from("driver-verification").createSignedUrl(path, 300);
@@ -101,44 +208,146 @@ export function AdminDriverCompliance() {
     setBusy("");
   }
 
+  async function removeDriver(driver: DriverRow) {
+    const activeTrip = orders.find((order) => order.driver_id === driver.id && ["accepted", "in_transit"].includes(order.status));
+    if (activeTrip) {
+      setError(`Cannot remove ${driver.full_name} while ${activeTrip.tracking_id} is ${activeTrip.status.replace("_", " ")}.`);
+      return;
+    }
+    const confirmed = window.confirm(`Remove ${driver.full_name} from the active driver roster?\n\nThe account will be suspended, idle truck assignment released, and all trip/payment/document history preserved.`);
+    if (!confirmed) return;
+    setBusy(driver.id); setError("");
+    const { error } = await supabase.rpc("admin_suspend_driver", { p_driver_id: driver.id });
+    if (error) setError(error.message); else await load();
+    setBusy("");
+  }
+
+  async function restoreDriver(driver: DriverRow) {
+    const confirmed = window.confirm(`Restore ${driver.full_name} to pending review? The driver must be approved again before accepting loads.`);
+    if (!confirmed) return;
+    setBusy(driver.id); setError("");
+    const { error } = await supabase.rpc("admin_restore_driver", { p_driver_id: driver.id });
+    if (error) setError(error.message); else await load();
+    setBusy("");
+  }
+
   return <main className="min-h-screen bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10">
     <div className="mx-auto max-w-7xl">
       <section className="bg-asphalt p-6 text-white sm:p-8">
         <p className="font-mono text-[10px] tracking-[.2em] text-amber">COMPLIANCE CONTROL</p>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-display text-3xl font-bold sm:text-4xl">Driver & vehicle verification</h1><p className="mt-2 max-w-2xl text-sm text-white/55">Review private identity and fleet records before drivers represent Hallo Truck on customer shipments.</p></div><a href="#/admin" className="border border-white/20 px-4 py-3 text-sm font-semibold">← Operations</a></div>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold sm:text-4xl">Driver operations & verification</h1>
+            <p className="mt-2 max-w-2xl text-sm text-white/55">Review private documents, full trip history, driver lifecycle and HALLO Smart commission from one audit-safe workspace.</p>
+          </div>
+          <a href="#/admin" className="border border-white/20 px-4 py-3 text-sm font-semibold">← Operations</a>
+        </div>
+      </section>
+
+      <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Summary label="Active drivers" value={String(drivers.filter((driver) => driver.driver_status !== "suspended").length)} />
+        <Summary label="Completed trips" value={String(orders.filter((order) => order.status === "delivered").length)} />
+        <Summary label="Released customer payment" value={formatEtb(globalReleased)} />
+        <Summary label={`HALLO Smart ${HALLO_SMART_COMMISSION_PERCENT}%`} value={formatEtb(globalCommission.commissionEtb)} accent />
       </section>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2"><button onClick={() => setFilter("pending")} className={`px-4 py-2 text-xs font-semibold ${filter === "pending" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>Pending review</button><button onClick={() => setFilter("all")} className={`px-4 py-2 text-xs font-semibold ${filter === "all" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>All drivers</button></div>
+        <div className="flex gap-2">
+          <button onClick={() => setFilter("pending")} className={`px-4 py-2 text-xs font-semibold ${filter === "pending" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>Pending review</button>
+          <button onClick={() => setFilter("all")} className={`px-4 py-2 text-xs font-semibold ${filter === "all" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>All drivers</button>
+        </div>
         <span className="font-mono text-xs text-steel">{documents.filter((doc) => doc.status === "pending").length} files pending</span>
       </div>
 
+      {!historyAvailable && <p className="mt-4 border border-amber/30 bg-amber/10 p-3 text-xs text-amber-dim">Document version history is waiting for the new Supabase audit migration. Current verification files still work normally.</p>}
       {error && <p className="mt-5 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
-      {loading ? <p className="py-16 text-center font-mono text-sm text-steel">Loading compliance records…</p> : visibleDrivers.length === 0 ? <div className="mt-5 border border-asphalt/10 bg-white p-10 text-center"><p className="font-display text-xl font-semibold">No drivers in this view</p><p className="mt-2 text-sm text-steel">Pending verification submissions will appear here.</p></div> : <div className="mt-5 grid gap-5">
+
+      {loading ? <p className="py-16 text-center font-mono text-sm text-steel">Loading driver operations…</p> : visibleDrivers.length === 0 ? <div className="mt-5 border border-asphalt/10 bg-white p-10 text-center"><p className="font-display text-xl font-semibold">No drivers in this view</p><p className="mt-2 text-sm text-steel">Pending verification submissions will appear here.</p></div> : <div className="mt-5 grid gap-5">
         {visibleDrivers.map((driver) => {
           const driverDocs = documents.filter((doc) => doc.driver_id === driver.id);
           const identityDocs = driverDocs.filter((doc) => !doc.truck_id);
+          const historyRows = history.filter((item) => item.driver_id === driver.id);
+          const driverOrders = orders.filter((order) => order.driver_id === driver.id);
+          const deliveredOrders = driverOrders.filter((order) => order.status === "delivered");
           const verifiedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "verified")).length;
           const assignedTruck = trucks.find((truck) => truck.driver_id === driver.id) ?? (driverDocs.find((doc) => doc.truck_id)?.truck_id ? trucks.find((truck) => truck.id === driverDocs.find((doc) => doc.truck_id)?.truck_id) : undefined);
+          const releasedGross = driverOrders.reduce((sum, order) => sum + releasedForOrder(order, payments), 0);
+          const split = splitHalloCommission(releasedGross);
+          const expanded = expandedDriverId === driver.id;
+          const activeTrip = driverOrders.find((order) => ["accepted", "in_transit"].includes(order.status));
+
           return <article key={driver.id} className="border border-asphalt/10 bg-white">
             <div className="grid gap-5 border-b border-asphalt/10 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
-              <div><div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{driver.full_name}</h2><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${driver.driver_status === "approved" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber/30 bg-amber/10 text-amber-dim"}`}>{driver.driver_status ?? "pending"}</span></div><p className="mt-2 text-sm text-steel">{driver.phone}{driver.email ? ` · ${driver.email}` : ""}</p><p className="mt-1 text-xs text-steel">{driver.home_address || "Home address not supplied"}</p></div>
-              <div className="min-w-52 bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">IDENTITY VERIFIED</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity} / {identityRequired.length}</p>{driver.driver_status !== "approved" && <button disabled={busy === driver.id || verifiedIdentity !== identityRequired.length} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
+              <div>
+                <div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{driver.full_name}</h2><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(driver.driver_status)}`}>{driver.driver_status ?? "pending"}</span></div>
+                <p className="mt-2 text-sm text-steel">{driver.phone}{driver.email ? ` · ${driver.email}` : ""}</p>
+                <p className="mt-1 text-xs text-steel">{driver.home_address || "Home address not supplied"}</p>
+                {activeTrip && <p className="mt-3 text-xs font-semibold text-amber-dim">Active trip: {activeTrip.tracking_id} · {activeTrip.status.replace("_", " ")}</p>}
+              </div>
+              <div className="flex min-w-52 flex-col gap-2">
+                <div className="bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">IDENTITY VERIFIED</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity} / {identityRequired.length}</p>{driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <button disabled={busy === driver.id || verifiedIdentity !== identityRequired.length} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
+                {driver.driver_status === "suspended" ? <button disabled={busy === driver.id} onClick={() => void restoreDriver(driver)} className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-40">Restore driver</button> : <button disabled={busy === driver.id || Boolean(activeTrip)} onClick={() => void removeDriver(driver)} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route disabled:opacity-35">Remove driver</button>}
+              </div>
             </div>
 
-            {assignedTruck && <div className="border-b border-asphalt/10 bg-emerald-50/40 px-5 py-4 text-sm sm:px-6"><strong>{assignedTruck.plate_number}</strong> · {assignedTruck.vehicle_type} · {assignedTruck.capacity_tons ?? "—"} tons · <span className="capitalize">{assignedTruck.status}</span></div>}
+            <div className="grid gap-px bg-asphalt/10 sm:grid-cols-2 lg:grid-cols-4">
+              <Mini label="Total trips" value={String(driverOrders.length)} />
+              <Mini label="Delivered" value={String(deliveredOrders.length)} />
+              <Mini label="HALLO 2% commission" value={formatEtb(split.commissionEtb)} />
+              <Mini label="Driver net released" value={formatEtb(split.driverNetEtb)} strong />
+            </div>
+
+            {assignedTruck && <div className="border-t border-asphalt/10 bg-emerald-50/40 px-5 py-4 text-sm sm:px-6"><strong>{assignedTruck.plate_number}</strong> · {assignedTruck.vehicle_type} · {assignedTruck.capacity_tons ?? "—"} tons · <span className="capitalize">{assignedTruck.status}</span></div>}
+
+            <div className="border-t border-asphalt/10 px-5 py-4 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{driverDocs.length} current verification records · {historyRows.length} archived versions</p></div><button onClick={() => setExpandedDriverId(expanded ? null : driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{expanded ? "Hide full history" : "View full driver history"}</button></div>
+            </div>
 
             <div className="grid gap-px bg-asphalt/10 sm:grid-cols-2 xl:grid-cols-3">
               {driverDocs.length === 0 ? <div className="col-span-full bg-white p-6 text-sm text-steel">No verification files submitted yet.</div> : driverDocs.map((doc) => <div key={doc.id} className="bg-white p-5">
-                <div className="flex items-start justify-between gap-3"><div><p className="font-display font-semibold">{labels[doc.document_key] ?? doc.document_key}</p><p className="mt-1 max-w-52 truncate text-xs text-steel">{doc.original_name}</p></div><span className={`px-2 py-1 text-[9px] font-semibold uppercase ${doc.status === "verified" ? "bg-emerald-50 text-emerald-800" : doc.status === "rejected" ? "bg-route/5 text-route" : "bg-amber/10 text-amber-dim"}`}>{doc.status}</span></div>
+                <div className="flex items-start justify-between gap-3"><div><p className="font-display font-semibold">{labels[doc.document_key] ?? doc.document_key}</p><p className="mt-1 max-w-52 truncate text-xs text-steel">{doc.original_name}</p></div><span className={`border px-2 py-1 text-[9px] font-semibold uppercase ${statusBadge(doc.status)}`}>{doc.status}</span></div>
                 {doc.expiry_date && <p className="mt-3 text-xs text-steel">Expiry: <strong className="text-asphalt">{doc.expiry_date}</strong></p>}
                 {doc.rejection_reason && <p className="mt-3 text-xs text-route">{doc.rejection_reason}</p>}
                 <div className="mt-4 flex flex-wrap gap-2"><button onClick={() => void openFile(doc.file_path)} className="border border-asphalt px-3 py-2 text-xs font-semibold">Open file</button>{doc.status === "pending" && <><button disabled={busy === doc.id} onClick={() => void review(doc, "verified")} className="bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Verify</button><button disabled={busy === doc.id} onClick={() => void review(doc, "rejected")} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route disabled:opacity-40">Reject</button></>}</div>
               </div>)}
             </div>
+
+            {expanded && <div className="border-t-4 border-[#f5f3ed] bg-[#faf9f5] p-5 sm:p-6">
+              <section>
+                <div className="flex items-end justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">TRIP AUDIT</p><h3 className="mt-1 font-display text-xl font-semibold">Full trip history</h3></div><span className="font-mono text-xs text-steel">{driverOrders.length} trips</span></div>
+                <div className="mt-4 grid gap-3">
+                  {driverOrders.length === 0 ? <p className="border border-asphalt/10 bg-white p-5 text-sm text-steel">No trips recorded for this driver.</p> : driverOrders.map((order) => {
+                    const released = releasedForOrder(order, payments);
+                    const payout = splitHalloCommission(released);
+                    return <div key={order.id} className="border border-asphalt/10 bg-white p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-xs font-semibold">{order.tracking_id}</p><p className="mt-2 text-sm">{order.pickup_address} → {order.dropoff_address}</p></div><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(order.status)}`}>{order.status.replace("_", " ")}</span></div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4"><AuditValue label="Invoice" value={formatEtb(money(order.price_etb))} /><AuditValue label="Payment" value={order.payment_status.replace("_", " ")} /><AuditValue label="HALLO 2%" value={formatEtb(payout.commissionEtb)} /><AuditValue label="Driver net" value={formatEtb(payout.driverNetEtb)} strong /></div>
+                      <p className="mt-3 text-[11px] text-steel">Accepted: {when(order.accepted_at)} · Delivered: {when(order.delivered_at)}</p>
+                    </div>;
+                  })}
+                </div>
+              </section>
+
+              <section className="mt-7">
+                <div className="flex items-end justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">DOCUMENT AUDIT</p><h3 className="mt-1 font-display text-xl font-semibold">Document version history</h3></div><span className="font-mono text-xs text-steel">{historyRows.length} versions</span></div>
+                {!historyAvailable ? <p className="mt-4 border border-amber/30 bg-amber/10 p-4 text-sm text-amber-dim">Apply the driver audit migration to start preserving every future replacement and review-state version.</p> : historyRows.length === 0 ? <p className="mt-4 border border-asphalt/10 bg-white p-5 text-sm text-steel">No archived versions yet. Future replacements and review changes will be preserved here.</p> : <div className="mt-4 grid gap-3 sm:grid-cols-2">{historyRows.map((item) => <div key={item.id} className="border border-asphalt/10 bg-white p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{labels[item.document_key] ?? item.document_key}</p><p className="mt-1 max-w-56 truncate text-xs text-steel">{item.original_name}</p></div><span className={`border px-2 py-1 text-[9px] font-semibold uppercase ${statusBadge(item.status)}`}>{item.status}</span></div><p className="mt-3 text-[11px] text-steel">Archived: {when(item.archived_at)} · {item.archive_reason.replace("_", " ")}</p>{item.rejection_reason && <p className="mt-2 text-xs text-route">{item.rejection_reason}</p>}<button onClick={() => void openFile(item.file_path)} className="mt-3 border border-asphalt px-3 py-2 text-xs font-semibold">Open archived file</button></div>)}</div>}
+              </section>
+            </div>}
           </article>;
         })}
       </div>}
     </div>
   </main>;
+}
+
+function Summary({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div className={`border p-4 sm:p-5 ${accent ? "border-amber bg-amber/10" : "border-asphalt/10 bg-white"}`}><p className="font-mono text-[9px] uppercase tracking-[.12em] text-steel">{label}</p><p className="mt-2 font-display text-xl font-bold sm:text-2xl">{value}</p></div>;
+}
+
+function Mini({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return <div className="bg-white p-4 sm:p-5"><p className="font-mono text-[9px] uppercase tracking-[.12em] text-steel">{label}</p><p className={`mt-2 text-sm ${strong ? "font-bold text-emerald-800" : "font-semibold text-asphalt"}`}>{value}</p></div>;
+}
+
+function AuditValue({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return <div><p className="font-mono text-[9px] uppercase tracking-[.12em] text-steel">{label}</p><p className={`mt-1 capitalize ${strong ? "font-bold text-emerald-800" : "font-semibold text-asphalt"}`}>{value}</p></div>;
 }
