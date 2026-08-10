@@ -3,6 +3,7 @@ import { submitCustomerPayment, type CustomerOrder } from "../../services/custom
 
 interface Props {
   order: CustomerOrder;
+  maxAmount: number;
   onClose: () => void;
   onSubmitted: () => Promise<void> | void;
 }
@@ -17,7 +18,7 @@ const providers = [
   ["mpesa", "M-Pesa"],
 ] as const;
 
-export function CustomerPaymentModal({ order, onClose, onSubmitted }: Props) {
+export function CustomerPaymentModal({ order, maxAmount, onClose, onSubmitted }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [receiptName, setReceiptName] = useState("");
@@ -59,7 +60,7 @@ export function CustomerPaymentModal({ order, onClose, onSubmitted }: Props) {
           <div>
             <p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">SECURE PAYMENT SUBMISSION</p>
             <h2 className="mt-2 font-display text-2xl font-bold">{order.tracking_id}</h2>
-            <p className="mt-2 text-xs text-steel">Invoice ETB {Number(order.price_etb ?? 0).toLocaleString()}</p>
+            <p className="mt-2 text-xs text-steel">Invoice ETB {Number(order.price_etb ?? 0).toLocaleString()} · remaining ETB {maxAmount.toLocaleString()}</p>
           </div>
           <button type="button" onClick={onClose} className="text-2xl">×</button>
         </div>
@@ -82,7 +83,7 @@ export function CustomerPaymentModal({ order, onClose, onSubmitted }: Props) {
           </label>
 
           <label className="text-sm">Amount ETB
-            <input required min="1" max={Number(order.price_etb ?? undefined)} name="amountEtb" type="number" step="0.01" defaultValue={Number(order.price_etb ?? 0) || undefined} className="mt-2 block w-full border border-line px-4 py-3" />
+            <input required min="1" max={maxAmount} name="amountEtb" type="number" step="0.01" defaultValue={maxAmount || undefined} className="mt-2 block w-full border border-line px-4 py-3" />
           </label>
 
           <label className="text-sm">Payment receipt / screenshot
@@ -99,7 +100,7 @@ export function CustomerPaymentModal({ order, onClose, onSubmitted }: Props) {
           </label>
         </div>
 
-        <button disabled={busy} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-50">{busy ? "Uploading & submitting…" : "Submit payment for verification"}</button>
+        <button disabled={busy || maxAmount <= 0} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-50">{busy ? "Uploading & submitting…" : "Submit payment for verification"}</button>
       </form>
     </div>
   );
