@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
+import { LanguageSwitcher, useLanguage } from "../i18n/LanguageProvider";
 
 export function Login() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -30,7 +32,7 @@ export function Login() {
     try {
       if (mode === "signup") {
         if (!fullName.trim() || !phone.trim()) {
-          throw new Error("Full name and phone number are required.");
+          throw new Error(t("driver.error.namePhone"));
         }
 
         const { data, error: signupError } = await supabase.auth.signUp({
@@ -51,11 +53,7 @@ export function Login() {
           navigate("/driver/jobs", { replace: true });
         } else {
           if (data.session) await supabase.auth.signOut();
-          setMessage(
-            data.user
-              ? "Account created. Driver access is pending approval."
-              : "Account created. Check your email to confirm your account.",
-          );
+          setMessage(data.user ? t("driver.message.pending") : t("driver.message.confirm"));
         }
       } else {
         const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
@@ -66,12 +64,12 @@ export function Login() {
         if (loginError) throw loginError;
         if (loginData.user.app_metadata?.role !== "driver") {
           await supabase.auth.signOut();
-          throw new Error("This account does not have Driver access.");
+          throw new Error(t("driver.error.access"));
         }
         navigate("/driver/jobs", { replace: true });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed.");
+      setError(err instanceof Error ? err.message : t("driver.error.auth"));
     } finally {
       setBusy(false);
     }
@@ -80,22 +78,23 @@ export function Login() {
   return (
     <main className="min-h-screen bg-bone flex items-center justify-center px-4 py-10">
       <section className="w-full max-w-md border border-line bg-white p-6 sm:p-8">
-        <div className="mb-8">
-          <div className="font-display font-bold text-2xl text-asphalt">
-            HALLO<span className="text-amber">TRUCK</span>
-            <span className="font-mono text-xs text-steel ml-2">DRIVER</span>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <div className="font-display font-bold text-2xl text-asphalt">
+              HALLO<span className="text-amber">TRUCK</span>
+              <span className="font-mono text-xs text-steel ml-2">DRIVER</span>
+            </div>
+            <div className="route-line mt-4" />
           </div>
-          <div className="route-line mt-4" />
+          <LanguageSwitcher />
         </div>
 
         <h1 className="font-display font-bold text-2xl text-asphalt">
-          {mode === "login" ? "Driver login" : "Create driver account"}
+          {mode === "login" ? t("driver.login.title") : t("driver.signup.title")}
         </h1>
 
         <p className="font-body text-sm text-steel mt-2 mb-6">
-          {mode === "login"
-            ? "Sign in to view available loads and manage trips."
-            : "Register as a Hallo Truck driver."}
+          {mode === "login" ? t("driver.login.desc") : t("driver.signup.desc")}
         </p>
 
         {error && (
@@ -114,7 +113,7 @@ export function Login() {
           {mode === "signup" && (
             <>
               <label className="block">
-                <span className="font-body text-sm text-asphalt">Full name</span>
+                <span className="font-body text-sm text-asphalt">{t("common.fullName")}</span>
                 <input
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
@@ -125,7 +124,7 @@ export function Login() {
               </label>
 
               <label className="block">
-                <span className="font-body text-sm text-asphalt">Phone number</span>
+                <span className="font-body text-sm text-asphalt">{t("common.phone")}</span>
                 <input
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
@@ -139,7 +138,7 @@ export function Login() {
           )}
 
           <label className="block">
-            <span className="font-body text-sm text-asphalt">Email</span>
+            <span className="font-body text-sm text-asphalt">{t("common.email")}</span>
             <input
               type="email"
               value={email}
@@ -151,7 +150,7 @@ export function Login() {
           </label>
 
           <label className="block">
-            <span className="font-body text-sm text-asphalt">Password</span>
+            <span className="font-body text-sm text-asphalt">{t("common.password")}</span>
             <input
               type="password"
               value={password}
@@ -168,11 +167,7 @@ export function Login() {
             disabled={busy}
             className="w-full bg-route text-bone font-display font-semibold px-6 py-3 disabled:opacity-50"
           >
-            {busy
-              ? "Please wait…"
-              : mode === "login"
-                ? "Sign in"
-                : "Create account"}
+            {busy ? t("common.wait") : mode === "login" ? t("driver.login.submit") : t("driver.signup.submit")}
           </button>
         </form>
 
@@ -185,9 +180,7 @@ export function Login() {
           }}
           className="w-full mt-5 font-body text-sm text-steel underline"
         >
-          {mode === "login"
-            ? "New driver? Create an account"
-            : "Already registered? Sign in"}
+          {mode === "login" ? t("driver.login.switchSignup") : t("driver.login.switchLogin")}
         </button>
       </section>
     </main>
