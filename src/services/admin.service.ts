@@ -63,6 +63,7 @@ export interface Payment {
   provider_ref: string | null;
   amount_etb: number;
   event: string;
+  receipt_path: string | null;
   created_at: string;
 }
 
@@ -83,7 +84,7 @@ export async function getDashboardData() {
     supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,created_at").order("created_at", { ascending: false }).limit(100),
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }),
-    supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,created_at").order("created_at", { ascending: false }).limit(100),
+    supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,created_at").order("created_at", { ascending: false }).limit(100),
     supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name"),
     supabase.from("delivery_proofs").select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at").order("delivered_at", { ascending:false }).limit(100),
   ]);
@@ -160,6 +161,12 @@ export async function submitDeliveryProof(input: { orderId:string; recipientName
 
 export async function openDeliveryProof(path:string) {
   const { data, error } = await supabase.storage.from("delivery-proofs").createSignedUrl(path, 300);
+  if (error) fail(error.message);
+  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+}
+
+export async function openPaymentReceipt(path:string) {
+  const { data, error } = await supabase.storage.from("payment-receipts").createSignedUrl(path, 300);
   if (error) fail(error.message);
   window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
