@@ -21,6 +21,8 @@ interface Props {
   onClose: () => void;
 }
 
+type PaymentWithReceipt = Payment & { receipt_path: string | null };
+
 function money(value: number) {
   return `ETB ${Math.max(0, Number(value || 0)).toLocaleString()}`;
 }
@@ -34,7 +36,7 @@ function dateTime(value?: string | null) {
 }
 
 export function AdminOperationsControl({ order, allOrders, trucks, drivers, onClose }: Props) {
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [payments, setPayments] = useState<PaymentWithReceipt[]>([]);
   const [proof, setProof] = useState<DeliveryProof | null>(null);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,7 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
     const [paymentsResult, proofResult, distanceResult] = await Promise.all([
       supabase
         .from("payments")
-        .select("id,order_id,provider,provider_ref,amount_etb,event,created_at")
+        .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,created_at")
         .eq("order_id", order.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -89,7 +91,7 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
     const queryError = paymentsResult.error || proofResult.error || distanceResult.error;
     if (queryError) setError(queryError.message);
     else {
-      setPayments((paymentsResult.data ?? []) as Payment[]);
+      setPayments((paymentsResult.data ?? []) as PaymentWithReceipt[]);
       setProof((proofResult.data ?? null) as DeliveryProof | null);
       const value = Number(distanceResult.data?.distance_km ?? 0);
       setDistanceKm(value > 0 ? value : null);
@@ -101,6 +103,16 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
   useEffect(() => {
     void loadDetails();
   }, [order.id]);
+
+  async function openPaymentReceipt(path: string) {
+    setError("");
+    const { data, error: signedError } = await supabase.storage.from("payment-receipts").createSignedUrl(path, 300);
+    if (signedError) {
+      setError(signedError.message);
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
 
   async function handleAssign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -254,7 +266,14 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
                   {remainingToRecord > 0 ? (
                     <form onSubmit={handlePayment} className="mt-5 space-y-3">
                       <select name="provider" defaultValue="telebirr" className="w-full border border-asphalt/20 bg-white p-3 text-sm">
-                        <option value="telebirr">telebirr</option><option value="cbe">CBE</option><option value="bank">Bank</option><option value="cash">Cash</option>
+                        <option value="telebirr">Telebirr</option>
+                        <option value="cbe">Commercial Bank of Ethiopia (CBE)</option>
+                        <option value="awash_bank">Awash Bank</option>
+                        <option value="bank_of_abyssinia">Bank of Abyssinia</option>
+                        <option value="dashen_bank">Dashen Bank</option>
+                        <option value="coop_bank_oromia">Cooperative Bank of Oromia</option>
+                        <option value="mpesa">M-Pesa</option>
+                        <option value="cash">Cash</option>
                       </select>
                       <input name="providerRef" placeholder="Transaction ID / reference" className="w-full border border-asphalt/20 p-3 text-sm" />
                       <input name="amountEtb" type="number" min="1" max={remainingToRecord} step="0.01" placeholder={`Amount · max ${remainingToRecord.toLocaleString()}`} className="w-full border border-asphalt/20 p-3 text-sm" required />
@@ -289,10 +308,15 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
               <section className="border border-asphalt/10 bg-white">
                 <div className="border-b border-asphalt/10 p-5 sm:px-6">
                   <h3 className="font-display text-lg font-semibold">Payment history</h3>
+                  <p className="mt-1 text-xs text-steel">Customer-uploaded receipts are private and open with a short-lived Admin/CEO link.</p>
                 </div>
                 {payments.length ? payments.map((payment) => (
                   <div key={payment.id} className="grid gap-2 border-b border-asphalt/10 p-4 text-sm last:border-0 sm:grid-cols-[1fr_auto_auto] sm:px-6">
-                    <div><p className="font-semibold">{payment.provider} · {payment.provider_ref ?? "No reference"}</p><p className="mt-1 text-xs text-steel">{dateTime(payment.created_at)}</p></div>
+                    <div>
+                      <p className="font-semibold">{payment.provider} · {payment.provider_ref ?? "No reference"}</p>
+                      <p className="mt-1 text-xs text-steel">{dateTime(payment.created_at)}</p>
+                      {payment.receipt_path && <button type="button" onClick={() => void openPaymentReceipt(payment.receipt_path!)} className="mt-2 border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800">Open customer receipt</button>}
+                    </div>
                     <span className="font-mono text-xs">{money(Number(payment.amount_etb))}</span>
                     <span className="text-xs font-semibold capitalize text-amber-dim">{label(payment.event)}</span>
                   </div>
