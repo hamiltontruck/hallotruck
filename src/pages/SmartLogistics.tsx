@@ -183,17 +183,29 @@ function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onRe
   const [saving,setSaving]=useState(false);
   const [error,setError]=useState("");
   const nextEvent = payment.event === "initiated" ? "held_escrow" : payment.event === "held_escrow" ? "released" : null;
-  const canRelease = nextEvent !== "released" || order?.status === "delivered";
   const invoiceTotal = Number(order?.price_etb ?? 0);
   const orderReleased = order ? allPayments.filter(p=>p.order_id===order.id&&p.event==="released").reduce((sum,p)=>sum+Number(p.amount_etb||0),0) : 0;
   const orderCreditRefunded = order ? allPayments.filter(p=>p.order_id===order.id&&p.event==="refunded"&&p.provider==="credit_refund").reduce((sum,p)=>sum+Number(p.amount_etb||0),0) : 0;
-  const overpaymentCredit = order ? Math.max(0, orderReleased-orderCreditRefunded-invoiceTotal) : 0;
+  const netReleased = Math.max(0, orderReleased-orderCreditRefunded);
+  const paymentAmount = Number(payment.amount_etb || 0);
+  const releaseExcess = order && payment.event === "held_escrow" ? Math.max(0, netReleased + paymentAmount - invoiceTotal) : 0;
+  const fullPaymentIsExcess = payment.event === "held_escrow" && paymentAmount > 0 && releaseExcess >= paymentAmount;
+  const canRelease = nextEvent !== "released" || (order?.status === "delivered" && releaseExcess <= 0);
+  const overpaymentCredit = order ? Math.max(0, netReleased-invoiceTotal) : 0;
   const showRefundCredit = Boolean(order && overpaymentCredit > 0 && payment.event === "released" && allPayments.filter(p=>p.order_id===order.id&&p.event==="released")[0]?.id===payment.id);
   const deliveryLocked = nextEvent === "released" && order?.status !== "delivered";
+  const needsVerification = payment.event === "initiated";
   async function advance(){
     if(!nextEvent) return;
     setSaving(true); setError("");
     const { error:rpcError } = await supabase.rpc("admin_update_payment_event", { p_payment_id:payment.id, p_event:nextEvent });
+    if(rpcError){ setError(rpcError.message); setSaving(false); return; }
+    await onReload(); setSaving(false);
+  }
+  async function refundHeldPayment(){
+    if(!fullPaymentIsExcess) return;
+    setSaving(true); setError("");
+    const { error:rpcError } = await supabase.rpc("admin_update_payment_event", { p_payment_id:payment.id, p_event:"refunded" });
     if(rpcError){ setError(rpcError.message); setSaving(false); return; }
     await onReload(); setSaving(false);
   }
@@ -218,21 +230,25 @@ function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onRe
   return <div className="p-4 sm:px-6 border-b border-asphalt/10 last:border-0">
     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-base">ETB {Number(payment.amount_etb).toLocaleString()}</p><span className="text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{payment.event.replace("_"," ")}</span></div>
+        <div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-base">ETB {paymentAmount.toLocaleString()}</p><span className="text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{payment.event.replace("_"," ")}</span></div>
         <p className="font-mono text-xs text-asphalt mt-2">{order?.tracking_id ?? "Order not found"}</p>
         <p className="text-xs text-steel mt-1">{order ? `${order.pickup_address} → ${order.dropoff_address}` : "This payment is not linked to a visible order."}</p>
+        {order && <p className="text-xs text-steel mt-1">Customer: <span className="font-semibold text-asphalt">{order.customer_name ?? "Customer"}</span>{order.customer_phone ? ` · ${order.customer_phone}` : ""}</p>}
         {order && <p className="text-xs text-steel mt-1">Invoice total: ETB {invoiceTotal.toLocaleString()}</p>}
         <p className="text-xs text-steel mt-1">Driver: {driver?.full_name ?? driver?.phone ?? (order?.driver_id ? "Driver profile unavailable" : "Unassigned")}</p>
         <p className="text-xs text-steel mt-1">{payment.provider}{payment.provider_ref ? ` · Transaction ID: ${payment.provider_ref}` : " · No transaction ID"}</p>
         <p className={`text-xs mt-2 font-semibold ${payment.receipt_path ? "text-emerald-700" : "text-steel"}`}>{payment.receipt_path ? "Customer receipt attached" : "No customer receipt attached"}</p>
+        {needsVerification && <p className="text-xs text-amber-dim font-semibold mt-2">Verification required — confirm this payment before holding it in escrow.</p>}
         {showRefundCredit && <p className="text-xs text-amber-dim font-semibold mt-2">Overpayment credit: ETB {overpaymentCredit.toLocaleString()}</p>}
+        {releaseExcess > 0 && <p className="text-xs text-route font-semibold mt-2">Release exceeds invoice balance by ETB {releaseExcess.toLocaleString()}.</p>}
         {deliveryLocked && <p className="text-xs text-route mt-2">Release is locked until this order is delivered.</p>}
         {error && !deliveryLocked && <p className="text-xs text-route mt-2">{error}</p>}
       </div>
       <div className="flex sm:flex-col gap-2 shrink-0 flex-wrap">
         {order && <button onClick={()=>onManage(order)} className="border border-asphalt/20 px-3 py-2 text-xs font-semibold">Open order</button>}
         {payment.receipt_path && <button onClick={receipt} className="border border-emerald-700 text-emerald-800 px-3 py-2 text-xs font-semibold">Open receipt</button>}
-        {nextEvent && <button disabled={saving||!canRelease} onClick={advance} className="bg-asphalt text-white px-3 py-2 text-xs font-semibold disabled:opacity-35">{saving?"Saving…":nextEvent==="held_escrow"?"Hold in escrow":"Release payment"}</button>}
+        {nextEvent && <button disabled={saving||!canRelease} onClick={advance} className="bg-asphalt text-white px-3 py-2 text-xs font-semibold disabled:opacity-35">{saving?"Saving…":nextEvent==="held_escrow"?"Verify payment":"Release payment"}</button>}
+        {fullPaymentIsExcess && <button disabled={saving} onClick={refundHeldPayment} className="bg-route text-white px-3 py-2 text-xs font-semibold disabled:opacity-35">{saving?"Refunding…":`Refund excess ETB ${paymentAmount.toLocaleString()}`}</button>}
         {showRefundCredit && <button disabled={saving} onClick={refundCredit} className="bg-route text-white px-3 py-2 text-xs font-semibold disabled:opacity-35">{saving?"Refunding…":`Refund credit ETB ${overpaymentCredit.toLocaleString()}`}</button>}
       </div>
     </div>
@@ -256,7 +272,7 @@ function ManageOrderModal({ order, trucks, drivers, payments, proof, onClose, on
     {order.status==="in_transit"&&<ProofOfDeliveryForm orderId={order.id} saving={saving} onSubmit={(input)=>run(()=>submitDeliveryProof(input))}/>}
     {proof&&<div className="mt-5 border border-emerald-700/30 bg-emerald-50 p-4"><h3 className="font-semibold text-emerald-800">Proof of delivery recorded</h3><p className="text-sm mt-2">Received by {proof.recipient_name} · {new Date(proof.delivered_at).toLocaleString()}</p>{proof.delivery_note&&<p className="text-xs text-steel mt-2">{proof.delivery_note}</p>}<div className="flex gap-4 mt-3"><button onClick={()=>openDeliveryProof(proof.photo_path)} className="text-xs font-semibold text-amber-dim">View photo</button><button onClick={()=>openDeliveryProof(proof.signature_path)} className="text-xs font-semibold text-amber-dim">View signature</button></div></div>}
     <form onSubmit={assign} className="mt-5 border border-asphalt/10 p-4"><h3 className="font-semibold">Assign truck & driver</h3><div className="grid sm:grid-cols-2 gap-3 mt-4"><Select name="truckId" label="Truck" defaultValue={order.truck_id??""} options={availableTrucks.map(t=>[t.id,`${t.plate_number} · ${t.status}`])}/><Select name="driverId" label="Driver" defaultValue={order.driver_id??""} options={drivers.map(d=>[d.id,d.full_name||d.phone||"Driver"])} /></div>{drivers.length===0&&<p className="text-xs text-route mt-3">No driver profiles found. Create an Auth user with profile role “driver” first.</p>}<button disabled={saving||!availableTrucks.length||!drivers.length} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4 disabled:opacity-40">Assign & accept</button></form>
-    <form onSubmit={pay} className="mt-5 border border-asphalt/10 p-4"><h3 className="font-semibold">Payment & verification</h3><div className="grid sm:grid-cols-2 gap-3 mt-4"><Field name="provider" label="Provider"/><Field name="providerRef" label="Transaction ID / Reference" required={false}/><Field name="amountEtb" label="Amount ETB" type="number"/><Select name="event" label="Payment event" defaultValue="released" options={[["initiated","Initiated"],["held_escrow","Held in escrow"],["released","Verified / released"],["refunded","Refunded"],["failed","Failed"]]}/></div><p className="text-[11px] text-steel mt-3">A provider + Transaction ID can only be recorded once. Reusing the same transaction ID is blocked.</p><button disabled={saving} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4">Save payment event</button></form>
+    <form onSubmit={pay} className="mt-5 border border-asphalt/10 p-4"><h3 className="font-semibold">Payment & verification</h3><div className="grid sm:grid-cols-2 gap-3 mt-4"><Field name="provider" label="Provider"/><Field name="providerRef" label="Transaction ID / Reference" required={false}/><Field name="amountEtb" label="Amount ETB" type="number"/><Select name="event" label="Payment event" defaultValue="initiated" options={[["initiated","Initiated / needs verification"],["held_escrow","Verified / held in escrow"],["released","Released after delivery"],["refunded","Refunded"],["failed","Failed"]]}/></div><p className="text-[11px] text-steel mt-3">A provider + Transaction ID can only be recorded once. Reusing the same transaction ID is blocked.</p><button disabled={saving} className="bg-asphalt text-white px-4 py-3 text-sm font-semibold mt-4">Save payment event</button></form>
     <div className="mt-5 border border-asphalt/10"><div className="p-4 border-b border-asphalt/10"><h3 className="font-semibold">Payment evidence</h3><p className="text-xs text-steel mt-1">Invoice total: ETB {Number(order.price_etb ?? 0).toLocaleString()}</p></div>{orderPayments.length?orderPayments.map(payment=><div key={payment.id} className="p-4 border-b border-asphalt/10 last:border-0 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"><div><p className="text-sm font-semibold">ETB {Number(payment.amount_etb).toLocaleString()} · <span className="capitalize">{payment.event.replace("_"," ")}</span></p><p className="text-xs text-steel mt-1">{payment.provider}{payment.provider_ref?` · ${payment.provider_ref}`:""}</p><p className={`text-xs mt-1 ${payment.receipt_path?"text-emerald-700":"text-steel"}`}>{payment.receipt_path?"Customer receipt attached":"No customer receipt attached"}</p></div>{payment.receipt_path&&<button type="button" onClick={()=>openPaymentReceipt(payment.receipt_path!)} className="border border-emerald-700 text-emerald-800 px-3 py-2 text-xs font-semibold">Open receipt</button>}</div>):<p className="p-4 text-xs text-steel">No payment records yet.</p>}</div>
     <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-steel">{orderPayments.length} {orderPayments.length===1?"payment record":"payment records"} · {order.payment_status.replace("_"," ")}</p><button onClick={()=>printInvoice(order,truck,driver,orderPayments)} className="border border-asphalt px-4 py-3 text-sm font-semibold">Invoice / receipt PDF</button></div>
   </div></div>;
