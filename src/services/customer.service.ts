@@ -31,6 +31,7 @@ export interface CustomerPayment {
   provider_ref: string | null;
   amount_etb: number;
   event: string;
+  receipt_path: string | null;
   created_at: string;
 }
 
@@ -47,11 +48,23 @@ export interface CustomerDriverAssignment {
   truck_photo_path: string | null;
 }
 
+export interface CustomerProfile {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  home_address: string | null;
+  customer_type: "individual" | "business";
+  company_name: string | null;
+  created_at: string;
+}
+
 export interface CustomerPortalData {
   orders: CustomerOrder[];
   proofs: CustomerProof[];
   payments: CustomerPayment[];
   assignments: CustomerDriverAssignment[];
+  profile: CustomerProfile | null;
 }
 
 const vehicleRates: Record<string, number> = {
@@ -62,20 +75,36 @@ const vehicleRates: Record<string, number> = {
   trailer: 110,
 };
 
+const allowedReceiptTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+
 export function calculateQuote(distanceKm: number, vehicleType: string) {
   const rate = vehicleRates[vehicleType.toLowerCase()] ?? 72;
   return Math.max(1500, Math.round((distanceKm * rate + 900) / 50) * 50);
 }
 
 export async function getCustomerPortalData(): Promise<CustomerPortalData> {
-  const { data: orders, error } = await supabase
-    .from("orders")
-    .select("id, tracking_id, pickup_address, dropoff_address, vehicle_type, distance_km, price_etb, status, payment_status, payment_provider, payment_ref, created_at")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Customer session expired.");
 
-  const ids = (orders ?? []).map((order) => order.id);
-  if (!ids.length) return { orders: [], proofs: [], payments: [], assignments: [] };
+  const [ordersResult, profileResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id, tracking_id, pickup_address, dropoff_address, vehicle_type, distance_km, price_etb, status, payment_status, payment_provider, payment_ref, created_at")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("id,full_name,phone,email,home_address,customer_type,company_name,created_at")
+      .eq("id", auth.user.id)
+      .maybeSingle(),
+  ]);
+
+  if (ordersResult.error) throw new Error(ordersResult.error.message);
+  if (profileResult.error) throw new Error(profileResult.error.message);
+
+  const orders = ordersResult.data ?? [];
+  const profile = (profileResult.data ?? null) as CustomerProfile | null;
+  const ids = orders.map((order) => order.id);
+  if (!ids.length) return { orders: [], proofs: [], payments: [], assignments: [], profile };
 
   const [proofResult, paymentResult, assignmentResult] = await Promise.all([
     supabase
@@ -84,7 +113,7 @@ export async function getCustomerPortalData(): Promise<CustomerPortalData> {
       .in("order_id", ids),
     supabase
       .from("payments")
-      .select("id, order_id, provider, provider_ref, amount_etb, event, created_at")
+      .select("id, order_id, provider, provider_ref, amount_etb, event, receipt_path, created_at")
       .in("order_id", ids)
       .order("created_at", { ascending: false }),
     supabase.rpc("customer_driver_assignment_cards"),
@@ -94,12 +123,49 @@ export async function getCustomerPortalData(): Promise<CustomerPortalData> {
   if (paymentResult.error) throw new Error(paymentResult.error.message);
 
   return {
-    orders: orders ?? [],
+    orders,
     proofs: proofResult.data ?? [],
     payments: paymentResult.data ?? [],
-    // Keep the customer portal operational before the optional verification migration is applied.
     assignments: assignmentResult.error ? [] : ((assignmentResult.data ?? []) as CustomerDriverAssignment[]),
+    profile,
   };
+}
+
+export async function updateCustomerProfile(input: {
+  fullName: string;
+  phone: string;
+  email: string;
+  homeAddress: string;
+  customerType: "individual" | "business";
+  companyName: string;
+}) {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Customer session expired.");
+
+  const fullName = input.fullName.trim();
+  const phone = input.phone.trim();
+  const email = input.email.trim();
+  const homeAddress = input.homeAddress.trim();
+  const companyName = input.companyName.trim();
+
+  if (fullName.length < 2) throw new Error("Enter your full name.");
+  if (!/^(09\d{8}|\+2519\d{8})$/.test(phone)) throw new Error("Phone must be 09xxxxxxxx or +2519xxxxxxxx.");
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
+  if (input.customerType === "business" && !companyName) throw new Error("Company name is required for a business account.");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: fullName,
+      phone,
+      email: email || null,
+      home_address: homeAddress || null,
+      customer_type: input.customerType,
+      company_name: input.customerType === "business" ? companyName : null,
+    })
+    .eq("id", auth.user.id);
+
+  if (error) throw new Error(error.message);
 }
 
 export async function createCustomerOrder(input: {
@@ -146,14 +212,42 @@ export async function submitCustomerPayment(input: {
   provider: string;
   providerRef: string;
   amountEtb: number;
+  receipt: File;
 }) {
-  const { error } = await supabase.rpc("customer_submit_payment", {
-    p_order_id: input.orderId,
-    p_provider: input.provider,
-    p_provider_ref: input.providerRef,
-    p_amount_etb: input.amountEtb,
+  if (!allowedReceiptTypes.has(input.receipt.type)) throw new Error("Receipt must be JPG, PNG, WebP or PDF.");
+  if (input.receipt.size > 10 * 1024 * 1024) throw new Error("Receipt must be 10 MB or smaller.");
+
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Customer session expired.");
+
+  const extension = input.receipt.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || (input.receipt.type === "application/pdf" ? "pdf" : "jpg");
+  const receiptPath = `${auth.user.id}/${input.orderId}/${crypto.randomUUID()}.${extension}`;
+
+  const upload = await supabase.storage.from("payment-receipts").upload(receiptPath, input.receipt, {
+    contentType: input.receipt.type,
+    upsert: false,
   });
+  if (upload.error) throw new Error(upload.error.message);
+
+  try {
+    const { error } = await supabase.rpc("customer_submit_payment", {
+      p_order_id: input.orderId,
+      p_provider: input.provider,
+      p_provider_ref: input.providerRef.trim(),
+      p_amount_etb: input.amountEtb,
+      p_receipt_path: receiptPath,
+    });
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    await supabase.storage.from("payment-receipts").remove([receiptPath]);
+    throw error;
+  }
+}
+
+export async function openCustomerPaymentReceipt(path: string) {
+  const { data, error } = await supabase.storage.from("payment-receipts").createSignedUrl(path, 300);
   if (error) throw new Error(error.message);
+  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
 
 export function printCustomerInvoice(order: CustomerOrder, payments: CustomerPayment[]) {
