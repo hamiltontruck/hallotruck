@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.client";
+import { splitHalloCommission } from "../utils/commission";
 
 export type DriverPayoutStatus = "released" | "partial" | "held_escrow" | "initiated" | "unpaid";
 
@@ -11,9 +12,12 @@ export interface DriverEarningsTrip {
   invoiceEtb: number;
   releasedEtb: number;
   partialReleasedEtb: number;
+  commissionEtb: number;
+  driverNetEtb: number;
   heldEtb: number;
   initiatedEtb: number;
   remainingEtb: number;
+  remainingDriverNetEtb: number;
   payoutStatus: DriverPayoutStatus;
   lastReleaseAt: string | null;
 }
@@ -21,9 +25,12 @@ export interface DriverEarningsTrip {
 export interface DriverEarningsSummary {
   releasedTrips: number;
   totalReleasedEtb: number;
+  totalCommissionEtb: number;
+  totalDriverNetEtb: number;
   partialReleasedEtb: number;
   pendingTrips: number;
   pendingBalanceEtb: number;
+  pendingDriverBalanceEtb: number;
   released: DriverEarningsTrip[];
   pending: DriverEarningsTrip[];
 }
@@ -67,9 +74,12 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
     return {
       releasedTrips: 0,
       totalReleasedEtb: 0,
+      totalCommissionEtb: 0,
+      totalDriverNetEtb: 0,
       partialReleasedEtb: 0,
       pendingTrips: 0,
       pendingBalanceEtb: 0,
+      pendingDriverBalanceEtb: 0,
       released: [],
       pending: [],
     };
@@ -101,18 +111,18 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
       .filter((payment) => payment.event === "refunded" && payment.provider === "credit_refund")
       .reduce((sum, payment) => sum + amount(payment.amount_etb), 0);
     const netReleased = Math.max(0, releasedGross - creditRefunded);
-    const releasedEtb = Math.min(invoiceEtb, netReleased);
+    const releasedToInvoice = Math.min(invoiceEtb, netReleased);
     const heldEtb = rows
       .filter((payment) => payment.event === "held_escrow")
       .reduce((sum, payment) => sum + amount(payment.amount_etb), 0);
     const initiatedEtb = rows
       .filter((payment) => payment.event === "initiated")
       .reduce((sum, payment) => sum + amount(payment.amount_etb), 0);
-    const remainingEtb = Math.max(0, invoiceEtb - releasedEtb);
+    const remainingEtb = Math.max(0, invoiceEtb - releasedToInvoice);
     const fullyReleased = invoiceEtb > 0 && remainingEtb <= 0.005;
     const payoutStatus: DriverPayoutStatus = fullyReleased
       ? "released"
-      : releasedEtb > 0
+      : releasedToInvoice > 0
         ? "partial"
         : heldEtb > 0
           ? "held_escrow"
@@ -120,6 +130,9 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
             ? "initiated"
             : "unpaid";
     const lastRelease = rows.find((payment) => payment.event === "released");
+    const grossPaid = fullyReleased ? invoiceEtb : releasedToInvoice;
+    const paidSplit = splitHalloCommission(grossPaid);
+    const remainingSplit = splitHalloCommission(remainingEtb);
 
     return {
       id: order.id,
@@ -129,10 +142,13 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
       deliveredAt: order.delivered_at,
       invoiceEtb,
       releasedEtb: fullyReleased ? invoiceEtb : 0,
-      partialReleasedEtb: fullyReleased ? 0 : releasedEtb,
+      partialReleasedEtb: fullyReleased ? 0 : releasedToInvoice,
+      commissionEtb: paidSplit.commissionEtb,
+      driverNetEtb: paidSplit.driverNetEtb,
       heldEtb,
       initiatedEtb,
       remainingEtb,
+      remainingDriverNetEtb: remainingSplit.driverNetEtb,
       payoutStatus,
       lastReleaseAt: lastRelease?.created_at ?? null,
     };
@@ -140,13 +156,21 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
 
   const released = trips.filter((trip) => trip.payoutStatus === "released");
   const pending = trips.filter((trip) => trip.payoutStatus !== "released");
+  const totalReleasedEtb = trips.reduce(
+    (sum, trip) => sum + (trip.payoutStatus === "released" ? trip.releasedEtb : trip.partialReleasedEtb),
+    0,
+  );
+  const totalSplit = splitHalloCommission(totalReleasedEtb);
 
   return {
     releasedTrips: released.length,
-    totalReleasedEtb: released.reduce((sum, trip) => sum + trip.releasedEtb, 0),
+    totalReleasedEtb,
+    totalCommissionEtb: totalSplit.commissionEtb,
+    totalDriverNetEtb: totalSplit.driverNetEtb,
     partialReleasedEtb: pending.reduce((sum, trip) => sum + trip.partialReleasedEtb, 0),
     pendingTrips: pending.length,
     pendingBalanceEtb: pending.reduce((sum, trip) => sum + trip.remainingEtb, 0),
+    pendingDriverBalanceEtb: pending.reduce((sum, trip) => sum + trip.remainingDriverNetEtb, 0),
     released,
     pending,
   };
