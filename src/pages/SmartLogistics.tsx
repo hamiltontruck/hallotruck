@@ -45,6 +45,7 @@ export function SmartLogistics() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [deliveryProofs, setDeliveryProofs] = useState<DeliveryProof[]>([]);
   const [managedOrder, setManagedOrder] = useState<AdminOrder | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -86,7 +87,7 @@ export function SmartLogistics() {
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-2 pt-5 pb-1">
             <div className="w-9 h-9 bg-amber text-asphalt font-display font-bold flex items-center justify-center">HT</div>
-          <div className="min-w-0"><p className="text-sm font-medium">Hamilton Truck</p><button onClick={() => supabase.auth.signOut()} className="text-[11px] text-white/40 hover:text-amber">Sign out</button></div>
+            <div className="min-w-0"><p className="text-sm font-medium">Hamilton Truck</p><button onClick={() => supabase.auth.signOut()} className="text-[11px] text-white/40 hover:text-amber">Sign out</button></div>
           </div>
         </div>
       </aside>
@@ -98,14 +99,14 @@ export function SmartLogistics() {
             <div className="hidden sm:block min-w-0"><p className="font-display font-semibold text-lg truncate">{section}</p><p className="hidden md:block text-xs text-steel mt-0.5">Live operations</p></div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <label className="hidden md:flex items-center gap-2 bg-[#f5f3ed] px-3 py-2.5 w-60 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label="Search" className="bg-transparent outline-none text-sm w-full" placeholder="Search orders, drivers..." /></label>
+            <label className="hidden md:flex items-center gap-2 bg-[#f5f3ed] px-3 py-2.5 w-64 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label="Search operations" value={searchQuery} onChange={(event)=>{const value=event.target.value;setSearchQuery(value);if(section==="Overview"&&value.trim())setSection("Orders");}} className="bg-transparent outline-none text-sm w-full" placeholder="Tracking, customer, truck..." /></label>
             <button className="relative border border-asphalt/10 p-2.5 text-steel"><Icon name="bell" className="w-5 h-5"/><span className="absolute top-2 right-2 w-2 h-2 bg-route rounded-full border border-white" /></button>
             <button onClick={() => setModal("order")} className="bg-asphalt text-white font-semibold text-xs sm:text-sm px-3 sm:px-5 py-3 hover:bg-line whitespace-nowrap"><span className="sm:hidden">+ Order</span><span className="hidden sm:inline">+ New order</span></button>
           </div>
         </header>
         <div className="p-5 sm:p-8 max-w-[1500px] mx-auto">
           {error && <p className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5">{error}</p>}
-          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
+          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} searchQuery={searchQuery} onSearch={setSearchQuery} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
         </div>
       </main>
       {modal === "order" ? <AdminCreateOrderModal onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} /> : modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
@@ -162,22 +163,62 @@ function OrderRow({ order:o, onManage }: { order: AdminOrder; onManage?: (order:
   return <div className="p-4 sm:px-6 grid grid-cols-[1fr_auto] sm:grid-cols-[100px_1fr_auto_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="text-sm font-medium flex items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p></div><span className="hidden sm:block font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 capitalize ${color}`}>{o.status.replace("_", " ")}</span>{onManage&&<button onClick={()=>onManage(o)} className="text-xs font-semibold text-amber-dim">Manage</button>}</div>;
 }
 
-function ModulePage({ section, orders, customers, trucks, payments, drivers, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+function includesQuery(values: Array<string | number | null | undefined>, query: string) {
+  if (!query) return true;
+  return values.some((value) => String(value ?? "").toLowerCase().includes(query));
+}
+
+function ModulePage({ section, orders, customers, trucks, payments, drivers, searchQuery, onSearch, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; searchQuery:string; onSearch:(value:string)=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+  const [orderStatus,setOrderStatus]=useState("all");
   const descriptions:Record<string,string> = {Orders:"Create, assign and monitor every customer order.","Live trips":"Track active vehicles and delivery progress in real time.","Fleet & drivers":"Manage trucks, drivers, availability and documents.",Customers:"View accounts, order history and customer value.",Finance:"Verify customer payments, link each payment to its order and driver, then release eligible payouts.",Reports:"Measure delivery performance and business growth."};
   const addKind = section === "Customers" ? "customer" : section === "Fleet & drivers" ? "truck" : "order";
+  const query=searchQuery.trim().toLowerCase();
+  const filteredOrders=orders.filter((order)=>(orderStatus==="all"||order.status===orderStatus)&&includesQuery([order.tracking_id,order.customer_name,order.customer_phone,order.pickup_address,order.dropoff_address,order.vehicle_type,order.cargo_description,order.status],query));
+  const filteredCustomers=customers.filter((customer)=>includesQuery([customer.full_name,customer.phone,customer.email,customer.company_name,customer.is_credit_customer?"credit":"standard"],query));
+  const filteredTrucks=trucks.filter((truck)=>includesQuery([truck.plate_number,truck.vehicle_type,truck.capacity_tons,truck.status],query));
+  const filteredPayments=payments.filter((payment)=>{const order=orders.find((item)=>item.id===payment.order_id);const driver=drivers.find((item)=>item.id===order?.driver_id);return includesQuery([payment.provider,payment.provider_ref,payment.event,payment.amount_etb,order?.tracking_id,order?.customer_name,order?.customer_phone,driver?.full_name,driver?.phone],query);});
+  const releasedGross=payments.filter((payment)=>payment.event==="released").reduce((sum,payment)=>sum+Number(payment.amount_etb||0),0);
+  const creditRefunded=payments.filter((payment)=>payment.event==="refunded"&&payment.provider==="credit_refund").reduce((sum,payment)=>sum+Number(payment.amount_etb||0),0);
+  const releasedNet=Math.max(0,releasedGross-creditRefunded);
+  const heldTotal=payments.filter((payment)=>payment.event==="held_escrow").reduce((sum,payment)=>sum+Number(payment.amount_etb||0),0);
+  const initiatedTotal=payments.filter((payment)=>payment.event==="initiated").reduce((sum,payment)=>sum+Number(payment.amount_etb||0),0);
+  const deliveredCount=orders.filter((order)=>order.status==="delivered").length;
+  const activeCount=orders.filter((order)=>["accepted","in_transit"].includes(order.status)).length;
+  const completionRate=orders.length?Math.round(deliveredCount/orders.length*100):0;
+  const busyFleet=trucks.filter((truck)=>truck.status==="assigned").length;
+  const fleetUtilization=trucks.length?Math.round(busyFleet/trucks.length*100):0;
+  const approvedDrivers=drivers.filter((driver)=>driver.driver_status==="approved").length;
+
   return <div>
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div>{["Orders","Customers","Fleet & drivers"].includes(section) && <button onClick={() => onAdd(addKind)} className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button>}</div>
-    {section === "Orders" && <DataPanel title="All orders" empty="No orders yet.">{orders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>}
-    {section === "Customers" && <DataPanel title="Customers" empty="No customers yet.">{customers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
-    {section === "Fleet & drivers" && <DataPanel title="Registered fleet" empty="No trucks yet.">{trucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel>}
-    {section === "Finance" && <DataPanel title="Payment ledger" empty="No payments yet.">{payments.map(p=><FinancePaymentRow key={p.id} payment={p} order={orders.find(o=>o.id===p.order_id)} driver={drivers.find(d=>d.id===orders.find(o=>o.id===p.order_id)?.driver_id)} allPayments={payments} onManage={onManage} onReload={onReload} />)}</DataPanel>}
+    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div>{["Orders","Customers","Fleet & drivers"].includes(section) && <button onClick={() => onAdd(addKind)} className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button>}</div>
+
+    {!["Live trips","Reports"].includes(section)&&<label className="md:hidden mb-5 flex items-center gap-2 border border-asphalt/10 bg-white px-4 py-3 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label={`Search ${section}`} value={searchQuery} onChange={(event)=>onSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={`Search ${section.toLowerCase()}...`}/>{searchQuery&&<button type="button" onClick={()=>onSearch("")} className="text-xs font-semibold text-route">Clear</button>}</label>}
+
+    {section === "Orders" && <>
+      <div className="mb-4 flex flex-wrap gap-2">{["all","placed","accepted","in_transit","delivered"].map((status)=><button key={status} onClick={()=>setOrderStatus(status)} className={`border px-3 py-2 text-[11px] font-semibold capitalize ${orderStatus===status?"border-asphalt bg-asphalt text-white":"border-asphalt/10 bg-white text-steel"}`}>{status==="all"?`All ${orders.length}`:`${status.replace("_"," ")} ${orders.filter((order)=>order.status===status).length}`}</button>)}</div>
+      <DataPanel title={searchQuery||orderStatus!=="all"?"Matching orders":"All orders"} empty="No matching orders.">{filteredOrders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>
+    </>}
+    {section === "Customers" && <DataPanel title={searchQuery?"Matching customers":"Customers"} empty="No matching customers.">{filteredCustomers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
+    {section === "Fleet & drivers" && <>
+      <a href="#/admin/driver-compliance" className="mb-5 flex flex-col gap-3 border border-amber/30 bg-asphalt p-5 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber">DRIVER CONTROL & COMPLIANCE</p><p className="mt-2 font-display text-xl font-semibold">Documents, trip history and driver lifecycle</p><p className="mt-1 text-xs text-white/50">{drivers.length} drivers · {approvedDrivers} approved · private verification records stay in the existing Admin control.</p></div><span className="shrink-0 text-sm font-semibold text-amber">Open driver control →</span></a>
+      <DataPanel title={searchQuery?"Matching fleet":"Registered fleet"} empty="No matching trucks.">{filteredTrucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel>
+    </>}
+    {section === "Finance" && <>
+      <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4"><FinanceSummaryCard label="Released customer funds" value={releasedNet}/><FinanceSummaryCard label="Held in escrow" value={heldTotal}/><FinanceSummaryCard label="Needs verification" value={initiatedTotal}/><FinanceSummaryCard label="Payment records" value={payments.length} money={false}/></div>
+      <DataPanel title={searchQuery?"Matching payments":"Payment ledger"} empty="No matching payments.">{filteredPayments.map(p=><FinancePaymentRow key={p.id} payment={p} order={orders.find(o=>o.id===p.order_id)} driver={drivers.find(d=>d.id===orders.find(o=>o.id===p.order_id)?.driver_id)} allPayments={payments} onManage={onManage} onReload={onReload} />)}</DataPanel>
+    </>}
     {section === "Live trips" && <AdminLiveTripsPanel orders={orders} trucks={trucks} drivers={drivers} onManage={onManage} />}
-    {section === "Reports" && <div className="grid sm:grid-cols-3 gap-5"><ReportCard label="Orders" value={orders.length}/><ReportCard label="Customers" value={customers.length}/><ReportCard label="Fleet" value={trucks.length}/></div>}
+    {section === "Reports" && <>
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4"><ReportCard label="Delivery completion" value={`${completionRate}%`} note={`${deliveredCount} delivered of ${orders.length}`}/><ReportCard label="Active shipments" value={activeCount} note="Accepted + in transit"/><ReportCard label="Fleet utilization" value={`${fleetUtilization}%`} note={`${busyFleet} assigned of ${trucks.length}`}/><ReportCard label="Approved drivers" value={approvedDrivers} note={`${drivers.length} driver profiles`}/><ReportCard label="Released revenue" value={`ETB ${compactMoney(releasedNet)}`} note="Net of recorded credit refunds"/><ReportCard label="Held escrow" value={`ETB ${compactMoney(heldTotal)}`} note="Verified, not released"/><ReportCard label="Pending verification" value={`ETB ${compactMoney(initiatedTotal)}`} note="Initiated customer payments"/><ReportCard label="Customers" value={customers.length} note="Live customer records"/></div>
+      <div className="mt-5 border border-asphalt/10 bg-white p-5"><p className="font-display text-lg font-semibold">Operational health</p><div className="mt-4 grid gap-3 sm:grid-cols-3"><HealthRow label="Orders waiting assignment" value={orders.filter((order)=>order.status==="placed").length}/><HealthRow label="Available trucks" value={trucks.filter((truck)=>truck.status==="available").length}/><HealthRow label="Payments needing verification" value={payments.filter((payment)=>payment.event==="initiated").length}/></div></div>
+    </>}
   </div>;
 }
 
 function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="bg-white border border-asphalt/10"><div className="p-5 sm:px-6 border-b border-asphalt/10 flex justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><span className="font-mono text-xs text-steel">{count} {count===1?"record":"records"}</span></div>{count ? children : <Empty label={empty}/>}</div>; }
 function SimpleRow({ title, subtitle, badge }: { title:string; subtitle:string; badge:string }) { return <div className="p-4 sm:px-6 border-b border-asphalt/10 last:border-0 flex items-center justify-between gap-4"><div><p className="font-semibold text-sm">{title}</p><p className="text-xs text-steel mt-1">{subtitle}</p></div><span className="text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{badge.replace("_"," ")}</span></div>; }
+function FinanceSummaryCard({label,value,money=true}:{label:string;value:number;money?:boolean}){return <div className="border border-asphalt/10 bg-white p-4 sm:p-5"><p className="font-mono text-[10px] uppercase tracking-wide text-steel">{label}</p><p className="mt-3 font-display text-xl font-bold text-asphalt">{money?`ETB ${compactMoney(value)}`:value.toLocaleString()}</p></div>}
+function HealthRow({label,value}:{label:string;value:number}){return <div className="bg-[#f5f3ed] p-4"><p className="text-xs text-steel">{label}</p><p className="mt-2 font-display text-2xl font-bold">{value}</p></div>}
 
 function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onReload }: { payment:Payment; order?:AdminOrder; driver?:Driver; allPayments:Payment[]; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
   const [saving,setSaving]=useState(false);
@@ -255,7 +296,7 @@ function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onRe
   </div>;
 }
 
-function ReportCard({ label, value }: { label:string; value:number }) { return <div className="bg-white border border-asphalt/10 p-7"><p className="text-xs text-steel">{label}</p><p className="font-display font-bold text-4xl mt-4">{value}</p><p className="text-[11px] text-emerald-700 mt-4">Live from Supabase</p></div>; }
+function ReportCard({ label, value, note="Live from Supabase" }: { label:string; value:string|number; note?:string }) { return <div className="bg-white border border-asphalt/10 p-5 sm:p-7"><p className="text-xs text-steel">{label}</p><p className="font-display font-bold text-2xl sm:text-3xl mt-4 break-words">{value}</p><p className="text-[11px] text-emerald-700 mt-4">{note}</p></div>; }
 function Empty({ label }: { label:string }) { return <p className="p-8 text-center text-sm text-steel">{label}</p>; }
 function compactMoney(value:number) { return value >= 1_000_000 ? `${(value/1_000_000).toFixed(1)}M` : value >= 1_000 ? `${(value/1_000).toFixed(1)}K` : value.toLocaleString(); }
 
