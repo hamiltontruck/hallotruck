@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { submitCustomerPayment, type CustomerOrder } from "../../services/customer.service";
+import { useLanguage } from "../../i18n/LanguageProvider";
+import { getCustomerCopy } from "../../i18n/customerCopy";
 
 interface Props {
   order: CustomerOrder;
@@ -19,6 +21,8 @@ const providers = [
 ] as const;
 
 export function CustomerPaymentModal({ order, maxAmount, onClose, onSubmitted }: Props) {
+  const { language } = useLanguage();
+  const c = getCustomerCopy(language);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [receiptName, setReceiptName] = useState("");
@@ -31,7 +35,7 @@ export function CustomerPaymentModal({ order, maxAmount, onClose, onSubmitted }:
     const receipt = form.get("receipt");
 
     if (!(receipt instanceof File) || !receipt.size) {
-      setError("Upload the bank / payment receipt as JPG, PNG, WebP or PDF.");
+      setError(c.uploadRequired);
       setBusy(false);
       return;
     }
@@ -47,7 +51,7 @@ export function CustomerPaymentModal({ order, maxAmount, onClose, onSubmitted }:
       await onSubmitted();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment could not be submitted.");
+      setError(err instanceof Error ? err.message : c.paymentSubmitError);
     } finally {
       setBusy(false);
     }
@@ -58,35 +62,35 @@ export function CustomerPaymentModal({ order, maxAmount, onClose, onSubmitted }:
       <form onSubmit={submit} className="max-h-[94vh] w-full max-w-lg overflow-y-auto bg-white p-6 sm:p-8">
         <div className="flex justify-between gap-4">
           <div>
-            <p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">SECURE PAYMENT SUBMISSION</p>
+            <p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">{c.paymentSecure}</p>
             <h2 className="mt-2 font-display text-2xl font-bold">{order.tracking_id}</h2>
-            <p className="mt-2 text-xs text-steel">Invoice ETB {Number(order.price_etb ?? 0).toLocaleString()} · remaining ETB {maxAmount.toLocaleString()}</p>
+            <p className="mt-2 text-xs text-steel">{c.invoiceAmount} ETB {Number(order.price_etb ?? 0).toLocaleString()} · {c.remaining} ETB {maxAmount.toLocaleString()}</p>
           </div>
           <button type="button" onClick={onClose} className="text-2xl">×</button>
         </div>
 
         <div className="mt-5 border border-emerald-200 bg-emerald-50 p-4 text-xs leading-relaxed text-emerald-900">
-          Submit the exact transaction ID and a receipt screenshot / PDF. Finance verifies the receipt before money is released.
+          {c.paymentInstruction}
         </div>
 
         {error && <p className="mt-4 border border-route/30 bg-route/5 p-3 text-sm text-route">{error}</p>}
 
         <div className="mt-6 grid gap-4">
-          <label className="text-sm">Payment provider / bank
+          <label className="text-sm">{c.provider}
             <select name="provider" required className="mt-2 block w-full border border-line bg-white px-4 py-3">
               {providers.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
 
-          <label className="text-sm">Transaction ID / reference
-            <input required name="providerRef" autoCapitalize="characters" placeholder="Enter exact bank / wallet reference" className="mt-2 block w-full border border-line px-4 py-3" />
+          <label className="text-sm">{c.transactionId}
+            <input required name="providerRef" autoCapitalize="characters" placeholder={c.transactionPlaceholder} className="mt-2 block w-full border border-line px-4 py-3" />
           </label>
 
-          <label className="text-sm">Amount ETB
+          <label className="text-sm">{c.amount}
             <input required min="1" max={maxAmount} name="amountEtb" type="number" step="0.01" defaultValue={maxAmount || undefined} className="mt-2 block w-full border border-line px-4 py-3" />
           </label>
 
-          <label className="text-sm">Payment receipt / screenshot
+          <label className="text-sm">{c.receipt}
             <input
               required
               name="receipt"
@@ -95,12 +99,12 @@ export function CustomerPaymentModal({ order, maxAmount, onClose, onSubmitted }:
               onChange={(event) => setReceiptName(event.target.files?.[0]?.name ?? "")}
               className="mt-2 block w-full border border-line bg-white px-4 py-3 text-sm"
             />
-            <span className="mt-2 block text-xs text-steel">JPG, PNG, WebP or PDF · maximum 10 MB.</span>
-            {receiptName && <span className="mt-2 block border-l-4 border-emerald-700 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900">Attached: {receiptName}</span>}
+            <span className="mt-2 block text-xs text-steel">{c.receiptTypes}</span>
+            {receiptName && <span className="mt-2 block border-l-4 border-emerald-700 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900">{c.attached}: {receiptName}</span>}
           </label>
         </div>
 
-        <button disabled={busy || maxAmount <= 0} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-50">{busy ? "Uploading & submitting…" : "Submit payment for verification"}</button>
+        <button disabled={busy || maxAmount <= 0} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-50">{busy ? c.uploading : c.submitForVerification}</button>
       </form>
     </div>
   );
