@@ -1,6 +1,8 @@
 import { FormEvent, PointerEvent, useRef, useState } from "react";
 import { submitDeliveryProof } from "../../services/delivery-proof.service";
 import { Button } from "../ui/Button";
+import { useLanguage } from "../../i18n/LanguageProvider";
+import { getDriverTripDocumentsCopy } from "../../i18n/driverTripDocumentsCopy";
 
 export function DriverDeliveryProofForm({
   orderId,
@@ -9,6 +11,8 @@ export function DriverDeliveryProofForm({
   orderId: string;
   onDelivered: () => void;
 }) {
+  const { language } = useLanguage();
+  const c = getDriverTripDocumentsCopy(language).proof;
   const canvas = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const [signed, setSigned] = useState(false);
@@ -46,9 +50,7 @@ export function DriverDeliveryProofForm({
     context.stroke();
   }
 
-  function stop() {
-    drawing.current = false;
-  }
+  function stop() { drawing.current = false; }
 
   function clear() {
     const target = canvas.current;
@@ -59,45 +61,24 @@ export function DriverDeliveryProofForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-
     const form = new FormData(event.currentTarget);
     const recipientName = String(form.get("recipientName") ?? "").trim();
     const deliveryNote = String(form.get("deliveryNote") ?? "");
     const photo = form.get("photo");
 
-    if (recipientName.length < 2) {
-      setError("Enter the recipient's name.");
-      return;
-    }
-    if (!(photo instanceof File) || !photo.size) {
-      setError("Delivery photo is required.");
-      return;
-    }
-    if (!signed || !canvas.current) {
-      setError("Recipient signature is required.");
-      return;
-    }
+    if (recipientName.length < 2) return setError(c.recipientNameError);
+    if (!(photo instanceof File) || !photo.size) return setError(c.photoRequired);
+    if (!signed || !canvas.current) return setError(c.signatureRequired);
 
-    const signature = await new Promise<Blob | null>((resolve) =>
-      canvas.current?.toBlob(resolve, "image/png"),
-    );
-    if (!signature) {
-      setError("Could not save the recipient signature.");
-      return;
-    }
+    const signature = await new Promise<Blob | null>((resolve) => canvas.current?.toBlob(resolve, "image/png"));
+    if (!signature) return setError(c.signatureSaveError);
 
     setSaving(true);
     try {
-      await submitDeliveryProof({
-        orderId,
-        recipientName,
-        deliveryNote,
-        photo,
-        signature,
-      });
+      await submitDeliveryProof({ orderId, recipientName, deliveryNote, photo, signature });
       onDelivered();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not complete delivery.");
+      setError(err instanceof Error ? err.message : c.submitError);
       setSaving(false);
     }
   }
@@ -106,68 +87,35 @@ export function DriverDeliveryProofForm({
     <form onSubmit={submit} className="border-2 border-emerald-700/30 bg-white p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[.18em] text-emerald-700">
-            Proof of delivery
-          </p>
-          <h2 className="font-display text-xl font-semibold text-asphalt mt-2">
-            Confirm the handover
-          </h2>
-          <p className="font-body text-xs text-steel mt-1">
-            Photo and recipient signature are required before this trip can be completed.
-          </p>
+          <p className="font-mono text-[10px] uppercase tracking-[.18em] text-emerald-700">{c.eyebrow}</p>
+          <h2 className="font-display text-xl font-semibold text-asphalt mt-2">{c.title}</h2>
+          <p className="font-body text-xs text-steel mt-1">{c.help}</p>
         </div>
-        <span className="font-mono text-[10px] uppercase text-emerald-700">Required</span>
+        <span className="font-mono text-[10px] uppercase text-emerald-700">{c.required}</span>
       </div>
 
-      {error && (
-        <p className="font-body text-xs text-route border border-route/30 bg-route/5 px-3 py-3 mt-4">
-          {error}
-        </p>
-      )}
+      {error && <p className="font-body text-xs text-route border border-route/30 bg-route/5 px-3 py-3 mt-4">{error}</p>}
 
       <label className="block font-body text-xs font-semibold text-asphalt mt-5">
-        Received by
-        <input
-          name="recipientName"
-          required
-          minLength={2}
-          maxLength={120}
-          autoComplete="name"
-          className="block w-full border border-line bg-white px-4 py-3 mt-2 font-normal outline-none focus:border-amber"
-          placeholder="Recipient full name"
-        />
+        {c.receivedBy}
+        <input name="recipientName" required minLength={2} maxLength={120} autoComplete="name" className="block w-full border border-line bg-white px-4 py-3 mt-2 font-normal outline-none focus:border-amber" placeholder={c.recipientPlaceholder} />
       </label>
 
       <label className="block font-body text-xs font-semibold text-asphalt mt-4">
-        Delivery photo
-        <input
-          name="photo"
-          type="file"
-          accept="image/*"
-          capture="environment"
-          required
-          className="block w-full border border-line bg-white px-4 py-3 mt-2 font-normal text-sm"
-        />
-        <span className="block text-[10px] font-normal text-steel mt-1">Maximum file size: 8 MB</span>
+        {c.deliveryPhoto}
+        <input name="photo" type="file" accept="image/*" capture="environment" required className="block w-full border border-line bg-white px-4 py-3 mt-2 font-normal text-sm" />
+        <span className="block text-[10px] font-normal text-steel mt-1">{c.maxFile}</span>
       </label>
 
       <label className="block font-body text-xs font-semibold text-asphalt mt-4">
-        Delivery note <span className="font-normal text-steel">(optional)</span>
-        <textarea
-          name="deliveryNote"
-          rows={3}
-          maxLength={500}
-          className="block w-full border border-line bg-white px-4 py-3 mt-2 font-normal outline-none focus:border-amber"
-          placeholder="Condition of cargo, recipient comment, or handover note"
-        />
+        {c.deliveryNote} <span className="font-normal text-steel">({c.optional})</span>
+        <textarea name="deliveryNote" rows={3} maxLength={500} className="block w-full border border-line bg-white px-4 py-3 mt-2 font-normal outline-none focus:border-amber" placeholder={c.notePlaceholder} />
       </label>
 
       <div className="mt-4">
         <div className="flex items-center justify-between gap-3">
-          <span className="font-body text-xs font-semibold text-asphalt">Recipient signature</span>
-          <button type="button" onClick={clear} className="font-body text-xs text-route underline">
-            Clear
-          </button>
+          <span className="font-body text-xs font-semibold text-asphalt">{c.signature}</span>
+          <button type="button" onClick={clear} className="font-body text-xs text-route underline">{c.clear}</button>
         </div>
         <canvas
           ref={canvas}
@@ -178,14 +126,12 @@ export function DriverDeliveryProofForm({
           onPointerUp={stop}
           onPointerCancel={stop}
           className="w-full h-36 border border-line bg-white mt-2 touch-none"
-          aria-label="Recipient signature pad"
+          aria-label={c.signatureAria}
         />
-        <p className="font-body text-[10px] text-steel mt-1">Ask the recipient to sign inside the box.</p>
+        <p className="font-body text-[10px] text-steel mt-1">{c.signHelp}</p>
       </div>
 
-      <Button disabled={saving} className="w-full mt-5">
-        {saving ? "Uploading proof…" : "Submit proof & complete delivery"}
-      </Button>
+      <Button disabled={saving} className="w-full mt-5">{saving ? c.uploading : c.submit}</Button>
     </form>
   );
 }
