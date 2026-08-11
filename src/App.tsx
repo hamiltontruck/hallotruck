@@ -10,6 +10,7 @@ import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
 import { Earnings } from "./pages/Earnings";
+import { DriverCommission } from "./pages/DriverCommission";
 import { AdminGate } from "./components/auth/AdminGate";
 import { CustomerGate } from "./components/auth/CustomerGate";
 import { PortalLanding } from "./pages/PortalLanding";
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
           <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
           <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
+          <Route path="/driver/commission" element={<DriverGate><DriverShell><DriverCommission /></DriverShell></DriverGate>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
