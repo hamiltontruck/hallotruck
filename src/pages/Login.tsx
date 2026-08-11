@@ -15,13 +15,22 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  async function routeDriver(userId: string) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("driver_status")
+      .eq("id", userId)
+      .maybeSingle();
+    navigate(data?.driver_status === "approved" ? "/driver/jobs" : "/driver/documents", { replace: true });
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user.app_metadata?.role === "driver") {
-        navigate("/driver/jobs", { replace: true });
+        void routeDriver(data.session.user.id);
       }
     });
-  }, [navigate]);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,10 +59,10 @@ export function Login() {
         if (signupError) throw signupError;
 
         if (data.session?.user.app_metadata?.role === "driver") {
-          navigate("/driver/jobs", { replace: true });
+          navigate("/driver/documents", { replace: true });
         } else {
           if (data.session) await supabase.auth.signOut();
-          setMessage(data.user ? t("driver.message.pending") : t("driver.message.confirm"));
+          setMessage(data.user ? "Account created. Confirm your email, sign in, then complete the required driver documents before approval." : t("driver.message.confirm"));
         }
       } else {
         const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
@@ -66,7 +75,7 @@ export function Login() {
           await supabase.auth.signOut();
           throw new Error(t("driver.error.access"));
         }
-        navigate("/driver/jobs", { replace: true });
+        await routeDriver(loginData.user.id);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("driver.error.auth"));
@@ -94,7 +103,7 @@ export function Login() {
         </h1>
 
         <p className="font-body text-sm text-steel mt-2 mb-6">
-          {mode === "login" ? t("driver.login.desc") : t("driver.signup.desc")}
+          {mode === "login" ? t("driver.login.desc") : "Create your driver account. Verification documents are required before Jobs, Trip and Earnings are unlocked."}
         </p>
 
         {error && (
@@ -167,7 +176,7 @@ export function Login() {
             disabled={busy}
             className="w-full bg-route text-bone font-display font-semibold px-6 py-3 disabled:opacity-50"
           >
-            {busy ? t("common.wait") : mode === "login" ? t("driver.login.submit") : t("driver.signup.submit")}
+            {busy ? t("common.wait") : mode === "login" ? t("driver.login.submit") : "Create account & continue to documents"}
           </button>
         </form>
 

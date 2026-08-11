@@ -1,9 +1,10 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
 
 export function DriverGate({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
   const [driverStatus, setDriverStatus] = useState<string | null>(null);
@@ -54,6 +55,10 @@ export function DriverGate({ children }: { children: ReactNode }) {
 
   if (role === "driver" && driverStatus === "suspended") {
     return <main className="min-h-screen bg-bone grid place-items-center p-5"><section className="bg-white border border-line p-7 max-w-md w-full"><p className="font-mono text-[10px] uppercase tracking-[.18em] text-route">Driver access suspended</p><p className="font-display font-bold text-2xl mt-2">This driver profile is inactive</p><p className="font-body text-sm text-steel mt-3">Hallo Truck Operations removed this driver from the active roster. Existing trip, payment and compliance history is preserved for audit purposes.</p><button onClick={switchAccount} className="w-full bg-asphalt text-white py-4 mt-6 font-semibold">Sign out</button></section></main>;
+  }
+
+  if (role === "driver" && driverStatus !== "approved" && location.pathname !== "/driver/documents") {
+    return <main className="min-h-screen bg-bone grid place-items-center p-5"><section className="bg-white border border-line p-7 max-w-md w-full"><p className="font-mono text-[10px] uppercase tracking-[.18em] text-amber-dim">Driver onboarding required</p><p className="font-display font-bold text-2xl mt-2">Complete your verification documents</p><p className="font-body text-sm text-steel mt-3">New drivers must submit the required identity documents before Jobs, Trip and Earnings become available. Upload your driver photo, driving licence front/back and national ID front/back, then wait for Admin verification and approval.</p><button onClick={() => navigate("/driver/documents", { replace: true })} className="w-full bg-route text-white py-4 mt-6 font-semibold">Open document onboarding</button><button onClick={switchAccount} className="w-full border border-asphalt/20 text-asphalt py-3 mt-3 font-semibold">Sign out</button></section></main>;
   }
 
   if (role === "driver") return <>{children}</>;
