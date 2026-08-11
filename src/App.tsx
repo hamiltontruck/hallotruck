@@ -2,8 +2,10 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { AdminDriverDocumentsShortcut } from "./components/admin/AdminDriverDocumentsShortcut";
+import { AdminDriverCommissionShortcut } from "./components/admin/AdminDriverCommissionShortcut";
 import { SmartLogistics } from "./pages/SmartLogistics";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
+import { AdminDriverCommission } from "./pages/AdminDriverCommission";
 import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
@@ -32,6 +34,7 @@ function AdminWorkspace() {
     <>
       <SmartLogistics />
       <AdminDriverDocumentsShortcut />
+      <AdminDriverCommissionShortcut />
     </>
   );
 }
@@ -44,6 +47,7 @@ export default function App() {
           <Route path="/" element={<PortalLanding />} />
           <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
           <Route path="/admin/driver-compliance" element={<AdminGate><AdminDriverCompliance /></AdminGate>} />
+          <Route path="/admin/driver-commission" element={<AdminGate><AdminDriverCommission /></AdminGate>} />
           <Route path="/customer/login" element={<CustomerLogin />} />
           <Route path="/customer" element={<CustomerGate><CustomerPortal /></CustomerGate>} />
           <Route path="/driver/login" element={<Login />} />
