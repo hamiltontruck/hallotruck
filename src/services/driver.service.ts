@@ -27,6 +27,14 @@ export interface AvailableJob {
   cargo_description: string | null;
 }
 
+export interface DriverTruckOption {
+  id: string;
+  plate_number: string;
+  vehicle_type: string;
+  capacity_tons: number | null;
+  status: string;
+}
+
 export async function getAvailableJobs(): Promise<AvailableJob[]> {
   const { data, error } = await supabase
     .from("orders")
@@ -41,10 +49,20 @@ export async function getAvailableJobs(): Promise<AvailableJob[]> {
   return data ?? [];
 }
 
-export async function acceptJob(orderId: string) {
-  const { data, error } = await supabase.rpc("claim_order", {
+export async function getAvailableTrucksForOrder(orderId: string): Promise<DriverTruckOption[]> {
+  const { data, error } = await supabase.rpc("driver_available_trucks_for_order", {
     p_order_id: orderId,
   });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as DriverTruckOption[];
+}
+
+export async function acceptJob(orderId: string, truckId?: string) {
+  const rpc = truckId ? "claim_order_with_truck" : "claim_order";
+  const params = truckId
+    ? { p_order_id: orderId, p_truck_id: truckId }
+    : { p_order_id: orderId };
+  const { data, error } = await supabase.rpc(rpc, params);
 
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Someone else already took this load.");
