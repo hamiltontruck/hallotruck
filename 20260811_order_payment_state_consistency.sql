@@ -98,7 +98,9 @@ set search_path = ''
 as $$
 declare
   v_total numeric;
-  v_released numeric;
+  v_released_gross numeric;
+  v_credit_refunded numeric;
+  v_released_net numeric;
   v_held numeric;
   v_has_refund boolean;
 begin
@@ -114,16 +116,19 @@ begin
 
   select
     coalesce(sum(amount_etb) filter (where event = 'released'),0),
+    coalesce(sum(amount_etb) filter (where event = 'refunded' and provider = 'credit_refund'),0),
     coalesce(sum(amount_etb) filter (where event = 'held_escrow'),0),
     exists(select 1 from public.payments p2 where p2.order_id = p_order_id and p2.event = 'refunded')
-  into v_released, v_held, v_has_refund
+  into v_released_gross, v_credit_refunded, v_held, v_has_refund
   from public.payments
   where order_id = p_order_id;
 
+  v_released_net := greatest(0, v_released_gross - v_credit_refunded);
+
   update public.orders
   set payment_status = case
-    when v_total > 0 and v_released >= v_total then 'released'::public.payment_status
-    when v_released > 0 or v_held > 0 then 'held_escrow'::public.payment_status
+    when v_total > 0 and v_released_net >= v_total then 'released'::public.payment_status
+    when v_released_net > 0 or v_held > 0 then 'held_escrow'::public.payment_status
     when v_has_refund then 'refunded'::public.payment_status
     else 'unpaid'::public.payment_status
   end
@@ -137,9 +142,21 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_order_id uuid;
 begin
-  perform public.recompute_order_payment_status(coalesce(new.order_id, old.order_id));
-  return coalesce(new, old);
+  if tg_op = 'DELETE' then
+    v_order_id := old.order_id;
+  else
+    v_order_id := new.order_id;
+  end if;
+
+  perform public.recompute_order_payment_status(v_order_id);
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
 end;
 $$;
 
