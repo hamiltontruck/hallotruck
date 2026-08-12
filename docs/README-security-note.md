@@ -1,0 +1,1 @@
+This branch contains only application-safe security hardening and Admin onboarding visibility improvements. It does not move PostGIS, alter `spatial_ref_sys`, enable account-level Auth features, or revoke authenticated access from RPCs that the signed-in application intentionally calls.
