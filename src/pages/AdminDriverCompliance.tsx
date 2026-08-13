@@ -165,8 +165,15 @@ export function AdminDriverCompliance() {
   useEffect(() => { void load(); }, []);
 
   const visibleDrivers = useMemo(
-    () => filter === "all" ? drivers : drivers.filter((driver) => documents.some((doc) => doc.driver_id === driver.id && doc.status === "pending")),
-    [drivers, documents, filter],
+    () => filter === "all"
+      ? drivers
+      : drivers.filter((driver) => driver.driver_status !== "approved" && driver.driver_status !== "suspended"),
+    [drivers, filter],
+  );
+
+  const pendingDriverCount = useMemo(
+    () => drivers.filter((driver) => driver.driver_status !== "approved" && driver.driver_status !== "suspended").length,
+    [drivers],
   );
 
   const globalReleased = useMemo(
@@ -256,20 +263,32 @@ export function AdminDriverCompliance() {
           <button onClick={() => setFilter("pending")} className={`px-4 py-2 text-xs font-semibold ${filter === "pending" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>Pending review</button>
           <button onClick={() => setFilter("all")} className={`px-4 py-2 text-xs font-semibold ${filter === "all" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>All drivers</button>
         </div>
-        <span className="font-mono text-xs text-steel">{documents.filter((doc) => doc.status === "pending").length} files pending</span>
+        <span className="font-mono text-xs text-steel">{pendingDriverCount} drivers awaiting · {documents.filter((doc) => doc.status === "pending").length} files pending</span>
       </div>
 
       {!historyAvailable && <p className="mt-4 border border-amber/30 bg-amber/10 p-3 text-xs text-amber-dim">Document version history is waiting for the new Supabase audit migration. Current verification files still work normally.</p>}
       {error && <p className="mt-5 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
 
-      {loading ? <p className="py-16 text-center font-mono text-sm text-steel">Loading driver operations…</p> : visibleDrivers.length === 0 ? <div className="mt-5 border border-asphalt/10 bg-white p-10 text-center"><p className="font-display text-xl font-semibold">No drivers in this view</p><p className="mt-2 text-sm text-steel">Pending verification submissions will appear here.</p></div> : <div className="mt-5 grid gap-5">
+      {loading ? <p className="py-16 text-center font-mono text-sm text-steel">Loading driver operations…</p> : visibleDrivers.length === 0 ? <div className="mt-5 border border-asphalt/10 bg-white p-10 text-center"><p className="font-display text-xl font-semibold">No drivers in this view</p><p className="mt-2 text-sm text-steel">New driver registrations and pending verification work will appear here.</p></div> : <div className="mt-5 grid gap-5">
         {visibleDrivers.map((driver) => {
           const driverDocs = documents.filter((doc) => doc.driver_id === driver.id);
           const identityDocs = driverDocs.filter((doc) => !doc.truck_id);
           const historyRows = history.filter((item) => item.driver_id === driver.id);
           const driverOrders = orders.filter((order) => order.driver_id === driver.id);
           const deliveredOrders = driverOrders.filter((order) => order.status === "delivered");
+          const submittedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key)).length;
           const verifiedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "verified")).length;
+          const pendingIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "pending")).length;
+          const rejectedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "rejected")).length;
+          const onboardingStage = verifiedIdentity === identityRequired.length
+            ? "Ready for approval"
+            : rejectedIdentity > 0
+              ? "Corrections required"
+              : submittedIdentity === 0
+                ? "Waiting for driver documents"
+                : pendingIdentity > 0
+                  ? "Documents under review"
+                  : "Onboarding incomplete";
           const assignedTruck = trucks.find((truck) => truck.driver_id === driver.id) ?? (driverDocs.find((doc) => doc.truck_id)?.truck_id ? trucks.find((truck) => truck.id === driverDocs.find((doc) => doc.truck_id)?.truck_id) : undefined);
           const releasedGross = driverOrders.reduce((sum, order) => sum + releasedForOrder(order, payments), 0);
           const split = splitHalloCommission(releasedGross);
@@ -282,10 +301,11 @@ export function AdminDriverCompliance() {
                 <div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{driver.full_name}</h2><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(driver.driver_status)}`}>{driver.driver_status ?? "pending"}</span></div>
                 <p className="mt-2 text-sm text-steel">{driver.phone}{driver.email ? ` · ${driver.email}` : ""}</p>
                 <p className="mt-1 text-xs text-steel">{driver.home_address || "Home address not supplied"}</p>
+                {driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <p className="mt-3 text-xs font-semibold text-amber-dim">Onboarding: {onboardingStage} · {submittedIdentity}/{identityRequired.length} submitted</p>}
                 {activeTrip && <p className="mt-3 text-xs font-semibold text-amber-dim">Active trip: {activeTrip.tracking_id} · {activeTrip.status.replace("_", " ")}</p>}
               </div>
               <div className="flex min-w-52 flex-col gap-2">
-                <div className="bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">IDENTITY VERIFIED</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity} / {identityRequired.length}</p>{driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <button disabled={busy === driver.id || verifiedIdentity !== identityRequired.length} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
+                <div className="bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">IDENTITY VERIFIED</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity} / {identityRequired.length}</p><p className="mt-1 text-[11px] font-semibold text-steel">{onboardingStage}</p>{driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <button disabled={busy === driver.id || verifiedIdentity !== identityRequired.length} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
                 {driver.driver_status === "suspended" ? <button disabled={busy === driver.id} onClick={() => void restoreDriver(driver)} className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-40">Restore driver</button> : <button disabled={busy === driver.id || Boolean(activeTrip)} onClick={() => void removeDriver(driver)} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route disabled:opacity-35">Remove driver</button>}
               </div>
             </div>
@@ -304,7 +324,7 @@ export function AdminDriverCompliance() {
             </div>
 
             <div className="grid gap-px bg-asphalt/10 sm:grid-cols-2 xl:grid-cols-3">
-              {driverDocs.length === 0 ? <div className="col-span-full bg-white p-6 text-sm text-steel">No verification files submitted yet.</div> : driverDocs.map((doc) => <div key={doc.id} className="bg-white p-5">
+              {driverDocs.length === 0 ? <div className="col-span-full bg-white p-6 text-sm text-steel">No verification files submitted yet. This driver remains visible here while completing onboarding.</div> : driverDocs.map((doc) => <div key={doc.id} className="bg-white p-5">
                 <div className="flex items-start justify-between gap-3"><div><p className="font-display font-semibold">{labels[doc.document_key] ?? doc.document_key}</p><p className="mt-1 max-w-52 truncate text-xs text-steel">{doc.original_name}</p></div><span className={`border px-2 py-1 text-[9px] font-semibold uppercase ${statusBadge(doc.status)}`}>{doc.status}</span></div>
                 {doc.expiry_date && <p className="mt-3 text-xs text-steel">Expiry: <strong className="text-asphalt">{doc.expiry_date}</strong></p>}
                 {doc.rejection_reason && <p className="mt-3 text-xs text-route">{doc.rejection_reason}</p>}

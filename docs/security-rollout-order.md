@@ -1,0 +1,1 @@
+After merge, apply the three new Supabase migrations in filename order, then rerun the Supabase security advisor and smoke-test Admin driver review, Customer rating submission (when UI is present), Driver job acceptance, Customer payment submission and Admin payment/order RPC flows.
