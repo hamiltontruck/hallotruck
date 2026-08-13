@@ -1,4 +1,4 @@
-import { FormEvent, PointerEvent, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, PointerEvent, useEffect, useRef, useState } from "react";
 import { submitDeliveryProof } from "../../services/delivery-proof.service";
 import { Button } from "../ui/Button";
 import { useLanguage } from "../../i18n/LanguageProvider";
@@ -14,10 +14,47 @@ export function DriverDeliveryProofForm({
   const { language } = useLanguage();
   const c = getDriverTripDocumentsCopy(language).proof;
   const canvas = useRef<HTMLCanvasElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const drawing = useRef(false);
   const [signed, setSigned] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreview("");
+      return;
+    }
+    const preview = URL.createObjectURL(photo);
+    setPhotoPreview(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [photo]);
+
+  function selectPhoto(event: ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0] ?? null;
+    if (!selected) return;
+    if (!selected.type.startsWith("image/")) {
+      setPhoto(null);
+      event.target.value = "";
+      setError(c.photoRequired);
+      return;
+    }
+    if (selected.size > 8 * 1024 * 1024) {
+      setPhoto(null);
+      event.target.value = "";
+      setError(c.maxFile);
+      return;
+    }
+    setPhoto(selected);
+    setError("");
+  }
+
+  function removePhoto() {
+    setPhoto(null);
+    if (fileInput.current) fileInput.current.value = "";
+  }
 
   function point(event: PointerEvent<HTMLCanvasElement>) {
     const target = canvas.current!;
@@ -64,10 +101,9 @@ export function DriverDeliveryProofForm({
     const form = new FormData(event.currentTarget);
     const recipientName = String(form.get("recipientName") ?? "").trim();
     const deliveryNote = String(form.get("deliveryNote") ?? "");
-    const photo = form.get("photo");
 
     if (recipientName.length < 2) return setError(c.recipientNameError);
-    if (!(photo instanceof File) || !photo.size) return setError(c.photoRequired);
+    if (!photo?.size) return setError(c.photoRequired);
     if (!signed || !canvas.current) return setError(c.signatureRequired);
 
     const signature = await new Promise<Blob | null>((resolve) => canvas.current?.toBlob(resolve, "image/png"));
@@ -103,9 +139,22 @@ export function DriverDeliveryProofForm({
 
       <label className="block font-body text-xs font-semibold text-asphalt mt-4">
         {c.deliveryPhoto}
-        <input name="photo" type="file" accept="image/*" capture="environment" required className="block w-full border border-line bg-white px-4 py-3 mt-2 font-normal text-sm" />
+        <input ref={fileInput} name="photo" type="file" accept="image/*" capture="environment" onChange={selectPhoto} className="block w-full border border-line bg-white px-4 py-3 mt-2 font-normal text-sm" />
         <span className="block text-[10px] font-normal text-steel mt-1">{c.maxFile}</span>
       </label>
+
+      {photo && (
+        <div className="mt-3 border border-emerald-700/25 bg-emerald-50 p-3">
+          <div className="flex items-start gap-3">
+            {photoPreview && <img src={photoPreview} alt="Selected delivery proof" className="h-20 w-20 shrink-0 object-cover" />}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-asphalt">{photo.name}</p>
+              <p className="mt-1 text-[10px] text-steel">{(photo.size / 1024 / 1024).toFixed(2)} MB · Photo ready</p>
+              <button type="button" onClick={removePhoto} disabled={saving} className="mt-2 text-xs font-semibold text-route underline disabled:opacity-50">Remove / retake</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <label className="block font-body text-xs font-semibold text-asphalt mt-4">
         {c.deliveryNote} <span className="font-normal text-steel">({c.optional})</span>
@@ -115,7 +164,7 @@ export function DriverDeliveryProofForm({
       <div className="mt-4">
         <div className="flex items-center justify-between gap-3">
           <span className="font-body text-xs font-semibold text-asphalt">{c.signature}</span>
-          <button type="button" onClick={clear} className="font-body text-xs text-route underline">{c.clear}</button>
+          <button type="button" onClick={clear} disabled={saving} className="font-body text-xs text-route underline disabled:opacity-50">{c.clear}</button>
         </div>
         <canvas
           ref={canvas}
@@ -131,7 +180,7 @@ export function DriverDeliveryProofForm({
         <p className="font-body text-[10px] text-steel mt-1">{c.signHelp}</p>
       </div>
 
-      <Button disabled={saving} className="w-full mt-5">{saving ? c.uploading : c.submit}</Button>
+      <Button disabled={saving || !photo} className="w-full mt-5">{saving ? c.uploading : c.submit}</Button>
     </form>
   );
 }
