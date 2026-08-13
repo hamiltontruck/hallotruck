@@ -3,6 +3,7 @@ import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { AdminDriverDocumentsShortcut } from "./components/admin/AdminDriverDocumentsShortcut";
 import { AdminDriverCommissionShortcut } from "./components/admin/AdminDriverCommissionShortcut";
+import { CustomerAssignmentNotice } from "./components/customer/CustomerAssignmentNotice";
 import { SmartLogistics } from "./pages/SmartLogistics";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
 import { AdminDriverCommission } from "./pages/AdminDriverCommission";
@@ -40,6 +41,15 @@ function AdminWorkspace() {
   );
 }
 
+function CustomerWorkspace() {
+  return (
+    <>
+      <CustomerAssignmentNotice />
+      <CustomerPortal />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <LanguageProvider>
@@ -50,7 +60,7 @@ export default function App() {
           <Route path="/admin/driver-compliance" element={<AdminGate><AdminDriverCompliance /></AdminGate>} />
           <Route path="/admin/driver-commission" element={<AdminGate><AdminDriverCommission /></AdminGate>} />
           <Route path="/customer/login" element={<CustomerLogin />} />
-          <Route path="/customer" element={<CustomerGate><CustomerPortal /></CustomerGate>} />
+          <Route path="/customer" element={<CustomerGate><CustomerWorkspace /></CustomerGate>} />
           <Route path="/driver/login" element={<Login />} />
           <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
           <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
