@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.client";
+import { calculatePaymentSummary } from "../utils/paymentSummary";
 
 export interface CustomerOrder {
   id: string;
@@ -46,6 +47,7 @@ export interface CustomerDriverAssignment {
   vehicle_type: string | null;
   capacity_tons: number | null;
   truck_photo_path: string | null;
+  driver_photo_path?: string | null;
 }
 
 export interface CustomerProfile {
@@ -260,43 +262,26 @@ export function printCustomerInvoice(order: CustomerOrder, payments: CustomerPay
   }[character] ?? character));
 
   const orderPayments = payments.filter((payment) => payment.order_id === order.id);
-  const releasedGross = orderPayments
-    .filter((payment) => payment.event === "released")
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
-  const heldEscrow = orderPayments
-    .filter((payment) => payment.event === "held_escrow")
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
-  const pendingVerification = orderPayments
-    .filter((payment) => payment.event === "initiated")
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
-  const refundedCredit = orderPayments
-    .filter((payment) => payment.event === "refunded" && payment.provider === "credit_refund")
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
+  const summary = calculatePaymentSummary(order.price_etb, orderPayments);
+  const releasedNet = Math.max(0, summary.releasedGross - summary.refunded);
 
-  const released = Math.max(0, releasedGross - refundedCredit);
-  const verifiedCustomerPayment = Math.max(0, releasedGross + heldEscrow - refundedCredit);
-  const total = Number(order.price_etb ?? 0);
-  const committed = Math.max(0, verifiedCustomerPayment + pendingVerification);
-  const balance = Math.max(0, total - committed);
-  const credit = Math.max(0, verifiedCustomerPayment - total);
-
-  const heldRow = heldEscrow > 0
-    ? `<div class="row escrow"><b>Held in escrow</b><span>ETB ${heldEscrow.toLocaleString()}</span></div>`
+  const heldRow = summary.heldEscrow > 0
+    ? `<div class="row escrow"><b>Held in escrow</b><span>ETB ${summary.heldEscrow.toLocaleString()}</span></div>`
     : "";
-  const releasedRow = released > 0
-    ? `<div class="row"><b>Released from escrow</b><span>ETB ${released.toLocaleString()}</span></div>`
+  const releasedRow = releasedNet > 0
+    ? `<div class="row"><b>Released from escrow</b><span>ETB ${releasedNet.toLocaleString()}</span></div>`
     : "";
-  const pendingRow = pendingVerification > 0
-    ? `<div class="row pending"><b>Pending verification</b><span>ETB ${pendingVerification.toLocaleString()}</span></div>`
+  const pendingRow = summary.pendingVerification > 0
+    ? `<div class="row pending"><b>Pending verification</b><span>ETB ${summary.pendingVerification.toLocaleString()}</span></div>`
     : "";
-  const refundRow = refundedCredit > 0
-    ? `<div class="row refund"><b>Credit refunded</b><span>ETB ${refundedCredit.toLocaleString()}</span></div>`
+  const refundRow = summary.refunded > 0
+    ? `<div class="row refund"><b>Refunded</b><span>ETB ${summary.refunded.toLocaleString()}</span></div>`
     : "";
-  const creditRow = credit > 0
-    ? `<div class="row credit"><b>Customer credit</b><span>ETB ${credit.toLocaleString()}</span></div>`
+  const creditRow = summary.customerCredit > 0
+    ? `<div class="row credit"><b>Customer credit</b><span>ETB ${summary.customerCredit.toLocaleString()}</span></div>`
     : "";
 
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(order.tracking_id)} invoice</title><style>body{font:14px Arial;color:#1d222a;padding:24px;max-width:760px;margin:auto}h1{font-size:28px}.brand{color:#d68e25}.row{display:flex;gap:20px;justify-content:space-between;border-bottom:1px solid #ddd;padding:12px 0}.row span{text-align:right}.total{font-size:20px;font-weight:bold}.muted{color:#68707c}.pending{color:#9b6418}.escrow{color:#8a5f1b;background:#fff8e8;padding-left:10px;padding-right:10px}.refund{color:#256b4a;background:#eefbf4;padding-left:10px;padding-right:10px}.credit{color:#256b4a;background:#eefbf4;padding-left:10px;padding-right:10px}button{width:100%;border:0;background:#1d222a;color:white;padding:15px;margin-top:24px;font-weight:bold}@media(max-width:480px){body{padding:18px}.row{display:block}.row span{display:block;text-align:left;margin-top:6px}}@media print{button{display:none}body{padding:0}}</style></head><body><h1>HALLO<span class="brand">TRUCK</span></h1><p class="muted">Customer logistics invoice / receipt</p><div class="row"><b>Tracking</b><span>${safe(order.tracking_id)}</span></div><div class="row"><b>Route</b><span>${safe(order.pickup_address)} → ${safe(order.dropoff_address)}</span></div><div class="row"><b>Vehicle</b><span>${safe(order.vehicle_type)}</span></div><div class="row"><b>Order status</b><span>${safe(order.status.replace("_", " "))}</span></div><div class="row total"><b>Invoice total</b><span>ETB ${total.toLocaleString()}</span></div><div class="row"><b>Verified customer payment</b><span>ETB ${verifiedCustomerPayment.toLocaleString()}</span></div>${heldRow}${releasedRow}${pendingRow}${refundRow}<div class="row total"><b>Balance to pay</b><span>ETB ${balance.toLocaleString()}</span></div>${creditRow}<p class="muted">Held escrow is verified customer money awaiting release after delivery. Pending verification is submitted but not yet verified.</p><p class="muted">Generated ${safe(new Date().toLocaleString())}</p><button type="button" onclick="window.print()">Print / Save as PDF</button></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(order.tracking_id)} invoice</title><style>body{font:14px Arial;color:#1d222a;padding:24px;max-width:760px;margin:auto}h1{font-size:28px}.brand{color:#d68e25}.row{display:flex;gap:20px;justify-content:space-between;border-bottom:1px solid #ddd;padding:12px 0}.row span{text-align:right}.total{font-size:20px;font-weight:bold}.muted{color:#68707c}.pending{color:#9b6418}.escrow{color:#8a5f1b;background:#fff8e8;padding-left:10px;padding-right:10px}.refund{color:#256b4a;background:#eefbf4;padding-left:10px;padding-right:10px}.credit{color:#256b4a;background:#eefbf4;padding-left:10px;padding-right:10px}button{width:100%;border:0;background:#1d222a;color:white;padding:15px;margin-top:24px;font-weight:bold}@media(max-width:480px){body{padding:18px}.row{display:block}.row span{display:block;text-align:left;margin-top:6px}}@media print{button{display:none}body{padding:0}}</style></head><body><h1>HALLO<span class="brand">TRUCK</span></h1><p class="muted">Customer logistics invoice / receipt</p><div class="row"><b>Tracking</b><span>${safe(order.tracking_id)}</span></div><div class="row"><b>Route</b><span>${safe(order.pickup_address)} → ${safe(order.dropoff_address)}</span></div><div class="row"><b>Vehicle</b><span>${safe(order.vehicle_type)}</span></div><div class="row"><b>Order status</b><span>${safe(order.status.replace("_", " "))}</span></div><div class="row total"><b>Invoice total</b><span>ETB ${summary.invoiceTotal.toLocaleString()}</span></div><div class="row"><b>Verified customer payment</b><span>ETB ${summary.verifiedPaid.toLocaleString()}</span></div>${heldRow}${releasedRow}${pendingRow}${refundRow}<div class="row total"><b>Balance to pay</b><span>ETB ${summary.balanceToPay.toLocaleString()}</span></div>${creditRow}<p class="muted">Held escrow is verified customer money awaiting release after delivery. Pending verification is submitted but not yet verified and does not reduce the verified balance.</p><p class="muted">Generated ${safe(new Date().toLocaleString())}</p><button type="button" onclick="window.print()">Print / Save as PDF</button></body></html>`;
   const popup = window.open("about:blank", "_blank");
   if (!popup) throw new Error("Allow pop-ups to generate the PDF.");
   popup.document.open();
