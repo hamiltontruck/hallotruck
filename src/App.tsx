@@ -2,6 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { CustomerAssignmentNotice } from "./components/customer/CustomerAssignmentNotice";
+import { AdminSidebarLeadershipLinks } from "./components/admin/AdminSidebarLeadershipLinks";
 import { SmartLogistics } from "./pages/SmartLogistics";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
 import { AdminDriverCommission } from "./pages/AdminDriverCommission";
@@ -29,6 +30,15 @@ function DriverShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AdminWorkspace() {
+  return (
+    <>
+      <SmartLogistics />
+      <AdminSidebarLeadershipLinks />
+    </>
+  );
+}
+
 function CustomerWorkspace() {
   return (
     <>
@@ -44,7 +54,7 @@ export default function App() {
       <HashRouter>
         <Routes>
           <Route path="/" element={<PortalLanding />} />
-          <Route path="/admin" element={<AdminGate><SmartLogistics /></AdminGate>} />
+          <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
           <Route path="/admin/driver-compliance" element={<AdminGate><AdminDriverCompliance /></AdminGate>} />
           <Route path="/admin/driver-commission" element={<AdminGate><AdminDriverCommission /></AdminGate>} />
           <Route path="/customer/login" element={<CustomerLogin />} />
