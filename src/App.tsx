@@ -3,6 +3,7 @@ import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { CustomerAssignmentNotice } from "./components/customer/CustomerAssignmentNotice";
 import { AdminSidebarLeadershipLinks } from "./components/admin/AdminSidebarLeadershipLinks";
+import { AdminToolShell } from "./components/admin/AdminToolShell";
 import { SmartLogistics } from "./pages/SmartLogistics";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
 import { AdminDriverCommission } from "./pages/AdminDriverCommission";
@@ -55,8 +56,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<PortalLanding />} />
           <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
-          <Route path="/admin/driver-compliance" element={<AdminGate><AdminDriverCompliance /></AdminGate>} />
-          <Route path="/admin/driver-commission" element={<AdminGate><AdminDriverCommission /></AdminGate>} />
+          <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
+          <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
           <Route path="/customer/login" element={<CustomerLogin />} />
           <Route path="/customer" element={<CustomerGate><CustomerWorkspace /></CustomerGate>} />
           <Route path="/driver/login" element={<Login />} />
