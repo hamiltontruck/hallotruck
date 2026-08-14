@@ -76,53 +76,25 @@ export function PortalLanding() {
           </div>
         </div>
 
-        <div className="grid items-start gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-3">
           {portalSpecs.map((portal, index) => (
-            <div key={portal.path} className="space-y-3">
-              <Link
-                to={portal.path}
-                className="group block border border-white/12 bg-white/[.04] p-6 transition hover:-translate-y-1 hover:border-amber/60 sm:p-8"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <span className={`inline-flex px-3 py-2 font-mono text-[10px] tracking-[.18em] ${portal.accent}`}>
-                    {portal.label}
-                  </span>
-                  <span className="font-mono text-xs text-white/25">0{index + 1}</span>
-                </div>
-                <h2 className="mt-10 font-display text-2xl font-semibold">{portal.title}</h2>
-                <p className="mt-3 min-h-14 text-sm leading-6 text-white/45">{portal.description}</p>
-                <span className="mt-8 inline-flex items-center gap-3 text-sm font-semibold text-amber">
-                  Open portal <span className="transition group-hover:translate-x-1">→</span>
+            <Link
+              key={portal.path}
+              to={portal.path}
+              className="group border border-white/12 bg-white/[.04] p-6 transition hover:-translate-y-1 hover:border-amber/60 sm:p-8"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <span className={`inline-flex px-3 py-2 font-mono text-[10px] tracking-[.18em] ${portal.accent}`}>
+                  {portal.label}
                 </span>
-              </Link>
-
-              {index === 0 && (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                  <Link
-                    to="/admin/driver-compliance"
-                    className="group flex items-center gap-3 border border-amber/30 bg-white/[.04] p-4 transition hover:border-amber"
-                  >
-                    <span className="grid h-10 w-10 shrink-0 place-items-center bg-amber font-mono text-[10px] font-bold tracking-[.12em] text-asphalt">DRV</span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold">Driver control</span>
-                      <span className="mt-1 block text-[10px] leading-4 text-white/40">Verification, documents and trip history</span>
-                    </span>
-                    <span className="ml-auto text-amber transition group-hover:translate-x-1">→</span>
-                  </Link>
-                  <Link
-                    to="/admin/driver-commission"
-                    className="group flex items-center gap-3 border border-amber/30 bg-white/[.04] p-4 transition hover:border-amber"
-                  >
-                    <span className="grid h-10 w-10 shrink-0 place-items-center bg-amber font-display font-bold text-asphalt">%</span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold">Commission control</span>
-                      <span className="mt-1 block text-[10px] leading-4 text-white/40">Approve driver settlements</span>
-                    </span>
-                    <span className="ml-auto text-amber transition group-hover:translate-x-1">→</span>
-                  </Link>
-                </div>
-              )}
-            </div>
+                <span className="font-mono text-xs text-white/25">0{index + 1}</span>
+              </div>
+              <h2 className="mt-10 font-display text-2xl font-semibold">{portal.title}</h2>
+              <p className="mt-3 min-h-14 text-sm leading-6 text-white/45">{portal.description}</p>
+              <span className="mt-8 inline-flex items-center gap-3 text-sm font-semibold text-amber">
+                Open portal <span className="transition group-hover:translate-x-1">→</span>
+              </span>
+            </Link>
           ))}
         </div>
       </section>
