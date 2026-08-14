@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { calculateQuote, createCustomerOrder, getCustomerPortalData, openCustomerPaymentReceipt, openCustomerProof, openCustomerTruckPhoto, printCustomerInvoice, type CustomerOrder, type CustomerPayment, type CustomerPortalData } from "../services/customer.service";
+import { calculateQuote, createCustomerOrder, getCustomerPortalData, openCustomerPaymentReceipt, openCustomerProof, printCustomerInvoice, type CustomerOrder, type CustomerPayment, type CustomerPortalData } from "../services/customer.service";
 import { supabase } from "../services/supabase.client";
 import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/CustomerQuoteMap";
 import { CustomerLiveTripMap } from "../components/tracking/CustomerLiveTripMap";
+import { CustomerDriverAssignmentCard } from "../components/customer/CustomerDriverAssignmentCard";
 import { CustomerProfilePanel } from "../components/customer/CustomerProfilePanel";
 import { CustomerPaymentModal } from "../components/customer/CustomerPaymentModal";
 import { LanguageSwitcher, useLanguage } from "../i18n/LanguageProvider";
@@ -109,12 +110,23 @@ export function CustomerPortal() {
                 <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-sm font-semibold">{order.tracking_id}</p><p className="mt-2 text-sm">{order.pickup_address} <span className="text-steel">→</span> {order.dropoff_address}</p></div><span className="bg-amber/15 px-3 py-2 text-xs font-semibold capitalize text-amber-dim">{order.status.replace("_", " ")}</span></div>
                 <div className="mt-5 grid grid-cols-2 gap-4 border-t border-asphalt/10 pt-5 text-sm sm:grid-cols-4"><Info label={c.quote} value={`ETB ${Number(order.price_etb ?? 0).toLocaleString()}`} /><Info label={c.distance} value={order.distance_km ? `${order.distance_km} km` : c.pending} /><Info label={c.payment} value={pending ? c.pendingVerification : order.payment_status.replace("_", " ")} /><Info label={c.vehicle} value={order.vehicle_type} /></div>
 
-                {assignment && <div className="mt-5 border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">{c.assigned}</p><p className="mt-1 font-display text-lg font-semibold">{assignment.driver_name}</p><a href={`tel:${assignment.driver_phone}`} className="mt-1 inline-block text-sm font-semibold text-emerald-800">{assignment.driver_phone}</a></div><span className={`px-3 py-2 text-[10px] font-semibold uppercase ${assignment.driver_verified ? "bg-emerald-700 text-white" : "border border-amber/30 bg-amber/10 text-amber-dim"}`}>{assignment.driver_verified ? c.verifiedDriver : c.verificationPending}</span></div>
-                  <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4"><SafeInfo label={c.license} value={assignment.license_verified ? c.verified : c.pending} /><SafeInfo label={c.nationalId} value={assignment.national_id_verified ? c.verified : c.pending} /><SafeInfo label={c.truckPlate} value={assignment.plate_number ?? c.pending} /><SafeInfo label={c.truck} value={`${assignment.vehicle_type ?? order.vehicle_type}${assignment.capacity_tons ? ` · ${assignment.capacity_tons} tons` : ""}`} /></div>
-                  {assignment.truck_photo_path && <button onClick={() => void openCustomerTruckPhoto(assignment.truck_photo_path!)} className="mt-4 border border-emerald-700 px-4 py-2.5 text-xs font-semibold text-emerald-800">{c.viewTruckPhoto}</button>}
-                  <p className="mt-3 text-[10px] leading-relaxed text-emerald-900/65">{c.privacy}</p>
-                </div>}
+                {assignment && <CustomerDriverAssignmentCard
+                  assignment={assignment}
+                  order={order}
+                  labels={{
+                    assigned: c.assigned,
+                    verifiedDriver: c.verifiedDriver,
+                    verificationPending: c.verificationPending,
+                    license: c.license,
+                    nationalId: c.nationalId,
+                    truckPlate: c.truckPlate,
+                    truck: c.truck,
+                    verified: c.verified,
+                    pending: c.pending,
+                    viewTruckPhoto: c.viewTruckPhoto,
+                    privacy: c.privacy,
+                  }}
+                />}
 
                 <div className="mt-5 flex flex-wrap gap-3 border-t border-asphalt/10 pt-5">
                   {trackable && <button onClick={() => setTrackingOrder(order)} className="bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{c.liveTracking}</button>}
@@ -140,4 +152,3 @@ export function CustomerPortal() {
 }
 
 function Info({ label, value }: { label: string; value: string }) { return <div><p className="text-xs text-steel">{label}</p><p className="mt-1 font-semibold capitalize">{value}</p></div>; }
-function SafeInfo({ label, value }: { label: string; value: string }) { return <div className="bg-white/70 p-3"><p className="text-[10px] uppercase tracking-wider text-emerald-900/55">{label}</p><p className="mt-1 font-semibold text-emerald-950">{value}</p></div>; }
