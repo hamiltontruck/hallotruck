@@ -323,13 +323,8 @@ export function AdminDriverCompliance() {
               <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{driverDocs.length} current verification records · {historyRows.length} archived versions</p></div><button onClick={() => setExpandedDriverId(expanded ? null : driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{expanded ? "Hide full history" : "View full driver history"}</button></div>
             </div>
 
-            <div className="grid gap-px bg-asphalt/10 sm:grid-cols-2 xl:grid-cols-3">
-              {driverDocs.length === 0 ? <div className="col-span-full bg-white p-6 text-sm text-steel">No verification files submitted yet. This driver remains visible here while completing onboarding.</div> : driverDocs.map((doc) => <div key={doc.id} className="bg-white p-5">
-                <div className="flex items-start justify-between gap-3"><div><p className="font-display font-semibold">{labels[doc.document_key] ?? doc.document_key}</p><p className="mt-1 max-w-52 truncate text-xs text-steel">{doc.original_name}</p></div><span className={`border px-2 py-1 text-[9px] font-semibold uppercase ${statusBadge(doc.status)}`}>{doc.status}</span></div>
-                {doc.expiry_date && <p className="mt-3 text-xs text-steel">Expiry: <strong className="text-asphalt">{doc.expiry_date}</strong></p>}
-                {doc.rejection_reason && <p className="mt-3 text-xs text-route">{doc.rejection_reason}</p>}
-                <div className="mt-4 flex flex-wrap gap-2"><button onClick={() => void openFile(doc.file_path)} className="border border-asphalt px-3 py-2 text-xs font-semibold">Open file</button>{doc.status === "pending" && <><button disabled={busy === doc.id} onClick={() => void review(doc, "verified")} className="bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Verify</button><button disabled={busy === doc.id} onClick={() => void review(doc, "rejected")} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route disabled:opacity-40">Reject</button></>}</div>
-              </div>)}
+            <div className="grid gap-3 bg-[#f8f7f2] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+              {driverDocs.length === 0 ? <div className="col-span-full rounded-2xl border border-dashed border-asphalt/15 bg-white p-7 text-center text-sm text-steel">No verification files submitted yet. This driver remains visible here while completing onboarding.</div> : driverDocs.map((doc) => <DocumentCard key={doc.id} doc={doc} busy={busy === doc.id} onOpen={openFile} onReview={review} />)}
             </div>
 
             {expanded && <div className="border-t-4 border-[#f5f3ed] bg-[#faf9f5] p-5 sm:p-6">
@@ -350,7 +345,7 @@ export function AdminDriverCompliance() {
 
               <section className="mt-7">
                 <div className="flex items-end justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">DOCUMENT AUDIT</p><h3 className="mt-1 font-display text-xl font-semibold">Document version history</h3></div><span className="font-mono text-xs text-steel">{historyRows.length} versions</span></div>
-                {!historyAvailable ? <p className="mt-4 border border-amber/30 bg-amber/10 p-4 text-sm text-amber-dim">Apply the driver audit migration to start preserving every future replacement and review-state version.</p> : historyRows.length === 0 ? <p className="mt-4 border border-asphalt/10 bg-white p-5 text-sm text-steel">No archived versions yet. Future replacements and review changes will be preserved here.</p> : <div className="mt-4 grid gap-3 sm:grid-cols-2">{historyRows.map((item) => <div key={item.id} className="border border-asphalt/10 bg-white p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{labels[item.document_key] ?? item.document_key}</p><p className="mt-1 max-w-56 truncate text-xs text-steel">{item.original_name}</p></div><span className={`border px-2 py-1 text-[9px] font-semibold uppercase ${statusBadge(item.status)}`}>{item.status}</span></div><p className="mt-3 text-[11px] text-steel">Archived: {when(item.archived_at)} · {item.archive_reason.replace("_", " ")}</p>{item.rejection_reason && <p className="mt-2 text-xs text-route">{item.rejection_reason}</p>}<button onClick={() => void openFile(item.file_path)} className="mt-3 border border-asphalt px-3 py-2 text-xs font-semibold">Open archived file</button></div>)}</div>}
+                {!historyAvailable ? <p className="mt-4 border border-amber/30 bg-amber/10 p-4 text-sm text-amber-dim">Apply the driver audit migration to start preserving every future replacement and review-state version.</p> : historyRows.length === 0 ? <p className="mt-4 border border-asphalt/10 bg-white p-5 text-sm text-steel">No archived versions yet. Future replacements and review changes will be preserved here.</p> : <div className="mt-4 grid gap-3 sm:grid-cols-2">{historyRows.map((item) => <div key={item.id} className="rounded-2xl border border-asphalt/10 bg-white p-4 shadow-sm"><div className="flex items-start gap-3"><DocumentGlyph muted /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><p className="font-semibold">{labels[item.document_key] ?? item.document_key}</p><span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase ${statusBadge(item.status)}`}>{item.status}</span></div><p className="mt-1 truncate text-xs text-steel">{item.original_name}</p></div></div><div className="mt-4 rounded-xl bg-[#f5f3ed] px-3 py-2 text-[11px] text-steel">Archived {when(item.archived_at)} · <span className="capitalize">{item.archive_reason.replace("_", " ")}</span></div>{item.rejection_reason && <p className="mt-3 rounded-xl bg-route/5 px-3 py-2 text-xs text-route">{item.rejection_reason}</p>}<button onClick={() => void openFile(item.file_path)} className="mt-4 min-h-10 w-full rounded-xl border border-asphalt/15 px-3 py-2 text-xs font-semibold transition hover:bg-asphalt hover:text-white">Open archived file</button></div>)}</div>}
               </section>
             </div>}
           </article>;
@@ -358,6 +353,85 @@ export function AdminDriverCompliance() {
       </div>}
     </div>
   </main>;
+}
+
+function DocumentCard({
+  doc,
+  busy,
+  onOpen,
+  onReview,
+}: {
+  doc: DriverVerificationFile;
+  busy: boolean;
+  onOpen: (path: string) => Promise<void>;
+  onReview: (doc: DriverVerificationFile, status: "verified" | "rejected") => Promise<void>;
+}) {
+  const isPdf = doc.mime_type === "application/pdf";
+  const updatedLabel = new Date(doc.updated_at).toLocaleDateString();
+  const expiryDate = doc.expiry_date ? new Date(`${doc.expiry_date}T00:00:00`) : null;
+  const daysUntilExpiry = expiryDate ? Math.ceil((expiryDate.getTime() - Date.now()) / 86_400_000) : null;
+  const expiryClass = daysUntilExpiry !== null && daysUntilExpiry < 0
+    ? "bg-route/5 text-route"
+    : daysUntilExpiry !== null && daysUntilExpiry <= 30
+      ? "bg-amber/10 text-amber-dim"
+      : "bg-[#f5f3ed] text-steel";
+  const expiryLabel = !doc.expiry_date
+    ? "No expiry"
+    : daysUntilExpiry !== null && daysUntilExpiry < 0
+      ? `Expired ${doc.expiry_date}`
+      : `Expires ${doc.expiry_date}`;
+
+  return <article className="flex min-h-56 flex-col rounded-2xl border border-asphalt/10 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-asphalt/20 hover:shadow-md sm:p-5">
+    <div className="flex items-start gap-3">
+      <DocumentGlyph verified={doc.status === "verified"} rejected={doc.status === "rejected"} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="font-display font-semibold leading-tight">{labels[doc.document_key] ?? doc.document_key}</p>
+          <span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide ${statusBadge(doc.status)}`}>{doc.status}</span>
+        </div>
+        <p className="mt-1 truncate text-xs text-steel" title={doc.original_name}>{doc.original_name}</p>
+      </div>
+    </div>
+
+    <div className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
+      <div className="rounded-xl bg-[#f5f3ed] px-3 py-2">
+        <p className="font-mono text-[9px] uppercase tracking-wide text-steel">File</p>
+        <p className="mt-1 font-semibold text-asphalt">{isPdf ? "PDF document" : "Image file"}</p>
+      </div>
+      <div className={`rounded-xl px-3 py-2 ${expiryClass}`}>
+        <p className="font-mono text-[9px] uppercase tracking-wide opacity-70">Validity</p>
+        <p className="mt-1 font-semibold">{expiryLabel}</p>
+      </div>
+    </div>
+
+    <p className="mt-3 text-[11px] text-steel">Updated {updatedLabel}{doc.reviewed_at ? ` · Reviewed ${new Date(doc.reviewed_at).toLocaleDateString()}` : ""}</p>
+    {doc.rejection_reason && <p className="mt-3 rounded-xl border border-route/15 bg-route/5 px-3 py-2 text-xs leading-relaxed text-route">{doc.rejection_reason}</p>}
+
+    <div className="mt-auto flex flex-wrap gap-2 pt-4">
+      <button onClick={() => void onOpen(doc.file_path)} className="min-h-10 flex-1 rounded-xl border border-asphalt/15 px-3 py-2 text-xs font-semibold transition hover:bg-asphalt hover:text-white">Open file</button>
+      {doc.status === "pending" && <>
+        <button disabled={busy} onClick={() => void onReview(doc, "verified")} className="min-h-10 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-40">Verify</button>
+        <button disabled={busy} onClick={() => void onReview(doc, "rejected")} className="min-h-10 rounded-xl border border-route/30 px-4 py-2 text-xs font-semibold text-route transition hover:bg-route/5 disabled:opacity-40">Reject</button>
+      </>}
+    </div>
+  </article>;
+}
+
+function DocumentGlyph({ verified = false, rejected = false, muted = false }: { verified?: boolean; rejected?: boolean; muted?: boolean }) {
+  const tone = verified
+    ? "bg-emerald-50 text-emerald-800"
+    : rejected
+      ? "bg-route/5 text-route"
+      : muted
+        ? "bg-[#f5f3ed] text-steel"
+        : "bg-amber/10 text-amber-dim";
+
+  return <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${tone}`} aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M7 3.75h7l3 3V20.25H7z" />
+      <path d="M14 3.75v3h3M9.5 11h5M9.5 14.5h5" />
+    </svg>
+  </span>;
 }
 
 function Summary({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
