@@ -8,17 +8,13 @@ import { CustomerProfilePanel } from "../components/customer/CustomerProfilePane
 import { CustomerPaymentModal } from "../components/customer/CustomerPaymentModal";
 import { LanguageSwitcher, useLanguage } from "../i18n/LanguageProvider";
 import { getCustomerCopy } from "../i18n/customerCopy";
+import { calculatePaymentSummary } from "../utils/paymentSummary";
 
 const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [], assignments: [], profile: null };
 
 function remainingPayment(order: CustomerOrder, payments: CustomerPayment[]) {
   const relevant = payments.filter((payment) => payment.order_id === order.id);
-  const committed = relevant.reduce((sum, payment) => {
-    if (["initiated", "held_escrow", "released"].includes(payment.event)) return sum + Number(payment.amount_etb || 0);
-    if (payment.event === "refunded" && payment.provider === "credit_refund") return sum - Number(payment.amount_etb || 0);
-    return sum;
-  }, 0);
-  return Math.max(0, Number(order.price_etb ?? 0) - committed);
+  return calculatePaymentSummary(order.price_etb, relevant).remainingToSubmit;
 }
 
 export function CustomerPortal() {
@@ -105,9 +101,10 @@ export function CustomerPortal() {
               const proof = data.proofs.find((item) => item.order_id === order.id);
               const assignment = data.assignments.find((item) => item.order_id === order.id);
               const orderPayments = data.payments.filter((item) => item.order_id === order.id);
-              const pending = orderPayments.some((item) => ["initiated", "held_escrow"].includes(item.event));
+              const paymentSummary = calculatePaymentSummary(order.price_etb, orderPayments);
+              const pending = paymentSummary.pendingVerification > 0;
               const trackable = ["accepted", "in_transit"].includes(order.status);
-              const remaining = remainingPayment(order, data.payments);
+              const remaining = paymentSummary.remainingToSubmit;
               return <article key={order.id} className="border border-asphalt/10 bg-white p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-sm font-semibold">{order.tracking_id}</p><p className="mt-2 text-sm">{order.pickup_address} <span className="text-steel">→</span> {order.dropoff_address}</p></div><span className="bg-amber/15 px-3 py-2 text-xs font-semibold capitalize text-amber-dim">{order.status.replace("_", " ")}</span></div>
                 <div className="mt-5 grid grid-cols-2 gap-4 border-t border-asphalt/10 pt-5 text-sm sm:grid-cols-4"><Info label={c.quote} value={`ETB ${Number(order.price_etb ?? 0).toLocaleString()}`} /><Info label={c.distance} value={order.distance_km ? `${order.distance_km} km` : c.pending} /><Info label={c.payment} value={pending ? c.pendingVerification : order.payment_status.replace("_", " ")} /><Info label={c.vehicle} value={order.vehicle_type} /></div>
@@ -122,7 +119,7 @@ export function CustomerPortal() {
                 <div className="mt-5 flex flex-wrap gap-3 border-t border-asphalt/10 pt-5">
                   {trackable && <button onClick={() => setTrackingOrder(order)} className="bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{c.liveTracking}</button>}
                   {order.status === "delivered" && <span className="self-center bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800">{c.deliveryComplete}</span>}
-                  {remaining > 0 ? <button onClick={() => setPaymentOrder(order)} className="bg-asphalt px-4 py-3 text-xs font-semibold text-white">{c.submitPayment} · ETB {remaining.toLocaleString()}</button> : <span className="self-center bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{c.paymentRecorded}</span>}
+                  {remaining > 0 ? <button onClick={() => setPaymentOrder(order)} className="bg-asphalt px-4 py-3 text-xs font-semibold text-white">{c.submitPayment} · ETB {remaining.toLocaleString()}</button> : <span className="self-center bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{pending ? c.pendingVerification : c.paymentRecorded}</span>}
                   <button onClick={() => printCustomerInvoice(order, orderPayments)} className="border border-asphalt px-4 py-3 text-xs font-semibold">{c.invoice}</button>
                 </div>
 
