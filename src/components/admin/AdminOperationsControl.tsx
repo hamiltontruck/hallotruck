@@ -12,6 +12,7 @@ import {
   recordPayment,
 } from "../../services/admin.service";
 import { supabase } from "../../services/supabase.client";
+import { calculatePaymentSummary } from "../../utils/paymentSummary";
 
 interface Props {
   order: AdminOrder;
@@ -58,19 +59,11 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
   );
   const eligibleDrivers = drivers.filter((driver) => !activeDriverIds.has(driver.id) || driver.id === order.driver_id);
 
-  const released = payments
-    .filter((payment) => payment.event === "released")
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
-  const creditRefunded = payments
-    .filter((payment) => payment.event === "refunded" && payment.provider === "credit_refund")
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
-  const verifiedPaid = Math.max(0, released - creditRefunded);
-  const invoiceTotal = Number(order.price_etb ?? 0);
-  const balance = Math.max(0, invoiceTotal - verifiedPaid);
-  const committed = payments
-    .filter((payment) => ["initiated", "held_escrow", "released"].includes(payment.event))
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0) - creditRefunded;
-  const remainingToRecord = Math.max(0, invoiceTotal - committed);
+  const paymentSummary = calculatePaymentSummary(order.price_etb, payments);
+  const invoiceTotal = paymentSummary.invoiceTotal;
+  const verifiedPaid = paymentSummary.verifiedPaid;
+  const balance = paymentSummary.balanceToPay;
+  const remainingToRecord = paymentSummary.remainingToSubmit;
   const activeTrip = ["accepted", "in_transit"].includes(order.status);
 
   async function loadDetails() {
@@ -216,6 +209,8 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
                   <div className="mt-4 space-y-3 text-sm">
                     <MoneyRow label="Invoice total" value={invoiceTotal} />
                     <MoneyRow label="Verified paid" value={verifiedPaid} />
+                    {paymentSummary.pendingVerification > 0 && <MoneyRow label="Pending verification" value={paymentSummary.pendingVerification} />}
+                    {paymentSummary.refunded > 0 && <MoneyRow label="Refunded" value={paymentSummary.refunded} />}
                     <MoneyRow label="Balance" value={balance} strong />
                   </div>
                   <button type="button" onClick={() => printInvoice(order, currentTruck, currentDriver, payments)} className="mt-5 w-full bg-asphalt px-4 py-3 text-sm font-semibold text-white">Invoice / receipt</button>
