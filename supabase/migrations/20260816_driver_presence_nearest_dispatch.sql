@@ -1,6 +1,6 @@
 create table if not exists public.driver_presence (
   driver_id uuid primary key references public.profiles(id) on delete cascade,
-  location geography(point, 4326),
+  location public.geography(point, 4326),
   accuracy_m numeric,
   is_available boolean not null default false,
   updated_at timestamptz not null default now(),
@@ -44,7 +44,7 @@ set search_path = ''
 as $$
 declare
   v_driver_id uuid := auth.uid();
-  v_location geography(point, 4326);
+  v_location public.geography(point, 4326);
 begin
   if v_driver_id is null then
     raise exception 'Authentication required';
@@ -66,7 +66,7 @@ begin
        or p_lng < -180 or p_lng > 180 then
       raise exception 'A valid GPS location is required to go online';
     end if;
-    v_location := st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography;
+    v_location := public.st_setsrid(public.st_makepoint(p_lng, p_lat), 4326)::public.geography;
   end if;
 
   insert into public.driver_presence as presence(
@@ -98,8 +98,8 @@ begin
   select
     dp.driver_id,
     dp.is_available,
-    case when dp.location is null then null else st_y(dp.location::geometry)::numeric end,
-    case when dp.location is null then null else st_x(dp.location::geometry)::numeric end,
+    case when dp.location is null then null else public.st_y(dp.location::public.geometry)::numeric end,
+    case when dp.location is null then null else public.st_x(dp.location::public.geometry)::numeric end,
     dp.accuracy_m,
     dp.updated_at
   from public.driver_presence dp
@@ -167,7 +167,7 @@ begin
     best_truck.plate_number,
     best_truck.vehicle_type,
     best_truck.capacity_tons,
-    round((st_distance(dp.location, requested.pickup) / 1000)::numeric, 1) as distance_km,
+    round((public.st_distance(dp.location, requested.pickup) / 1000)::numeric, 1) as distance_km,
     dp.accuracy_m as location_accuracy_m,
     dp.updated_at as presence_updated_at
   from requested
@@ -247,7 +247,7 @@ begin
     )
   )
   order by
-    st_distance(dp.location, requested.pickup) asc,
+    public.st_distance(dp.location, requested.pickup) asc,
     best_truck.capacity_tons asc nulls last,
     p.full_name asc
   limit 20;
