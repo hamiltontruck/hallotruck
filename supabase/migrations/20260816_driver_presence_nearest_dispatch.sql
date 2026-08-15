@@ -82,7 +82,7 @@ begin
     p_is_available,
     now()
   )
-  on conflict (driver_id) do update
+  on conflict on constraint driver_presence_pkey do update
   set location = case
         when excluded.is_available then excluded.location
         else presence.location
