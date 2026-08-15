@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CustomerLiveTripMap } from "../tracking/CustomerLiveTripMap";
 import { AdminOperationsControl } from "./AdminOperationsControl";
 import { AdminDispatchMatchModal } from "./AdminDispatchMatchModal";
+import { AdminPaymentCollectionControl } from "./AdminPaymentCollectionControl";
 import { supabase } from "../../services/supabase.client";
 import type { AdminOrder, Driver, Truck } from "../../services/admin.service";
 import { splitHalloCommission, HALLO_SMART_COMMISSION_PERCENT } from "../../utils/commission";
@@ -76,6 +77,8 @@ export function AdminLiveTripsPanel({ orders, trucks, drivers }: AdminLiveTripsP
 
   return (
     <>
+      <AdminPaymentCollectionControl orders={orders} onOpenControl={setControlOrderId} />
+
       {activeOrders.length ? (
         <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
           <div className="overflow-hidden rounded-2xl border border-asphalt/10 bg-white">
