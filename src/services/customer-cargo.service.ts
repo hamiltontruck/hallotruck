@@ -13,9 +13,9 @@ const vehicleRates: Record<string, number> = {
 export const vehicleCapacityTons: Record<string, number> = {
   pickup: 3,
   van: 5,
-  "dry cargo": 15,
+  "dry cargo": 10,
   refrigerated: 15,
-  trailer: 40,
+  trailer: 22,
 };
 
 export function cargoToTons(quantity: number, unit: CargoUnit) {
