@@ -8,6 +8,9 @@ interface Props {
   onSaved: () => Promise<void> | void;
 }
 
+const CUSTOMER_LOCATION_REQUESTED_KEY = "hallotruck:customer-location-requested";
+const CUSTOMER_LOCATION_KEY = "hallotruck:customer-location";
+
 export function CustomerProfilePanel({ profile, onSaved }: Props) {
   const { language } = useLanguage();
   const c = getCustomerCopy(language);
@@ -15,6 +18,37 @@ export function CustomerProfilePanel({ profile, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [customerType, setCustomerType] = useState<"individual" | "business">(profile?.customer_type ?? "individual");
+
+  useEffect(() => {
+    if (!("geolocation" in navigator)) return;
+    if (window.sessionStorage.getItem(CUSTOMER_LOCATION_REQUESTED_KEY) === "1") return;
+
+    // Mark before requesting so React Strict Mode or component re-renders cannot
+    // trigger a second browser prompt in the same customer-portal session.
+    window.sessionStorage.setItem(CUSTOMER_LOCATION_REQUESTED_KEY, "1");
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const location = {
+          lng: coords.longitude,
+          lat: coords.latitude,
+          accuracyM: coords.accuracy,
+          capturedAt: new Date().toISOString(),
+        };
+        window.sessionStorage.setItem(CUSTOMER_LOCATION_KEY, JSON.stringify(location));
+        window.dispatchEvent(new CustomEvent("hallotruck:customer-location", { detail: location }));
+      },
+      () => {
+        // Location is optional. A denial or unavailable GPS must not block the
+        // customer portal, order history, payment, or manual place search.
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5 * 60 * 1000,
+        timeout: 12_000,
+      },
+    );
+  }, []);
 
   useEffect(() => setCustomerType(profile?.customer_type ?? "individual"), [profile?.customer_type]);
 
