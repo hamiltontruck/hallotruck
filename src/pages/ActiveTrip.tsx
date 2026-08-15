@@ -17,6 +17,45 @@ import { getDriverTripDocumentsCopy } from "../i18n/driverTripDocumentsCopy";
 
 const AUTO_ADVANCE_METERS = 45;
 
+const tripActionCopy = {
+  en: {
+    ready: "Ready to start",
+    readyHelp: "Tap Start Trip. The first successful GPS update changes this order to In Transit.",
+    starting: "Starting trip…",
+    startingHelp: "Finding your GPS position and sending the first live update.",
+    started: "Trip started",
+    startedHelp: "This order is In Transit. The customer can follow the truck while live GPS is active.",
+    startTrip: "Start trip & share GPS",
+    resumeGps: "Resume live GPS",
+    gpsLive: "Live GPS is active",
+    gpsPaused: "The trip is In Transit, but live GPS is paused. Resume sharing so the customer can follow the truck.",
+  },
+  om: {
+    ready: "Imala jalqabuuf qophaa'eera",
+    readyHelp: "Imala Jalqabi tuqi. GPS jalqabaa milkaa'inaan ergame order gara Daandii irraatti ce'a.",
+    starting: "Imala jalqabaa jira…",
+    startingHelp: "Bakka GPS kee barbaadaa fi odeeffannoo kallattii jalqabaa ergaa jira.",
+    started: "Imalli jalqabameera",
+    startedHelp: "Order kun Daandii irra jira. GPS kallattiin yeroo baname maamilaan truck hordofuu danda'a.",
+    startTrip: "Imala jalqabi & GPS qoodi",
+    resumeGps: "GPS kallattii itti fufi",
+    gpsLive: "GPS kallattiin hojii irra jira",
+    gpsPaused: "Imalli Daandii irra jira; garuu GPS kallattiin dhaabbateera. Maamilaan akka hordofuuf qooduu itti fufi.",
+  },
+  am: {
+    ready: "ጉዞውን ለመጀመር ዝግጁ",
+    readyHelp: "ጉዞ ጀምርን ይጫኑ። የመጀመሪያው የGPS ማሻሻያ ትዕዛዙን ወደ In Transit ያስገባል።",
+    starting: "ጉዞው እየተጀመረ ነው…",
+    startingHelp: "የGPS ቦታዎን በመፈለግ የመጀመሪያውን ቀጥታ ማሻሻያ እየላከ ነው።",
+    started: "ጉዞው ተጀምሯል",
+    startedHelp: "ትዕዛዙ In Transit ላይ ነው። ቀጥታ GPS ሲሰራ ደንበኛው መኪናውን መከታተል ይችላል።",
+    startTrip: "ጉዞ ጀምር እና GPS አጋራ",
+    resumeGps: "ቀጥታ GPS ቀጥል",
+    gpsLive: "ቀጥታ GPS እየሰራ ነው",
+    gpsPaused: "ጉዞው In Transit ላይ ነው፣ ግን ቀጥታ GPS ቆሟል። ደንበኛው እንዲከታተል ማጋራትን ይቀጥሉ።",
+  },
+} as const;
+
 function distanceMeters(a: [number, number], b: [number, number]) {
   const toRad = (value: number) => (value * Math.PI) / 180;
   const earthRadiusM = 6_371_000;
@@ -32,6 +71,7 @@ export function ActiveTrip() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const c = getDriverTripDocumentsCopy(language).trip;
+  const action = tripActionCopy[language];
   const [order, setOrder] = useState<MyOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [gpsSharing, setGpsSharing] = useState(false);
@@ -73,6 +113,8 @@ export function ActiveTrip() {
       setError(c.gpsUnavailable);
       return;
     }
+    if (watchIdRef.current !== null) return;
+
     setError(null);
     setGpsSharing(true);
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -131,7 +173,8 @@ export function ActiveTrip() {
     );
   }
 
-  const statusLabel = order.status === "accepted" ? c.assigned : order.status === "in_transit" ? c.onRoad : order.status;
+  const tripStarted = order.status === "in_transit";
+  const statusLabel = order.status === "accepted" ? c.assigned : tripStarted ? c.onRoad : order.status;
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-16">
@@ -150,6 +193,29 @@ export function ActiveTrip() {
 
       {error && <p className="font-body text-sm text-route border border-route/40 bg-route/5 px-4 py-3 mb-6">{error}</p>}
       {routeError && <p className="font-body text-xs text-steel border border-line px-4 py-3 mb-6">{c.directionsUnavailable}: {routeError}</p>}
+
+      <section className={`mb-6 rounded-2xl border p-5 ${tripStarted ? "border-emerald-700/30 bg-emerald-50" : "border-amber/40 bg-amber/10"}`}>
+        <div className="flex items-start gap-3">
+          <span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${gpsSharing ? "bg-emerald-600 animate-pulse" : tripStarted ? "bg-amber" : "bg-steel"}`} />
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[10px] uppercase tracking-[.18em] text-steel">
+              {tripStarted ? c.onRoad : c.assigned}
+            </p>
+            <h2 className="mt-1 font-display text-xl font-bold text-asphalt">
+              {tripStarted ? action.started : gpsSharing ? action.starting : action.ready}
+            </h2>
+            <p className="mt-2 font-body text-sm leading-6 text-steel">
+              {tripStarted ? action.startedHelp : gpsSharing ? action.startingHelp : action.readyHelp}
+            </p>
+            {gpsSharing && <p className="mt-3 text-xs font-semibold text-emerald-800">✓ {action.gpsLive}</p>}
+          </div>
+        </div>
+        {!gpsSharing && (
+          <Button onClick={startSharing} className="mt-5 w-full">
+            {tripStarted ? action.resumeGps : action.startTrip}
+          </Button>
+        )}
+      </section>
 
       {route && (
         <div className="border border-line bg-white mb-6">
@@ -179,8 +245,8 @@ export function ActiveTrip() {
         </div>
         {!gpsSharing ? (
           <>
-            {order.status === "accepted" && <p className="font-body text-xs text-steel mb-3">{c.startHelp}</p>}
-            <Button onClick={startSharing} className="w-full">{c.startSharing}</Button>
+            <p className="font-body text-xs text-steel mb-3">{tripStarted ? action.gpsPaused : c.startHelp}</p>
+            <Button onClick={startSharing} className="w-full">{tripStarted ? action.resumeGps : action.startTrip}</Button>
           </>
         ) : (
           <>
@@ -193,7 +259,7 @@ export function ActiveTrip() {
         )}
       </div>
 
-      {order.status === "in_transit" ? (
+      {tripStarted ? (
         <DriverDeliveryProofForm orderId={order.id} onDelivered={() => { stopSharing(); navigate("/driver/jobs"); }} />
       ) : (
         <div className="border border-line bg-white px-5 py-4 text-center">
