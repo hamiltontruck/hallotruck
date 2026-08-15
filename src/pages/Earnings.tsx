@@ -8,6 +8,7 @@ import {
 import { formatEtb } from "../utils/currency";
 import { HALLO_SMART_COMMISSION_PERCENT } from "../utils/commission";
 import { CargoPlate } from "../components/ui/CargoPlate";
+import { DriverRatingSummary } from "../components/driver/DriverRatingSummary";
 import { useDriverText } from "../i18n/driverTranslations";
 
 function when(value: string | null) {
@@ -96,6 +97,8 @@ export function Earnings() {
           {error}
         </p>
       )}
+
+      <DriverRatingSummary />
 
       {data && (
         <>
