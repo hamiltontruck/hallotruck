@@ -3,14 +3,15 @@ import { useNavigate } from "react-router-dom";
 import {
   getAvailableJobs,
   acceptJob,
-  AvailableJob,
+  type AvailableJob,
   getMyActiveOrders,
   getAvailableTrucksForOrder,
-  DriverTruckOption,
+  type DriverTruckOption,
 } from "../services/driver.service";
 import { supabase } from "../services/supabase.client";
 import { formatEtb, formatKm } from "../utils/currency";
 import { useDriverText } from "../i18n/driverTranslations";
+import { DriverAvailabilityCard } from "../components/driver/DriverAvailabilityCard";
 
 export function JobBoard() {
   const navigate = useNavigate();
@@ -25,10 +26,13 @@ export function JobBoard() {
   const [selectedTruckIds, setSelectedTruckIds] = useState<Record<string, string>>({});
   const [loadingTrucksFor, setLoadingTrucksFor] = useState<string | null>(null);
 
-  async function load(silent=false) {
-    if(!silent)setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     try {
-      const [availableJobs, activeOrders] = await Promise.all([getAvailableJobs(), getMyActiveOrders()]);
+      const [availableJobs, activeOrders] = await Promise.all([
+        getAvailableJobs(),
+        getMyActiveOrders(),
+      ]);
       const activeTrip = activeOrders.length > 0;
       setHasActiveTrip(activeTrip);
       setJobs(activeTrip ? [] : availableJobs);
@@ -37,9 +41,11 @@ export function JobBoard() {
         setSelectedTruckIds({});
       }
       setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : dt("jobs.loadError"));
+    } finally {
+      setLoading(false);
     }
-    catch (err) { setError(err instanceof Error ? err.message : dt("jobs.loadError")); }
-    finally { setLoading(false); }
   }
 
   async function loadTruckOptions(jobId: string) {
@@ -59,10 +65,18 @@ export function JobBoard() {
   }
 
   useEffect(() => {
-    load();
-    supabase.auth.getUser().then(async({data})=>{if(!data.user)return;const {data:profile}=await supabase.from("profiles").select("full_name").eq("id",data.user.id).maybeSingle();setDriverName(profile?.full_name?.split(" ")[0]||"Driver")});
-    const interval = setInterval(()=>load(true),15000);
-    return () => clearInterval(interval);
+    void load();
+    void supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      setDriverName(profile?.full_name?.split(" ")[0] || "Driver");
+    });
+    const interval = window.setInterval(() => void load(true), 15_000);
+    return () => window.clearInterval(interval);
   }, []);
 
   async function handleAccept(job: AvailableJob) {
@@ -76,60 +90,161 @@ export function JobBoard() {
       await loadTruckOptions(job.id);
       return;
     }
-    setAcceptingId(job.id); setError(null);
+
+    setAcceptingId(job.id);
+    setError(null);
     try {
-      const { data:{user} }=await supabase.auth.getUser();
-      if(!user)throw new Error(dt("jobs.signIn"));
-      await acceptJob(job.id, truckId); navigate("/driver/trip");
-    } catch(err){
-      setTruckOptions((current) => { const next = { ...current }; delete next[job.id]; return next; });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error(dt("jobs.signIn"));
+      await acceptJob(job.id, truckId);
+      navigate("/driver/trip");
+    } catch (err) {
+      setTruckOptions((current) => {
+        const next = { ...current };
+        delete next[job.id];
+        return next;
+      });
       setSelectedTruckIds((current) => ({ ...current, [job.id]: "" }));
-      setError(err instanceof Error?err.message:dt("jobs.taken"));
+      setError(err instanceof Error ? err.message : dt("jobs.taken"));
       await load(true);
+    } finally {
+      setAcceptingId(null);
     }
-    finally{setAcceptingId(null)}
   }
 
-  const potential=jobs.reduce((sum,job)=>sum+Number(job.price_etb||0),0);
-  return <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-28 md:pb-10">
-    <section className="bg-asphalt text-white p-6 sm:p-9 relative overflow-hidden">
-      <div className="absolute -right-16 -top-24 w-64 h-64 border-[42px] border-amber/10 rounded-full"/>
-      <div className="relative"><p className="font-mono text-[10px] tracking-[.22em] text-amber">{dt("jobs.ready")}</p><h1 className="font-display font-bold text-3xl sm:text-4xl mt-3">{dt("jobs.greeting")}, {driverName}.</h1><p className="text-white/50 text-sm mt-3 max-w-lg">{dt("jobs.hero")}</p><div className="flex items-center gap-2 mt-6 text-xs"><span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"/><span className="text-white/65">{dt("jobs.online")}</span></div></div>
-    </section>
+  const potential = jobs.reduce((sum, job) => sum + Number(job.price_etb || 0), 0);
 
-    <section className="grid grid-cols-3 gap-3 sm:gap-5 my-5">
-      <Stat value={String(jobs.length)} label={dt("jobs.open")}/>
-      <Stat value={jobs.some(j=>Number(j.distance_km)>0)?formatKm(Math.min(...jobs.filter(j=>Number(j.distance_km)>0).map(j=>Number(j.distance_km)))):dt("jobs.pending")} label={dt("jobs.nearest")}/>
-      <Stat value={potential?`ETB ${compact(potential)}`:"—"} label={dt("jobs.value")}/>
-    </section>
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-6 pb-28 sm:px-6 sm:py-10 md:pb-10">
+      <section className="relative overflow-hidden bg-asphalt p-6 text-white sm:p-9">
+        <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full border-[42px] border-amber/10" />
+        <div className="relative">
+          <p className="font-mono text-[10px] tracking-[.22em] text-amber">{dt("jobs.ready")}</p>
+          <h1 className="mt-3 font-display text-3xl font-bold sm:text-4xl">{dt("jobs.greeting")}, {driverName}.</h1>
+          <p className="mt-3 max-w-lg text-sm text-white/50">{dt("jobs.hero")}</p>
+        </div>
+      </section>
 
-    <div className="flex items-end justify-between gap-4 mt-8 mb-4"><div><p className="font-mono text-[10px] tracking-[.2em] text-amber-dim">{dt("jobs.market")}</p><h2 className="font-display font-bold text-2xl mt-1">{dt("jobs.available")}</h2></div><button onClick={()=>load()} className="text-xs font-semibold text-amber-dim">↻ {dt("jobs.refresh")}</button></div>
-    {hasActiveTrip&&<div className="border border-amber/40 bg-amber/10 p-4 mb-4"><p className="text-sm font-semibold text-asphalt">{dt("jobs.active")}</p><p className="text-xs text-steel mt-1">{dt("jobs.activeHelp")}</p><button onClick={()=>navigate("/driver/trip")} className="mt-4 bg-asphalt px-4 py-3 text-xs font-semibold text-white">Open active trip →</button></div>}
-    {error&&<p className="text-sm text-route border border-route/30 bg-route/5 p-3 mb-4">{error}</p>}
-    {loading&&<div className="bg-white border border-asphalt/10 p-10 text-center text-steel text-sm">{dt("jobs.loading")}</div>}
-    {!loading&&!hasActiveTrip&&jobs.length===0&&<div className="bg-white border border-asphalt/10 p-8 sm:p-12 text-center"><div className="w-14 h-14 mx-auto bg-[#f5f3ed] grid place-items-center text-2xl">✓</div><h3 className="font-display font-semibold text-xl mt-5">{dt("jobs.emptyTitle")}</h3><p className="text-sm text-steel mt-2 max-w-sm mx-auto">{dt("jobs.emptyText")}</p><button onClick={()=>load()} className="bg-asphalt text-white px-5 py-3 mt-6 text-sm font-semibold">{dt("jobs.check")}</button></div>}
-    {!hasActiveTrip&&<div className="grid lg:grid-cols-2 gap-4">{jobs.map(job=>{
-      const options=truckOptions[job.id]??[];
-      const selected=selectedTruckIds[job.id]??"";
-      return <article key={job.id} className="bg-white border border-asphalt/10 p-5 sm:p-6 hover:border-amber transition"><div className="flex justify-between items-start gap-3"><div><span className="font-mono text-[10px] bg-[#f5f3ed] px-2.5 py-1.5">{job.tracking_id}</span><p className="font-display font-bold text-2xl mt-4">{formatEtb(job.price_etb)}</p></div><span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1.5">{dt("jobs.status")}</span></div><div className="mt-6 relative pl-7"><span className="absolute left-1.5 top-1 w-2.5 h-2.5 rounded-full border-2 border-amber"/><span className="absolute left-[10px] top-3 bottom-6 border-l border-dashed border-steel/40"/><span className="absolute left-1.5 bottom-1 w-2.5 h-2.5 bg-asphalt rounded-full"/><div><p className="text-[10px] text-steel uppercase tracking-wider">{dt("jobs.pickup")}</p><p className="text-sm font-semibold mt-1">{job.pickup_address}</p></div><div className="mt-5"><p className="text-[10px] text-steel uppercase tracking-wider">{dt("jobs.delivery")}</p><p className="text-sm font-semibold mt-1">{job.dropoff_address}</p></div></div><div className="flex flex-wrap gap-2 mt-6 text-[10px] text-steel"><span className="bg-[#f5f3ed] px-2.5 py-2">{formatKm(job.distance_km)}</span><span className="bg-[#f5f3ed] px-2.5 py-2 capitalize">{job.vehicle_type.replace("_"," ")}</span>{job.cargo_description&&<span className="bg-[#f5f3ed] px-2.5 py-2">{job.cargo_description}</span>}</div>
-      <div className="mt-5 border border-asphalt/10 bg-[#f8f7f2] p-4">
-        <label className="block text-[10px] font-semibold uppercase tracking-wider text-steel">Choose your truck</label>
-        <select
-          value={selected}
-          onFocus={()=>loadTruckOptions(job.id)}
-          onChange={(event)=>setSelectedTruckIds((current)=>({...current,[job.id]:event.target.value}))}
-          className="mt-2 w-full border border-asphalt/15 bg-white px-3 py-3 text-sm text-asphalt"
-          disabled={loadingTrucksFor===job.id}
-        >
-          <option value="">{loadingTrucksFor===job.id?"Loading matching trucks…":"Select matching truck"}</option>
-          {options.map((truck)=><option key={truck.id} value={truck.id}>{truck.plate_number} · {truck.vehicle_type}{truck.capacity_tons?` · ${truck.capacity_tons} t`:""}</option>)}
-        </select>
-        {truckOptions[job.id]&&options.length===0&&<p className="mt-2 text-xs text-route">No compatible available truck is ready for this load.</p>}
-        <p className="mt-2 text-[11px] leading-relaxed text-steel">Only an available truck matching this load can be assigned. The server checks the truck again before the load is accepted.</p>
+      <DriverAvailabilityCard />
+
+      <section className="my-5 grid grid-cols-3 gap-3 sm:gap-5">
+        <Stat value={String(jobs.length)} label={dt("jobs.open")} />
+        <Stat
+          value={jobs.some((job) => Number(job.distance_km) > 0)
+            ? formatKm(Math.min(...jobs.filter((job) => Number(job.distance_km) > 0).map((job) => Number(job.distance_km))))
+            : dt("jobs.pending")}
+          label={dt("jobs.nearest")}
+        />
+        <Stat value={potential ? `ETB ${compact(potential)}` : "—"} label={dt("jobs.value")} />
+      </section>
+
+      <div className="mb-4 mt-8 flex items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] tracking-[.2em] text-amber-dim">{dt("jobs.market")}</p>
+          <h2 className="mt-1 font-display text-2xl font-bold">{dt("jobs.available")}</h2>
+        </div>
+        <button onClick={() => void load()} className="text-xs font-semibold text-amber-dim">↻ {dt("jobs.refresh")}</button>
       </div>
-      <button onClick={()=>handleAccept(job)} disabled={acceptingId===job.id||!selected} className="w-full bg-asphalt text-white py-4 mt-4 font-semibold text-sm disabled:opacity-50">{acceptingId===job.id?dt("jobs.securing"):"Assign truck & accept load →"}</button></article>})}</div>}
-  </main>;
+
+      {hasActiveTrip && (
+        <div className="mb-4 border border-amber/40 bg-amber/10 p-4">
+          <p className="text-sm font-semibold text-asphalt">{dt("jobs.active")}</p>
+          <p className="mt-1 text-xs text-steel">{dt("jobs.activeHelp")}</p>
+          <button onClick={() => navigate("/driver/trip")} className="mt-4 bg-asphalt px-4 py-3 text-xs font-semibold text-white">Open active trip →</button>
+        </div>
+      )}
+
+      {error && <p className="mb-4 border border-route/30 bg-route/5 p-3 text-sm text-route">{error}</p>}
+      {loading && <div className="border border-asphalt/10 bg-white p-10 text-center text-sm text-steel">{dt("jobs.loading")}</div>}
+
+      {!loading && !hasActiveTrip && jobs.length === 0 && (
+        <div className="border border-asphalt/10 bg-white p-8 text-center sm:p-12">
+          <div className="mx-auto grid h-14 w-14 place-items-center bg-[#f5f3ed] text-2xl">✓</div>
+          <h3 className="mt-5 font-display text-xl font-semibold">{dt("jobs.emptyTitle")}</h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-steel">{dt("jobs.emptyText")}</p>
+          <button onClick={() => void load()} className="mt-6 bg-asphalt px-5 py-3 text-sm font-semibold text-white">{dt("jobs.check")}</button>
+        </div>
+      )}
+
+      {!hasActiveTrip && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {jobs.map((job) => {
+            const options = truckOptions[job.id] ?? [];
+            const selected = selectedTruckIds[job.id] ?? "";
+            return (
+              <article key={job.id} className="border border-asphalt/10 bg-white p-5 transition hover:border-amber sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="bg-[#f5f3ed] px-2.5 py-1.5 font-mono text-[10px]">{job.tracking_id}</span>
+                    <p className="mt-4 font-display text-2xl font-bold">{formatEtb(job.price_etb)}</p>
+                  </div>
+                  <span className="bg-emerald-50 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-700">{dt("jobs.status")}</span>
+                </div>
+
+                <div className="relative mt-6 pl-7">
+                  <span className="absolute left-1.5 top-1 h-2.5 w-2.5 rounded-full border-2 border-amber" />
+                  <span className="absolute bottom-6 left-[10px] top-3 border-l border-dashed border-steel/40" />
+                  <span className="absolute bottom-1 left-1.5 h-2.5 w-2.5 rounded-full bg-asphalt" />
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-steel">{dt("jobs.pickup")}</p>
+                    <p className="mt-1 text-sm font-semibold">{job.pickup_address}</p>
+                  </div>
+                  <div className="mt-5">
+                    <p className="text-[10px] uppercase tracking-wider text-steel">{dt("jobs.delivery")}</p>
+                    <p className="mt-1 text-sm font-semibold">{job.dropoff_address}</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-2 text-[10px] text-steel">
+                  <span className="bg-[#f5f3ed] px-2.5 py-2">{formatKm(job.distance_km)}</span>
+                  <span className="bg-[#f5f3ed] px-2.5 py-2 capitalize">{job.vehicle_type.replace("_", " ")}</span>
+                  {job.cargo_description && <span className="bg-amber/10 px-2.5 py-2 font-semibold text-amber-dim">{job.cargo_description}</span>}
+                </div>
+
+                <div className="mt-5 border border-asphalt/10 bg-[#f8f7f2] p-4">
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-steel">Choose your truck</label>
+                  <select
+                    value={selected}
+                    onFocus={() => void loadTruckOptions(job.id)}
+                    onChange={(event) => setSelectedTruckIds((current) => ({ ...current, [job.id]: event.target.value }))}
+                    className="mt-2 w-full border border-asphalt/15 bg-white px-3 py-3 text-sm text-asphalt"
+                    disabled={loadingTrucksFor === job.id}
+                  >
+                    <option value="">{loadingTrucksFor === job.id ? "Loading matching trucks…" : "Select matching truck"}</option>
+                    {options.map((truck) => (
+                      <option key={truck.id} value={truck.id}>
+                        {truck.plate_number} · {truck.vehicle_type}{truck.capacity_tons ? ` · ${truck.capacity_tons} t` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {truckOptions[job.id] && options.length === 0 && <p className="mt-2 text-xs text-route">No compatible available truck is ready for this load.</p>}
+                  <p className="mt-2 text-[11px] leading-relaxed text-steel">The server checks truck type, cargo tonnage, documents and active-trip availability again before acceptance.</p>
+                </div>
+
+                <button
+                  onClick={() => void handleAccept(job)}
+                  disabled={acceptingId === job.id || !selected}
+                  className="mt-4 w-full bg-asphalt py-4 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {acceptingId === job.id ? dt("jobs.securing") : "Assign truck & accept load →"}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </main>
+  );
 }
 
-function Stat({value,label}:{value:string;label:string}){return <div className="bg-white border border-asphalt/10 p-3 sm:p-5 min-w-0"><p className="font-display font-bold text-lg sm:text-2xl truncate">{value}</p><p className="text-[9px] sm:text-xs text-steel mt-1">{label}</p></div>}
-function compact(value:number){return value>=1_000_000?`${(value/1_000_000).toFixed(1)}M`:value>=1000?`${(value/1000).toFixed(1)}K`:value.toLocaleString()}
+function Stat({ value, label }: { value: string; label: string }) {
+  return <div className="min-w-0 border border-asphalt/10 bg-white p-3 sm:p-5"><p className="truncate font-display text-lg font-bold sm:text-2xl">{value}</p><p className="mt-1 text-[9px] text-steel sm:text-xs">{label}</p></div>;
+}
+
+function compact(value: number) {
+  return value >= 1_000_000
+    ? `${(value / 1_000_000).toFixed(1)}M`
+    : value >= 1000
+      ? `${(value / 1000).toFixed(1)}K`
+      : value.toLocaleString();
+}
