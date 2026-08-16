@@ -23,9 +23,6 @@ export function CustomerProfilePanel({ profile, onSaved }: Props) {
   useEffect(() => {
     if (!("geolocation" in navigator)) return;
     if (window.sessionStorage.getItem(CUSTOMER_LOCATION_REQUESTED_KEY) === "1") return;
-
-    // Mark before requesting so React Strict Mode or component re-renders cannot
-    // trigger a second browser prompt in the same customer-portal session.
     window.sessionStorage.setItem(CUSTOMER_LOCATION_REQUESTED_KEY, "1");
 
     navigator.geolocation.getCurrentPosition(
@@ -40,8 +37,7 @@ export function CustomerProfilePanel({ profile, onSaved }: Props) {
         window.dispatchEvent(new CustomEvent("hallotruck:customer-location", { detail: location }));
       },
       () => {
-        // Location is optional. A denial or unavailable GPS must not block the
-        // customer portal, order history, payment, or manual place search.
+        // Location is optional and never blocks customer self-service.
       },
       {
         enableHighAccuracy: true,
@@ -84,49 +80,54 @@ export function CustomerProfilePanel({ profile, onSaved }: Props) {
   }
 
   return (
-    <section className="mt-7 border border-asphalt/10 bg-white p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">{c.profileLabel}</p>
-          <h2 className="mt-2 font-display text-xl font-bold">{profile?.full_name || c.completeProfile}</h2>
-          <p className="mt-1 text-xs text-steel">{c.profileDesc}</p>
+    <section className="customer-profile-card">
+      <div className="customer-profile-card__header">
+        <div className="customer-profile-card__identity">
+          <div className="customer-avatar" aria-hidden="true">{(profile?.full_name || "C").trim().charAt(0).toUpperCase()}</div>
+          <div>
+            <p className="customer-eyebrow">{c.profileLabel}</p>
+            <h2>{profile?.full_name || c.completeProfile}</h2>
+            <p>{c.profileDesc}</p>
+          </div>
         </div>
-        <button type="button" onClick={() => setEditing((value) => !value)} className="border border-asphalt px-4 py-2.5 text-xs font-semibold">
+        <button type="button" onClick={() => setEditing((value) => !value)} className="customer-profile-edit">
           {editing ? c.cancel : c.editProfile}
         </button>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="customer-profile-values">
         <ProfileValue label={c.account} value={profile?.customer_type === "business" ? c.business : c.individual} />
         <ProfileValue label={c.phone} value={profile?.phone || c.missing} />
         <ProfileValue label={c.email} value={profile?.email || c.missing} />
         <ProfileValue label={c.address} value={profile?.home_address || c.missing} />
-        <ProfileValue label={c.profile} value={`${completeness}% ${c.complete}`} />
+      </div>
+
+      <div className="customer-profile-progress">
+        <div><span>{c.profile}</span><strong>{completeness}% {c.complete}</strong></div>
+        <div className="customer-profile-progress__track" aria-label={`${completeness}% ${c.complete}`}><span style={{ width: `${completeness}%` }} /></div>
       </div>
 
       {profile?.customer_type === "business" && profile.company_name && (
-        <div className="mt-3 border-l-4 border-emerald-700 bg-emerald-50 px-4 py-3 text-sm">
-          <span className="text-steel">{c.company}</span><strong className="ml-2">{profile.company_name}</strong>
-        </div>
+        <div className="customer-company-card"><span>{c.company}</span><strong>{profile.company_name}</strong></div>
       )}
 
       {editing && (
-        <form onSubmit={save} className="mt-6 border-t border-asphalt/10 pt-5">
-          {error && <p className="mb-4 border border-route/30 bg-route/5 p-3 text-sm text-route">{error}</p>}
-          <div className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={save} className="customer-profile-form">
+          {error && <p className="customer-profile-error">{error}</p>}
+          <div className="customer-profile-form__grid">
             <ProfileField name="fullName" label={c.fullName} defaultValue={profile?.full_name ?? ""} required />
             <ProfileField name="phone" label={c.phone} defaultValue={profile?.phone ?? ""} placeholder="09xxxxxxxx or +2519xxxxxxxx" maxLength={13} required />
             <ProfileField name="email" label={c.email} type="email" defaultValue={profile?.email ?? ""} placeholder="name@example.com" />
             <ProfileField name="homeAddress" label={c.homeBusiness} defaultValue={profile?.home_address ?? ""} placeholder="City, sub-city / area" />
-            <label className="text-sm">{c.customerType}
-              <select value={customerType} onChange={(event) => setCustomerType(event.target.value as "individual" | "business")} className="mt-2 block w-full border border-line bg-white px-4 py-3">
+            <label className="customer-profile-field">{c.customerType}
+              <select value={customerType} onChange={(event) => setCustomerType(event.target.value as "individual" | "business")}>
                 <option value="individual">{c.individualCustomer}</option>
                 <option value="business">{c.businessCompany}</option>
               </select>
             </label>
             {customerType === "business" && <ProfileField name="companyName" label={c.companyName} defaultValue={profile?.company_name ?? ""} required />}
           </div>
-          <button disabled={saving} className="mt-5 bg-emerald-700 px-6 py-3 text-sm font-semibold text-white disabled:opacity-50">{saving ? c.saving : c.saveProfile}</button>
+          <button disabled={saving} className="customer-profile-save">{saving ? c.saving : c.saveProfile}</button>
         </form>
       )}
     </section>
@@ -134,9 +135,9 @@ export function CustomerProfilePanel({ profile, onSaved }: Props) {
 }
 
 function ProfileValue({ label, value }: { label: string; value: string }) {
-  return <div className="bg-bone p-3"><p className="text-[10px] uppercase tracking-wider text-steel">{label}</p><p className="mt-1 break-words text-sm font-semibold">{value}</p></div>;
+  return <div className="customer-profile-value"><p>{label}</p><strong>{value}</strong></div>;
 }
 
 function ProfileField({ name, label, defaultValue, placeholder, type = "text", required = false, maxLength }: { name: string; label: string; defaultValue: string; placeholder?: string; type?: string; required?: boolean; maxLength?: number }) {
-  return <label className="text-sm">{label}<input name={name} type={type} required={required} maxLength={maxLength} defaultValue={defaultValue} placeholder={placeholder} className="mt-2 block w-full border border-line px-4 py-3" /></label>;
+  return <label className="customer-profile-field">{label}<input name={name} type={type} required={required} maxLength={maxLength} defaultValue={defaultValue} placeholder={placeholder} /></label>;
 }
