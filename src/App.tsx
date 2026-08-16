@@ -21,32 +21,6 @@ import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 
-import * as Sentry from "@sentry/react";
-
-function SentryTestButton() {
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        Sentry.captureException(new Error("Manual Sentry test"));
-      }}
-      style={{
-        position: "fixed",
-        bottom: "20px",
-        right: "20px",
-        zIndex: 9999,
-        padding: "10px 16px",
-        background: "#7c3aed",
-        color: "#fff",
-        border: "none",
-        borderRadius: "8px",
-        cursor: "pointer",
-      }}
-    >
-      Test Sentry
-    </button>
-  );
-}
 function DriverShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-bone">
@@ -76,7 +50,6 @@ function CustomerWorkspace() {
 }
 
 export default function App() {
-
   return (
     <LanguageProvider>
       <HashRouter>
