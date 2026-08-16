@@ -1,0 +1,102 @@
+@media (max-width: 639px) {
+  .driver-mobile-flow main {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .driver-mobile-flow main > section:first-child {
+    padding: 1.25rem;
+  }
+
+  .driver-mobile-flow main > section[class*="grid-cols-3"] {
+    gap: 0.5rem;
+  }
+
+  .driver-mobile-flow main > section[class*="grid-cols-3"] > div {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .driver-mobile-flow main article {
+    min-width: 0;
+    padding: 1rem;
+  }
+
+  .driver-mobile-flow main article > div:first-child > div {
+    min-width: 0;
+  }
+
+  .driver-mobile-flow main article p,
+  .driver-mobile-flow main article span {
+    overflow-wrap: anywhere;
+  }
+
+  .driver-mobile-flow > div[class*="max-w-2xl"] {
+    padding: 1.5rem 0.75rem 7rem;
+  }
+
+  .driver-mobile-flow > div[class*="max-w-2xl"] > div:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .driver-mobile-flow > div[class*="max-w-2xl"] > div[class*="p-6"] {
+    padding: 1rem;
+  }
+
+  .driver-mobile-flow > div[class*="max-w-2xl"] section[class*="rounded-2xl"] {
+    padding: 1rem;
+  }
+
+  .driver-mobile-flow > div[class*="max-w-2xl"] > div[class*="border-line"] > div[class*="p-5"][class*="justify-between"] {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .driver-mobile-flow > div[class*="max-w-2xl"] > div[class*="border-line"] > div[class*="p-5"][class*="justify-between"] button {
+    min-height: 2.5rem;
+    align-self: stretch;
+    border: 1px solid rgb(29 34 42 / 0.12);
+    padding: 0.55rem 0.75rem;
+    text-align: center;
+  }
+
+  .driver-mobile-flow form:has(canvas) > header {
+    padding: 1rem;
+  }
+
+  .driver-mobile-flow form:has(canvas) > header > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .driver-mobile-flow form:has(canvas) > header > div:first-child > span {
+    align-self: flex-start;
+  }
+
+  .driver-mobile-flow form:has(canvas) > div {
+    padding: 1rem;
+  }
+
+  .driver-mobile-flow form:has(canvas) section {
+    padding: 0.875rem;
+  }
+
+  .driver-mobile-flow form:has(canvas) section > div:first-child {
+    gap: 0.5rem;
+  }
+
+  .driver-mobile-flow form:has(canvas) section > div:first-child > div {
+    min-width: 0;
+  }
+
+  .driver-mobile-flow form:has(canvas) section > div:first-child p {
+    overflow-wrap: anywhere;
+  }
+
+  .driver-mobile-flow form:has(canvas) input[type="file"] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 0.75rem;
+  }
+}
