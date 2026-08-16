@@ -48,12 +48,57 @@ export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
     return () => { cancelled = true; };
   }, [assignment.driver_photo_path, assignment.driver_verified, assignment.truck_photo_path]);
 
+  const verificationLabel = assignment.driver_verified ? labels.verifiedDriver : labels.verificationPending;
+
+  if (order.status === "delivered") {
+    return (
+      <section className="customer-delivered-assignment mt-5 min-w-0 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 shadow-sm">
+        <div className="flex items-center justify-between gap-3 bg-asphalt px-4 py-3 text-white">
+          <p className="min-w-0 font-mono text-[10px] tracking-[.18em] text-amber">{labels.assigned}</p>
+          <span className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wide ${assignment.driver_verified ? "bg-emerald-600 text-white" : "border border-amber/40 bg-amber/10 text-amber"}`}>
+            {verificationLabel}
+          </span>
+        </div>
+
+        <div className="grid min-w-0 gap-3 p-3 sm:grid-cols-2 sm:p-4">
+          <div className="flex min-w-0 items-center gap-3 rounded-xl border border-emerald-200 bg-white p-3">
+            <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-emerald-100 bg-emerald-100">
+              {driverPhotoUrl ? <img src={driverPhotoUrl} alt={assignment.driver_name} className="h-full w-full object-cover" /> : <span className="font-display text-lg font-bold text-emerald-800">{assignment.driver_name?.trim()?.charAt(0)?.toUpperCase() || "D"}</span>}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-[9px] uppercase tracking-[.16em] text-steel">Driver</p>
+              <p className="mt-0.5 truncate font-display text-base font-semibold text-asphalt">{assignment.driver_name}</p>
+              <a href={`tel:${assignment.driver_phone}`} className="mt-0.5 block truncate text-xs font-semibold text-emerald-800">{assignment.driver_phone}</a>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 items-center gap-3 rounded-xl border border-emerald-200 bg-white p-3">
+            <button
+              type="button"
+              disabled={!truckPhotoUrl}
+              onClick={() => truckPhotoUrl && window.open(truckPhotoUrl, "_blank", "noopener,noreferrer")}
+              className="grid h-14 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#e8eee8] disabled:cursor-default"
+              aria-label={labels.viewTruckPhoto}
+            >
+              {truckPhotoUrl ? <img src={truckPhotoUrl} alt={`${assignment.plate_number ?? labels.truck} ${labels.truck}`} className="h-full w-full object-cover" /> : <span className="px-2 text-center text-[9px] font-semibold text-steel">{labels.truck}</span>}
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-[9px] uppercase tracking-[.16em] text-steel">{labels.truckPlate}</p>
+              <p className="mt-0.5 truncate font-display text-base font-bold text-asphalt">{assignment.plate_number ?? labels.pending}</p>
+              <p className="mt-0.5 truncate text-xs text-steel">{assignment.vehicle_type ?? order.vehicle_type}{assignment.capacity_tons ? ` · ${assignment.capacity_tons} tons` : ""}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="mt-5 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 shadow-sm">
+    <section className="mt-5 min-w-0 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 shadow-sm">
       <div className="flex items-center justify-between gap-3 bg-asphalt px-4 py-3 text-white sm:px-5">
         <p className="font-mono text-[10px] tracking-[.18em] text-amber">{labels.assigned}</p>
         <span className={`rounded-full px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wide ${assignment.driver_verified ? "bg-emerald-600 text-white" : "border border-amber/40 bg-amber/10 text-amber"}`}>
-          {assignment.driver_verified ? labels.verifiedDriver : labels.verificationPending}
+          {verificationLabel}
         </span>
       </div>
 
