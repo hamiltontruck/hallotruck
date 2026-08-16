@@ -1,0 +1,35 @@
+.customer-map-home__continue-match {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  border: 1px solid rgb(214 142 37 / 0.26);
+  border-radius: 0.95rem;
+  background: #fff8e8;
+  padding: 0.75rem 0.85rem;
+  color: #1d222a;
+  text-align: left;
+  box-shadow: 0 10px 24px rgb(29 34 42 / 0.06);
+}
+
+.customer-map-home__continue-match span,
+.customer-map-home__continue-match strong {
+  display: block;
+}
+
+.customer-map-home__continue-match span {
+  overflow: hidden;
+  color: #7a6441;
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-map-home__continue-match strong {
+  flex: 0 0 auto;
+  color: #087f5b;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
