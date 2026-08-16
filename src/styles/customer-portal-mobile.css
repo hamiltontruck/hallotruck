@@ -1,34 +1,128 @@
 @media (max-width: 639px) {
+  .customer-portal-mobile {
+    overflow-x: hidden;
+  }
+
   .customer-portal-mobile main > header > div {
-    flex-wrap: wrap;
-    align-items: stretch;
-    padding: 1rem 0.75rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.875rem;
   }
 
   .customer-portal-mobile main > header > div > div:first-child {
-    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .customer-portal-mobile main > header > div > div:first-child p:first-child {
+    font-size: 1.1rem;
+    line-height: 1.25rem;
   }
 
   .customer-portal-mobile main > header > div > div:last-child {
-    display: grid;
-    width: 100%;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-    gap: 0.5rem;
+    display: flex;
+    width: auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
   }
 
   .customer-portal-mobile main > header > div > div:last-child > * {
     min-width: 0;
   }
 
-  .customer-portal-mobile main > header > div > div:last-child button,
   .customer-portal-mobile main > header > div > div:last-child select {
-    width: 100%;
-    min-width: 0;
-    min-height: 2.75rem;
+    width: 4.25rem;
+    min-height: 2.5rem;
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
+  }
+
+  .customer-portal-mobile main > header > div > div:last-child button {
+    width: auto;
+    min-height: 2.5rem;
+    padding: 0.65rem 0.8rem;
+    white-space: nowrap;
   }
 
   .customer-portal-mobile main > section {
-    padding: 1.5rem 0.75rem 2rem;
+    padding: 1.25rem 0.875rem 1.75rem;
+  }
+
+  .customer-portal-mobile main > section > div:first-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  .customer-portal-mobile main > section > div:first-child h1 {
+    margin-top: 0.4rem;
+    max-width: 18rem;
+    font-size: 2rem;
+    line-height: 1.08;
+  }
+
+  .customer-portal-mobile main > section > div:first-child p:last-child {
+    margin-top: 0.65rem;
+    max-width: 19rem;
+    font-size: 0.82rem;
+    line-height: 1.35rem;
+  }
+
+  .customer-portal-mobile main > section > div:first-child > button {
+    margin-top: 0.1rem;
+    white-space: nowrap;
+    font-size: 0.75rem;
+  }
+
+  .customer-portal-mobile main > section > section {
+    margin-top: 1.25rem;
+    padding: 1rem;
+  }
+
+  .customer-portal-mobile main > section > section > div:first-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  .customer-portal-mobile main > section > section > div:first-child h2 {
+    font-size: 1.05rem;
+    line-height: 1.35rem;
+  }
+
+  .customer-portal-mobile main > section > section > div:first-child p:last-child {
+    max-width: 15rem;
+    line-height: 1.15rem;
+  }
+
+  .customer-portal-mobile main > section > section > div:first-child button {
+    padding: 0.6rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  .customer-portal-mobile main > section > section > div[class*="lg:grid-cols-5"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .customer-portal-mobile main > section > section > div[class*="lg:grid-cols-5"] > div {
+    min-width: 0;
+    padding: 0.75rem;
+  }
+
+  .customer-portal-mobile main > section > section > div[class*="lg:grid-cols-5"] > div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .customer-portal-mobile main > section > section > div[class*="lg:grid-cols-5"] p:last-child {
+    overflow-wrap: anywhere;
+    line-height: 1.15rem;
   }
 
   .customer-portal-mobile main article {
