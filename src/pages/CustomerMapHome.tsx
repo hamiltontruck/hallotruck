@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomerBottomNav } from "../components/customer/CustomerBottomNav";
+import {
+  CustomerNearbyTrucksSheet,
+  type DispatchOrderSummary,
+} from "../components/customer/CustomerNearbyTrucksSheet";
 import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/CustomerQuoteMap";
 import { LanguageSwitcher, useLanguage, type HalloLanguage } from "../i18n/LanguageProvider";
 import { getCustomerCopy } from "../i18n/customerCopy";
@@ -12,7 +16,6 @@ import {
   type CargoUnit,
 } from "../services/customer-cargo.service";
 import { getCustomerPortalData, type CustomerPortalData } from "../services/customer.service";
-import { supabase } from "../services/supabase.client";
 import { calculatePaymentSummary } from "../utils/paymentSummary";
 
 const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [], assignments: [], profile: null };
@@ -46,6 +49,8 @@ const copy: Record<HalloLanguage, {
   dryCargo: string;
   refrigerated: string;
   trailer: string;
+  continueMatch: string;
+  findTruck: string;
 }> = {
   en: {
     greeting: "Ready to move cargo?",
@@ -64,7 +69,7 @@ const copy: Record<HalloLanguage, {
     equivalent: "Equivalent",
     estimate: "Estimated quote",
     chooseRoute: "Choose a route",
-    create: "Confirm & create order",
+    create: "Confirm & find nearby trucks",
     creating: "Creating order…",
     viewOrders: "View orders",
     privacy: "Exact driver locations stay private until a verified driver and truck are assigned to your order.",
@@ -75,6 +80,8 @@ const copy: Record<HalloLanguage, {
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
     trailer: "Trailer",
+    continueMatch: "Unassigned order",
+    findTruck: "Find nearby truck",
   },
   om: {
     greeting: "Feʼumsa geessuuf qophiidhaa?",
@@ -93,7 +100,7 @@ const copy: Record<HalloLanguage, {
     equivalent: "Wal-qixa",
     estimate: "Gatii tilmaamaa",
     chooseRoute: "Route fili",
-    create: "Mirkaneessi order uumi",
+    create: "Mirkaneessi truck naannoo barbaadi",
     creating: "Order uumamaa jira…",
     viewOrders: "Ajajoota ilaali",
     privacy: "GPS driver sirrii orderf driver fi truck verified assign taʼan booda qofa customerf mulʼata.",
@@ -104,6 +111,8 @@ const copy: Record<HalloLanguage, {
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
     trailer: "Trailer",
+    continueMatch: "Order hin assign taane",
+    findTruck: "Truck naannoo barbaadi",
   },
   am: {
     greeting: "ጭነት ለማጓጓዝ ዝግጁ ነዎት?",
@@ -122,7 +131,7 @@ const copy: Record<HalloLanguage, {
     equivalent: "ተመጣጣኝ",
     estimate: "ግምታዊ ዋጋ",
     chooseRoute: "መንገድ ይምረጡ",
-    create: "ያረጋግጡና ትዕዛዝ ይፍጠሩ",
+    create: "ያረጋግጡና በአቅራቢያ መኪና ይፈልጉ",
     creating: "ትዕዛዝ እየተፈጠረ ነው…",
     viewOrders: "ትዕዛዞችን ይመልከቱ",
     privacy: "የአሽከርካሪው ትክክለኛ GPS የሚታየው የተረጋገጠ አሽከርካሪና መኪና ከተመደበ በኋላ ብቻ ነው።",
@@ -133,6 +142,8 @@ const copy: Record<HalloLanguage, {
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
     trailer: "Trailer",
+    continueMatch: "ያልተመደበ ትዕዛዝ",
+    findTruck: "በአቅራቢያ መኪና ፈልግ",
   },
 };
 
@@ -148,6 +159,7 @@ export function CustomerMapHome() {
   const [vehicle, setVehicle] = useState<(typeof vehicleOptions)[number]>("Dry Cargo");
   const [cargoQuantity, setCargoQuantity] = useState("1");
   const [cargoUnit, setCargoUnit] = useState<CargoUnit>("ton");
+  const [matchingOrder, setMatchingOrder] = useState<DispatchOrderSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -178,6 +190,11 @@ export function CustomerMapHome() {
     return { active, delivered, due };
   }, [data.orders, data.payments]);
 
+  const latestPlacedOrder = useMemo(
+    () => data.orders.find((order) => order.status === "placed") ?? null,
+    [data.orders],
+  );
+
   useEffect(() => {
     let cancelled = false;
     void getCustomerPortalData()
@@ -201,7 +218,7 @@ export function CustomerMapHome() {
 
     setBusy(true);
     try {
-      await createCustomerCargoOrder({
+      const order = await createCustomerCargoOrder({
         pickupAddress: routePoints.pickupAddress,
         dropoffAddress: routePoints.dropoffAddress,
         vehicleType: vehicle,
@@ -211,9 +228,16 @@ export function CustomerMapHome() {
         cargoQuantity: cargoAmount,
         cargoUnit,
       });
-      navigate("/customer/orders", { replace: true });
+      setMatchingOrder({
+        id: order.id,
+        tracking_id: order.trackingId,
+        pickup_address: order.pickupAddress,
+        dropoff_address: order.dropoffAddress,
+        vehicle_type: order.vehicleType,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : c.orderCreateError);
+    } finally {
       setBusy(false);
     }
   }
@@ -243,6 +267,22 @@ export function CustomerMapHome() {
             <p className="customer-eyebrow">{firstName}</p>
             <h1>{t.greeting}</h1>
             <p>{t.ready}</p>
+            {latestPlacedOrder && (
+              <button
+                type="button"
+                className="customer-map-home__continue-match"
+                onClick={() => setMatchingOrder({
+                  id: latestPlacedOrder.id,
+                  tracking_id: latestPlacedOrder.tracking_id,
+                  pickup_address: latestPlacedOrder.pickup_address,
+                  dropoff_address: latestPlacedOrder.dropoff_address,
+                  vehicle_type: latestPlacedOrder.vehicle_type,
+                })}
+              >
+                <span>{t.continueMatch} · {latestPlacedOrder.tracking_id}</span>
+                <strong>{t.findTruck} →</strong>
+              </button>
+            )}
           </div>
           <div className="customer-map-home__summary" aria-label="Customer logistics summary">
             <Summary label={t.active} value={loading ? "…" : summary.active.toLocaleString()} />
@@ -293,6 +333,14 @@ export function CustomerMapHome() {
           </button>
         </form>
       </section>
+
+      {matchingOrder && (
+        <CustomerNearbyTrucksSheet
+          order={matchingOrder}
+          onClose={() => setMatchingOrder(null)}
+          onOpenOrders={() => navigate("/customer/orders")}
+        />
+      )}
     </main>
   );
 }
