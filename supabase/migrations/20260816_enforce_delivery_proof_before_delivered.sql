@@ -31,6 +31,9 @@ begin
 end;
 $$;
 
+revoke all on function public.enforce_delivery_proof_before_delivered()
+from public, anon, authenticated;
+
 drop trigger if exists orders_require_delivery_proof_before_delivered on public.orders;
 create trigger orders_require_delivery_proof_before_delivered
 before insert or update of status on public.orders
