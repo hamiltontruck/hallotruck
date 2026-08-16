@@ -23,10 +23,11 @@ import { Login } from "./pages/Login";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import "./styles/fleet-maintenance-mobile.css";
 import "./styles/customer-portal-mobile.css";
+import "./styles/driver-mobile-flow.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-bone">
+    <div className="driver-mobile-flow min-h-screen bg-bone">
       <OfflineBanner />
       <Header />
       {children}
