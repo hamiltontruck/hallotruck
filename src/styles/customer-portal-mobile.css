@@ -3,11 +3,38 @@
     overflow-x: hidden;
   }
 
+  .customer-portal-mobile main {
+    padding-bottom: 2rem;
+  }
+
+  .customer-portal-mobile main > header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    border-color: rgb(255 255 255 / 0.1);
+    background: #1d222a;
+    color: white;
+  }
+
+  .customer-portal-mobile main > header::after {
+    display: block;
+    height: 4px;
+    background: repeating-linear-gradient(
+      90deg,
+      #e6a843 0,
+      #e6a843 18px,
+      transparent 18px,
+      transparent 34px
+    );
+    content: "";
+  }
+
   .customer-portal-mobile main > header > div {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.625rem;
+    min-height: 5rem;
     padding: 0.875rem;
   }
 
@@ -16,8 +43,13 @@
   }
 
   .customer-portal-mobile main > header > div > div:first-child p:first-child {
+    color: white;
     font-size: 1.1rem;
     line-height: 1.25rem;
+  }
+
+  .customer-portal-mobile main > header > div > div:first-child p:last-child {
+    color: rgb(255 255 255 / 0.42);
   }
 
   .customer-portal-mobile main > header > div > div:last-child {
@@ -36,51 +68,101 @@
   .customer-portal-mobile main > header > div > div:last-child select {
     width: 4.25rem;
     min-height: 2.5rem;
+    border-color: rgb(255 255 255 / 0.18);
+    background: #1d222a;
+    color: white;
     padding-left: 0.65rem;
     padding-right: 0.65rem;
+  }
+
+  .customer-portal-mobile main > header > div > div:last-child select option {
+    background: white;
+    color: #1d222a;
   }
 
   .customer-portal-mobile main > header > div > div:last-child button {
     width: auto;
     min-height: 2.5rem;
+    border-radius: 0.75rem;
     padding: 0.65rem 0.8rem;
     white-space: nowrap;
+    box-shadow: 0 8px 20px rgb(0 0 0 / 0.16);
   }
 
   .customer-portal-mobile main > section {
-    padding: 1.25rem 0.875rem 1.75rem;
+    padding: 1rem 0.75rem 2rem;
   }
 
   .customer-portal-mobile main > section > div:first-child {
+    position: relative;
+    isolation: isolate;
     display: grid;
+    overflow: hidden;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
     gap: 0.75rem;
+    min-height: 12.5rem;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background: #1d222a;
+    padding: 1.5rem;
+    color: white;
+  }
+
+  .customer-portal-mobile main > section > div:first-child::after {
+    position: absolute;
+    z-index: -1;
+    right: -5.5rem;
+    top: -6rem;
+    width: 15rem;
+    height: 15rem;
+    border: 2.5rem solid rgb(230 168 67 / 0.09);
+    border-radius: 9999px;
+    content: "";
+  }
+
+  .customer-portal-mobile main > section > div:first-child > div,
+  .customer-portal-mobile main > section > div:first-child > button {
+    position: relative;
+    z-index: 1;
+  }
+
+  .customer-portal-mobile main > section > div:first-child p:first-child {
+    color: #e6a843;
   }
 
   .customer-portal-mobile main > section > div:first-child h1 {
-    margin-top: 0.4rem;
+    margin-top: 0.65rem;
     max-width: 18rem;
+    color: white;
     font-size: 2rem;
     line-height: 1.08;
   }
 
   .customer-portal-mobile main > section > div:first-child p:last-child {
-    margin-top: 0.65rem;
+    margin-top: 0.8rem;
     max-width: 19rem;
+    color: rgb(255 255 255 / 0.58);
     font-size: 0.82rem;
     line-height: 1.35rem;
   }
 
   .customer-portal-mobile main > section > div:first-child > button {
     margin-top: 0.1rem;
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 0.75rem;
+    background: rgb(255 255 255 / 0.06);
+    padding: 0.65rem 0.75rem;
+    color: #f4a261;
     white-space: nowrap;
     font-size: 0.75rem;
   }
 
   .customer-portal-mobile main > section > section {
-    margin-top: 1.25rem;
+    margin-top: 1rem;
+    border-color: rgb(29 34 42 / 0.08);
+    border-radius: 1.5rem;
     padding: 1rem;
+    box-shadow: 0 12px 30px rgb(29 34 42 / 0.07);
   }
 
   .customer-portal-mobile main > section > section > div:first-child {
@@ -101,6 +183,7 @@
   }
 
   .customer-portal-mobile main > section > section > div:first-child button {
+    border-radius: 0.75rem;
     padding: 0.6rem 0.75rem;
     white-space: nowrap;
   }
@@ -113,6 +196,8 @@
 
   .customer-portal-mobile main > section > section > div[class*="lg:grid-cols-5"] > div {
     min-width: 0;
+    border: 1px solid rgb(29 34 42 / 0.05);
+    border-radius: 1rem;
     padding: 0.75rem;
   }
 
@@ -129,7 +214,10 @@
     min-width: 0;
     max-width: 100%;
     overflow-x: clip;
+    border-color: rgb(29 34 42 / 0.08);
+    border-radius: 1.5rem;
     padding: 1rem;
+    box-shadow: 0 12px 30px rgb(29 34 42 / 0.06);
   }
 
   .customer-portal-mobile main article > div:first-child {
@@ -144,12 +232,19 @@
     overflow-wrap: anywhere;
   }
 
+  .customer-portal-mobile main article > div:first-child > span {
+    border-radius: 9999px;
+  }
+
   .customer-portal-mobile main article > div[class*="grid-cols-2"] {
     gap: 0.5rem;
   }
 
   .customer-portal-mobile main article > div[class*="grid-cols-2"] > div {
     min-width: 0;
+    border-radius: 1rem;
+    background: #f5f3ed;
+    padding: 0.75rem;
   }
 
   .customer-portal-mobile main article > div[class*="grid-cols-2"] p:last-child {
@@ -168,8 +263,13 @@
     width: 100%;
     min-width: 0;
     min-height: 2.75rem;
+    border-radius: 0.875rem;
     padding: 0.7rem 0.75rem;
     text-align: center;
+  }
+
+  .customer-portal-mobile main article > div[class*="bg-bone"] {
+    border-radius: 1rem;
   }
 
   .customer-portal-mobile main article > div[class*="bg-bone"] > div > div {
@@ -179,6 +279,7 @@
 
   .customer-portal-mobile main article > div[class*="bg-emerald-50"][class*="justify-between"] {
     align-items: flex-start;
+    border-radius: 1rem;
     flex-direction: column;
   }
 
@@ -192,6 +293,7 @@
   .customer-portal-mobile main article > div[class*="bg-emerald-50"][class*="justify-between"] button {
     min-height: 2.5rem;
     border: 1px solid rgb(4 120 87 / 0.2);
+    border-radius: 0.75rem;
     padding: 0.55rem 0.75rem;
     text-align: center;
   }
@@ -203,5 +305,13 @@
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
+  }
+
+  .customer-rating-card {
+    box-shadow: inset 0 0 0 1px rgb(230 168 67 / 0.06);
+  }
+
+  .customer-rating-card button {
+    border-radius: 0.875rem;
   }
 }
