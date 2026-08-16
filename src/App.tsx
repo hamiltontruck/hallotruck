@@ -24,6 +24,7 @@ import { LanguageProvider } from "./i18n/LanguageProvider";
 import "./styles/fleet-maintenance-mobile.css";
 import "./styles/customer-portal-mobile.css";
 import "./styles/customer-portal-sections.css";
+import "./styles/customer-header-map-polish.css";
 import "./styles/driver-mobile-flow.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
