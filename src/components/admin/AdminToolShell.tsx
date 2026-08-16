@@ -5,6 +5,7 @@ import { supabase } from "../../services/supabase.client";
 const links = [
   { to: "/admin", label: "Overview", icon: "▦" },
   { to: "/admin/driver-compliance", label: "Driver control", icon: "DRV" },
+  { to: "/admin/fleet-maintenance", label: "Fleet maintenance", icon: "MNT" },
   { to: "/admin/driver-commission", label: "Commission control", icon: "%" },
 ];
 
