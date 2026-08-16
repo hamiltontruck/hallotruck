@@ -127,6 +127,8 @@
 
   .customer-portal-mobile main article {
     min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
     padding: 1rem;
   }
 
@@ -192,5 +194,14 @@
     border: 1px solid rgb(4 120 87 / 0.2);
     padding: 0.55rem 0.75rem;
     text-align: center;
+  }
+
+  .customer-rating-card,
+  .customer-delivered-assignment,
+  .customer-rating-card form,
+  .customer-rating-card textarea {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }
