@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { assignOrder, type AdminOrder } from "../../services/admin.service";
 import {
+  getAdminCustomerDispatchPreference,
   getOrderAssignmentCandidates,
+  type AdminCustomerDispatchPreference,
   type AssignmentCandidate,
 } from "../../services/admin-dispatch.service";
 
@@ -15,6 +17,7 @@ export function AdminDispatchMatchModal({
   onAssigned: () => void;
 }) {
   const [candidates, setCandidates] = useState<AssignmentCandidate[]>([]);
+  const [preference, setPreference] = useState<AdminCustomerDispatchPreference | null>(null);
   const [selectedKey, setSelectedKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,10 +27,18 @@ export function AdminDispatchMatchModal({
     setLoading(true);
     setError("");
     try {
-      const rows = await getOrderAssignmentCandidates(order.id);
-      setCandidates(rows);
-      if (rows.length) setSelectedKey(`${rows[0].driver_id}:${rows[0].truck_id}`);
-      else setSelectedKey("");
+      const [rows, customerPreference] = await Promise.all([
+        getOrderAssignmentCandidates(order.id),
+        getAdminCustomerDispatchPreference(order.id),
+      ]);
+      const ordered = customerPreference?.status === "requested"
+        ? [...rows].sort((left, right) => Number(isPreferred(right, customerPreference)) - Number(isPreferred(left, customerPreference)))
+        : rows;
+      setCandidates(ordered);
+      setPreference(customerPreference);
+      const preferredCandidate = ordered.find((candidate) => customerPreference && isPreferred(candidate, customerPreference));
+      const selected = preferredCandidate ?? ordered[0];
+      setSelectedKey(selected ? `${selected.driver_id}:${selected.truck_id}` : "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not find matching drivers.");
     } finally {
@@ -79,6 +90,14 @@ export function AdminDispatchMatchModal({
             Candidates must be approved, fully documented, online within the last 30 minutes, free from another active trip, and paired with a truck that matches the vehicle type and cargo tonnage.
           </div>
 
+          {preference?.status === "requested" && (
+            <div className="mt-4 rounded-xl border border-emerald-700/20 bg-emerald-50 p-4 text-xs leading-5 text-emerald-900">
+              <strong>Customer preferred a verified match.</strong> The requested driver and truck are ranked first when still eligible.
+              {preference.distance_km !== null && <span> Approximate pickup distance: {preference.distance_km} km.</span>}
+              {preference.eta_minutes !== null && <span> Estimated arrival: {preference.eta_minutes} min.</span>}
+            </div>
+          )}
+
           {error && <p className="mt-5 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
 
           <div className="mt-6 flex items-end justify-between gap-3">
@@ -96,13 +115,15 @@ export function AdminDispatchMatchModal({
               {candidates.map((candidate, index) => {
                 const key = `${candidate.driver_id}:${candidate.truck_id}`;
                 const selected = key === selectedKey;
+                const preferred = preference?.status === "requested" && isPreferred(candidate, preference);
                 return (
                   <label key={key} className={`block cursor-pointer rounded-2xl border p-4 transition sm:p-5 ${selected ? "border-emerald-600 bg-emerald-50 shadow-sm" : "border-asphalt/10 bg-white hover:border-amber"}`}>
                     <input type="radio" name="dispatchCandidate" value={key} checked={selected} onChange={() => setSelectedKey(key)} className="sr-only" />
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          {index === 0 && <span className="rounded-full bg-emerald-700 px-3 py-1 text-[9px] font-semibold uppercase text-white">Nearest match</span>}
+                          {preferred && <span className="rounded-full bg-amber px-3 py-1 text-[9px] font-semibold uppercase text-asphalt">Customer preferred</span>}
+                          {index === 0 && !preferred && <span className="rounded-full bg-emerald-700 px-3 py-1 text-[9px] font-semibold uppercase text-white">Nearest match</span>}
                           <span className="font-mono text-[10px] text-steel">GPS {new Date(candidate.presence_updated_at).toLocaleTimeString()}</span>
                         </div>
                         <p className="mt-2 font-display text-xl font-bold text-asphalt">{candidate.driver_name ?? "Approved driver"}</p>
@@ -141,6 +162,10 @@ export function AdminDispatchMatchModal({
       </div>
     </div>
   );
+}
+
+function isPreferred(candidate: AssignmentCandidate, preference: AdminCustomerDispatchPreference) {
+  return candidate.driver_id === preference.driver_id && candidate.truck_id === preference.truck_id;
 }
 
 function Summary({ label, value }: { label: string; value: string }) {

@@ -19,6 +19,7 @@ import { PortalLanding } from "./pages/PortalLanding";
 import { CustomerLogin } from "./pages/CustomerLogin";
 import { CustomerPortal } from "./pages/CustomerPortal";
 import { CustomerMapHome } from "./pages/CustomerMapHome";
+import { CustomerTrackingPage } from "./pages/CustomerTrackingPage";
 import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
 import { LanguageProvider } from "./i18n/LanguageProvider";
@@ -27,6 +28,8 @@ import "./styles/customer-portal-mobile.css";
 import "./styles/customer-portal-sections.css";
 import "./styles/customer-header-map-polish.css";
 import "./styles/customer-map-home.css";
+import "./styles/customer-nearby-tracking.css";
+import "./styles/customer-nearby-home-bridge.css";
 import "./styles/driver-mobile-flow.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
@@ -75,6 +78,7 @@ export default function App() {
           <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="home" /></CustomerGate>} />
           <Route path="/customer/orders" element={<CustomerGate><CustomerWorkspace section="orders" /></CustomerGate>} />
           <Route path="/customer/profile" element={<CustomerGate><CustomerWorkspace section="profile" /></CustomerGate>} />
+          <Route path="/customer/tracking/:orderId" element={<CustomerGate><CustomerTrackingPage /></CustomerGate>} />
           <Route path="/driver/login" element={<Login />} />
           <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
           <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
