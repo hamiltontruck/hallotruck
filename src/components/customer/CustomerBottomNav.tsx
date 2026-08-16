@@ -1,15 +1,16 @@
 import { NavLink } from "react-router-dom";
 import { useLanguage, type HalloLanguage } from "../../i18n/LanguageProvider";
 
-const copy: Record<HalloLanguage, { dashboard: string; profile: string; orders: string }> = {
-  en: { dashboard: "Customer dashboard", profile: "Profile", orders: "Orders" },
-  om: { dashboard: "Daashboordii customer", profile: "Profaayilii", orders: "Ajajoota" },
-  am: { dashboard: "የደንበኛ ዳሽቦርድ", profile: "መገለጫ", orders: "ትዕዛዞች" },
+const copy: Record<HalloLanguage, { dashboard: string; home: string; profile: string; orders: string }> = {
+  en: { dashboard: "Customer dashboard", home: "Home", profile: "Profile", orders: "Orders" },
+  om: { dashboard: "Daashboordii customer", home: "Home", profile: "Profaayilii", orders: "Ajajoota" },
+  am: { dashboard: "የደንበኛ ዳሽቦርድ", home: "መነሻ", profile: "መገለጫ", orders: "ትዕዛዞች" },
 };
 
 const links = [
-  { to: "/customer", key: "profile" as const, icon: "◫", end: true },
-  { to: "/customer/orders", key: "orders" as const, icon: "▤", end: false },
+  { to: "/customer", key: "home" as const, icon: "⌂", end: true },
+  { to: "/customer/orders", key: "orders" as const, icon: "▤", end: true },
+  { to: "/customer/profile", key: "profile" as const, icon: "◫", end: true },
 ];
 
 export function CustomerBottomNav() {
