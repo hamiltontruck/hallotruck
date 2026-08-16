@@ -10,15 +10,11 @@
 }
 
 .customer-dashboard-nav {
-  position: fixed;
+  position: relative;
   z-index: 24;
-  top: 5.25rem;
-  right: 0;
-  left: 0;
   border-bottom: 1px solid rgb(29 34 42 / 0.1);
-  background: rgb(255 255 255 / 0.96);
-  box-shadow: 0 8px 24px rgb(29 34 42 / 0.08);
-  backdrop-filter: blur(16px);
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgb(29 34 42 / 0.06);
 }
 
 .customer-dashboard-nav__inner {
@@ -88,14 +84,10 @@
 }
 
 .customer-content {
-  padding-top: 5rem;
+  padding-top: 2rem;
 }
 
 @media (min-width: 640px) {
-  .customer-dashboard-nav {
-    top: 5rem;
-  }
-
   .customer-dashboard-nav__inner {
     min-height: 4.4rem;
     padding-right: 1.25rem;
@@ -118,6 +110,6 @@
   }
 
   .customer-content {
-    padding-top: 5.5rem;
+    padding-top: 2.5rem;
   }
 }

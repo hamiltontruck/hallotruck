@@ -49,8 +49,8 @@ function AdminWorkspace() {
 function CustomerWorkspace({ section }: { section: "profile" | "orders" }) {
   return (
     <div className={`customer-portal-mobile customer-view-${section}`}>
-      <CustomerPortal />
       <CustomerBottomNav />
+      <CustomerPortal />
     </div>
   );
 }
