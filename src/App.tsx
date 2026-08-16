@@ -7,6 +7,7 @@ import { AdminToolShell } from "./components/admin/AdminToolShell";
 import { SmartLogistics } from "./pages/SmartLogistics";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
 import { AdminDriverCommission } from "./pages/AdminDriverCommission";
+import { AdminFleetMaintenance } from "./pages/AdminFleetMaintenance";
 import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
@@ -76,7 +77,6 @@ function CustomerWorkspace() {
 }
 
 export default function App() {
-
   return (
     <LanguageProvider>
       <HashRouter>
@@ -85,6 +85,7 @@ export default function App() {
           <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
           <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
           <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
+          <Route path="/admin/fleet-maintenance" element={<AdminGate><AdminToolShell><AdminFleetMaintenance /></AdminToolShell></AdminGate>} />
           <Route path="/customer/login" element={<CustomerLogin />} />
           <Route path="/customer" element={<CustomerGate><CustomerWorkspace /></CustomerGate>} />
           <Route path="/driver/login" element={<Login />} />
