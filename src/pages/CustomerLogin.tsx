@@ -1,33 +1,111 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
-import { LanguageSwitcher, useLanguage } from "../i18n/LanguageProvider";
+import { LanguageSwitcher, useLanguage, type HalloLanguage } from "../i18n/LanguageProvider";
+
+type Feedback = {
+  kind: "error" | "success";
+  text: string;
+  retryable?: boolean;
+};
+
+const connectionCopy: Record<HalloLanguage, {
+  offline: string;
+  unavailable: string;
+  retry: string;
+}> = {
+  en: {
+    offline: "You are offline. Turn on mobile data or Wi-Fi, then try again.",
+    unavailable: "The secure login server could not be reached. Check your connection, switch between mobile data and Wi-Fi, then retry.",
+    retry: "Retry secure connection",
+  },
+  om: {
+    offline: "Internet hin jiru. Data mobile ykn Wi-Fi baniitii irra deebi'i.",
+    unavailable: "Server login nageenya qabu bira ga'uun hin danda'amne. Internet kee ilaali, data mobile fi Wi-Fi wal jijjiiriitii irra deebi'i.",
+    retry: "Walqunnamtii irra deebi'i",
+  },
+  am: {
+    offline: "ኢንተርኔት የለም። የሞባይል ዳታ ወይም Wi-Fi ክፈቱና እንደገና ይሞክሩ።",
+    unavailable: "ደህንነቱ የተጠበቀውን የመግቢያ አገልጋይ ማግኘት አልተቻለም። ግንኙነትዎን ያረጋግጡ፣ በሞባይል ዳታና Wi-Fi መካከል ይቀያይሩና እንደገና ይሞክሩ።",
+    retry: "ደህንነቱ የተጠበቀ ግንኙነትን እንደገና ሞክር",
+  },
+};
+
+function isNetworkFailure(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  return error instanceof TypeError
+    || message.includes("failed to fetch")
+    || message.includes("network request failed")
+    || message.includes("load failed")
+    || message.includes("fetch failed");
+}
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function withSingleNetworkRetry<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!isNetworkFailure(error) || !navigator.onLine) throw error;
+    await wait(1000);
+    return operation();
+  }
+}
 
 export function CustomerLogin() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const connection = connectionCopy[language];
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<{ kind: "error" | "success"; text: string } | null>(null);
+  const [online, setOnline] = useState(() => navigator.onLine);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) return;
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.session.user.id).maybeSingle();
-      if (profile?.role === "customer") navigate("/customer", { replace: true });
-    });
-  }, [navigate]);
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    void supabase.auth.getSession()
+      .then(async ({ data }) => {
+        if (!data.session) return;
+        const profile = await withSingleNetworkRetry(async () => {
+          const result = await supabase.from("profiles").select("role").eq("id", data.session!.user.id).maybeSingle();
+          if (result.error) throw result.error;
+          return result.data;
+        });
+        if (profile?.role === "customer") navigate("/customer", { replace: true });
+      })
+      .catch((error) => {
+        if (isNetworkFailure(error)) {
+          setFeedback({ kind: "error", text: navigator.onLine ? connection.unavailable : connection.offline, retryable: true });
+        }
+      });
+  }, [connection.offline, connection.unavailable, navigate]);
+
+  async function authenticate() {
     setBusy(true);
     setFeedback(null);
 
     try {
+      if (!navigator.onLine) {
+        setOnline(false);
+        throw new Error(connection.offline);
+      }
+
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
@@ -37,21 +115,44 @@ export function CustomerLogin() {
         if (error) throw error;
         if (data.session) navigate("/customer", { replace: true });
         else setFeedback({ kind: "success", text: t("customer.message.confirm") });
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
-        if (profile?.role !== "customer") {
-          await supabase.auth.signOut();
-          throw new Error(t("customer.error.access"));
-        }
-        navigate("/customer", { replace: true });
+        return;
       }
+
+      const data = await withSingleNetworkRetry(async () => {
+        const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (result.error) throw result.error;
+        return result.data;
+      });
+
+      const profile = await withSingleNetworkRetry(async () => {
+        const result = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+        if (result.error) throw result.error;
+        return result.data;
+      });
+
+      if (profile?.role !== "customer") {
+        await supabase.auth.signOut();
+        throw new Error(t("customer.error.access"));
+      }
+      navigate("/customer", { replace: true });
     } catch (error) {
-      setFeedback({ kind: "error", text: error instanceof Error ? error.message : t("customer.error.auth") });
+      const networkFailure = isNetworkFailure(error) || !navigator.onLine;
+      setOnline(navigator.onLine);
+      setFeedback({
+        kind: "error",
+        text: networkFailure
+          ? navigator.onLine ? connection.unavailable : connection.offline
+          : error instanceof Error ? error.message : t("customer.error.auth"),
+        retryable: networkFailure && mode === "login",
+      });
     } finally {
       setBusy(false);
     }
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await authenticate();
   }
 
   return (
@@ -73,7 +174,17 @@ export function CustomerLogin() {
           <h2 className="mt-8 font-display text-3xl font-bold">{mode === "login" ? t("customer.login.title") : t("customer.signup.title")}</h2>
           <p className="mt-2 text-sm text-steel">{mode === "login" ? t("customer.login.desc") : t("customer.signup.desc")}</p>
 
-          {feedback && <p className={`mt-5 border p-3 text-sm ${feedback.kind === "error" ? "border-route/30 bg-route/5 text-route" : "border-emerald-700/30 bg-emerald-50 text-emerald-800"}`}>{feedback.text}</p>}
+          {!online && !feedback && <p className="mt-5 border border-route/30 bg-route/5 p-3 text-sm text-route">{connection.offline}</p>}
+          {feedback && (
+            <div className={`mt-5 border p-3 text-sm ${feedback.kind === "error" ? "border-route/30 bg-route/5 text-route" : "border-emerald-700/30 bg-emerald-50 text-emerald-800"}`}>
+              <p>{feedback.text}</p>
+              {feedback.kind === "error" && feedback.retryable && (
+                <button type="button" onClick={() => void authenticate()} disabled={busy || !online} className="mt-3 border border-route px-3 py-2 text-xs font-semibold disabled:opacity-40">
+                  {connection.retry}
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="mt-6 space-y-4">
             {mode === "signup" && <>
@@ -84,7 +195,7 @@ export function CustomerLogin() {
             <Field label={t("common.password")} value={password} onChange={setPassword} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={10} />
           </div>
 
-          <button disabled={busy} className="mt-6 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-50">
+          <button disabled={busy || !online} className="mt-6 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-50">
             {busy ? t("common.wait") : mode === "login" ? t("customer.login.submit") : t("customer.signup.submit")}
           </button>
           <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setFeedback(null); }} className="mt-5 w-full text-sm text-steel underline">
