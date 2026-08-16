@@ -50,6 +50,8 @@ function CustomerWorkspace() {
 }
 
 export default function App() {
+throw new Error("Sentry test error");
+
   return (
     <LanguageProvider>
       <HashRouter>
