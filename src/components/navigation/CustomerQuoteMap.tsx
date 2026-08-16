@@ -243,6 +243,7 @@ export function CustomerQuoteMap({ onChange }: { onChange: (points: QuotePoints 
       setRoadRoute(null);
       setRouting(false);
       setRoutingError("");
+      onChange(null);
       return;
     }
 
