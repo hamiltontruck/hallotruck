@@ -1,0 +1,99 @@
+@media (max-width: 639px) {
+  .fleet-maintenance-mobile main {
+    padding: 1.25rem 0.75rem 2rem;
+  }
+
+  .fleet-maintenance-mobile main > header {
+    gap: 1rem;
+  }
+
+  .fleet-maintenance-mobile main > header > div:last-child {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 0.5rem;
+  }
+
+  .fleet-maintenance-mobile main > header > div:last-child button {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem;
+    line-height: 1.2;
+  }
+
+  .fleet-maintenance-mobile main > section {
+    margin-top: 1rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) > div:first-child {
+    padding: 1rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) > div:nth-child(2) {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article {
+    min-width: 0;
+    padding: 1rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div:first-child {
+    align-items: center;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div:first-child > div {
+    min-width: 0;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div:first-child p:first-child {
+    overflow-wrap: anywhere;
+    font-size: 0.95rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div:first-child span {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div[class*="grid-cols-2"] {
+    gap: 0.5rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div[class*="grid-cols-2"] > div {
+    min-width: 0;
+    padding: 0.75rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div[class*="grid-cols-2"] p:last-child {
+    overflow-wrap: anywhere;
+    font-size: 0.82rem;
+    line-height: 1.25rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div:last-child button {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.5rem;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(2) article > div:last-child:has(> button:nth-child(3):last-child) > button:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .fleet-maintenance-mobile main > section:nth-of-type(3) > div:first-child {
+    align-items: flex-start;
+    padding: 1rem;
+  }
+}
