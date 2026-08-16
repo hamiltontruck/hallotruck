@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { supabase } from "../../services/supabase.client";
@@ -25,6 +26,7 @@ interface RouteResult {
 
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
 const style = `https://api.maptiler.com/maps/basic-v2/style.json?key=${mapTilerKey ?? ""}`;
+const timelineSteps = ["Assigned", "Pickup", "On route", "Delivered"] as const;
 
 async function fetchRoute(from: [number, number], to: [number, number]): Promise<RouteResult | null> {
   const url = `https://router.project-osrm.org/route/v1/driving/${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson&steps=false`;
@@ -41,7 +43,22 @@ function formatDuration(seconds: number) {
   return hours ? `${hours}h ${mins}m` : `${mins}m`;
 }
 
-export function CustomerLiveTripMap({ orderId, totalDistanceKm }: { orderId: string; totalDistanceKm: number | null }) {
+function timelinePosition(status: string | undefined) {
+  if (status === "delivered") return 3;
+  if (status === "in_transit") return 2;
+  if (status === "accepted" || status === "assigned") return 1;
+  return 0;
+}
+
+export function CustomerLiveTripMap({
+  orderId,
+  totalDistanceKm,
+  standalone = false,
+}: {
+  orderId: string;
+  totalDistanceKm: number | null;
+  standalone?: boolean;
+}) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const truckMarker = useRef<maplibregl.Marker | null>(null);
@@ -56,6 +73,8 @@ export function CustomerLiveTripMap({ orderId, totalDistanceKm }: { orderId: str
     if (!total || remainingKm == null) return null;
     return Math.min(100, Math.max(0, Math.round((1 - remainingKm / total) * 100)));
   }, [remainingKm, totalDistanceKm]);
+
+  const activeStep = timelinePosition(trip?.status);
 
   useEffect(() => {
     let cancelled = false;
@@ -161,8 +180,18 @@ export function CustomerLiveTripMap({ orderId, totalDistanceKm }: { orderId: str
   if (!mapTilerKey) return <p className="border border-route/30 bg-route/5 p-4 text-sm text-route">Map key is not configured.</p>;
 
   return (
-    <div>
+    <div className="customer-live-map">
       {error && <p className="mb-3 border border-route/30 bg-route/5 p-3 text-xs text-route">{error}</p>}
+
+      <div className="customer-live-map__timeline" aria-label="Trip progress">
+        {timelineSteps.map((step, index) => (
+          <div key={step} className={`customer-live-map__step${index < activeStep ? " is-done" : index === activeStep ? " is-active" : ""}`}>
+            <span>{index < activeStep ? "✓" : index + 1}</span>
+            <small>{step}</small>
+          </div>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
         <Metric label="Trip status" value={trip?.status?.replace("_", " ") ?? "Loading"} />
         <Metric label="Truck speed" value={trip?.speed_kmh != null ? `${Math.round(Number(trip.speed_kmh))} km/h` : "Waiting GPS"} />
@@ -175,9 +204,10 @@ export function CustomerLiveTripMap({ orderId, totalDistanceKm }: { orderId: str
           <div className="h-2 overflow-hidden rounded-full bg-asphalt/10"><div className="h-full bg-emerald-700" style={{ width: `${progress}%` }} /></div>
         </div>
       )}
-      <div ref={container} className="mt-4 h-72 w-full border border-line bg-bone" />
+      <div ref={container} className="customer-live-map__canvas mt-4 h-72 w-full border border-line bg-bone" />
       <p className="mt-2 text-[11px] text-steel">Live GPS refreshes every 8 seconds. Orange line = road route · TRK = latest driver location.</p>
       {trip?.recorded_at && <p className="mt-1 text-[11px] text-steel">Last GPS update: {new Date(trip.recorded_at).toLocaleString()}</p>}
+      {!standalone && <Link to={`/customer/tracking/${orderId}`} className="customer-live-map__open-page">Open full live tracking →</Link>}
     </div>
   );
 }
