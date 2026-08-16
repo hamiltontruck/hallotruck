@@ -4,20 +4,27 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_transitioning_to_delivered boolean := false;
 begin
-  if new.status = 'delivered'::public.order_status
-     and (tg_op = 'INSERT' or old.status is distinct from new.status) then
-    if not exists (
-      select 1
-      from public.delivery_proofs proof
-      where proof.order_id = new.id
-        and nullif(btrim(proof.recipient_name), '') is not null
-        and nullif(btrim(proof.photo_path), '') is not null
-        and nullif(btrim(proof.signature_path), '') is not null
-    ) then
-      raise exception 'Delivery proof with receiver name, photo and signature is required before marking an order delivered.'
-        using errcode = '23514';
+  if new.status = 'delivered'::public.order_status then
+    if tg_op = 'INSERT' then
+      v_transitioning_to_delivered := true;
+    elsif tg_op = 'UPDATE' and old.status is distinct from new.status then
+      v_transitioning_to_delivered := true;
     end if;
+  end if;
+
+  if v_transitioning_to_delivered and not exists (
+    select 1
+    from public.delivery_proofs proof
+    where proof.order_id = new.id
+      and nullif(btrim(proof.recipient_name), '') is not null
+      and nullif(btrim(proof.photo_path), '') is not null
+      and nullif(btrim(proof.signature_path), '') is not null
+  ) then
+    raise exception 'Delivery proof with receiver name, photo and signature is required before marking an order delivered.'
+      using errcode = '23514';
   end if;
 
   return new;
