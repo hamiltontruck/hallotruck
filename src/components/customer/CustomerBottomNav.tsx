@@ -1,10 +1,10 @@
 import { NavLink } from "react-router-dom";
 import { useLanguage, type HalloLanguage } from "../../i18n/LanguageProvider";
 
-const copy: Record<HalloLanguage, { profile: string; orders: string }> = {
-  en: { profile: "Profile", orders: "Orders" },
-  om: { profile: "Profaayilii", orders: "Ajajoota" },
-  am: { profile: "መገለጫ", orders: "ትዕዛዞች" },
+const copy: Record<HalloLanguage, { dashboard: string; profile: string; orders: string }> = {
+  en: { dashboard: "Customer dashboard", profile: "Profile", orders: "Orders" },
+  om: { dashboard: "Daashboordii customer", profile: "Profaayilii", orders: "Ajajoota" },
+  am: { dashboard: "የደንበኛ ዳሽቦርድ", profile: "መገለጫ", orders: "ትዕዛዞች" },
 };
 
 const links = [
@@ -17,18 +17,26 @@ export function CustomerBottomNav() {
   const labels = copy[language];
 
   return (
-    <nav className="customer-bottom-nav" aria-label="Customer portal navigation">
-      {links.map((link) => (
-        <NavLink
-          key={link.to}
-          to={link.to}
-          end={link.end}
-          className={({ isActive }) => `customer-bottom-nav__item${isActive ? " is-active" : ""}`}
-        >
-          <span className="customer-bottom-nav__icon" aria-hidden="true">{link.icon}</span>
-          <span>{labels[link.key]}</span>
-        </NavLink>
-      ))}
+    <nav className="customer-dashboard-nav" aria-label="Customer portal navigation">
+      <div className="customer-dashboard-nav__inner">
+        <div className="customer-dashboard-nav__title">
+          <span className="customer-dashboard-nav__eyebrow">HALLOTRUCK</span>
+          <strong>{labels.dashboard}</strong>
+        </div>
+        <div className="customer-dashboard-nav__tabs">
+          {links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              className={({ isActive }) => `customer-dashboard-nav__item${isActive ? " is-active" : ""}`}
+            >
+              <span className="customer-dashboard-nav__icon" aria-hidden="true">{link.icon}</span>
+              <span>{labels[link.key]}</span>
+            </NavLink>
+          ))}
+        </div>
+      </div>
     </nav>
   );
 }
