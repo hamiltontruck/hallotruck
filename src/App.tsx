@@ -1,7 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
-import { CustomerAssignmentNotice } from "./components/customer/CustomerAssignmentNotice";
+import { CustomerBottomNav } from "./components/customer/CustomerBottomNav";
 import { AdminSidebarLeadershipLinks } from "./components/admin/AdminSidebarLeadershipLinks";
 import { AdminToolShell } from "./components/admin/AdminToolShell";
 import { SmartLogistics } from "./pages/SmartLogistics";
@@ -23,6 +23,7 @@ import { Login } from "./pages/Login";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import "./styles/fleet-maintenance-mobile.css";
 import "./styles/customer-portal-mobile.css";
+import "./styles/customer-portal-sections.css";
 import "./styles/driver-mobile-flow.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
@@ -44,11 +45,11 @@ function AdminWorkspace() {
   );
 }
 
-function CustomerWorkspace() {
+function CustomerWorkspace({ section }: { section: "profile" | "orders" }) {
   return (
-    <div className="customer-portal-mobile">
-      <CustomerAssignmentNotice />
+    <div className={`customer-portal-mobile customer-view-${section}`}>
       <CustomerPortal />
+      <CustomerBottomNav />
     </div>
   );
 }
@@ -64,7 +65,8 @@ export default function App() {
           <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
           <Route path="/admin/fleet-maintenance" element={<AdminGate><AdminToolShell><div className="fleet-maintenance-mobile"><AdminFleetMaintenance /></div></AdminToolShell></AdminGate>} />
           <Route path="/customer/login" element={<CustomerLogin />} />
-          <Route path="/customer" element={<CustomerGate><CustomerWorkspace /></CustomerGate>} />
+          <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="profile" /></CustomerGate>} />
+          <Route path="/customer/orders" element={<CustomerGate><CustomerWorkspace section="orders" /></CustomerGate>} />
           <Route path="/driver/login" element={<Login />} />
           <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
           <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
