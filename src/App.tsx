@@ -22,6 +22,7 @@ import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import "./styles/fleet-maintenance-mobile.css";
+import "./styles/customer-portal-mobile.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
   return (
@@ -44,10 +45,10 @@ function AdminWorkspace() {
 
 function CustomerWorkspace() {
   return (
-    <>
+    <div className="customer-portal-mobile">
       <CustomerAssignmentNotice />
       <CustomerPortal />
-    </>
+    </div>
   );
 }
 
