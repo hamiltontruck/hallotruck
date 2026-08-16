@@ -71,7 +71,7 @@ export async function createCustomerCargoOrder(input: {
   const priceEtb = calculateCargoQuote(input.distanceKm, input.vehicleType, input.cargoQuantity, input.cargoUnit);
   const cargoDescription = formatCargoLoad(input.cargoQuantity, input.cargoUnit);
 
-  const { error } = await supabase.from("orders").insert({
+  const { data: order, error } = await supabase.from("orders").insert({
     tracking_id: trackingId,
     customer_id: auth.user.id,
     customer_name: profile?.full_name ?? auth.user.email ?? "Customer",
@@ -87,8 +87,17 @@ export async function createCustomerCargoOrder(input: {
     cargo_description: cargoDescription,
     price_etb: priceEtb,
     status: "placed",
-  });
+  }).select("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,status").single();
 
   if (error) throw new Error(error.message);
-  return { trackingId, priceEtb };
+  return {
+    id: order.id as string,
+    trackingId: order.tracking_id as string,
+    pickupAddress: order.pickup_address as string,
+    dropoffAddress: order.dropoff_address as string,
+    vehicleType: order.vehicle_type as string,
+    distanceKm: Number(order.distance_km ?? input.distanceKm),
+    priceEtb: Number(order.price_etb ?? priceEtb),
+    status: order.status as string,
+  };
 }
