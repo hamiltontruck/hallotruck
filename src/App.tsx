@@ -29,6 +29,7 @@ import "./styles/customer-portal-sections.css";
 import "./styles/customer-header-map-polish.css";
 import "./styles/customer-map-home.css";
 import "./styles/customer-nearby-tracking.css";
+import "./styles/customer-nearby-home-bridge.css";
 import "./styles/driver-mobile-flow.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
