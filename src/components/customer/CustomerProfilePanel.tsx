@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { updateCustomerProfile, type CustomerProfile } from "../../services/customer.service";
+import type { CustomerProfile } from "../../services/customer.service";
+import { updateCustomerProfile } from "../../services/customer-profile.service";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { getCustomerCopy } from "../../i18n/customerCopy";
 
