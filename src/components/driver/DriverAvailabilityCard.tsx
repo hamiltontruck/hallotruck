@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLanguage, type HalloLanguage } from "../../i18n/LanguageProvider";
 import {
   getMyDriverPresence,
   setDriverPresence,
   type DriverPresence,
 } from "../../services/driver-presence.service";
+import { getMyActiveOrders } from "../../services/driver.service";
 
 const copy: Record<HalloLanguage, {
   kicker: string;
@@ -21,6 +23,10 @@ const copy: Record<HalloLanguage, {
   accuracy: string;
   unsupported: string;
   denied: string;
+  activeKicker: string;
+  activeTitle: string;
+  activeHelp: string;
+  resumeTrip: string;
 }> = {
   en: {
     kicker: "DRIVER AVAILABILITY",
@@ -37,6 +43,10 @@ const copy: Record<HalloLanguage, {
     accuracy: "Accuracy",
     unsupported: "This browser does not support location.",
     denied: "Location permission is required to go online.",
+    activeKicker: "ACTIVE DELIVERY",
+    activeTitle: "Trip in progress",
+    activeHelp: "Job availability is paused while this trip is active. Resume live GPS so the customer can follow the truck.",
+    resumeTrip: "Resume live GPS",
   },
   om: {
     kicker: "ARGAMA KONKOLAACHISAA",
@@ -53,6 +63,10 @@ const copy: Record<HalloLanguage, {
     accuracy: "Sirrummaa",
     unsupported: "Browser kun location hin deeggaru.",
     denied: "Online ta'uuf location hayyamuu qabda.",
+    activeKicker: "IMALA HOJII IRRA JIRU",
+    activeTitle: "Trip itti fufaa jira",
+    activeHelp: "Trip kun yeroo hojjetu hojii haaraa fudhachuun dhaabbata. Maamilaan akka hordofuuf GPS kallattii itti fufi.",
+    resumeTrip: "GPS kallattii itti fufi",
   },
   am: {
     kicker: "የአሽከርካሪ ተገኝነት",
@@ -69,15 +83,21 @@ const copy: Record<HalloLanguage, {
     accuracy: "ትክክለኛነት",
     unsupported: "ይህ ብራውዘር location አይደግፍም።",
     denied: "ኦንላይን ለመሆን location ፈቃድ ያስፈልጋል።",
+    activeKicker: "ንቁ ጉዞ",
+    activeTitle: "ጉዞው በሂደት ላይ ነው",
+    activeHelp: "ይህ ጉዞ ንቁ በሆነበት ጊዜ አዲስ ሥራ መቀበል ቆሟል። ደንበኛው እንዲከታተል ቀጥታ GPS ይቀጥሉ።",
+    resumeTrip: "ቀጥታ GPS ቀጥል",
   },
 };
 
 const UPDATE_INTERVAL_MS = 60_000;
 
 export function DriverAvailabilityCard() {
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const t = copy[language];
   const [presence, setPresenceState] = useState<DriverPresence | null>(null);
+  const [hasActiveTrip, setHasActiveTrip] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const watchId = useRef<number | null>(null);
@@ -111,11 +131,13 @@ export function DriverAvailabilityCard() {
 
   useEffect(() => {
     let cancelled = false;
-    getMyDriverPresence()
-      .then((current) => {
+    Promise.all([getMyDriverPresence(), getMyActiveOrders()])
+      .then(([current, activeOrders]) => {
         if (cancelled) return;
+        const active = activeOrders.length > 0;
         setPresenceState(current);
-        if (current?.is_available) startWatch();
+        setHasActiveTrip(active);
+        if (!active && current?.is_available) startWatch();
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : t.denied);
@@ -170,6 +192,27 @@ export function DriverAvailabilityCard() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (hasActiveTrip) {
+    return (
+      <section className="my-5 overflow-hidden rounded-2xl border border-amber/40 bg-amber/10">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] tracking-[.18em] text-amber-dim">{t.activeKicker}</p>
+            <h2 className="mt-2 font-display text-xl font-bold text-asphalt">{t.activeTitle}</h2>
+            <p className="mt-2 max-w-2xl text-xs leading-5 text-steel">{t.activeHelp}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/driver/trip")}
+            className="min-h-12 shrink-0 rounded-xl bg-asphalt px-5 py-3 text-sm font-semibold text-white"
+          >
+            {t.resumeTrip} →
+          </button>
+        </div>
+      </section>
+    );
   }
 
   const online = Boolean(presence?.is_available);
