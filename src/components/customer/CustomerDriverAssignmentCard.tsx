@@ -6,6 +6,8 @@ interface AssignmentWithPhoto extends CustomerDriverAssignment {
   driver_photo_path?: string | null;
 }
 
+const PHOTO_URL_TTL_SECONDS = 3600;
+
 export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
   assignment: AssignmentWithPhoto;
   order: CustomerOrder;
@@ -32,10 +34,10 @@ export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
     async function loadPhotos() {
       const [driverResult, truckResult] = await Promise.all([
         assignment.driver_photo_path && assignment.driver_verified
-          ? supabase.storage.from("driver-verification").createSignedUrl(assignment.driver_photo_path, 300)
+          ? supabase.storage.from("driver-verification").createSignedUrl(assignment.driver_photo_path, PHOTO_URL_TTL_SECONDS)
           : Promise.resolve({ data: null, error: null }),
         assignment.truck_photo_path
-          ? supabase.storage.from("driver-verification").createSignedUrl(assignment.truck_photo_path, 300)
+          ? supabase.storage.from("driver-verification").createSignedUrl(assignment.truck_photo_path, PHOTO_URL_TTL_SECONDS)
           : Promise.resolve({ data: null, error: null }),
       ]);
 
@@ -49,6 +51,7 @@ export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
   }, [assignment.driver_photo_path, assignment.driver_verified, assignment.truck_photo_path]);
 
   const verificationLabel = assignment.driver_verified ? labels.verifiedDriver : labels.verificationPending;
+  const driverInitial = assignment.driver_name?.trim()?.charAt(0)?.toUpperCase() || "D";
 
   if (order.status === "delivered") {
     return (
@@ -63,7 +66,11 @@ export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
         <div className="grid min-w-0 gap-3 p-3 sm:grid-cols-2 sm:p-4">
           <div className="flex min-w-0 items-center gap-3 rounded-xl border border-emerald-200 bg-white p-3">
             <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-emerald-100 bg-emerald-100">
-              {driverPhotoUrl ? <img src={driverPhotoUrl} alt={assignment.driver_name} className="h-full w-full object-cover" /> : <span className="font-display text-lg font-bold text-emerald-800">{assignment.driver_name?.trim()?.charAt(0)?.toUpperCase() || "D"}</span>}
+              {driverPhotoUrl ? (
+                <img src={driverPhotoUrl} alt="" className="h-full w-full object-cover" onError={() => setDriverPhotoUrl(null)} />
+              ) : (
+                <span className="font-display text-lg font-bold text-emerald-800">{driverInitial}</span>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-mono text-[9px] uppercase tracking-[.16em] text-steel">Driver</p>
@@ -80,7 +87,11 @@ export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
               className="grid h-14 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#e8eee8] disabled:cursor-default"
               aria-label={labels.viewTruckPhoto}
             >
-              {truckPhotoUrl ? <img src={truckPhotoUrl} alt={`${assignment.plate_number ?? labels.truck} ${labels.truck}`} className="h-full w-full object-cover" /> : <span className="px-2 text-center text-[9px] font-semibold text-steel">{labels.truck}</span>}
+              {truckPhotoUrl ? (
+                <img src={truckPhotoUrl} alt="" className="h-full w-full object-cover" onError={() => setTruckPhotoUrl(null)} />
+              ) : (
+                <span className="px-2 text-center text-[9px] font-semibold text-steel">{labels.truck}</span>
+              )}
             </button>
             <div className="min-w-0 flex-1">
               <p className="font-mono text-[9px] uppercase tracking-[.16em] text-steel">{labels.truckPlate}</p>
@@ -107,7 +118,11 @@ export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
           <div className="rounded-2xl border border-emerald-200 bg-white p-4">
             <div className="flex items-center gap-4">
               <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-emerald-50 bg-emerald-100 shadow-sm">
-                {driverPhotoUrl ? <img src={driverPhotoUrl} alt={assignment.driver_name} className="h-full w-full object-cover" /> : <span className="font-display text-2xl font-bold text-emerald-800">{assignment.driver_name?.trim()?.charAt(0)?.toUpperCase() || "D"}</span>}
+                {driverPhotoUrl ? (
+                  <img src={driverPhotoUrl} alt="" className="h-full w-full object-cover" onError={() => setDriverPhotoUrl(null)} />
+                ) : (
+                  <span className="font-display text-2xl font-bold text-emerald-800">{driverInitial}</span>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-[9px] uppercase tracking-[.16em] text-steel">Driver</p>
@@ -130,7 +145,11 @@ export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
               className="block h-40 w-full overflow-hidden bg-[#e8eee8] text-left disabled:cursor-default sm:h-44"
               aria-label={labels.viewTruckPhoto}
             >
-              {truckPhotoUrl ? <img src={truckPhotoUrl} alt={`${assignment.plate_number ?? labels.truck} ${labels.truck}`} className="h-full w-full object-cover transition duration-200 hover:scale-[1.02]" /> : <span className="grid h-full place-items-center px-4 text-center text-xs font-semibold text-steel">{labels.truck} · {labels.pending}</span>}
+              {truckPhotoUrl ? (
+                <img src={truckPhotoUrl} alt="" className="h-full w-full object-cover transition duration-200 hover:scale-[1.02]" onError={() => setTruckPhotoUrl(null)} />
+              ) : (
+                <span className="grid h-full place-items-center px-4 text-center text-xs font-semibold text-steel">{labels.truck} · {labels.pending}</span>
+              )}
             </button>
             <div className="p-4">
               <p className="font-mono text-[9px] uppercase tracking-[.16em] text-steel">{labels.truckPlate}</p>
