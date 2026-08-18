@@ -27,6 +27,7 @@ interface RouteResult {
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
 const style = `https://api.maptiler.com/maps/basic-v2/style.json?key=${mapTilerKey ?? ""}`;
 const timelineSteps = ["Assigned", "Pickup", "On route", "Delivered"] as const;
+const LIVE_GPS_FRESH_MS = 2 * 60 * 1000;
 
 async function fetchRoute(from: [number, number], to: [number, number]): Promise<RouteResult | null> {
   const url = `https://router.project-osrm.org/route/v1/driving/${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson&steps=false`;
@@ -41,6 +42,14 @@ function formatDuration(seconds: number) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return hours ? `${hours}h ${mins}m` : `${mins}m`;
+}
+
+function formatGpsAge(recordedAt: string) {
+  const ageSeconds = Math.max(0, Math.round((Date.now() - new Date(recordedAt).getTime()) / 1000));
+  if (ageSeconds < 60) return `${ageSeconds}s ago`;
+  const ageMinutes = Math.round(ageSeconds / 60);
+  if (ageMinutes < 60) return `${ageMinutes}m ago`;
+  return `${Math.round(ageMinutes / 60)}h ago`;
 }
 
 function timelinePosition(status: string | undefined) {
@@ -75,6 +84,16 @@ export function CustomerLiveTripMap({
   }, [remainingKm, totalDistanceKm]);
 
   const activeStep = timelinePosition(trip?.status);
+  const hasTruckLocation = trip?.truck_lng != null && trip?.truck_lat != null;
+  const gpsAgeMs = trip?.recorded_at ? Date.now() - new Date(trip.recorded_at).getTime() : null;
+  const gpsFresh = hasTruckLocation && gpsAgeMs !== null && gpsAgeMs >= 0 && gpsAgeMs <= LIVE_GPS_FRESH_MS;
+  const speedValue = !hasTruckLocation
+    ? "Waiting for GPS"
+    : !gpsFresh
+      ? "GPS paused"
+      : trip?.speed_kmh != null
+        ? `${Math.round(Number(trip.speed_kmh))} km/h`
+        : "Location received";
 
   useEffect(() => {
     let cancelled = false;
@@ -194,9 +213,9 @@ export function CustomerLiveTripMap({
 
       <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
         <Metric label="Trip status" value={trip?.status?.replace("_", " ") ?? "Loading"} />
-        <Metric label="Truck speed" value={trip?.speed_kmh != null ? `${Math.round(Number(trip.speed_kmh))} km/h` : "Waiting GPS"} />
-        <Metric label="Remaining" value={remainingKm != null ? `${remainingKm} km` : "Waiting GPS"} />
-        <Metric label="ETA" value={remainingSeconds != null ? formatDuration(remainingSeconds) : "Waiting GPS"} />
+        <Metric label="Truck GPS" value={speedValue} />
+        <Metric label="Remaining" value={remainingKm != null ? `${remainingKm} km` : "Waiting for GPS"} />
+        <Metric label="ETA" value={remainingSeconds != null ? formatDuration(remainingSeconds) : "Waiting for GPS"} />
       </div>
       {progress != null && (
         <div className="mt-4">
@@ -205,8 +224,18 @@ export function CustomerLiveTripMap({
         </div>
       )}
       <div ref={container} className="customer-live-map__canvas mt-4 h-72 w-full border border-line bg-bone" />
-      <p className="mt-2 text-[11px] text-steel">Live GPS refreshes every 8 seconds. Orange line = road route · TRK = latest driver location.</p>
-      {trip?.recorded_at && <p className="mt-1 text-[11px] text-steel">Last GPS update: {new Date(trip.recorded_at).toLocaleString()}</p>}
+      <p className={`mt-2 text-[11px] ${gpsFresh ? "text-emerald-800" : "text-steel"}`}>
+        {gpsFresh
+          ? "Live GPS is active and refreshes every 8 seconds. Orange line = road route · TRK = latest driver location."
+          : hasTruckLocation
+            ? "Live GPS is paused. The map, remaining distance and ETA use the last known driver location."
+            : "Waiting for the driver to share the first GPS location."}
+      </p>
+      {trip?.recorded_at && (
+        <p className="mt-1 text-[11px] text-steel">
+          Last GPS update: {new Date(trip.recorded_at).toLocaleString()} · {formatGpsAge(trip.recorded_at)}
+        </p>
+      )}
       {!standalone && <Link to={`/customer/tracking/${orderId}`} className="customer-live-map__open-page">Open full live tracking →</Link>}
     </div>
   );
