@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   DriverEarningsSummary,
   DriverEarningsTrip,
@@ -9,13 +9,14 @@ import { formatEtb } from "../utils/currency";
 import { HALLO_SMART_COMMISSION_PERCENT } from "../utils/commission";
 import { CargoPlate } from "../components/ui/CargoPlate";
 import { DriverRatingSummary } from "../components/driver/DriverRatingSummary";
+import { DriverPaymentConfirmation } from "../components/driver/DriverPaymentConfirmation";
 import { useDriverText } from "../i18n/driverTranslations";
 
 function when(value: string | null) {
   return value ? new Date(value).toLocaleString() : "—";
 }
 
-function PayoutCard({ trip, released }: { trip: DriverEarningsTrip; released: boolean }) {
+function PayoutCard({ trip, released, onPaymentChanged }: { trip: DriverEarningsTrip; released: boolean; onPaymentChanged: () => void }) {
   const dt = useDriverText();
   const payoutLabels: Record<DriverPayoutStatus, string> = {
     released: dt("earn.status.released"),
@@ -60,6 +61,12 @@ function PayoutCard({ trip, released }: { trip: DriverEarningsTrip; released: bo
           </>
         )}
       </div>
+
+      {!released && trip.heldEtb > 0 && (
+        <div className="mt-5">
+          <DriverPaymentConfirmation orderId={trip.id} showEmpty={false} onChanged={onPaymentChanged} />
+        </div>
+      )}
     </article>
   );
 }
@@ -78,11 +85,18 @@ export function Earnings() {
   const [data, setData] = useState<DriverEarningsSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const load = useCallback(async () => {
+    try {
+      setData(await getDriverEarnings());
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : dt("earn.error"));
+    }
+  }, [dt]);
+
   useEffect(() => {
-    getDriverEarnings()
-      .then(setData)
-      .catch((err) => setError(err instanceof Error ? err.message : dt("earn.error")));
-  }, []);
+    void load();
+  }, [load]);
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-16">
@@ -127,7 +141,7 @@ export function Earnings() {
             </div>
             {data.released.length ? (
               <div className="space-y-4">
-                {data.released.map((trip) => <PayoutCard key={trip.id} trip={trip} released />)}
+                {data.released.map((trip) => <PayoutCard key={trip.id} trip={trip} released onPaymentChanged={() => void load()} />)}
               </div>
             ) : (
               <div className="border border-line bg-white p-6 font-body text-sm text-steel">{dt("earn.noReleased")}</div>
@@ -144,7 +158,7 @@ export function Earnings() {
             </div>
             {data.pending.length ? (
               <div className="space-y-4">
-                {data.pending.map((trip) => <PayoutCard key={trip.id} trip={trip} released={false} />)}
+                {data.pending.map((trip) => <PayoutCard key={trip.id} trip={trip} released={false} onPaymentChanged={() => void load()} />)}
               </div>
             ) : (
               <div className="border border-line bg-white p-6 font-body text-sm text-steel">{dt("earn.noPending")}</div>

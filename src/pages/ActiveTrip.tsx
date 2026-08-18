@@ -12,6 +12,8 @@ import { Button } from "../components/ui/Button";
 import { CargoPlate } from "../components/ui/CargoPlate";
 import { TripMap } from "../components/navigation/TripMap";
 import { DriverDeliveryProofForm } from "../components/driver/DriverDeliveryProofForm";
+import { DriverCustomerContact } from "../components/driver/DriverCustomerContact";
+import { DriverPaymentConfirmation } from "../components/driver/DriverPaymentConfirmation";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { getDriverTripDocumentsCopy } from "../i18n/driverTripDocumentsCopy";
 
@@ -223,6 +225,9 @@ export function ActiveTrip() {
           <p className="text-[11px] leading-5 text-steel">{action.netHelp}</p>
         </div>
       </div>
+
+      <DriverCustomerContact orderId={order.id} />
+      <DriverPaymentConfirmation orderId={order.id} />
 
       {error && <p className="font-body text-sm text-route border border-route/40 bg-route/5 px-4 py-3 mb-6">{error}</p>}
       {routeError && <p className="font-body text-xs text-steel border border-line px-4 py-3 mb-6">{c.directionsUnavailable}: {routeError}</p>}
