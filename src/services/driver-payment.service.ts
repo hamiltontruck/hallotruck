@@ -14,6 +14,11 @@ export interface DriverPaymentStatus {
   can_confirm: boolean;
 }
 
+export interface AssignedCustomerContact {
+  customer_name: string;
+  customer_phone: string | null;
+}
+
 export async function getDriverPaymentStatus(orderId: string): Promise<DriverPaymentStatus[]> {
   const { data, error } = await supabase.rpc("driver_payment_status", {
     p_order_id: orderId,
@@ -31,4 +36,14 @@ export async function confirmDriverPayment(paymentId: string): Promise<string> {
   });
   if (error) throw new Error(error.message);
   return String(data ?? "confirmed_waiting_delivery");
+}
+
+export async function getAssignedCustomerContact(orderId: string): Promise<AssignedCustomerContact> {
+  const { data, error } = await supabase.rpc("driver_order_contact", {
+    p_order_id: orderId,
+  });
+  if (error) throw new Error(error.message);
+  const row = data?.[0] as AssignedCustomerContact | undefined;
+  if (!row) throw new Error("Customer contact is unavailable for this order.");
+  return row;
 }
