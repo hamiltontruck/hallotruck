@@ -84,27 +84,27 @@ export function calculateQuote(distanceKm: number, vehicleType: string) {
   return Math.max(1500, Math.round((distanceKm * rate + 900) / 50) * 50);
 }
 
+async function getCustomerProfileForSession(): Promise<CustomerProfile | null> {
+  const { data, error } = await supabase.rpc("customer_get_profile");
+  if (error) throw new Error(error.message);
+  return ((data?.[0] ?? null) as CustomerProfile | null);
+}
+
 export async function getCustomerPortalData(): Promise<CustomerPortalData> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Customer session expired.");
 
-  const [ordersResult, profileResult] = await Promise.all([
+  const [ordersResult, profile] = await Promise.all([
     supabase
       .from("orders")
       .select("id, tracking_id, pickup_address, dropoff_address, vehicle_type, distance_km, price_etb, status, payment_status, payment_provider, payment_ref, created_at")
       .order("created_at", { ascending: false }),
-    supabase
-      .from("profiles")
-      .select("id,full_name,phone,email,home_address,customer_type,company_name,created_at")
-      .eq("id", auth.user.id)
-      .maybeSingle(),
+    getCustomerProfileForSession(),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message);
-  if (profileResult.error) throw new Error(profileResult.error.message);
 
   const orders = ordersResult.data ?? [];
-  const profile = (profileResult.data ?? null) as CustomerProfile | null;
   const ids = orders.map((order) => order.id);
   if (!ids.length) return { orders: [], proofs: [], payments: [], assignments: [], profile };
 
@@ -155,17 +155,14 @@ export async function updateCustomerProfile(input: {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
   if (input.customerType === "business" && !companyName) throw new Error("Company name is required for a business account.");
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      full_name: fullName,
-      phone,
-      email: email || null,
-      home_address: homeAddress || null,
-      customer_type: input.customerType,
-      company_name: input.customerType === "business" ? companyName : null,
-    })
-    .eq("id", auth.user.id);
+  const { error } = await supabase.rpc("customer_update_profile", {
+    p_full_name: fullName,
+    p_phone: phone,
+    p_email: email || null,
+    p_home_address: homeAddress || null,
+    p_customer_type: input.customerType,
+    p_company_name: input.customerType === "business" ? companyName : null,
+  });
 
   if (error) throw new Error(error.message);
 }
@@ -181,12 +178,7 @@ export async function createCustomerOrder(input: {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Customer session expired.");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, phone")
-    .eq("id", auth.user.id)
-    .single();
-
+  const profile = await getCustomerProfileForSession();
   const trackingId = `HT-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
   const priceEtb = calculateQuote(input.distanceKm, input.vehicleType);
 
