@@ -29,6 +29,11 @@ const tripActionCopy = {
     resumeGps: "Resume live GPS",
     gpsLive: "Live GPS is active",
     gpsPaused: "The trip is In Transit, but live GPS is paused. Resume sharing so the customer can follow the truck.",
+    gpsPausedTitle: "Live GPS paused",
+    grossFare: "Gross trip fare",
+    commission: "HALLO Smart commission (2%)",
+    expectedNet: "Expected driver net (98%)",
+    netHelp: "This is the amount expected after the customer payment is released.",
   },
   om: {
     ready: "Imala jalqabuuf qophaa'eera",
@@ -41,6 +46,11 @@ const tripActionCopy = {
     resumeGps: "GPS kallattii itti fufi",
     gpsLive: "GPS kallattiin hojii irra jira",
     gpsPaused: "Imalli Daandii irra jira; garuu GPS kallattiin dhaabbateera. Maamilaan akka hordofuuf qooduu itti fufi.",
+    gpsPausedTitle: "GPS kallattiin dhaabbateera",
+    grossFare: "Gatii trip guutuu",
+    commission: "Komishinii HALLO Smart (2%)",
+    expectedNet: "Galii driver eegamu (98%)",
+    netHelp: "Kaffaltiin customer erga release taʼe booda galiin eegamu kana.",
   },
   am: {
     ready: "ጉዞውን ለመጀመር ዝግጁ",
@@ -53,6 +63,11 @@ const tripActionCopy = {
     resumeGps: "ቀጥታ GPS ቀጥል",
     gpsLive: "ቀጥታ GPS እየሰራ ነው",
     gpsPaused: "ጉዞው In Transit ላይ ነው፣ ግን ቀጥታ GPS ቆሟል። ደንበኛው እንዲከታተል ማጋራትን ይቀጥሉ።",
+    gpsPausedTitle: "ቀጥታ GPS ቆሟል",
+    grossFare: "ጠቅላላ የጉዞ ዋጋ",
+    commission: "የHALLO Smart ኮሚሽን (2%)",
+    expectedNet: "የሚጠበቀው የአሽከርካሪ ገቢ (98%)",
+    netHelp: "የደንበኛው ክፍያ ከተለቀቀ በኋላ የሚጠበቀው መጠን ይህ ነው።",
   },
 } as const;
 
@@ -175,6 +190,9 @@ export function ActiveTrip() {
 
   const tripStarted = order.status === "in_transit";
   const statusLabel = order.status === "accepted" ? c.assigned : tripStarted ? c.onRoad : order.status;
+  const grossFare = Number(order.price_etb ?? 0);
+  const platformCommission = Math.round(grossFare * 0.02 * 100) / 100;
+  const driverNet = Math.max(0, Math.round((grossFare - platformCommission) * 100) / 100);
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-16">
@@ -183,11 +201,26 @@ export function ActiveTrip() {
         <span className="font-display font-semibold text-asphalt">{statusLabel}</span>
       </div>
 
-      <div className="border border-line bg-white p-6 mb-6 space-y-3 font-body text-sm">
-        <div><span className="text-steel">{c.pickup}</span><div className="text-asphalt">{order.pickup_address}</div></div>
-        <div><span className="text-steel">{c.dropoff}</span><div className="text-asphalt">{order.dropoff_address}</div></div>
-        <div className="flex justify-between pt-3 border-t border-line items-center">
-          <span className="text-steel">{c.earn}</span><CargoPlate>{formatEtb(order.price_etb)}</CargoPlate>
+      <div className="mb-6 border border-line bg-white p-6 font-body text-sm">
+        <div className="space-y-3">
+          <div><span className="text-steel">{c.pickup}</span><div className="text-asphalt">{order.pickup_address}</div></div>
+          <div><span className="text-steel">{c.dropoff}</span><div className="text-asphalt">{order.dropoff_address}</div></div>
+        </div>
+
+        <div className="mt-5 grid gap-2 border-t border-line pt-5">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-steel">{action.grossFare}</span>
+            <strong className="font-display text-asphalt">{formatEtb(grossFare)}</strong>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-steel">{action.commission}</span>
+            <strong className="font-display text-route">− {formatEtb(platformCommission)}</strong>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-4 bg-emerald-50 px-4 py-4">
+            <span className="font-semibold text-emerald-900">{action.expectedNet}</span>
+            <CargoPlate>{formatEtb(driverNet)}</CargoPlate>
+          </div>
+          <p className="text-[11px] leading-5 text-steel">{action.netHelp}</p>
         </div>
       </div>
 
@@ -202,10 +235,14 @@ export function ActiveTrip() {
               {tripStarted ? c.onRoad : c.assigned}
             </p>
             <h2 className="mt-1 font-display text-xl font-bold text-asphalt">
-              {tripStarted ? action.started : gpsSharing ? action.starting : action.ready}
+              {tripStarted
+                ? gpsSharing ? action.started : action.gpsPausedTitle
+                : gpsSharing ? action.starting : action.ready}
             </h2>
             <p className="mt-2 font-body text-sm leading-6 text-steel">
-              {tripStarted ? action.startedHelp : gpsSharing ? action.startingHelp : action.readyHelp}
+              {tripStarted
+                ? gpsSharing ? action.startedHelp : action.gpsPaused
+                : gpsSharing ? action.startingHelp : action.readyHelp}
             </p>
             {gpsSharing && <p className="mt-3 text-xs font-semibold text-emerald-800">✓ {action.gpsLive}</p>}
           </div>
