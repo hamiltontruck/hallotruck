@@ -4,6 +4,9 @@ import { Button } from "../ui/Button";
 import { useLanguage, type HalloLanguage } from "../../i18n/LanguageProvider";
 import { getDriverTripDocumentsCopy } from "../../i18n/driverTripDocumentsCopy";
 
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const CAMERA_CAPTURE_MAX_WIDTH = 1600;
+
 const journeyCopy: Record<HalloLanguage, {
   progress: string;
   receiver: string;
@@ -12,6 +15,16 @@ const journeyCopy: Record<HalloLanguage, {
   complete: string;
   ready: string;
   waiting: string;
+  takePhoto: string;
+  chooseGallery: string;
+  cameraTitle: string;
+  cameraHelp: string;
+  cameraStarting: string;
+  cameraUnavailable: string;
+  capturePhoto: string;
+  closeCamera: string;
+  retake: string;
+  photoReady: string;
 }> = {
   en: {
     progress: "DELIVERY COMPLETION STEPS",
@@ -21,6 +34,16 @@ const journeyCopy: Record<HalloLanguage, {
     complete: "Complete",
     ready: "Ready",
     waiting: "Waiting",
+    takePhoto: "Take delivery photo",
+    chooseGallery: "Choose from gallery",
+    cameraTitle: "Delivery camera",
+    cameraHelp: "Keep the cargo and handover area clearly visible.",
+    cameraStarting: "Starting rear camera…",
+    cameraUnavailable: "The camera could not open. Allow camera permission or choose a photo from the gallery.",
+    capturePhoto: "Use this photo",
+    closeCamera: "Cancel",
+    retake: "Retake photo",
+    photoReady: "Photo ready",
   },
   om: {
     progress: "TARTIIBA GEEJJIBA XUMURUU",
@@ -30,6 +53,16 @@ const journeyCopy: Record<HalloLanguage, {
     complete: "Xumuri",
     ready: "Qophaa'e",
     waiting: "Eegaa jira",
+    takePhoto: "Suuraa geessuu kaasi",
+    chooseGallery: "Gallery keessaa fili",
+    cameraTitle: "Kaameraa geessuu",
+    cameraHelp: "Fe'umsa fi bakka kennuu ifatti akka mul'atu godhi.",
+    cameraStarting: "Kaameraa duubaa banaa jira…",
+    cameraUnavailable: "Kaameraan banamuu hin dandeenye. Hayyama cameraa kenni ykn gallery keessaa suuraa fili.",
+    capturePhoto: "Suuraa kana fayyadami",
+    closeCamera: "Dhiisi",
+    retake: "Irra deebi'ii kaasi",
+    photoReady: "Suuraan qophaa'eera",
   },
   am: {
     progress: "የማድረስ ማጠናቀቂያ ደረጃዎች",
@@ -39,6 +72,16 @@ const journeyCopy: Record<HalloLanguage, {
     complete: "ጨርስ",
     ready: "ዝግጁ",
     waiting: "በመጠበቅ ላይ",
+    takePhoto: "የማድረሻ ፎቶ አንሳ",
+    chooseGallery: "ከጋለሪ ምረጥ",
+    cameraTitle: "የማድረሻ ካሜራ",
+    cameraHelp: "ጭነቱና የርክክብ ቦታው በግልጽ እንዲታዩ ያድርጉ።",
+    cameraStarting: "የኋላ ካሜራ እየተከፈተ ነው…",
+    cameraUnavailable: "ካሜራው አልተከፈተም። የካሜራ ፈቃድ ይስጡ ወይም ከጋለሪ ፎቶ ይምረጡ።",
+    capturePhoto: "ይህን ፎቶ ተጠቀም",
+    closeCamera: "ሰርዝ",
+    retake: "እንደገና አንሳ",
+    photoReady: "ፎቶው ዝግጁ ነው",
   },
 };
 
@@ -53,12 +96,17 @@ export function DriverDeliveryProofForm({
   const c = getDriverTripDocumentsCopy(language).proof;
   const journey = journeyCopy[language];
   const canvas = useRef<HTMLCanvasElement>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
+  const cameraVideo = useRef<HTMLVideoElement>(null);
+  const cameraStream = useRef<MediaStream | null>(null);
   const drawing = useRef(false);
   const [recipientName, setRecipientName] = useState("");
   const [signed, setSigned] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -72,6 +120,89 @@ export function DriverDeliveryProofForm({
     return () => URL.revokeObjectURL(preview);
   }, [photo]);
 
+  useEffect(() => {
+    if (!cameraOpen) return;
+    let cancelled = false;
+
+    async function startCamera() {
+      setCameraReady(false);
+      setCameraError("");
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError(journey.cameraUnavailable);
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        cameraStream.current = stream;
+        if (cameraVideo.current) {
+          cameraVideo.current.srcObject = stream;
+          await cameraVideo.current.play();
+          setCameraReady(true);
+        }
+      } catch {
+        if (!cancelled) setCameraError(journey.cameraUnavailable);
+      }
+    }
+
+    void startCamera();
+    return () => {
+      cancelled = true;
+      stopCameraStream();
+    };
+  }, [cameraOpen, journey.cameraUnavailable]);
+
+  function stopCameraStream() {
+    cameraStream.current?.getTracks().forEach((track) => track.stop());
+    cameraStream.current = null;
+    if (cameraVideo.current) cameraVideo.current.srcObject = null;
+  }
+
+  function openCamera() {
+    setError("");
+    setCameraError("");
+    setCameraOpen(true);
+  }
+
+  function closeCamera() {
+    stopCameraStream();
+    setCameraReady(false);
+    setCameraOpen(false);
+  }
+
+  async function captureCameraPhoto() {
+    const video = cameraVideo.current;
+    if (!video || !video.videoWidth || !video.videoHeight) return;
+
+    const scale = Math.min(1, CAMERA_CAPTURE_MAX_WIDTH / video.videoWidth);
+    const captureCanvas = document.createElement("canvas");
+    captureCanvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    captureCanvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+    const context = captureCanvas.getContext("2d");
+    if (!context) return setCameraError(journey.cameraUnavailable);
+    context.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+    const blob = await new Promise<Blob | null>((resolve) => captureCanvas.toBlob(resolve, "image/jpeg", 0.86));
+    if (!blob) return setCameraError(journey.cameraUnavailable);
+    if (blob.size > MAX_PHOTO_BYTES) return setCameraError(c.maxFile);
+
+    const captured = new File([blob], `delivery-${orderId}-${Date.now()}.jpg`, { type: "image/jpeg" });
+    setPhoto(captured);
+    setError("");
+    closeCamera();
+  }
+
   function selectPhoto(event: ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0] ?? null;
     if (!selected) return;
@@ -81,7 +212,7 @@ export function DriverDeliveryProofForm({
       setError(c.photoRequired);
       return;
     }
-    if (selected.size > 8 * 1024 * 1024) {
+    if (selected.size > MAX_PHOTO_BYTES) {
       setPhoto(null);
       event.target.value = "";
       setError(c.maxFile);
@@ -93,7 +224,7 @@ export function DriverDeliveryProofForm({
 
   function removePhoto() {
     setPhoto(null);
-    if (fileInput.current) fileInput.current.value = "";
+    if (galleryInput.current) galleryInput.current.value = "";
   }
 
   function point(event: PointerEvent<HTMLCanvasElement>) {
@@ -174,8 +305,8 @@ export function DriverDeliveryProofForm({
   const completionReady = receiverReady && photoReady && signatureReady;
   const steps = [
     { label: journey.receiver, done: receiverReady },
-    { label: journey.photo, done: photoReady },
-    { label: journey.signature, done: signatureReady },
+    { label: journey.photo, done: receiverReady && photoReady },
+    { label: journey.signature, done: receiverReady && photoReady && signatureReady },
     { label: journey.complete, done: completionReady },
   ];
   const completedCount = steps.filter((step) => step.done).length;
@@ -238,28 +369,34 @@ export function DriverDeliveryProofForm({
 
         <section className={`mt-4 rounded-2xl border p-4 ${photoReady ? "border-emerald-200 bg-emerald-50/60" : "border-asphalt/10 bg-[#f8f7f2]"}`}>
           <StepHeading number={2} label={journey.photo} done={photoReady} ready={journey.ready} waiting={journey.waiting} />
-          <label className="mt-4 block text-xs font-semibold text-asphalt">
-            {c.deliveryPhoto}
-            <input
-              ref={fileInput}
-              name="photo"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={selectPhoto}
-              className="mt-2 block w-full rounded-xl border border-line bg-white px-4 py-3 text-sm font-normal"
-            />
-            <span className="mt-1 block text-[10px] font-normal text-steel">{c.maxFile}</span>
-          </label>
+          <p className="mt-4 text-xs font-semibold text-asphalt">{c.deliveryPhoto}</p>
+          <input
+            ref={galleryInput}
+            name="photo"
+            type="file"
+            accept="image/*"
+            onChange={selectPhoto}
+            className="sr-only"
+            tabIndex={-1}
+          />
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button type="button" onClick={openCamera} disabled={saving} className="min-h-12 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+              📷 {photo ? journey.retake : journey.takePhoto}
+            </button>
+            <button type="button" onClick={() => galleryInput.current?.click()} disabled={saving} className="min-h-12 rounded-xl border border-asphalt/20 bg-white px-4 py-3 text-sm font-semibold text-asphalt disabled:opacity-50">
+              🖼 {journey.chooseGallery}
+            </button>
+          </div>
+          <span className="mt-2 block text-[10px] font-normal text-steel">{c.maxFile}</span>
 
           {photo && (
             <div className="mt-3 rounded-xl border border-emerald-700/25 bg-white p-3">
               <div className="flex items-start gap-3">
-                {photoPreview && <img src={photoPreview} alt="Selected delivery proof" className="h-20 w-20 shrink-0 rounded-lg object-cover" />}
+                {photoPreview && <img src={photoPreview} alt="" className="h-20 w-20 shrink-0 rounded-lg object-cover" />}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-semibold text-asphalt">{photo.name}</p>
-                  <p className="mt-1 text-[10px] text-steel">{(photo.size / 1024 / 1024).toFixed(2)} MB · Photo ready</p>
-                  <button type="button" onClick={removePhoto} disabled={saving} className="mt-2 text-xs font-semibold text-route underline disabled:opacity-50">Remove / retake</button>
+                  <p className="mt-1 text-[10px] text-steel">{(photo.size / 1024 / 1024).toFixed(2)} MB · {journey.photoReady}</p>
+                  <button type="button" onClick={removePhoto} disabled={saving} className="mt-2 text-xs font-semibold text-route underline disabled:opacity-50">Remove</button>
                 </div>
               </div>
             </div>
@@ -297,6 +434,35 @@ export function DriverDeliveryProofForm({
           <Button disabled={saving || !completionReady} className="mt-4 w-full">{saving ? c.uploading : c.submit}</Button>
         </section>
       </div>
+
+      {cameraOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/90 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={journey.cameraTitle}>
+          <div className="w-full max-w-xl overflow-hidden rounded-t-3xl bg-asphalt text-white sm:rounded-3xl">
+            <div className="flex items-start justify-between gap-4 p-5">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[.18em] text-amber">{journey.cameraTitle}</p>
+                <p className="mt-1 text-xs leading-5 text-white/65">{journey.cameraHelp}</p>
+              </div>
+              <button type="button" onClick={closeCamera} className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/20 text-xl" aria-label={journey.closeCamera}>×</button>
+            </div>
+
+            <div className="relative aspect-[3/4] w-full overflow-hidden bg-black sm:aspect-video">
+              <video ref={cameraVideo} autoPlay muted playsInline className="h-full w-full object-cover" />
+              {!cameraReady && !cameraError && <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-white/70">{journey.cameraStarting}</div>}
+              {cameraError && <div className="absolute inset-0 grid place-items-center px-8 text-center text-sm leading-6 text-white">{cameraError}</div>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              <button type="button" onClick={closeCamera} className="min-h-13 rounded-xl border border-white/20 px-4 py-3 font-semibold text-white">{journey.closeCamera}</button>
+              {cameraError ? (
+                <button type="button" onClick={() => { closeCamera(); window.setTimeout(() => galleryInput.current?.click(), 0); }} className="min-h-13 rounded-xl bg-white px-4 py-3 font-semibold text-asphalt">{journey.chooseGallery}</button>
+              ) : (
+                <button type="button" onClick={() => void captureCameraPhoto()} disabled={!cameraReady} className="min-h-13 rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-asphalt disabled:opacity-40">{journey.capturePhoto}</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
