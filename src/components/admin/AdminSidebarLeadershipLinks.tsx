@@ -38,6 +38,10 @@ export function AdminSidebarLeadershipLinks() {
         <span className="grid h-[18px] w-[18px] place-items-center border border-amber/60 text-[11px] font-bold text-amber">%</span>
         <span>Commission control</span>
       </Link>
+      <Link to="/admin/quote-pricing" className="flex w-full items-center gap-3 px-3 py-3 text-sm text-white/60 transition hover:bg-white/5 hover:text-white">
+        <span className="grid h-[18px] w-[18px] place-items-center border border-amber/60 font-mono text-[8px] font-bold text-amber">ETB</span>
+        <span>Quote pricing</span>
+      </Link>
     </div>,
     mount,
   );
