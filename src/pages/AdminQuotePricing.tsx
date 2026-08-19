@@ -81,9 +81,9 @@ export function AdminQuotePricing() {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-mono text-[10px] tracking-[.18em] text-amber-dim">ADMIN / LIVE QUOTE CONTROL</p>
-            <h1 className="mt-2 font-display text-3xl font-bold">Ton-kilometre pricing</h1>
+            <h1 className="mt-2 font-display text-3xl font-bold">Single freight pricing</h1>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-steel">
-              Final transport cost is load tons × distance kilometres × ETB per ton-km. Base fee and fuel/market adjustment are then applied. HALLO commission stays fixed at 2% inside the final quote.
+              Customer pays one freight amount only: load tons × distance kilometres × ETB per ton-km, adjusted only by the saved fuel/market percentage. HALLO 2% is included inside that final freight amount.
             </p>
           </div>
           <Link to="/admin" className="self-start border border-asphalt px-4 py-3 text-sm font-semibold">← Back to Control Center</Link>
@@ -95,8 +95,8 @@ export function AdminQuotePricing() {
           <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr] lg:items-end">
             <div>
               <p className="font-mono text-[10px] tracking-[.18em] text-amber">FORMULA TEST</p>
-              <h2 className="mt-2 font-display text-2xl font-semibold">Check the current live rate</h2>
-              <p className="mt-2 text-sm text-white/55">Example: 45 tons × 900 km = 40,500 ton-km. At 22.222222 ETB per ton-km, the transport charge rounds to ETB 900,000.</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold">Check the current live freight</h2>
+              <p className="mt-2 text-sm text-white/55">Example: 45 tons × 900 km × 22.222222 ETB per ton-km = ETB 900,000. No base fee and no minimum quote are added.</p>
             </div>
             <form onSubmit={runPreview} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <label className="text-[10px] uppercase tracking-wide text-white/55">Vehicle
@@ -122,17 +122,17 @@ export function AdminQuotePricing() {
                 <PreviewValue label="Ton-km" value={preview.ton_kilometers.toLocaleString()} />
                 <PreviewValue label="ETB / ton-km" value={preview.rate_per_ton_km.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
                 <PreviewValue label="ETB / ton" value={`ETB ${preview.route_rate_per_ton_etb.toLocaleString()}`} />
-                <PreviewValue label="Transport" value={`ETB ${preview.transport_charge_etb.toLocaleString()}`} />
+                <PreviewValue label="Freight" value={`ETB ${preview.transport_charge_etb.toLocaleString()}`} />
                 <PreviewValue label="Fuel / market" value={`ETB ${preview.market_adjustment_etb.toLocaleString()}`} />
-                <PreviewValue label="Final quote" value={`ETB ${preview.total_quote_etb.toLocaleString()}`} strong />
+                <PreviewValue label="Customer pays" value={`ETB ${preview.total_quote_etb.toLocaleString()}`} strong />
               </div>
-              <div className="mt-3 text-xs text-white/50">HALLO 2%: ETB {preview.commission_etb.toLocaleString()} · Driver 98%: ETB {preview.driver_net_etb.toLocaleString()}.</div>
+              <div className="mt-3 text-xs text-white/50">HALLO 2% included: ETB {preview.commission_etb.toLocaleString()} · Driver 98%: ETB {preview.driver_net_etb.toLocaleString()}.</div>
             </div>
           )}
         </section>
 
         <div className="mb-4 flex items-center justify-between gap-3">
-          <div><h2 className="font-display text-xl font-semibold">Vehicle pricing rules</h2><p className="mt-1 text-xs text-steel">Changes apply only to new quotes. Existing orders keep their saved amount.</p></div>
+          <div><h2 className="font-display text-xl font-semibold">Vehicle freight rates</h2><p className="mt-1 text-xs text-steel">Changes apply only to new quotes. Existing orders keep their saved amount.</p></div>
           <span className="font-mono text-xs text-steel">{rules.length} vehicles</span>
         </div>
 
@@ -164,10 +164,6 @@ function PricingRuleCard({ rule, saving, onSave }: {
   const [referenceDistance, setReferenceDistance] = useState("900");
   const [targetPerTon, setTargetPerTon] = useState("20000");
 
-  function setNumber(key: keyof Pick<QuotePricingRule, "rate_per_ton_km" | "base_fee_etb" | "minimum_fare_etb" | "market_adjustment_percent">, value: string) {
-    setDraft((current) => ({ ...current, [key]: value === "" ? null : Number(value) }));
-  }
-
   const convertedRate = Number(referenceDistance) > 0 && Number(targetPerTon) > 0
     ? Number(targetPerTon) / Number(referenceDistance)
     : 0;
@@ -182,8 +178,14 @@ function PricingRuleCard({ rule, saving, onSave }: {
       </div>
 
       <div className="mt-5">
-        <NumberField label="ETB per ton-km" value={draft.rate_per_ton_km == null ? "" : String(draft.rate_per_ton_km)} onChange={(value) => setNumber("rate_per_ton_km", value)} min="0.000001" step="0.000001" />
-        <p className="mt-2 text-[11px] text-steel">Core formula: load tons × distance km × this rate.</p>
+        <NumberField
+          label="ETB per ton-km"
+          value={draft.rate_per_ton_km == null ? "" : String(draft.rate_per_ton_km)}
+          onChange={(value) => setDraft((current) => ({ ...current, rate_per_ton_km: value === "" ? null : Number(value) }))}
+          min="0.000001"
+          step="0.000001"
+        />
+        <p className="mt-2 text-[11px] text-steel">Freight formula: load tons × distance km × this rate.</p>
       </div>
 
       <div className="mt-4 border border-asphalt/10 bg-[#f5f3ed] p-4">
@@ -198,15 +200,18 @@ function PricingRuleCard({ rule, saving, onSave }: {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <NumberField label="Base fee ETB" value={String(draft.base_fee_etb)} onChange={(value) => setNumber("base_fee_etb", value)} min="0" step="0.01" />
-        <NumberField label="Minimum quote ETB" value={String(draft.minimum_fare_etb)} onChange={(value) => setNumber("minimum_fare_etb", value)} min="1" step="0.01" />
-        <div className="col-span-2">
-          <NumberField label="Fuel / market adjustment %" value={String(draft.market_adjustment_percent)} onChange={(value) => setNumber("market_adjustment_percent", value)} min="-50" max="300" step="0.1" />
-          <p className="mt-2 text-[11px] text-steel">For the exact 45 tons × ETB 20,000 = ETB 900,000 example, use 900 km and ETB 20,000 in the converter, then set base fee and adjustment to zero.</p>
-        </div>
+      <div className="mt-4">
+        <NumberField
+          label="Fuel / market adjustment %"
+          value={String(draft.market_adjustment_percent)}
+          onChange={(value) => setDraft((current) => ({ ...current, market_adjustment_percent: Number(value) }))}
+          min="-50"
+          max="300"
+          step="0.1"
+        />
+        <p className="mt-2 text-[11px] text-steel">No base fee or minimum quote is added. Set this to 0 when the ton-km rate already represents the complete freight price.</p>
       </div>
-      <button disabled={saving || !validDraft} className="mt-5 w-full bg-asphalt px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{saving ? "Saving…" : `Save ${rule.vehicle_type} ton-km rate`}</button>
+      <button disabled={saving || !validDraft} className="mt-5 w-full bg-asphalt px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{saving ? "Saving…" : `Save ${rule.vehicle_type} freight rate`}</button>
     </form>
   );
 }
