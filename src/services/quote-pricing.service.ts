@@ -3,6 +3,7 @@ import { supabase } from "./supabase.client";
 export interface QuotePricingRule {
   vehicle_key: string;
   vehicle_type: string;
+  rate_per_ton_km: number | null;
   rate_per_km: number;
   rate_per_ton: number;
   base_fee_etb: number;
@@ -13,10 +14,13 @@ export interface QuotePricingRule {
 
 export interface QuoteBreakdown {
   vehicle_type: string;
+  pricing_formula: "ton_km" | "legacy";
   distance_km: number;
   cargo_tons: number;
-  distance_charge_etb: number;
-  weight_charge_etb: number;
+  ton_kilometers: number;
+  rate_per_ton_km: number;
+  route_rate_per_ton_etb: number;
+  transport_charge_etb: number;
   base_fee_etb: number;
   market_adjustment_etb: number;
   total_quote_etb: number;
@@ -32,11 +36,12 @@ function amount(value: unknown) {
 }
 
 export async function getQuotePricingRules(): Promise<QuotePricingRule[]> {
-  const { data, error } = await supabase.rpc("get_quote_pricing_rules");
+  const { data, error } = await supabase.rpc("get_quote_pricing_rules_v2");
   if (error) throw new Error(error.message);
   return ((data ?? []) as QuoteRpcRow[]).map((row) => ({
     vehicle_key: String(row.vehicle_key),
     vehicle_type: String(row.vehicle_type),
+    rate_per_ton_km: row.rate_per_ton_km == null ? null : amount(row.rate_per_ton_km),
     rate_per_km: amount(row.rate_per_km),
     rate_per_ton: amount(row.rate_per_ton),
     base_fee_etb: amount(row.base_fee_etb),
@@ -47,10 +52,12 @@ export async function getQuotePricingRules(): Promise<QuotePricingRule[]> {
 }
 
 export async function updateQuotePricingRule(rule: QuotePricingRule) {
-  const { error } = await supabase.rpc("admin_update_quote_pricing_rule", {
+  if (!rule.rate_per_ton_km || rule.rate_per_ton_km <= 0) {
+    throw new Error("Enter an ETB per ton-kilometre rate greater than zero.");
+  }
+  const { error } = await supabase.rpc("admin_update_quote_pricing_rule_v2", {
     p_vehicle_key: rule.vehicle_key,
-    p_rate_per_km: rule.rate_per_km,
-    p_rate_per_ton: rule.rate_per_ton,
+    p_rate_per_ton_km: rule.rate_per_ton_km,
     p_base_fee_etb: rule.base_fee_etb,
     p_minimum_fare_etb: rule.minimum_fare_etb,
     p_market_adjustment_percent: rule.market_adjustment_percent,
@@ -63,7 +70,7 @@ export async function calculateTransportQuote(
   vehicleType: string,
   cargoTons: number,
 ): Promise<QuoteBreakdown> {
-  const { data, error } = await supabase.rpc("calculate_transport_quote", {
+  const { data, error } = await supabase.rpc("calculate_transport_quote_v2", {
     p_distance_km: distanceKm,
     p_vehicle_type: vehicleType,
     p_cargo_tons: cargoTons,
@@ -73,10 +80,13 @@ export async function calculateTransportQuote(
   if (!row) throw new Error("Quote calculation returned no result.");
   return {
     vehicle_type: String(row.vehicle_type),
+    pricing_formula: row.pricing_formula === "ton_km" ? "ton_km" : "legacy",
     distance_km: amount(row.distance_km),
     cargo_tons: amount(row.cargo_tons),
-    distance_charge_etb: amount(row.distance_charge_etb),
-    weight_charge_etb: amount(row.weight_charge_etb),
+    ton_kilometers: amount(row.ton_kilometers),
+    rate_per_ton_km: amount(row.rate_per_ton_km),
+    route_rate_per_ton_etb: amount(row.route_rate_per_ton_etb),
+    transport_charge_etb: amount(row.transport_charge_etb),
     base_fee_etb: amount(row.base_fee_etb),
     market_adjustment_etb: amount(row.market_adjustment_etb),
     total_quote_etb: amount(row.total_quote_etb),
