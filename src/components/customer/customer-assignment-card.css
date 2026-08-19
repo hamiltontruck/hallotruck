@@ -1,0 +1,40 @@
+.customer-order-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.customer-order-card__top {
+  order: 1;
+}
+
+.customer-order-card__stats {
+  order: 2;
+}
+
+.customer-order-card__details {
+  display: contents;
+}
+
+.customer-assignment-card {
+  order: 3;
+  margin-top: 1rem;
+}
+
+.customer-order-card__actions {
+  order: 4;
+}
+
+.customer-order-card__details > *:not(.customer-assignment-card) {
+  order: 5;
+}
+
+@media (max-width: 640px) {
+  .customer-assignment-card header {
+    align-items: center;
+  }
+
+  .customer-assignment-card header > p {
+    max-width: 10rem;
+    line-height: 1.25rem;
+  }
+}
