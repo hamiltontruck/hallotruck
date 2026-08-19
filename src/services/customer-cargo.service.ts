@@ -1,14 +1,27 @@
 import { supabase } from "./supabase.client";
+import {
+  calculateTransportQuote,
+  getQuotePricingRules,
+  type QuotePricingRule,
+} from "./quote-pricing.service";
 
 export type CargoUnit = "ton" | "quintal";
 
-const vehicleRates: Record<string, number> = {
-  pickup: 48,
-  van: 58,
-  "dry cargo": 72,
-  refrigerated: 92,
-  trailer: 110,
+type CachedPricingRule = Pick<
+  QuotePricingRule,
+  "rate_per_km" | "rate_per_ton" | "base_fee_etb" | "minimum_fare_etb" | "market_adjustment_percent"
+>;
+
+const defaultPricing: Record<string, CachedPricingRule> = {
+  pickup: { rate_per_km: 48, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
+  van: { rate_per_km: 58, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
+  "dry cargo": { rate_per_km: 72, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
+  refrigerated: { rate_per_km: 92, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
+  trailer: { rate_per_km: 110, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
 };
+
+let pricingCache: Record<string, CachedPricingRule> = { ...defaultPricing };
+let pricingLoad: Promise<void> | null = null;
 
 export const vehicleCapacityTons: Record<string, number> = {
   pickup: 3,
@@ -17,6 +30,28 @@ export const vehicleCapacityTons: Record<string, number> = {
   refrigerated: 15,
   trailer: 22,
 };
+
+export async function refreshQuotePricing() {
+  const rules = await getQuotePricingRules();
+  if (!rules.length) return;
+  pricingCache = Object.fromEntries(rules.map((rule) => [rule.vehicle_key, {
+    rate_per_km: rule.rate_per_km,
+    rate_per_ton: rule.rate_per_ton,
+    base_fee_etb: rule.base_fee_etb,
+    minimum_fare_etb: rule.minimum_fare_etb,
+    market_adjustment_percent: rule.market_adjustment_percent,
+  }]));
+}
+
+function warmQuotePricing() {
+  if (!pricingLoad) {
+    pricingLoad = refreshQuotePricing()
+      .catch(() => undefined)
+      .finally(() => { pricingLoad = null; });
+  }
+}
+
+warmQuotePricing();
 
 export function cargoToTons(quantity: number, unit: CargoUnit) {
   if (!Number.isFinite(quantity) || quantity <= 0) return 0;
@@ -29,11 +64,14 @@ export function formatCargoLoad(quantity: number, unit: CargoUnit) {
 }
 
 export function calculateCargoQuote(distanceKm: number, vehicleType: string, cargoQuantity: number, cargoUnit: CargoUnit) {
-  const rate = vehicleRates[vehicleType.toLowerCase()] ?? 72;
+  warmQuotePricing();
+  const rule = pricingCache[vehicleType.toLowerCase()] ?? pricingCache["dry cargo"] ?? defaultPricing["dry cargo"];
   const cargoTons = cargoToTons(cargoQuantity, cargoUnit);
-  const distanceCharge = distanceKm * rate;
-  const weightCharge = cargoTons * 650;
-  return Math.max(1500, Math.round((distanceCharge + weightCharge + 900) / 50) * 50);
+  const distanceCharge = distanceKm * rule.rate_per_km;
+  const weightCharge = cargoTons * rule.rate_per_ton;
+  const subtotal = rule.base_fee_etb + distanceCharge + weightCharge;
+  const adjusted = subtotal * (1 + rule.market_adjustment_percent / 100);
+  return Math.max(rule.minimum_fare_etb, Math.round(adjusted / 50) * 50);
 }
 
 export function validateCargoLoad(vehicleType: string, cargoQuantity: number, cargoUnit: CargoUnit) {
@@ -59,7 +97,8 @@ export async function createCustomerCargoOrder(input: {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Customer session expired.");
 
-  validateCargoLoad(input.vehicleType, input.cargoQuantity, input.cargoUnit);
+  const cargoTons = validateCargoLoad(input.vehicleType, input.cargoQuantity, input.cargoUnit);
+  const quote = await calculateTransportQuote(input.distanceKm, input.vehicleType, cargoTons);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -68,7 +107,7 @@ export async function createCustomerCargoOrder(input: {
     .single();
 
   const trackingId = `HT-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-  const priceEtb = calculateCargoQuote(input.distanceKm, input.vehicleType, input.cargoQuantity, input.cargoUnit);
+  const priceEtb = quote.total_quote_etb;
   const cargoDescription = formatCargoLoad(input.cargoQuantity, input.cargoUnit);
 
   const { data: order, error } = await supabase.from("orders").insert({
