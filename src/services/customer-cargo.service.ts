@@ -9,15 +9,15 @@ export type CargoUnit = "ton" | "quintal";
 
 type CachedPricingRule = Pick<
   QuotePricingRule,
-  "rate_per_ton_km" | "rate_per_km" | "rate_per_ton" | "base_fee_etb" | "minimum_fare_etb" | "market_adjustment_percent"
+  "rate_per_ton_km" | "rate_per_km" | "rate_per_ton" | "market_adjustment_percent"
 >;
 
 const defaultPricing: Record<string, CachedPricingRule> = {
-  pickup: { rate_per_ton_km: null, rate_per_km: 48, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
-  van: { rate_per_ton_km: null, rate_per_km: 58, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
-  "dry cargo": { rate_per_ton_km: null, rate_per_km: 72, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
-  refrigerated: { rate_per_ton_km: null, rate_per_km: 92, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
-  trailer: { rate_per_ton_km: null, rate_per_km: 110, rate_per_ton: 650, base_fee_etb: 900, minimum_fare_etb: 1500, market_adjustment_percent: 0 },
+  pickup: { rate_per_ton_km: null, rate_per_km: 48, rate_per_ton: 650, market_adjustment_percent: 0 },
+  van: { rate_per_ton_km: null, rate_per_km: 58, rate_per_ton: 650, market_adjustment_percent: 0 },
+  "dry cargo": { rate_per_ton_km: null, rate_per_km: 72, rate_per_ton: 650, market_adjustment_percent: 0 },
+  refrigerated: { rate_per_ton_km: null, rate_per_km: 92, rate_per_ton: 650, market_adjustment_percent: 0 },
+  trailer: { rate_per_ton_km: null, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
 };
 
 let pricingCache: Record<string, CachedPricingRule> = { ...defaultPricing };
@@ -38,8 +38,6 @@ export async function refreshQuotePricing() {
     rate_per_ton_km: rule.rate_per_ton_km,
     rate_per_km: rule.rate_per_km,
     rate_per_ton: rule.rate_per_ton,
-    base_fee_etb: rule.base_fee_etb,
-    minimum_fare_etb: rule.minimum_fare_etb,
     market_adjustment_percent: rule.market_adjustment_percent,
   }]));
 }
@@ -71,9 +69,8 @@ export function calculateCargoQuote(distanceKm: number, vehicleType: string, car
   const transportCharge = rule.rate_per_ton_km && rule.rate_per_ton_km > 0
     ? distanceKm * cargoTons * rule.rate_per_ton_km
     : (distanceKm * rule.rate_per_km) + (cargoTons * rule.rate_per_ton);
-  const subtotal = rule.base_fee_etb + transportCharge;
-  const adjusted = subtotal * (1 + rule.market_adjustment_percent / 100);
-  return Math.max(rule.minimum_fare_etb, Math.round(adjusted / 50) * 50);
+  const adjusted = transportCharge * (1 + rule.market_adjustment_percent / 100);
+  return Math.max(0, Math.round(adjusted / 50) * 50);
 }
 
 export function validateCargoLoad(vehicleType: string, cargoQuantity: number, cargoUnit: CargoUnit) {
