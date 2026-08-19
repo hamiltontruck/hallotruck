@@ -6,8 +6,6 @@ export interface QuotePricingRule {
   rate_per_ton_km: number | null;
   rate_per_km: number;
   rate_per_ton: number;
-  base_fee_etb: number;
-  minimum_fare_etb: number;
   market_adjustment_percent: number;
   updated_at: string;
 }
@@ -21,7 +19,6 @@ export interface QuoteBreakdown {
   rate_per_ton_km: number;
   route_rate_per_ton_etb: number;
   transport_charge_etb: number;
-  base_fee_etb: number;
   market_adjustment_etb: number;
   total_quote_etb: number;
   commission_etb: number;
@@ -44,8 +41,6 @@ export async function getQuotePricingRules(): Promise<QuotePricingRule[]> {
     rate_per_ton_km: row.rate_per_ton_km == null ? null : amount(row.rate_per_ton_km),
     rate_per_km: amount(row.rate_per_km),
     rate_per_ton: amount(row.rate_per_ton),
-    base_fee_etb: amount(row.base_fee_etb),
-    minimum_fare_etb: amount(row.minimum_fare_etb),
     market_adjustment_percent: amount(row.market_adjustment_percent),
     updated_at: String(row.updated_at),
   }));
@@ -58,8 +53,8 @@ export async function updateQuotePricingRule(rule: QuotePricingRule) {
   const { error } = await supabase.rpc("admin_update_quote_pricing_rule_v2", {
     p_vehicle_key: rule.vehicle_key,
     p_rate_per_ton_km: rule.rate_per_ton_km,
-    p_base_fee_etb: rule.base_fee_etb,
-    p_minimum_fare_etb: rule.minimum_fare_etb,
+    p_base_fee_etb: 0,
+    p_minimum_fare_etb: 0,
     p_market_adjustment_percent: rule.market_adjustment_percent,
   });
   if (error) throw new Error(error.message);
@@ -87,7 +82,6 @@ export async function calculateTransportQuote(
     rate_per_ton_km: amount(row.rate_per_ton_km),
     route_rate_per_ton_etb: amount(row.route_rate_per_ton_etb),
     transport_charge_etb: amount(row.transport_charge_etb),
-    base_fee_etb: amount(row.base_fee_etb),
     market_adjustment_etb: amount(row.market_adjustment_etb),
     total_quote_etb: amount(row.total_quote_etb),
     commission_etb: amount(row.commission_etb),
