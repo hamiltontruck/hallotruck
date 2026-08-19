@@ -107,8 +107,27 @@ export function CustomerDriverAssignmentCard({ assignment, order, labels }: {
   return (
     <section className="mt-5 min-w-0 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 shadow-sm">
       <div className="flex items-center justify-between gap-3 bg-asphalt px-4 py-3 text-white sm:px-5">
-        <p className="font-mono text-[10px] tracking-[.18em] text-amber">{labels.assigned}</p>
-        <span className={`rounded-full px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wide ${assignment.driver_verified ? "bg-emerald-600 text-white" : "border border-amber/40 bg-amber/10 text-amber"}`}>
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            disabled={!truckPhotoUrl}
+            onClick={() => truckPhotoUrl && window.open(truckPhotoUrl, "_blank", "noopener,noreferrer")}
+            className="grid h-12 w-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-white/15 bg-white/10 disabled:cursor-default"
+            aria-label={labels.viewTruckPhoto}
+          >
+            {truckPhotoUrl ? (
+              <img src={truckPhotoUrl} alt="" className="h-full w-full object-cover" onError={() => setTruckPhotoUrl(null)} />
+            ) : (
+              <span className="px-1 text-center text-[8px] font-semibold uppercase tracking-wide text-white/65">{labels.truck}</span>
+            )}
+          </button>
+          <div className="min-w-0">
+            <p className="font-mono text-[9px] tracking-[.16em] text-amber">{labels.assigned}</p>
+            <p className="mt-0.5 truncate font-display text-base font-bold text-white">{assignment.plate_number ?? labels.pending}</p>
+            <p className="truncate text-[10px] text-white/55">{assignment.vehicle_type ?? order.vehicle_type}{assignment.capacity_tons ? ` · ${assignment.capacity_tons} tons` : ""}</p>
+          </div>
+        </div>
+        <span className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wide ${assignment.driver_verified ? "bg-emerald-600 text-white" : "border border-amber/40 bg-amber/10 text-amber"}`}>
           {verificationLabel}
         </span>
       </div>
