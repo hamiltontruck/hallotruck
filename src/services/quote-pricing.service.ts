@@ -24,6 +24,8 @@ export interface QuoteBreakdown {
   driver_net_etb: number;
 }
 
+type QuoteRpcRow = Record<string, unknown>;
+
 function amount(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -32,7 +34,7 @@ function amount(value: unknown) {
 export async function getQuotePricingRules(): Promise<QuotePricingRule[]> {
   const { data, error } = await supabase.rpc("get_quote_pricing_rules");
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => ({
+  return ((data ?? []) as QuoteRpcRow[]).map((row) => ({
     vehicle_key: String(row.vehicle_key),
     vehicle_type: String(row.vehicle_type),
     rate_per_km: amount(row.rate_per_km),
@@ -67,7 +69,7 @@ export async function calculateTransportQuote(
     p_cargo_tons: cargoTons,
   });
   if (error) throw new Error(error.message);
-  const row = Array.isArray(data) ? data[0] : data;
+  const row = (Array.isArray(data) ? data[0] : data) as QuoteRpcRow | null;
   if (!row) throw new Error("Quote calculation returned no result.");
   return {
     vehicle_type: String(row.vehicle_type),
