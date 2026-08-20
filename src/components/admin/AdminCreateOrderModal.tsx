@@ -4,7 +4,7 @@ import { createAdminSmartOrder } from "../../services/admin-order.service";
 import { calculateQuote } from "../../services/customer.service";
 import { AdminOrder, Driver, Truck, assignOrder, getDashboardData } from "../../services/admin.service";
 
-const vehicleOptions = ["Pickup", "Van", "Dry Cargo", "Refrigerated", "Trailer"];
+const vehicleOptions = ["Pickup", "Van", "Isuzu 5 Ton", "Dry Cargo", "Refrigerated", "Trailer"];
 const ethiopianMobilePattern = /^(?:09\d{8}|\+2519\d{8})$/;
 
 export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void | Promise<void> }) {

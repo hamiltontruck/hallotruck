@@ -46,6 +46,7 @@ const copy: Record<HalloLanguage, {
   exceeds: string;
   pickup: string;
   van: string;
+  isuzu5Ton: string;
   dryCargo: string;
   refrigerated: string;
   trailer: string;
@@ -77,6 +78,7 @@ const copy: Record<HalloLanguage, {
     exceeds: "This load exceeds the selected truck capacity.",
     pickup: "Pickup",
     van: "Van",
+    isuzu5Ton: "Isuzu 5 Ton",
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
     trailer: "Trailer",
@@ -108,6 +110,7 @@ const copy: Record<HalloLanguage, {
     exceeds: "Feʼiinsi kun capacity truck filatamee caala.",
     pickup: "Pickup",
     van: "Van",
+    isuzu5Ton: "Isuzu 5 Ton",
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
     trailer: "Trailer",
@@ -139,6 +142,7 @@ const copy: Record<HalloLanguage, {
     exceeds: "ጭነቱ የተመረጠውን የመኪና አቅም ይበልጣል።",
     pickup: "Pickup",
     van: "Van",
+    isuzu5Ton: "Isuzu 5 Ton",
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
     trailer: "Trailer",
@@ -147,7 +151,7 @@ const copy: Record<HalloLanguage, {
   },
 };
 
-const vehicleOptions = ["Pickup", "Van", "Dry Cargo", "Refrigerated", "Trailer"] as const;
+const vehicleOptions = ["Pickup", "Van", "Isuzu 5 Ton", "Dry Cargo", "Refrigerated", "Trailer"] as const;
 
 export function CustomerMapHome() {
   const navigate = useNavigate();
@@ -349,7 +353,8 @@ function Summary({ label, value }: { label: string; value: string }) {
   return <div><span>{label}</span><strong>{value}</strong></div>;
 }
 
-function vehicleKey(vehicle: (typeof vehicleOptions)[number]): "pickup" | "van" | "dryCargo" | "refrigerated" | "trailer" {
+function vehicleKey(vehicle: (typeof vehicleOptions)[number]): "pickup" | "van" | "isuzu5Ton" | "dryCargo" | "refrigerated" | "trailer" {
   if (vehicle === "Dry Cargo") return "dryCargo";
+  if (vehicle === "Isuzu 5 Ton") return "isuzu5Ton";
   return vehicle.toLowerCase() as "pickup" | "van" | "refrigerated" | "trailer";
 }
