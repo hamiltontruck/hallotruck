@@ -1,7 +1,12 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CustomerQuoteMap, QuotePoints } from "../navigation/CustomerQuoteMap";
 import { createAdminSmartOrder } from "../../services/admin-order.service";
-import { calculateQuote } from "../../services/customer.service";
+import {
+  calculateCargoQuote,
+  cargoToTons,
+  vehicleCapacityTons,
+  type CargoUnit,
+} from "../../services/customer-cargo.service";
 import { AdminOrder, Driver, Truck, assignOrder, getDashboardData } from "../../services/admin.service";
 
 const vehicleOptions = ["Pickup", "Van", "Isuzu 5 Ton", "Dry Cargo", "Refrigerated", "Trailer"];
@@ -10,6 +15,8 @@ const ethiopianMobilePattern = /^(?:09\d{8}|\+2519\d{8})$/;
 export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void | Promise<void> }) {
   const [route, setRoute] = useState<QuotePoints | null>(null);
   const [vehicleType, setVehicleType] = useState("");
+  const [cargoQuantity, setCargoQuantity] = useState("1");
+  const [cargoUnit, setCargoUnit] = useState<CargoUnit>("ton");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -36,10 +43,19 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
     return () => { active = false; };
   }, []);
 
+  const cargoAmount = Number(cargoQuantity);
+  const cargoTons = cargoToTons(cargoAmount, cargoUnit);
+  const selectedCapacity = vehicleCapacityTons[vehicleType.toLowerCase()] ?? 0;
+  const cargoValidation = !Number.isFinite(cargoAmount) || cargoAmount <= 0
+    ? "Enter a load amount greater than zero."
+    : selectedCapacity > 0 && cargoTons > selectedCapacity
+      ? `${vehicleType} supports up to ${selectedCapacity} tons. Reduce the load or choose a larger vehicle.`
+      : "";
+
   const quote = useMemo(() => {
-    if (!route || !vehicleType) return null;
-    return calculateQuote(route.distanceKm, vehicleType);
-  }, [route, vehicleType]);
+    if (!route || !vehicleType || cargoValidation) return null;
+    return calculateCargoQuote(route.distanceKm, vehicleType, cargoAmount, cargoUnit);
+  }, [cargoAmount, cargoUnit, cargoValidation, route, vehicleType]);
 
   const busyDriverIds = useMemo(
     () => new Set(orders.filter((order) => ["accepted", "in_transit"].includes(order.status)).map((order) => order.driver_id).filter(Boolean)),
@@ -57,11 +73,16 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
   );
 
   const matchingTrucks = useMemo(
-    () => trucks.filter((truck) => truck.status === "available" && (!vehicleType || truck.vehicle_type.trim().toLowerCase() === vehicleType.trim().toLowerCase())),
-    [trucks, vehicleType],
+    () => trucks.filter((truck) => {
+      const exactType = !vehicleType || truck.vehicle_type.trim().toLowerCase() === vehicleType.trim().toLowerCase();
+      const truckCapacity = truck.capacity_tons == null ? null : Number(truck.capacity_tons);
+      const enoughCapacity = truckCapacity == null || cargoTons <= 0 || truckCapacity >= cargoTons;
+      return truck.status === "available" && exactType && enoughCapacity;
+    }),
+    [cargoTons, trucks, vehicleType],
   );
 
-  const assignmentReady = Boolean(vehicleType && matchingTrucks.length > 0 && availableDrivers.length > 0);
+  const assignmentReady = Boolean(vehicleType && !cargoValidation && matchingTrucks.length > 0 && availableDrivers.length > 0);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,6 +94,10 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
     }
     if (!vehicleType) {
       setError("Select a vehicle type.");
+      return;
+    }
+    if (cargoValidation) {
+      setError(cargoValidation);
       return;
     }
 
@@ -96,6 +121,8 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
         customerName: String(form.get("customerName") ?? ""),
         customerPhone,
         cargoDescription: String(form.get("cargoDescription") ?? ""),
+        cargoQuantity: cargoAmount,
+        cargoUnit,
         vehicleType,
         pickupAddress: route.pickupAddress,
         dropoffAddress: route.dropoffAddress,
@@ -127,7 +154,7 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
     : availableDrivers.length === 0
       ? "All approved drivers are currently on active trips."
       : matchingTrucks.length === 0 && vehicleType
-        ? "A driver cannot be assigned until a matching available truck exists."
+        ? "No available matching truck has enough registered capacity for this load."
         : "";
 
   return (
@@ -137,7 +164,7 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
           <div>
             <p className="font-mono text-[10px] tracking-[.2em] text-amber-dim">SMART ORDER</p>
             <h2 className="mt-1 font-display text-2xl font-bold">New order</h2>
-            <p className="mt-2 text-xs text-steel">Search the route. Road distance and the quote are calculated automatically.</p>
+            <p className="mt-2 text-xs text-steel">Road distance and cargo weight use the same freight formula as the customer portal.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="text-3xl leading-none text-steel">×</button>
         </div>
@@ -171,24 +198,50 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
             </select>
           </label>
           <Field name="cargoDescription" label="Cargo description" required={false} />
+          <label className="text-xs font-semibold">
+            Load amount
+            <input
+              value={cargoQuantity}
+              onChange={(event) => setCargoQuantity(event.target.value)}
+              type="number"
+              inputMode="decimal"
+              min="0.1"
+              step="0.1"
+              required
+              className="mt-2 block w-full border border-asphalt/20 px-3 py-3 text-sm font-normal outline-none focus:border-amber"
+            />
+          </label>
+          <label className="text-xs font-semibold">
+            Unit
+            <select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)} className="mt-2 block w-full border border-asphalt/20 bg-white px-3 py-3 text-sm outline-none focus:border-amber">
+              <option value="ton">Ton</option>
+              <option value="quintal">Quintal</option>
+            </select>
+          </label>
+        </div>
+
+        <div className={`mt-3 border p-3 text-xs ${cargoValidation ? "border-route/30 bg-route/10 text-route" : "border-asphalt/10 bg-[#f5f3ed] text-steel"}`}>
+          {cargoValidation || (vehicleType
+            ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} tons · ${vehicleType} policy capacity ${selectedCapacity || "—"} tons`
+            : "Select a vehicle to check load capacity.")}
         </div>
 
         <div className="mt-5 border border-asphalt/10 p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="font-semibold">Truck & driver assignment</h3>
-              <p className="mt-1 text-[11px] text-steel">Optional. Assignment requires a matching available truck and an approved driver with no active trip.</p>
+              <p className="mt-1 text-[11px] text-steel">Optional. Assignment requires an exact vehicle-type match, enough registered truck capacity and an approved free driver.</p>
             </div>
             {!assignmentLoading && <span className="bg-[#f5f3ed] px-3 py-2 font-mono text-[10px] text-steel">{matchingTrucks.length} trucks · {availableDrivers.length} free drivers · {busyDriverIds.size} busy</span>}
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="text-xs font-semibold">
               Truck
-              <select name="truckId" defaultValue="" disabled={assignmentLoading || !vehicleType || matchingTrucks.length === 0} className="mt-2 block w-full border border-asphalt/20 bg-white px-3 py-3 text-sm disabled:opacity-50">
+              <select name="truckId" defaultValue="" disabled={assignmentLoading || !vehicleType || Boolean(cargoValidation) || matchingTrucks.length === 0} className="mt-2 block w-full border border-asphalt/20 bg-white px-3 py-3 text-sm disabled:opacity-50">
                 <option value="">Assign later</option>
                 {matchingTrucks.map((truck) => <option key={truck.id} value={truck.id}>{truck.plate_number} · {truck.vehicle_type} · {truck.capacity_tons ?? "—"} tons</option>)}
               </select>
-              {!assignmentLoading && vehicleType && matchingTrucks.length === 0 && <span className="mt-1 block text-[11px] text-route">No available {vehicleType} truck. Finish an active trip or add another matching truck.</span>}
+              {!assignmentLoading && vehicleType && matchingTrucks.length === 0 && <span className="mt-1 block text-[11px] text-route">No available exact-match {vehicleType} truck with enough capacity.</span>}
             </label>
             <label className="text-xs font-semibold">
               Approved free driver
@@ -201,21 +254,20 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
           </div>
           {!assignmentLoading && !assignmentReady && (
             <div className="mt-4 border border-amber/30 bg-amber/10 p-3 text-xs leading-relaxed text-asphalt">
-              Dispatch is locked to <strong>Assign later</strong>. The order is created normally and can be assigned only when both a compatible truck and an approved driver without an active trip are available.
+              Dispatch stays on <strong>Assign later</strong> until an exact matching truck has enough capacity and an approved driver is free.
             </div>
           )}
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 border border-asphalt/10 bg-[#f5f3ed] p-4 sm:grid-cols-3">
+        <div className="mt-5 grid grid-cols-2 gap-3 border border-asphalt/10 bg-[#f5f3ed] p-4 sm:grid-cols-4">
           <Summary label="Road distance" value={route ? `${route.distanceKm.toLocaleString()} km` : "Select route"} />
+          <Summary label="Load" value={cargoTons > 0 ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} t` : "Enter load"} />
           <Summary label="Vehicle" value={vehicleType || "Select vehicle"} />
-          <div className="col-span-2 sm:col-span-1">
-            <Summary label="Smart quote" value={quote != null ? `ETB ${quote.toLocaleString()}` : "Waiting"} emphasis />
-          </div>
+          <Summary label="Freight quote" value={quote != null ? `ETB ${quote.toLocaleString()}` : "Waiting"} emphasis />
         </div>
 
-        <p className="mt-3 text-[11px] text-steel">Phone accepts Ethiopian mobile format only: 09xxxxxxxx or +2519xxxxxxxx. Price uses the same rate logic as the customer portal.</p>
-        <button disabled={saving || Boolean(createdTrackingId) || !route || !vehicleType} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">
+        <p className="mt-3 text-[11px] text-steel">Final freight uses the active server pricing rule. HALLO's 2% share is included inside that amount, not added on top.</p>
+        <button disabled={saving || Boolean(createdTrackingId) || !route || !vehicleType || Boolean(cargoValidation)} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">
           {createdTrackingId ? `Order ${createdTrackingId} created` : saving ? "Creating order…" : quote != null ? `Create order · ETB ${quote.toLocaleString()}` : "Create order"}
         </button>
       </form>
