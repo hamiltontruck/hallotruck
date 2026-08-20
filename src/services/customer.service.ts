@@ -72,6 +72,7 @@ export interface CustomerPortalData {
 const vehicleRates: Record<string, number> = {
   pickup: 48,
   van: 58,
+  "isuzu 5 ton": 58,
   "dry cargo": 72,
   refrigerated: 92,
   trailer: 110,
