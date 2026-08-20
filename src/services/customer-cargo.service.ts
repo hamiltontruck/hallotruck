@@ -15,6 +15,7 @@ type CachedPricingRule = Pick<
 const defaultPricing: Record<string, CachedPricingRule> = {
   pickup: { rate_per_ton_km: null, rate_per_km: 48, rate_per_ton: 650, market_adjustment_percent: 0 },
   van: { rate_per_ton_km: null, rate_per_km: 58, rate_per_ton: 650, market_adjustment_percent: 0 },
+  "isuzu 5 ton": { rate_per_ton_km: null, rate_per_km: 58, rate_per_ton: 650, market_adjustment_percent: 0 },
   "dry cargo": { rate_per_ton_km: null, rate_per_km: 72, rate_per_ton: 650, market_adjustment_percent: 0 },
   refrigerated: { rate_per_ton_km: null, rate_per_km: 92, rate_per_ton: 650, market_adjustment_percent: 0 },
   trailer: { rate_per_ton_km: null, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
@@ -26,9 +27,10 @@ let pricingLoad: Promise<void> | null = null;
 export const vehicleCapacityTons: Record<string, number> = {
   pickup: 3,
   van: 5,
+  "isuzu 5 ton": 5,
   "dry cargo": 10,
   refrigerated: 15,
-  trailer: 22,
+  trailer: 45,
 };
 
 export async function refreshQuotePricing() {
