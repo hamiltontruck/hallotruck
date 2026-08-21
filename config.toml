@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.navigation]
 verify_jwt = false
+
+[functions."quote-route"]
+verify_jwt = false

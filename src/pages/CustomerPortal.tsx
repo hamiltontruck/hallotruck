@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCustomerPortalData, openCustomerPaymentReceipt, openCustomerProof, printCustomerInvoice, type CustomerOrder, type CustomerPayment, type CustomerPortalData } from "../services/customer.service";
-import { calculateCargoQuote, cargoToTons, createCustomerCargoOrder, formatCargoLoad, vehicleCapacityTons, type CargoUnit } from "../services/customer-cargo.service";
+import { cargoToTons, createCustomerCargoOrder, formatCargoLoad, vehicleCapacityTons, type CargoUnit } from "../services/customer-cargo.service";
 import { supabase } from "../services/supabase.client";
 import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/CustomerQuoteMap";
 import { CustomerLiveTripMap } from "../components/tracking/CustomerLiveTripMap";
@@ -12,6 +12,7 @@ import { CustomerPaymentModal } from "../components/customer/CustomerPaymentModa
 import { LanguageSwitcher, useLanguage } from "../i18n/LanguageProvider";
 import { getCustomerCopy } from "../i18n/customerCopy";
 import { calculatePaymentSummary } from "../utils/paymentSummary";
+import { useTransportQuote } from "../hooks/useTransportQuote";
 
 const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [], assignments: [], profile: null };
 const activeStatuses = new Set(["assigned", "accepted", "in_transit"]);
@@ -36,6 +37,9 @@ const cargoCopy = {
     exceeds: "The load exceeds the selected vehicle capacity.",
     pricing: "Quote includes road distance and cargo weight.",
     load: "Load",
+    quoteLoading: "Getting latest price…",
+    quoteUnavailable: "Latest server price is unavailable. Try again.",
+    latestRate: "Current admin-managed Supabase rate.",
   },
   om: {
     amount: "Baay'ina fe'umsaa",
@@ -48,6 +52,9 @@ const cargoCopy = {
     exceeds: "Fe'iinsi kun capacity konkolaataa filatamee caala.",
     pricing: "Gatiin fageenya daandii fi ulfaatina fe'umsaa of keessaa qaba.",
     load: "Fe'umsa",
+    quoteLoading: "Gatii haaraa database irraa fidaa jira…",
+    quoteUnavailable: "Gatiin server yeroo ammaa hin argamne. Irra deebi'i.",
+    latestRate: "Gatii Supabase adminiin yeroo ammaa qindeesse.",
   },
   am: {
     amount: "የጭነት መጠን",
@@ -60,6 +67,9 @@ const cargoCopy = {
     exceeds: "ጭነቱ የተመረጠውን ተሽከርካሪ አቅም ይበልጣል።",
     pricing: "ዋጋው የመንገድ ርቀትንና የጭነት ክብደትን ያካትታል።",
     load: "ጭነት",
+    quoteLoading: "የቅርብ ጊዜውን ዋጋ በማምጣት ላይ…",
+    quoteUnavailable: "የአሁኑ የሰርቨር ዋጋ አልተገኘም። እንደገና ይሞክሩ።",
+    latestRate: "በአስተዳዳሪ የሚተዳደር የአሁኑ Supabase ዋጋ።",
   },
 } as const;
 
@@ -160,10 +170,17 @@ export function CustomerPortal() {
     : selectedCapacity > 0 && cargoTons > selectedCapacity
       ? `${cargoText.exceeds} ${vehicle}: ${selectedCapacity} ${cargoText.ton}.`
       : "";
-  const quote = useMemo(
-    () => distance && !cargoValidation ? calculateCargoQuote(distance, vehicle, cargoAmount, cargoUnit) : 0,
-    [cargoAmount, cargoUnit, cargoValidation, distance, vehicle],
-  );
+  const {
+    quote: quoteBreakdown,
+    loading: quoteLoading,
+    error: quoteError,
+  } = useTransportQuote({
+    distanceKm: distance,
+    vehicleType: vehicle,
+    cargoTons,
+    enabled: Boolean(distance && !cargoValidation),
+  });
+  const quote = quoteBreakdown?.total_quote_etb ?? 0;
   const updateRoute = useCallback((points: QuotePoints | null) => setRoutePoints(points), []);
 
   const activeCount = data.orders.filter((order) => activeStatuses.has(order.status)).length;
@@ -226,6 +243,7 @@ export function CustomerPortal() {
     try {
       if (!routePoints) throw new Error(c.routeMissing);
       if (cargoValidation) throw new Error(cargoValidation);
+      if (!quoteBreakdown) throw new Error(quoteError || cargoText.quoteUnavailable);
       await createCustomerCargoOrder({
         pickupAddress: routePoints.pickupAddress,
         dropoffAddress: routePoints.dropoffAddress,
@@ -355,11 +373,11 @@ export function CustomerPortal() {
         <header className="customer-order-sheet__header"><div><p className="customer-eyebrow">{c.smartQuote}</p><h2 id="new-order-title">{c.newTransport}</h2></div><button type="button" onClick={() => setShowOrder(false)} aria-label="Close new order">×</button></header>
         <div className="customer-order-sheet__body">
           <div className="customer-order-steps" aria-label="Order steps"><span><b>1</b>{ui.route}</span><span><b>2</b>{ui.loadStep}</span><span><b>3</b>{ui.review}</span></div>
-          <section className="customer-order-step"><div className="customer-order-step__heading"><span>1</span><div><h3>{ui.route}</h3><p>{ui.routeHelp}</p></div></div><CustomerQuoteMap onChange={updateRoute} /></section>
-          <section className="customer-order-step"><div className="customer-order-step__heading"><span>2</span><div><h3>{ui.loadStep}</h3><p>{ui.loadHelp}</p></div></div><div className="customer-load-grid"><label>{c.vehicleLabel}<select value={vehicle} onChange={(event) => setVehicle(event.target.value)}><option>Pickup</option><option>Van</option><option>Isuzu 5 Ton</option><option>Dry Cargo</option><option>Refrigerated</option><option>Trailer</option></select></label><div className="customer-distance-card"><p>{c.estimatedDistance}</p><strong>{distance ? `${distance} km` : c.findRoute}</strong></div><label>{cargoText.amount}<input value={cargoQuantity} onChange={(event) => setCargoQuantity(event.target.value)} type="number" inputMode="decimal" min="0.1" step="0.1" required /></label><label>{cargoText.unit}<select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{cargoText.ton}</option><option value="quintal">{cargoText.quintal}</option></select></label></div><div className={`customer-capacity-card ${cargoValidation ? "has-error" : ""}`}><div><p>{cargoText.equivalent}</p><strong>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} ${cargoText.ton}` : "—"}</strong></div><div><p>{cargoText.capacity}</p><strong>{selectedCapacity ? `${selectedCapacity} ${cargoText.ton}` : "—"}</strong></div>{cargoValidation && <p className="customer-capacity-error">{cargoValidation}</p>}</div></section>
-          <section className="customer-order-step"><div className="customer-order-step__heading"><span>3</span><div><h3>{ui.review}</h3><p>{ui.reviewHelp}</p></div></div><div className="customer-quote-card"><p>{c.estimatedQuote}</p><strong>{quote ? `ETB ${quote.toLocaleString()}` : c.selectRoute}</strong><small>{cargoText.pricing}</small></div></section>
+          <section className="customer-order-step"><div className="customer-order-step__heading"><span>1</span><div><h3>{ui.route}</h3><p>{ui.routeHelp}</p></div></div><CustomerQuoteMap onChange={updateRoute} vehicleType={vehicle} /></section>
+          <section className="customer-order-step"><div className="customer-order-step__heading"><span>2</span><div><h3>{ui.loadStep}</h3><p>{ui.loadHelp}</p></div></div><div className="customer-load-grid"><label>{c.vehicleLabel}<select value={vehicle} onChange={(event) => setVehicle(event.target.value)}><option>Pickup</option><option>Van</option><option>Isuzu 5 Ton</option><option>Dry Cargo</option><option>Refrigerated</option><option>Truck 22 Ton</option><option>Truck 25 Ton</option><option>Truck 30 Ton</option><option>Trailer</option></select></label><div className="customer-distance-card"><p>{c.estimatedDistance}</p><strong>{distance ? `${distance} km` : c.findRoute}</strong></div><label>{cargoText.amount}<input value={cargoQuantity} onChange={(event) => setCargoQuantity(event.target.value)} type="number" inputMode="decimal" min="0.1" step="0.1" required /></label><label>{cargoText.unit}<select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{cargoText.ton}</option><option value="quintal">{cargoText.quintal}</option></select></label></div><div className={`customer-capacity-card ${cargoValidation ? "has-error" : ""}`}><div><p>{cargoText.equivalent}</p><strong>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} ${cargoText.ton}` : "—"}</strong></div><div><p>{cargoText.capacity}</p><strong>{selectedCapacity ? `${selectedCapacity} ${cargoText.ton}` : "—"}</strong></div>{cargoValidation && <p className="customer-capacity-error">{cargoValidation}</p>}</div></section>
+          <section className="customer-order-step"><div className="customer-order-step__heading"><span>3</span><div><h3>{ui.review}</h3><p>{ui.reviewHelp}</p></div></div><div className="customer-quote-card"><p>{c.estimatedQuote}</p><strong>{quoteLoading ? "…" : quote ? `ETB ${quote.toLocaleString()}` : c.selectRoute}</strong><small>{quoteLoading ? cargoText.quoteLoading : quoteError ? `${cargoText.quoteUnavailable} ${quoteError}` : `${cargoText.pricing} ${cargoText.latestRate}`}</small></div></section>
         </div>
-        <footer className="customer-order-sheet__footer"><button disabled={busy || !routePoints || Boolean(cargoValidation)}>{busy ? c.creating : c.confirmCreate}</button></footer>
+        <footer className="customer-order-sheet__footer"><button disabled={busy || quoteLoading || !quoteBreakdown || !routePoints || Boolean(cargoValidation)}>{busy ? c.creating : quoteLoading ? cargoText.quoteLoading : c.confirmCreate}</button></footer>
       </form></div>}
 
       {paymentOrder && <CustomerPaymentModal order={paymentOrder} maxAmount={remainingPayment(paymentOrder, data.payments)} onClose={() => setPaymentOrder(null)} onSubmitted={load} />}

@@ -9,12 +9,12 @@ import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/Cus
 import { LanguageSwitcher, useLanguage, type HalloLanguage } from "../i18n/LanguageProvider";
 import { getCustomerCopy } from "../i18n/customerCopy";
 import {
-  calculateCargoQuote,
   cargoToTons,
   createCustomerCargoOrder,
   vehicleCapacityTons,
   type CargoUnit,
 } from "../services/customer-cargo.service";
+import { useTransportQuote } from "../hooks/useTransportQuote";
 import { getCustomerPortalData, type CustomerPortalData } from "../services/customer.service";
 import { calculatePaymentSummary } from "../utils/paymentSummary";
 
@@ -55,6 +55,9 @@ const copy: Record<HalloLanguage, {
   trailer: string;
   continueMatch: string;
   findTruck: string;
+  quoteLoading: string;
+  quoteUnavailable: string;
+  latestRate: string;
 }> = {
   en: {
     greeting: "Ready to move cargo?",
@@ -90,6 +93,9 @@ const copy: Record<HalloLanguage, {
     trailer: "Trailer",
     continueMatch: "Unassigned order",
     findTruck: "Find nearby truck",
+    quoteLoading: "Getting latest price…",
+    quoteUnavailable: "The latest price could not be loaded. Try again.",
+    latestRate: "Latest admin-managed Supabase rate",
   },
   om: {
     greeting: "Feʼumsa geessuuf qophiidhaa?",
@@ -125,6 +131,9 @@ const copy: Record<HalloLanguage, {
     trailer: "Trailer",
     continueMatch: "Order hin assign taane",
     findTruck: "Truck naannoo barbaadi",
+    quoteLoading: "Gatii haaraa database irraa fidaa jira…",
+    quoteUnavailable: "Gatii haaraa fiduun hin danda'amne. Irra deebi'i.",
+    latestRate: "Gatii Supabase adminiin yeroo ammaa qindeesse",
   },
   am: {
     greeting: "ጭነት ለማጓጓዝ ዝግጁ ነዎት?",
@@ -160,6 +169,9 @@ const copy: Record<HalloLanguage, {
     trailer: "Trailer",
     continueMatch: "ያልተመደበ ትዕዛዝ",
     findTruck: "በአቅራቢያ መኪና ፈልግ",
+    quoteLoading: "የቅርብ ጊዜውን ዋጋ በማምጣት ላይ…",
+    quoteUnavailable: "የቅርብ ጊዜውን ዋጋ ማምጣት አልተቻለም። እንደገና ይሞክሩ።",
+    latestRate: "በአስተዳዳሪ የሚተዳደር የቅርብ ጊዜ Supabase ዋጋ",
   },
 };
 
@@ -199,12 +211,17 @@ export function CustomerMapHome() {
     : selectedCapacity > 0 && cargoTons > selectedCapacity
       ? `${t.exceeds} ${vehicle}: ${selectedCapacity} ${t.ton}.`
       : "";
-  const quote = useMemo(
-    () => routePoints && !validation
-      ? calculateCargoQuote(routePoints.distanceKm, vehicle, cargoAmount, cargoUnit)
-      : 0,
-    [cargoAmount, cargoUnit, routePoints, validation, vehicle],
-  );
+  const {
+    quote: quoteBreakdown,
+    loading: quoteLoading,
+    error: quoteError,
+  } = useTransportQuote({
+    distanceKm: routePoints?.distanceKm ?? 0,
+    vehicleType: vehicle,
+    cargoTons,
+    enabled: Boolean(routePoints && !validation),
+  });
+  const quote = quoteBreakdown?.total_quote_etb ?? 0;
 
   const summary = useMemo(() => {
     const active = data.orders.filter((order) => activeStatuses.has(order.status)).length;
@@ -239,6 +256,10 @@ export function CustomerMapHome() {
     }
     if (validation) {
       setError(validation);
+      return;
+    }
+    if (!quoteBreakdown) {
+      setError(quoteError || t.quoteUnavailable);
       return;
     }
 
@@ -322,15 +343,15 @@ export function CustomerMapHome() {
             <div><span>01</span><div><h2>{t.routeTitle}</h2><p>{t.routeHelp}</p></div></div>
           </div>
           <div className="customer-map-home__map">
-            <CustomerQuoteMap onChange={updateRoute} />
+            <CustomerQuoteMap onChange={updateRoute} vehicleType={vehicle} />
           </div>
         </div>
 
         <form onSubmit={createOrder} className="customer-map-home__sheet">
           <div className="customer-map-home__handle" aria-hidden="true" />
           <div className="customer-map-home__sheet-heading">
-            <div><p className="customer-eyebrow">02 · {t.truckMatch}</p><h2>{routePoints ? `${routePoints.distanceKm.toLocaleString()} km` : t.chooseRoute}</h2></div>
-            <div className="customer-map-home__quote"><span>{t.estimate}</span><strong>{quote ? `ETB ${quote.toLocaleString()}` : "—"}</strong></div>
+            <div><p className="customer-eyebrow">02 · {t.truckMatch}</p><h2>{routePoints ? `${routePoints.distanceKm.toLocaleString()} km · ${Math.floor(routePoints.durationMinutes / 60)}h ${routePoints.durationMinutes % 60}m` : t.chooseRoute}</h2></div>
+            <div className="customer-map-home__quote"><span>{t.estimate}</span><strong>{quoteLoading ? "…" : quote ? `ETB ${quote.toLocaleString()}` : "—"}</strong><small>{t.latestRate}</small></div>
           </div>
 
           <div className="customer-map-home__vehicles" role="group" aria-label={t.truckMatch}>
@@ -352,10 +373,12 @@ export function CustomerMapHome() {
 
           {error && <p className="customer-map-home__error">{error}</p>}
           {validation && <p className="customer-map-home__error">{validation}</p>}
+          {quoteLoading && <p className="customer-map-home__quote-state">{t.quoteLoading}</p>}
+          {quoteError && <p className="customer-map-home__error">{t.quoteUnavailable} {quoteError}</p>}
           <p className="customer-map-home__privacy">{t.privacy}</p>
 
-          <button type="submit" disabled={busy || !routePoints || Boolean(validation)} className="customer-map-home__confirm">
-            {busy ? t.creating : t.create}
+          <button type="submit" disabled={busy || quoteLoading || !quoteBreakdown || !routePoints || Boolean(validation)} className="customer-map-home__confirm">
+            {busy ? t.creating : quoteLoading ? t.quoteLoading : t.create}
           </button>
         </form>
       </section>
