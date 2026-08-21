@@ -51,6 +51,7 @@ const routeCopy: Record<HalloLanguage, {
   drivingTime: string;
   routeFailed: string;
   retry: string;
+  retryAction: string;
   hint: string;
   truckRoute: string;
 }> = {
@@ -78,6 +79,7 @@ const routeCopy: Record<HalloLanguage, {
     drivingTime: "estimated driving time",
     routeFailed: "No safe truck route could be calculated for those places.",
     retry: "Choose another nearby place or retry.",
+    retryAction: "Retry route",
     hint: "P = pickup · D = drop-off · drag either marker to refine the route. Distance follows a live heavy-truck road route.",
     truckRoute: "HGV route",
   },
@@ -105,6 +107,7 @@ const routeCopy: Record<HalloLanguage, {
     drivingTime: "yeroo geejjibaa tilmaamaa",
     routeFailed: "Bakkoota kana gidduutti daandii truck nageenya qabu shallaguun hin danda'amne.",
     retry: "Bakka biraa dhihoo fili ykn irra deebi'i.",
+    retryAction: "Route irra deebi'i",
     hint: "P = bakka fe'umsaa · D = bakka geessuu · route sirreessuuf mallattoo harkisi. Fageenyi daandii truck guddaa hordofa.",
     truckRoute: "Daandii HGV",
   },
@@ -132,6 +135,7 @@ const routeCopy: Record<HalloLanguage, {
     drivingTime: "ግምታዊ የመንዳት ጊዜ",
     routeFailed: "በእነዚህ ቦታዎች መካከል ለከባድ መኪና ተስማሚ መንገድ ማስላት አልተቻለም።",
     retry: "ሌላ ቅርብ ቦታ ይምረጡ ወይም እንደገና ይሞክሩ።",
+    retryAction: "መንገዱን ደግመው ይሞክሩ",
     hint: "P = መጫኛ · D = ማድረሻ · መንገዱን ለማስተካከል ምልክቱን ይጎትቱ። ርቀቱ የከባድ መኪና መንገድን ይከተላል።",
     truckRoute: "የHGV መንገድ",
   },
@@ -277,6 +281,7 @@ export function CustomerQuoteMap({
   const [roadRoute, setRoadRoute] = useState<TruckRoadRoute | null>(null);
   const [routing, setRouting] = useState(false);
   const [routingError, setRoutingError] = useState("");
+  const [routeRevision, setRouteRevision] = useState(0);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
 
@@ -370,7 +375,7 @@ export function CustomerQuoteMap({
       });
 
     return () => controller.abort();
-  }, [dropoff, onChange, pickup, t.routeFailed, vehicleType]);
+  }, [dropoff, onChange, pickup, routeRevision, t.routeFailed, vehicleType]);
 
   useEffect(() => {
     const instance = map.current;
@@ -538,6 +543,7 @@ export function CustomerQuoteMap({
         <div className="customer-quote-map__actions">
           <button type="button" onClick={useCurrentLocation} disabled={locating}>{locating ? t.locating : `⌖ ${t.useLocation}`}</button>
           {pickup && dropoff && <button type="button" onClick={swapPlaces}>⇄ {t.swap}</button>}
+          {routingError && <button type="button" onClick={() => setRouteRevision((revision) => revision + 1)}>↻ {t.retryAction}</button>}
           {(pickup || dropoff) && <button type="button" onClick={reset}>{t.reset}</button>}
         </div>
       </div>
