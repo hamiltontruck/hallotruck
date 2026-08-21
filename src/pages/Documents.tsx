@@ -1,10 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  DRIVER_VEHICLE_TYPES,
+  DriverVehicleType,
   DriverVerificationProfile,
   VerificationDocumentKey,
   getMyVerificationProfile,
   openVerificationDocument,
   replaceVerificationDocument,
+  saveMyVehicleProfile,
   updateMyVerificationProfile,
 } from "../services/driver.service";
 import { useLanguage } from "../i18n/LanguageProvider";
@@ -29,9 +32,9 @@ const DRIVER_DOCS: DocumentSpec[] = [
 
 const TRUCK_DOCS: DocumentSpec[] = [
   { key: "vehicle_registration", label: "Vehicle registration", help: "Registration booklet/card as PDF or clear scan/photo.", scope: "truck" },
+  { key: "truck_front", label: "Truck photo · front", help: "Front photo with the plate clearly visible.", scope: "truck", photoOnly: true },
   { key: "insurance", label: "Insurance certificate", help: "Current insurance certificate.", scope: "truck", expiry: true },
   { key: "transport_permit", label: "Transport permit", help: "Commercial transport permit or operating certificate.", scope: "truck", expiry: true },
-  { key: "truck_front", label: "Truck photo · front", help: "Front photo with the plate clearly visible.", scope: "truck", photoOnly: true },
   { key: "truck_back", label: "Truck photo · back", help: "Rear photo with the plate clearly visible.", scope: "truck", photoOnly: true },
   { key: "truck_side", label: "Truck photo · side", help: "Full side profile of the vehicle.", scope: "truck", photoOnly: true },
   { key: "truck_loading_area", label: "Loading area photo", help: "Clear cargo/loading-bed or container interior photo.", scope: "truck", photoOnly: true },
@@ -59,6 +62,7 @@ export function Documents() {
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState<VerificationDocumentKey | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [savingVehicle, setSavingVehicle] = useState(false);
   const [expiry, setExpiry] = useState<Partial<Record<VerificationDocumentKey, string>>>({});
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -87,6 +91,11 @@ export function Documents() {
   const rejected = required.filter((spec) => docsByKey.get(spec.key)?.status === "rejected").length;
   const missing = Math.max(0, required.length - verified - pending - rejected);
   const percent = required.length ? Math.round((verified / required.length) * 100) : 0;
+  const profileComplete = Boolean(data?.profile.full_name && data.profile.phone && data.profile.home_address);
+  const identityVerified = DRIVER_DOCS.filter((spec) => docsByKey.get(spec.key)?.status === "verified").length;
+  const vehicleVerified = TRUCK_DOCS.filter((spec) => docsByKey.get(spec.key)?.status === "verified").length;
+  const identityComplete = identityVerified === DRIVER_DOCS.length;
+  const vehicleComplete = Boolean(data?.truck) && vehicleVerified === TRUCK_DOCS.length;
   const initials = (data?.profile.full_name ?? "Driver")
     .split(/\s+/)
     .filter(Boolean)
@@ -134,6 +143,23 @@ export function Documents() {
     } finally { setBusyKey(null); }
   }
 
+  async function saveVehicle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSavingVehicle(true); setError(""); setNotice("");
+    try {
+      await saveMyVehicleProfile({
+        plateNumber: String(form.get("plateNumber") ?? ""),
+        vehicleType: String(form.get("vehicleType") ?? "") as DriverVehicleType,
+        capacityTons: Number(form.get("capacityTons")),
+      });
+      setNotice(c.vehicleSaved);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : c.vehicleSaveError);
+    } finally { setSavingVehicle(false); }
+  }
+
   if (loading) return <main className="mx-auto max-w-6xl px-5 py-12 pb-28"><p className="font-mono text-sm text-steel">{c.loading}</p></main>;
 
   return (
@@ -174,6 +200,18 @@ export function Documents() {
       {error && <p className="mt-5 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
       {notice && <p className="mt-5 border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{notice}</p>}
 
+      <section className="driver-setup-steps mt-6 border border-asphalt/10 bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div><p className="font-mono text-[10px] tracking-[.18em] text-amber-dim">SMART ONBOARDING</p><h2 className="mt-1 font-display text-2xl font-semibold">{c.setupTitle}</h2></div>
+          <p className="max-w-xl text-xs leading-5 text-steel sm:text-right">{c.setupHelp}</p>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <SetupStep number="01" label={c.stepProfile} detail={profileComplete ? c.complete : c.inProgress} complete={profileComplete} />
+          <SetupStep number="02" label={c.stepIdentity} detail={`${identityVerified} / ${DRIVER_DOCS.length}`} complete={identityComplete} />
+          <SetupStep number="03" label={c.stepVehicle} detail={data?.truck ? `${vehicleVerified} / ${TRUCK_DOCS.length}` : c.inProgress} complete={vehicleComplete} />
+        </div>
+      </section>
+
       <section className="mt-6 grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
         <form onSubmit={saveProfile} className="border border-asphalt/10 bg-white p-5 shadow-sm sm:p-6">
           <SectionTitle eyebrow={c.profile} title={c.contact} badge={localStatus(data?.profile.driver_status ?? "pending", c)} badgeClass={data?.profile.driver_status === "approved" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber/30 bg-amber/10 text-amber-dim"} />
@@ -186,25 +224,23 @@ export function Documents() {
           <button disabled={savingProfile} className="mt-5 inline-flex min-h-12 items-center justify-center bg-asphalt px-6 py-3 text-sm font-semibold text-white transition hover:bg-line disabled:opacity-50">{savingProfile ? c.saving : c.saveProfile}</button>
         </form>
 
-        <div className="relative overflow-hidden border border-asphalt/10 bg-white p-5 shadow-sm sm:p-6">
+        <form key={data?.truck?.id ?? "new-vehicle"} onSubmit={saveVehicle} className="relative overflow-hidden border border-asphalt/10 bg-white p-5 shadow-sm sm:p-6">
           <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber/10" />
-          <SectionTitle eyebrow={c.currentVehicle} title={data?.truck?.plate_number ?? c.noTruck} />
-          {data?.truck ? <>
-            <div className="relative mt-5 grid grid-cols-2 gap-3">
-              <MiniStat label={c.currentVehicle} value={data.truck.vehicle_type} />
-              <MiniStat label={c.tons} value={`${data.truck.capacity_tons ?? "—"}`} />
-            </div>
-            <div className="relative mt-4 flex items-center justify-between gap-3 border border-amber/20 bg-amber/5 p-4">
-              <div><p className="font-mono text-[9px] tracking-[.16em] text-amber-dim">ASSIGNMENT STATUS</p><p className="mt-1 text-sm font-semibold capitalize">{data.truck.status}</p></div>
-              <span className="h-3 w-3 rounded-full bg-amber shadow-[0_0_16px_rgba(240,170,55,.65)]" />
-            </div>
-            <p className="relative mt-4 border-t border-asphalt/10 pt-4 text-xs leading-5 text-steel">{c.linkedHelp}</p>
-          </> : <div className="relative mt-5 border border-dashed border-asphalt/15 bg-[#f5f3ed] p-5"><p className="font-display font-semibold">{c.noTruck}</p><p className="mt-2 text-sm leading-6 text-steel">{c.noTruckHelp}</p></div>}
-        </div>
+          <SectionTitle eyebrow={c.currentVehicle} title={c.vehicleDetails} badge={data?.truck ? localStatus(data.truck.status, c) : c.inProgress} badgeClass={data?.truck?.status === "available" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber/30 bg-amber/10 text-amber-dim"} />
+          <p className="relative mt-3 text-xs leading-5 text-steel">{data?.truck ? c.linkedHelp : c.vehicleDetailsHelp}</p>
+          <div className="relative mt-5 grid gap-4 sm:grid-cols-2">
+            <Field name="plateNumber" label={c.plateNumber} defaultValue={data?.truck?.plate_number ?? ""} placeholder="3-A12345" />
+            <label className="text-sm font-medium">{c.vehicleType}<select name="vehicleType" required defaultValue={data?.truck?.vehicle_type ?? ""} className="mt-2 block min-h-12 w-full border border-asphalt/15 bg-white px-4 py-3 font-normal outline-none transition focus:border-amber focus:ring-2 focus:ring-amber/10"><option value="" disabled>{c.chooseType}</option>{DRIVER_VEHICLE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+            <label className="text-sm font-medium sm:col-span-2">{c.capacityTons}<input name="capacityTons" type="number" inputMode="decimal" min="0.1" max="60" step="0.1" required defaultValue={data?.truck?.capacity_tons ?? ""} placeholder="10" className="mt-2 block w-full border border-asphalt/15 bg-white px-4 py-3 font-normal outline-none transition focus:border-amber focus:ring-2 focus:ring-amber/10" /></label>
+          </div>
+          <button disabled={savingVehicle} className="relative mt-5 inline-flex min-h-12 w-full items-center justify-center bg-route px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0d7469] disabled:opacity-50">{savingVehicle ? c.saving : data?.truck ? c.updateVehicle : c.registerVehicle}</button>
+          {data?.truck && data.truck.status !== "available" && <p className="relative mt-3 border border-amber/25 bg-amber/10 px-3 py-2 text-xs font-semibold text-amber-dim">{c.inactiveReview}</p>}
+        </form>
       </section>
 
-      <DocumentSection title={c.driverIdentity} eyebrow={c.personalVerification} specs={DRIVER_DOCS} docsByKey={docsByKey} expiry={expiry} setExpiry={setExpiry} busyKey={busyKey} onUpload={upload} />
+      <p className="mt-6 border border-amber/25 bg-amber/10 p-4 text-sm leading-6 text-amber-dim">{c.vehicleUploadHelp}</p>
       <DocumentSection title={c.vehicleCompliance} eyebrow={c.truckDocsPhotos} specs={TRUCK_DOCS} docsByKey={docsByKey} expiry={expiry} setExpiry={setExpiry} busyKey={busyKey} onUpload={upload} truckLocked={!data?.truck} />
+      <DocumentSection title={c.driverIdentity} eyebrow={c.personalVerification} specs={DRIVER_DOCS} docsByKey={docsByKey} expiry={expiry} setExpiry={setExpiry} busyKey={busyKey} onUpload={upload} />
 
       <section className="mt-6 flex items-start gap-4 border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-emerald-200 bg-white text-lg">✓</span>
@@ -214,16 +250,19 @@ export function Documents() {
   );
 }
 
+function SetupStep({ number, label, detail, complete }: { number: string; label: string; detail: string; complete: boolean }) {
+  return <div className={`driver-setup-step flex items-center gap-4 border p-4 ${complete ? "is-complete border-emerald-200 bg-emerald-50" : "border-asphalt/10 bg-[#f5f3ed]"}`}>
+    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full font-mono text-xs font-bold ${complete ? "bg-emerald-700 text-white" : "bg-asphalt text-amber"}`}>{complete ? "✓" : number}</span>
+    <div className="min-w-0"><p className="font-display font-semibold">{label}</p><p className={`mt-1 text-xs ${complete ? "text-emerald-800" : "text-steel"}`}>{detail}</p></div>
+  </div>;
+}
+
 function Metric({ label, value, detail, accent = false }: { label: string; value: string; detail: string; accent?: boolean }) {
   return <div className={`border p-4 ${accent ? "border-amber/30 bg-amber/10" : "border-white/10 bg-white/[.04]"}`}>
     <p className={`font-mono text-[9px] tracking-[.16em] ${accent ? "text-amber" : "text-white/40"}`}>{label}</p>
     <p className={`mt-2 font-display text-2xl font-bold ${accent ? "text-amber" : "text-white"}`}>{value}</p>
     <p className="mt-1 text-[10px] text-white/35">{detail}</p>
   </div>;
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return <div className="border border-asphalt/10 bg-[#f5f3ed] p-4"><p className="font-mono text-[9px] tracking-[.15em] text-steel">{label}</p><p className="mt-2 truncate font-display text-lg font-semibold">{value}</p></div>;
 }
 
 function SectionTitle({ eyebrow, title, badge, badgeClass }: { eyebrow: string; title: string; badge?: string; badgeClass?: string }) {

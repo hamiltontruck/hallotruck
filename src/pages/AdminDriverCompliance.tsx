@@ -65,6 +65,7 @@ type DriverVerificationHistoryRow = {
 };
 
 const identityRequired = ["driver_photo", "license_front", "license_back", "national_id_front", "national_id_back"];
+const vehicleRequired = ["vehicle_registration", "insurance", "transport_permit", "truck_front", "truck_back", "truck_side", "truck_loading_area"];
 
 const labels: Record<string, string> = {
   driver_photo: "Driver photo",
@@ -207,10 +208,7 @@ export function AdminDriverCompliance() {
 
   async function approveDriver(driver: DriverRow) {
     setBusy(driver.id); setError("");
-    const driverDocs = documents.filter((doc) => doc.driver_id === driver.id && doc.truck_id === null);
-    const complete = identityRequired.every((key) => driverDocs.some((doc) => doc.document_key === key && doc.status === "verified"));
-    if (!complete) { setError("Verify the driver photo, both license sides and both national-ID sides before approval."); setBusy(""); return; }
-    const { error } = await supabase.from("profiles").update({ driver_status: "approved" }).eq("id", driver.id);
+    const { error } = await supabase.rpc("admin_approve_driver_onboarding", { p_driver_id: driver.id });
     if (error) setError(error.message); else await load();
     setBusy("");
   }
@@ -273,6 +271,8 @@ export function AdminDriverCompliance() {
         {visibleDrivers.map((driver) => {
           const driverDocs = documents.filter((doc) => doc.driver_id === driver.id);
           const identityDocs = driverDocs.filter((doc) => !doc.truck_id);
+          const assignedTruck = trucks.find((truck) => truck.driver_id === driver.id) ?? (driverDocs.find((doc) => doc.truck_id)?.truck_id ? trucks.find((truck) => truck.id === driverDocs.find((doc) => doc.truck_id)?.truck_id) : undefined);
+          const vehicleDocs = assignedTruck ? driverDocs.filter((doc) => doc.truck_id === assignedTruck.id) : [];
           const historyRows = history.filter((item) => item.driver_id === driver.id);
           const driverOrders = orders.filter((order) => order.driver_id === driver.id);
           const deliveredOrders = driverOrders.filter((order) => order.status === "delivered");
@@ -280,16 +280,24 @@ export function AdminDriverCompliance() {
           const verifiedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "verified")).length;
           const pendingIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "pending")).length;
           const rejectedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "rejected")).length;
-          const onboardingStage = verifiedIdentity === identityRequired.length
+          const submittedVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key)).length;
+          const verifiedVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key && doc.status === "verified")).length;
+          const pendingVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key && doc.status === "pending")).length;
+          const rejectedVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key && doc.status === "rejected")).length;
+          const onboardingReady = verifiedIdentity === identityRequired.length && Boolean(assignedTruck) && verifiedVehicle === vehicleRequired.length;
+          const onboardingStage = onboardingReady
             ? "Ready for approval"
-            : rejectedIdentity > 0
+            : rejectedIdentity > 0 || rejectedVehicle > 0
               ? "Corrections required"
-              : submittedIdentity === 0
+              : verifiedIdentity < identityRequired.length && submittedIdentity === 0
                 ? "Waiting for driver documents"
-                : pendingIdentity > 0
+                : pendingIdentity > 0 || pendingVehicle > 0
                   ? "Documents under review"
-                  : "Onboarding incomplete";
-          const assignedTruck = trucks.find((truck) => truck.driver_id === driver.id) ?? (driverDocs.find((doc) => doc.truck_id)?.truck_id ? trucks.find((truck) => truck.id === driverDocs.find((doc) => doc.truck_id)?.truck_id) : undefined);
+                  : !assignedTruck
+                    ? "Waiting for vehicle details"
+                    : submittedVehicle < vehicleRequired.length
+                      ? "Waiting for vehicle documents"
+                      : "Onboarding incomplete";
           const releasedGross = driverOrders.reduce((sum, order) => sum + releasedForOrder(order, payments), 0);
           const split = splitHalloCommission(releasedGross);
           const expanded = expandedDriverId === driver.id;
@@ -301,11 +309,11 @@ export function AdminDriverCompliance() {
                 <div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{driver.full_name}</h2><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(driver.driver_status)}`}>{driver.driver_status ?? "pending"}</span></div>
                 <p className="mt-2 text-sm text-steel">{driver.phone}{driver.email ? ` · ${driver.email}` : ""}</p>
                 <p className="mt-1 text-xs text-steel">{driver.home_address || "Home address not supplied"}</p>
-                {driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <p className="mt-3 text-xs font-semibold text-amber-dim">Onboarding: {onboardingStage} · {submittedIdentity}/{identityRequired.length} submitted</p>}
+                {driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <p className="mt-3 text-xs font-semibold text-amber-dim">Onboarding: {onboardingStage} · driver {submittedIdentity}/{identityRequired.length} · vehicle {submittedVehicle}/{vehicleRequired.length}</p>}
                 {activeTrip && <p className="mt-3 text-xs font-semibold text-amber-dim">Active trip: {activeTrip.tracking_id} · {activeTrip.status.replace("_", " ")}</p>}
               </div>
               <div className="flex min-w-52 flex-col gap-2">
-                <div className="bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">IDENTITY VERIFIED</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity} / {identityRequired.length}</p><p className="mt-1 text-[11px] font-semibold text-steel">{onboardingStage}</p>{driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <button disabled={busy === driver.id || verifiedIdentity !== identityRequired.length} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
+                <div className="bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">VERIFICATION READY</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity + verifiedVehicle} / {identityRequired.length + vehicleRequired.length}</p><p className="mt-1 text-[11px] font-semibold text-steel">{onboardingStage}</p>{driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <button disabled={busy === driver.id || !onboardingReady} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
                 {driver.driver_status === "suspended" ? <button disabled={busy === driver.id} onClick={() => void restoreDriver(driver)} className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-40">Restore driver</button> : <button disabled={busy === driver.id || Boolean(activeTrip)} onClick={() => void removeDriver(driver)} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route disabled:opacity-35">Remove driver</button>}
               </div>
             </div>
