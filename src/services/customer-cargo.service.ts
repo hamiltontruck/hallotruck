@@ -18,6 +18,9 @@ const defaultPricing: Record<string, CachedPricingRule> = {
   "isuzu 5 ton": { rate_per_ton_km: null, rate_per_km: 58, rate_per_ton: 650, market_adjustment_percent: 0 },
   "dry cargo": { rate_per_ton_km: null, rate_per_km: 72, rate_per_ton: 650, market_adjustment_percent: 0 },
   refrigerated: { rate_per_ton_km: null, rate_per_km: 92, rate_per_ton: 650, market_adjustment_percent: 0 },
+  "truck 22 ton": { rate_per_ton_km: 22.222222, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
+  "truck 25 ton": { rate_per_ton_km: 22.222222, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
+  "truck 30 ton": { rate_per_ton_km: 22.222222, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
   trailer: { rate_per_ton_km: null, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
 };
 
@@ -30,6 +33,9 @@ export const vehicleCapacityTons: Record<string, number> = {
   "isuzu 5 ton": 5,
   "dry cargo": 10,
   refrigerated: 15,
+  "truck 22 ton": 22,
+  "truck 25 ton": 25,
+  "truck 30 ton": 30,
   trailer: 45,
 };
 
