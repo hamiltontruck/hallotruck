@@ -49,6 +49,9 @@ const copy: Record<HalloLanguage, {
   isuzu5Ton: string;
   dryCargo: string;
   refrigerated: string;
+  truck22Ton: string;
+  truck25Ton: string;
+  truck30Ton: string;
   trailer: string;
   continueMatch: string;
   findTruck: string;
@@ -81,6 +84,9 @@ const copy: Record<HalloLanguage, {
     isuzu5Ton: "Isuzu 5 Ton",
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
+    truck22Ton: "Truck 22 Ton",
+    truck25Ton: "Truck 25 Ton",
+    truck30Ton: "Truck 30 Ton",
     trailer: "Trailer",
     continueMatch: "Unassigned order",
     findTruck: "Find nearby truck",
@@ -113,6 +119,9 @@ const copy: Record<HalloLanguage, {
     isuzu5Ton: "Isuzu 5 Ton",
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
+    truck22Ton: "Truck 22 Ton",
+    truck25Ton: "Truck 25 Ton",
+    truck30Ton: "Truck 30 Ton",
     trailer: "Trailer",
     continueMatch: "Order hin assign taane",
     findTruck: "Truck naannoo barbaadi",
@@ -145,13 +154,26 @@ const copy: Record<HalloLanguage, {
     isuzu5Ton: "Isuzu 5 Ton",
     dryCargo: "Dry Cargo",
     refrigerated: "Refrigerated",
+    truck22Ton: "Truck 22 Ton",
+    truck25Ton: "Truck 25 Ton",
+    truck30Ton: "Truck 30 Ton",
     trailer: "Trailer",
     continueMatch: "ያልተመደበ ትዕዛዝ",
     findTruck: "በአቅራቢያ መኪና ፈልግ",
   },
 };
 
-const vehicleOptions = ["Pickup", "Van", "Isuzu 5 Ton", "Dry Cargo", "Refrigerated", "Trailer"] as const;
+const vehicleOptions = [
+  "Pickup",
+  "Van",
+  "Isuzu 5 Ton",
+  "Dry Cargo",
+  "Refrigerated",
+  "Truck 22 Ton",
+  "Truck 25 Ton",
+  "Truck 30 Ton",
+  "Trailer",
+] as const;
 
 export function CustomerMapHome() {
   const navigate = useNavigate();
@@ -353,8 +375,20 @@ function Summary({ label, value }: { label: string; value: string }) {
   return <div><span>{label}</span><strong>{value}</strong></div>;
 }
 
-function vehicleKey(vehicle: (typeof vehicleOptions)[number]): "pickup" | "van" | "isuzu5Ton" | "dryCargo" | "refrigerated" | "trailer" {
+function vehicleKey(vehicle: (typeof vehicleOptions)[number]):
+  | "pickup"
+  | "van"
+  | "isuzu5Ton"
+  | "dryCargo"
+  | "refrigerated"
+  | "truck22Ton"
+  | "truck25Ton"
+  | "truck30Ton"
+  | "trailer" {
   if (vehicle === "Dry Cargo") return "dryCargo";
   if (vehicle === "Isuzu 5 Ton") return "isuzu5Ton";
+  if (vehicle === "Truck 22 Ton") return "truck22Ton";
+  if (vehicle === "Truck 25 Ton") return "truck25Ton";
+  if (vehicle === "Truck 30 Ton") return "truck30Ton";
   return vehicle.toLowerCase() as "pickup" | "van" | "refrigerated" | "trailer";
 }
