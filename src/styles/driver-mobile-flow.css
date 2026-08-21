@@ -1,4 +1,24 @@
 @media (max-width: 639px) {
+  .driver-mobile-flow input,
+  .driver-mobile-flow select,
+  .driver-mobile-flow textarea {
+    font-size: 16px;
+  }
+
+  .driver-mobile-flow .driver-setup-steps {
+    border-radius: 1.25rem;
+    padding: 1rem;
+  }
+
+  .driver-mobile-flow .driver-setup-step {
+    border-radius: 1rem;
+    padding: 0.875rem;
+  }
+
+  .driver-mobile-flow .driver-setup-step.is-complete {
+    box-shadow: inset 0 0 0 1px rgb(4 120 87 / 0.04);
+  }
+
   .driver-mobile-flow main {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
@@ -98,5 +118,12 @@
     padding-left: 0.75rem;
     padding-right: 0.75rem;
     font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .driver-mobile-flow .driver-setup-steps,
+  .driver-mobile-flow .driver-setup-step {
+    border-radius: 1.25rem;
   }
 }

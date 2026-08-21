@@ -142,6 +142,20 @@ export interface DriverVerificationProfile {
   documents: DriverVerificationFile[];
 }
 
+export const DRIVER_VEHICLE_TYPES = [
+  "Pickup",
+  "Van",
+  "Isuzu 5 Ton",
+  "Dry Cargo",
+  "Refrigerated",
+  "Truck 22 Ton",
+  "Truck 25 Ton",
+  "Truck 30 Ton",
+  "Trailer",
+] as const;
+
+export type DriverVehicleType = (typeof DRIVER_VEHICLE_TYPES)[number];
+
 function ensureEthiopianPhone(phone: string) {
   const normalized = phone.replace(/\s+/g, "");
   if (!/^(09\d{8}|\+2519\d{8})$/.test(normalized)) {
@@ -244,6 +258,30 @@ export async function updateMyVerificationProfile(input: {
     .update({ full_name: fullName, phone, email: email || null, home_address: homeAddress })
     .eq("id", auth.user.id);
   if (error) throw new Error(error.message);
+}
+
+export async function saveMyVehicleProfile(input: {
+  plateNumber: string;
+  vehicleType: DriverVehicleType;
+  capacityTons: number;
+}): Promise<NonNullable<DriverVerificationProfile["truck"]>> {
+  const plateNumber = input.plateNumber.trim();
+  if (plateNumber.length < 3) throw new Error("Enter a valid plate number.");
+  if (!DRIVER_VEHICLE_TYPES.includes(input.vehicleType)) throw new Error("Choose a valid vehicle type.");
+  if (!Number.isFinite(input.capacityTons) || input.capacityTons < 0.1 || input.capacityTons > 60) {
+    throw new Error("Vehicle capacity must be between 0.1 and 60 tons.");
+  }
+
+  const { data, error } = await supabase.rpc("driver_save_vehicle_profile", {
+    p_plate_number: plateNumber,
+    p_vehicle_type: input.vehicleType,
+    p_capacity_tons: input.capacityTons,
+  });
+  if (error) throw new Error(error.message);
+
+  const truck = Array.isArray(data) ? data[0] : data;
+  if (!truck) throw new Error("Vehicle details could not be saved.");
+  return truck as NonNullable<DriverVerificationProfile["truck"]>;
 }
 
 export async function replaceVerificationDocument(input: {
