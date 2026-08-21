@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomerBottomNav } from "../components/customer/CustomerBottomNav";
 import {
@@ -15,11 +15,6 @@ import {
   type CargoUnit,
 } from "../services/customer-cargo.service";
 import { useTransportQuote } from "../hooks/useTransportQuote";
-import { getCustomerPortalData, type CustomerPortalData } from "../services/customer.service";
-import { calculatePaymentSummary } from "../utils/paymentSummary";
-
-const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [], assignments: [], profile: null };
-const activeStatuses = new Set(["assigned", "accepted", "in_transit"]);
 
 const copy: Record<HalloLanguage, {
   greeting: string;
@@ -58,6 +53,8 @@ const copy: Record<HalloLanguage, {
   quoteLoading: string;
   quoteUnavailable: string;
   latestRate: string;
+  expandSheet: string;
+  collapseSheet: string;
 }> = {
   en: {
     greeting: "Ready to move cargo?",
@@ -96,6 +93,8 @@ const copy: Record<HalloLanguage, {
     quoteLoading: "Getting latest price…",
     quoteUnavailable: "The latest price could not be loaded. Try again.",
     latestRate: "Latest admin-managed Supabase rate",
+    expandSheet: "Open truck and load options",
+    collapseSheet: "Show more map",
   },
   om: {
     greeting: "Feʼumsa geessuuf qophiidhaa?",
@@ -134,6 +133,8 @@ const copy: Record<HalloLanguage, {
     quoteLoading: "Gatii haaraa database irraa fidaa jira…",
     quoteUnavailable: "Gatii haaraa fiduun hin danda'amne. Irra deebi'i.",
     latestRate: "Gatii Supabase adminiin yeroo ammaa qindeesse",
+    expandSheet: "Filannoo truck fi fe'umsaa bani",
+    collapseSheet: "Map bal'inaan agarsiisi",
   },
   am: {
     greeting: "ጭነት ለማጓጓዝ ዝግጁ ነዎት?",
@@ -172,6 +173,8 @@ const copy: Record<HalloLanguage, {
     quoteLoading: "የቅርብ ጊዜውን ዋጋ በማምጣት ላይ…",
     quoteUnavailable: "የቅርብ ጊዜውን ዋጋ ማምጣት አልተቻለም። እንደገና ይሞክሩ።",
     latestRate: "በአስተዳዳሪ የሚተዳደር የቅርብ ጊዜ Supabase ዋጋ",
+    expandSheet: "የመኪናና የጭነት ምርጫዎችን ክፈት",
+    collapseSheet: "ተጨማሪ ካርታ አሳይ",
   },
 };
 
@@ -192,14 +195,13 @@ export function CustomerMapHome() {
   const { language } = useLanguage();
   const c = getCustomerCopy(language);
   const t = copy[language];
-  const [data, setData] = useState<CustomerPortalData>(emptyData);
   const [routePoints, setRoutePoints] = useState<QuotePoints | null>(null);
   const [vehicle, setVehicle] = useState<(typeof vehicleOptions)[number]>("Dry Cargo");
   const [cargoQuantity, setCargoQuantity] = useState("1");
   const [cargoUnit, setCargoUnit] = useState<CargoUnit>("ton");
   const [matchingOrder, setMatchingOrder] = useState<DispatchOrderSummary | null>(null);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const updateRoute = useCallback((points: QuotePoints | null) => setRoutePoints(points), []);
@@ -223,29 +225,9 @@ export function CustomerMapHome() {
   });
   const quote = quoteBreakdown?.total_quote_etb ?? 0;
 
-  const summary = useMemo(() => {
-    const active = data.orders.filter((order) => activeStatuses.has(order.status)).length;
-    const delivered = data.orders.filter((order) => order.status === "delivered").length;
-    const due = data.orders.reduce((total, order) => {
-      const payments = data.payments.filter((payment) => payment.order_id === order.id);
-      return total + calculatePaymentSummary(order.price_etb, payments).remainingToSubmit;
-    }, 0);
-    return { active, delivered, due };
-  }, [data.orders, data.payments]);
-
-  const latestPlacedOrder = useMemo(
-    () => data.orders.find((order) => order.status === "placed") ?? null,
-    [data.orders],
-  );
-
   useEffect(() => {
-    let cancelled = false;
-    void getCustomerPortalData()
-      .then((result) => { if (!cancelled) setData(result); })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : c.loadError); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [c.loadError]);
+    if (routePoints) setSheetExpanded(true);
+  }, [routePoints]);
 
   async function createOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -289,8 +271,6 @@ export function CustomerMapHome() {
     }
   }
 
-  const firstName = data.profile?.full_name?.trim().split(/\s+/)[0] ?? "Customer";
-
   return (
     <main className="customer-map-home min-h-screen bg-bone text-asphalt">
       <header className="customer-main-header customer-map-home__header">
@@ -309,35 +289,6 @@ export function CustomerMapHome() {
       <CustomerBottomNav />
 
       <section className="customer-map-home__stage">
-        <div className="customer-map-home__welcome">
-          <div>
-            <p className="customer-eyebrow">{firstName}</p>
-            <h1>{t.greeting}</h1>
-            <p>{t.ready}</p>
-            {latestPlacedOrder && (
-              <button
-                type="button"
-                className="customer-map-home__continue-match"
-                onClick={() => setMatchingOrder({
-                  id: latestPlacedOrder.id,
-                  tracking_id: latestPlacedOrder.tracking_id,
-                  pickup_address: latestPlacedOrder.pickup_address,
-                  dropoff_address: latestPlacedOrder.dropoff_address,
-                  vehicle_type: latestPlacedOrder.vehicle_type,
-                })}
-              >
-                <span>{t.continueMatch} · {latestPlacedOrder.tracking_id}</span>
-                <strong>{t.findTruck} →</strong>
-              </button>
-            )}
-          </div>
-          <div className="customer-map-home__summary" aria-label="Customer logistics summary">
-            <Summary label={t.active} value={loading ? "…" : summary.active.toLocaleString()} />
-            <Summary label={t.due} value={loading ? "…" : `ETB ${summary.due.toLocaleString()}`} />
-            <Summary label={t.delivered} value={loading ? "…" : summary.delivered.toLocaleString()} />
-          </div>
-        </div>
-
         <div className="customer-map-home__map-shell">
           <div className="customer-map-home__map-title">
             <div><span>01</span><div><h2>{t.routeTitle}</h2><p>{t.routeHelp}</p></div></div>
@@ -347,39 +298,48 @@ export function CustomerMapHome() {
           </div>
         </div>
 
-        <form onSubmit={createOrder} className="customer-map-home__sheet">
-          <div className="customer-map-home__handle" aria-hidden="true" />
+        <form onSubmit={createOrder} className={`customer-map-home__sheet ${sheetExpanded ? "is-expanded" : "is-collapsed"}`}>
+          <button
+            type="button"
+            className="customer-map-home__handle"
+            onClick={() => setSheetExpanded((current) => !current)}
+            aria-expanded={sheetExpanded}
+            aria-label={sheetExpanded ? t.collapseSheet : t.expandSheet}
+          ><span aria-hidden="true" /></button>
           <div className="customer-map-home__sheet-heading">
             <div><p className="customer-eyebrow">02 · {t.truckMatch}</p><h2>{routePoints ? `${routePoints.distanceKm.toLocaleString()} km · ${Math.floor(routePoints.durationMinutes / 60)}h ${routePoints.durationMinutes % 60}m` : t.chooseRoute}</h2></div>
             <div className="customer-map-home__quote"><span>{t.estimate}</span><strong>{quoteLoading ? "…" : quote ? `ETB ${quote.toLocaleString()}` : "—"}</strong><small>{t.latestRate}</small></div>
+            <button type="button" className="customer-map-home__sheet-toggle" onClick={() => setSheetExpanded((current) => !current)} aria-label={sheetExpanded ? t.collapseSheet : t.expandSheet}>{sheetExpanded ? "⌄" : "⌃"}</button>
           </div>
 
-          <div className="customer-map-home__vehicles" role="group" aria-label={t.truckMatch}>
-            {vehicleOptions.map((option) => (
-              <button key={option} type="button" onClick={() => setVehicle(option)} className={vehicle === option ? "is-active" : ""}>
-                <span className="customer-map-home__vehicle-icon" aria-hidden="true">▰</span>
-                <strong>{t[vehicleKey(option)]}</strong>
-                <small>{vehicleCapacityTons[option.toLowerCase()] ?? "—"} {t.ton}</small>
-              </button>
-            ))}
-          </div>
+          {sheetExpanded && <div className="customer-map-home__sheet-body">
+            <div className="customer-map-home__vehicles" role="group" aria-label={t.truckMatch}>
+              {vehicleOptions.map((option) => (
+                <button key={option} type="button" onClick={() => setVehicle(option)} className={vehicle === option ? "is-active" : ""}>
+                  <span className="customer-map-home__vehicle-icon" aria-hidden="true">▰</span>
+                  <strong>{t[vehicleKey(option)]}</strong>
+                  <small>{vehicleCapacityTons[option.toLowerCase()] ?? "—"} {t.ton}</small>
+                </button>
+              ))}
+            </div>
 
-          <div className="customer-map-home__load-grid">
-            <label>{t.load}<input value={cargoQuantity} onChange={(event) => setCargoQuantity(event.target.value)} type="number" inputMode="decimal" min="0.1" step="0.1" required /></label>
-            <label>{t.unit}<select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{t.ton}</option><option value="quintal">{t.quintal}</option></select></label>
-            <div><span>{t.equivalent}</span><strong>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} ${t.ton}` : "—"}</strong></div>
-            <div><span>{t.capacity}</span><strong>{selectedCapacity ? `${selectedCapacity} ${t.ton}` : "—"}</strong></div>
-          </div>
+            <div className="customer-map-home__load-grid">
+              <label>{t.load}<input value={cargoQuantity} onChange={(event) => setCargoQuantity(event.target.value)} type="number" inputMode="decimal" min="0.1" step="0.1" required /></label>
+              <label>{t.unit}<select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{t.ton}</option><option value="quintal">{t.quintal}</option></select></label>
+              <div><span>{t.equivalent}</span><strong>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} ${t.ton}` : "—"}</strong></div>
+              <div><span>{t.capacity}</span><strong>{selectedCapacity ? `${selectedCapacity} ${t.ton}` : "—"}</strong></div>
+            </div>
 
-          {error && <p className="customer-map-home__error">{error}</p>}
-          {validation && <p className="customer-map-home__error">{validation}</p>}
-          {quoteLoading && <p className="customer-map-home__quote-state">{t.quoteLoading}</p>}
-          {quoteError && <p className="customer-map-home__error">{t.quoteUnavailable} {quoteError}</p>}
-          <p className="customer-map-home__privacy">{t.privacy}</p>
+            {error && <p className="customer-map-home__error">{error}</p>}
+            {validation && <p className="customer-map-home__error">{validation}</p>}
+            {quoteLoading && <p className="customer-map-home__quote-state">{t.quoteLoading}</p>}
+            {quoteError && <p className="customer-map-home__error">{t.quoteUnavailable} {quoteError}</p>}
+            <p className="customer-map-home__privacy">{t.privacy}</p>
 
-          <button type="submit" disabled={busy || quoteLoading || !quoteBreakdown || !routePoints || Boolean(validation)} className="customer-map-home__confirm">
-            {busy ? t.creating : quoteLoading ? t.quoteLoading : t.create}
-          </button>
+            <button type="submit" disabled={busy || quoteLoading || !quoteBreakdown || !routePoints || Boolean(validation)} className="customer-map-home__confirm">
+              {busy ? t.creating : quoteLoading ? t.quoteLoading : t.create}
+            </button>
+          </div>}
         </form>
       </section>
 
@@ -392,10 +352,6 @@ export function CustomerMapHome() {
       )}
     </main>
   );
-}
-
-function Summary({ label, value }: { label: string; value: string }) {
-  return <div><span>{label}</span><strong>{value}</strong></div>;
 }
 
 function vehicleKey(vehicle: (typeof vehicleOptions)[number]):

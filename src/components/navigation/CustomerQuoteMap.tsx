@@ -283,6 +283,7 @@ export function CustomerQuoteMap({
   useEffect(() => { languageRef.current = language; }, [language]);
 
   const choosePickup = useCallback((place: SelectedPlace) => {
+    setLocationError("");
     pickupRef.current = place;
     setPickup(place);
     setPickupQuery(place.label);
@@ -480,6 +481,19 @@ export function CustomerQuoteMap({
 
   const routeHours = roadRoute ? Math.floor(roadRoute.durationMinutes / 60) : 0;
   const routeMinutes = roadRoute ? roadRoute.durationMinutes % 60 : 0;
+  const statusMessage = locationError
+    ? locationError
+    : !pickup
+      ? t.choosePickup
+      : !dropoff
+        ? t.chooseDropoff
+        : routing
+          ? t.calculating
+          : routingError
+            ? `${routingError} ${t.retry}`
+            : roadRoute
+              ? `${t.distance}: ${roadRoute.distanceKm.toLocaleString()} km · ${t.drivingTime}: ${routeHours > 0 ? `${routeHours}h ` : ""}${routeMinutes}m`
+              : t.selected;
 
   return (
     <div className="customer-quote-map">
@@ -517,8 +531,9 @@ export function CustomerQuoteMap({
       </div>
 
       <div className="customer-quote-map__status mb-2 mt-4 flex items-center justify-between gap-3" aria-live="polite">
-        <p className="text-xs text-steel">
-          {!pickup ? t.choosePickup : !dropoff ? t.chooseDropoff : routing ? t.calculating : routingError ? t.unavailable : t.selected}
+        <p className={`customer-quote-map__status-copy text-xs ${locationError || routingError ? "is-error" : roadRoute ? "is-ready" : "text-steel"}`}>
+          {roadRoute && !locationError && !routingError && <span>{t.truckRoute}</span>}
+          <strong>{statusMessage}</strong>
         </p>
         <div className="customer-quote-map__actions">
           <button type="button" onClick={useCurrentLocation} disabled={locating}>{locating ? t.locating : `⌖ ${t.useLocation}`}</button>
@@ -531,14 +546,6 @@ export function CustomerQuoteMap({
         ? <div ref={container} className="h-64 w-full border border-line bg-[#e9e5da]" />
         : <div className="grid h-64 place-items-center border border-route/30 bg-route/5 p-6 text-center text-sm text-route">{t.mapMissing}</div>}
 
-      {locationError && <p className="customer-quote-map__error mt-2 text-[11px] font-semibold text-route">{locationError}</p>}
-      {routing && <p className="customer-quote-map__routing mt-2 text-[11px] font-semibold text-amber-dim">{t.calculating}</p>}
-      {routingError && <p className="customer-quote-map__error mt-2 text-[11px] font-semibold text-route">{routingError} {t.retry}</p>}
-      {roadRoute && (
-        <p className="customer-quote-map__result mt-2 text-[11px] font-semibold text-emerald-700">
-          <span>{t.truckRoute}</span> {t.distance}: {roadRoute.distanceKm.toLocaleString()} km · {t.drivingTime}: {routeHours > 0 ? `${routeHours}h ` : ""}{routeMinutes}m
-        </p>
-      )}
       <p className="customer-quote-map__hint mt-2 text-[11px] text-steel">{t.hint}</p>
     </div>
   );
