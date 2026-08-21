@@ -25,6 +25,7 @@ interface GeocodingFeature {
   place_name?: string;
   text?: string;
   center?: [number, number];
+  place_type?: string[];
 }
 
 const routeCopy: Record<HalloLanguage, {
@@ -78,7 +79,7 @@ const routeCopy: Record<HalloLanguage, {
     distance: "Truck-road distance",
     drivingTime: "estimated driving time",
     routeFailed: "No safe truck route could be calculated for those places.",
-    retry: "Choose another nearby place or retry.",
+    retry: "Choose a city, port or nearby road address and retry.",
     retryAction: "Retry route",
     hint: "P = pickup · D = drop-off · drag either marker to refine the route. Distance follows a live heavy-truck road route.",
     truckRoute: "HGV route",
@@ -106,7 +107,7 @@ const routeCopy: Record<HalloLanguage, {
     distance: "Fageenya daandii truck",
     drivingTime: "yeroo geejjibaa tilmaamaa",
     routeFailed: "Bakkoota kana gidduutti daandii truck nageenya qabu shallaguun hin danda'amne.",
-    retry: "Bakka biraa dhihoo fili ykn irra deebi'i.",
+    retry: "Magaalaa, buufata doonii ykn teessoo daandii dhihoo fili; irra deebi'i.",
     retryAction: "Route irra deebi'i",
     hint: "P = bakka fe'umsaa · D = bakka geessuu · route sirreessuuf mallattoo harkisi. Fageenyi daandii truck guddaa hordofa.",
     truckRoute: "Daandii HGV",
@@ -134,7 +135,7 @@ const routeCopy: Record<HalloLanguage, {
     distance: "የከባድ መኪና የመንገድ ርቀት",
     drivingTime: "ግምታዊ የመንዳት ጊዜ",
     routeFailed: "በእነዚህ ቦታዎች መካከል ለከባድ መኪና ተስማሚ መንገድ ማስላት አልተቻለም።",
-    retry: "ሌላ ቅርብ ቦታ ይምረጡ ወይም እንደገና ይሞክሩ።",
+    retry: "ከተማ፣ ወደብ ወይም ቅርብ የመንገድ አድራሻ መርጠው ደግመው ይሞክሩ።",
     retryAction: "መንገዱን ደግመው ይሞክሩ",
     hint: "P = መጫኛ · D = ማድረሻ · መንገዱን ለማስተካከል ምልክቱን ይጎትቱ። ርቀቱ የከባድ መኪና መንገድን ይከተላል።",
     truckRoute: "የHGV መንገድ",
@@ -143,6 +144,7 @@ const routeCopy: Record<HalloLanguage, {
 
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
 const mapStyle = `https://api.maptiler.com/maps/basic-v2/style.json?key=${mapTilerKey ?? ""}`;
+const nonRoutablePlaceTypes = new Set(["continental_marine", "country", "major_landform"]);
 
 async function geocode(query: string, language: HalloLanguage, signal?: AbortSignal) {
   if (!mapTilerKey || query.trim().length < 2) return [] as GeocodingFeature[];
@@ -151,10 +153,16 @@ async function geocode(query: string, language: HalloLanguage, signal?: AbortSig
   url.searchParams.set("autocomplete", "true");
   url.searchParams.set("limit", "6");
   url.searchParams.set("language", language);
+  url.searchParams.set("types", [...nonRoutablePlaceTypes].join(","));
+  url.searchParams.set("excludeTypes", "true");
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error("Place search is temporarily unavailable.");
   const result = await response.json() as { features?: GeocodingFeature[] };
-  return (result.features ?? []).filter((feature) => Array.isArray(feature.center) && feature.center.length === 2);
+  return (result.features ?? []).filter((feature) => (
+    Array.isArray(feature.center)
+    && feature.center.length === 2
+    && !feature.place_type?.some((type) => nonRoutablePlaceTypes.has(type))
+  ));
 }
 
 async function reverseGeocode(coordinates: [number, number], language: HalloLanguage) {
