@@ -269,6 +269,11 @@
   color: #176b50;
 }
 
+.customer-status--cancelled {
+  background: #fbe9e4;
+  color: #a4472d;
+}
+
 .customer-order-card__stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -312,6 +317,12 @@
   color: #1d222a;
 }
 
+.customer-order-card__actions .is-cancel {
+  border: 1px solid rgb(164 71 45 / 0.28);
+  background: #fff8f5;
+  color: #a4472d;
+}
+
 .customer-order-card__details {
   margin-top: 1rem;
   border-top: 1px solid rgb(29 34 42 / 0.08);
@@ -327,6 +338,34 @@
   color: #176b50;
   font-size: 0.7rem;
   font-weight: 800;
+}
+
+.customer-cancellation-record {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  border: 1px solid rgb(164 71 45 / 0.2);
+  border-radius: 1rem;
+  background: #fff8f5;
+  padding: 1rem;
+}
+
+.customer-cancellation-record p {
+  color: #a4472d;
+  font-family: monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.customer-cancellation-record strong {
+  font-size: 0.82rem;
+  line-height: 1.3rem;
+}
+
+.customer-cancellation-record small {
+  color: #68707c;
+  font-size: 0.68rem;
 }
 
 .customer-payment-history,
@@ -577,6 +616,172 @@
   display: grid;
   background: rgb(29 34 42 / 0.72);
   backdrop-filter: blur(6px);
+}
+
+.customer-cancel-modal {
+  align-items: end;
+}
+
+.customer-cancel-sheet {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 92dvh;
+  margin: 0 auto;
+  overflow-y: auto;
+  border-radius: 1.5rem 1.5rem 0 0;
+  background: white;
+  box-shadow: 0 -18px 50px rgb(29 34 42 / 0.2);
+}
+
+.customer-cancel-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgb(29 34 42 / 0.08);
+  padding: 1.25rem;
+}
+
+.customer-cancel-sheet__header h2 {
+  margin-top: 0.35rem;
+  font-family: var(--font-display, inherit);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.customer-cancel-sheet__header > button {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(29 34 42 / 0.12);
+  border-radius: 0.85rem;
+  background: white;
+  font-size: 1.45rem;
+}
+
+.customer-cancel-sheet__body {
+  padding: 1.25rem;
+}
+
+.customer-cancel-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 1rem;
+  background: #f5f3ed;
+  padding: 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.customer-cancel-route span {
+  overflow-wrap: anywhere;
+}
+
+.customer-cancel-route b {
+  color: #d68e25;
+}
+
+.customer-cancel-help,
+.customer-cancel-warning,
+.customer-cancel-error {
+  margin-top: 1rem;
+  border-radius: 0.9rem;
+  padding: 0.85rem;
+  font-size: 0.74rem;
+  line-height: 1.2rem;
+}
+
+.customer-cancel-help {
+  background: #edf7f3;
+  color: #245f50;
+}
+
+.customer-cancel-warning {
+  border: 1px solid rgb(214 142 37 / 0.32);
+  background: #fff8e8;
+  color: #815812;
+  font-weight: 700;
+}
+
+.customer-cancel-error {
+  border: 1px solid rgb(164 71 45 / 0.3);
+  background: #fff3ef;
+  color: #a4472d;
+}
+
+.customer-cancel-reason {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.customer-cancel-reason textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgb(29 34 42 / 0.16);
+  border-radius: 1rem;
+  padding: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.35rem;
+  outline: none;
+}
+
+.customer-cancel-reason textarea:focus {
+  border-color: #a4472d;
+  box-shadow: 0 0 0 3px rgb(164 71 45 / 0.1);
+}
+
+.customer-cancel-reason small {
+  color: #68707c;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.customer-cancel-reason small.has-error {
+  color: #a4472d;
+}
+
+.customer-cancel-sheet__footer {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  border-top: 1px solid rgb(29 34 42 / 0.08);
+  background: rgb(255 255 255 / 0.97);
+  padding: 1rem 1.25rem calc(1rem + env(safe-area-inset-bottom));
+  backdrop-filter: blur(12px);
+}
+
+.customer-cancel-sheet__footer button {
+  min-height: 3rem;
+  border-radius: 0.9rem;
+  padding: 0.7rem;
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+.customer-cancel-keep {
+  border: 1px solid rgb(29 34 42 / 0.16);
+  color: #1d222a;
+}
+
+.customer-cancel-confirm {
+  background: #a4472d;
+  color: white;
+}
+
+.customer-cancel-sheet__footer button:disabled,
+.customer-cancel-sheet__header > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .customer-order-sheet,
@@ -930,6 +1135,16 @@
   .customer-tracking-sheet {
     height: auto;
     max-height: 92vh;
+    border-radius: 1.5rem;
+  }
+
+  .customer-cancel-modal {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .customer-cancel-sheet {
+    max-height: 90vh;
     border-radius: 1.5rem;
   }
 

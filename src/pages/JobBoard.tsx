@@ -6,12 +6,15 @@ import {
   type AvailableJob,
   getMyActiveOrders,
   getAvailableTrucksForOrder,
+  getMyLatestCancelledOrder,
+  type MyOrder,
   type DriverTruckOption,
 } from "../services/driver.service";
 import { supabase } from "../services/supabase.client";
 import { formatEtb, formatKm } from "../utils/currency";
 import { useDriverText } from "../i18n/driverTranslations";
 import { DriverAvailabilityCard } from "../components/driver/DriverAvailabilityCard";
+import { DriverOrderCancellationNotice } from "../components/driver/DriverOrderCancellationNotice";
 
 export function JobBoard() {
   const navigate = useNavigate();
@@ -25,17 +28,23 @@ export function JobBoard() {
   const [truckOptions, setTruckOptions] = useState<Record<string, DriverTruckOption[]>>({});
   const [selectedTruckIds, setSelectedTruckIds] = useState<Record<string, string>>({});
   const [loadingTrucksFor, setLoadingTrucksFor] = useState<string | null>(null);
+  const [cancelledOrder, setCancelledOrder] = useState<MyOrder | null>(null);
 
   async function load(silent = false) {
     if (!silent) setLoading(true);
     try {
-      const [availableJobs, activeOrders] = await Promise.all([
+      const [availableJobs, activeOrders, latestCancellation] = await Promise.all([
         getAvailableJobs(),
         getMyActiveOrders(),
+        getMyLatestCancelledOrder(),
       ]);
       const activeTrip = activeOrders.length > 0;
       setHasActiveTrip(activeTrip);
       setJobs(activeTrip ? [] : availableJobs);
+      const dismissed = latestCancellation
+        ? window.localStorage.getItem(`hallotruck-dismissed-cancellation-${latestCancellation.id}`) === "1"
+        : false;
+      setCancelledOrder(dismissed ? null : latestCancellation);
       if (activeTrip) {
         setTruckOptions({});
         setSelectedTruckIds({});
@@ -114,6 +123,12 @@ export function JobBoard() {
 
   const potential = jobs.reduce((sum, job) => sum + Number(job.price_etb || 0), 0);
 
+  function dismissCancellation() {
+    if (!cancelledOrder) return;
+    window.localStorage.setItem(`hallotruck-dismissed-cancellation-${cancelledOrder.id}`, "1");
+    setCancelledOrder(null);
+  }
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 pb-28 sm:px-6 sm:py-10 md:pb-10">
       <section className="relative overflow-hidden bg-asphalt p-6 text-white sm:p-9">
@@ -124,6 +139,8 @@ export function JobBoard() {
           <p className="mt-3 max-w-lg text-sm text-white/50">{dt("jobs.hero")}</p>
         </div>
       </section>
+
+      {cancelledOrder && <div className="my-5"><DriverOrderCancellationNotice order={cancelledOrder} onDismiss={dismissCancellation} /></div>}
 
       <DriverAvailabilityCard />
 

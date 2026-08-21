@@ -28,6 +28,9 @@ export interface AdminOrder {
   truck_id: string | null;
   accepted_at: string | null;
   delivered_at: string | null;
+  cancellation_reason: string | null;
+  cancellation_source: string | null;
+  cancelled_at: string | null;
   created_at: string;
 }
 
@@ -82,7 +85,7 @@ function fail(message: string): never { throw new Error(message); }
 
 export async function getDashboardData() {
   const [ordersResult, trucksResult, customersResult, paymentsResult, driversResult, proofsResult] = await Promise.all([
-    supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,created_at").order("created_at", { ascending: false }).limit(100),
+    supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at").order("created_at", { ascending: false }).limit(100),
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }),
     supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,created_at").order("created_at", { ascending: false }).limit(100),

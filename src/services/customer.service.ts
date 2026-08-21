@@ -13,6 +13,9 @@ export interface CustomerOrder {
   payment_status: string;
   payment_provider: string | null;
   payment_ref: string | null;
+  cancellation_reason: string | null;
+  cancellation_source: string | null;
+  cancelled_at: string | null;
   created_at: string;
 }
 
@@ -98,7 +101,7 @@ export async function getCustomerPortalData(): Promise<CustomerPortalData> {
   const [ordersResult, profile] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, tracking_id, pickup_address, dropoff_address, vehicle_type, distance_km, price_etb, status, payment_status, payment_provider, payment_ref, created_at")
+      .select("id, tracking_id, pickup_address, dropoff_address, vehicle_type, distance_km, price_etb, status, payment_status, payment_provider, payment_ref, cancellation_reason, cancellation_source, cancelled_at, created_at")
       .order("created_at", { ascending: false }),
     getCustomerProfileForSession(),
   ]);
@@ -132,6 +135,21 @@ export async function getCustomerPortalData(): Promise<CustomerPortalData> {
     assignments: assignmentResult.error ? [] : ((assignmentResult.data ?? []) as CustomerDriverAssignment[]),
     profile,
   };
+}
+
+export async function cancelCustomerOrder(orderId: string, reason: string) {
+  const cleanReason = reason.trim();
+  if (cleanReason.length < 5) throw new Error("Write a cancellation reason of at least 5 characters.");
+  if (cleanReason.length > 500) throw new Error("Cancellation reason must be 500 characters or fewer.");
+
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Customer session expired.");
+
+  const { error } = await supabase.rpc("customer_cancel_order", {
+    p_order_id: orderId,
+    p_reason: cleanReason,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function updateCustomerProfile(input: {

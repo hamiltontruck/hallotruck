@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { CustomerCancelOrderModal } from "../components/customer/CustomerCancelOrderModal";
 import { CustomerLiveTripMap } from "../components/tracking/CustomerLiveTripMap";
 import { useLanguage, type HalloLanguage } from "../i18n/LanguageProvider";
 import {
@@ -20,6 +21,11 @@ const copy: Record<HalloLanguage, {
   notFound: string;
   loadError: string;
   verified: string;
+  cancelled: string;
+  cancelledHelp: string;
+  reason: string;
+  cancelledAt: string;
+  cancelOrder: string;
 }> = {
   en: {
     eyebrow: "LIVE CARGO TRACKING",
@@ -33,6 +39,11 @@ const copy: Record<HalloLanguage, {
     notFound: "This order could not be found in your account.",
     loadError: "Live tracking could not be loaded.",
     verified: "Verified driver & truck",
+    cancelled: "Cancelled",
+    cancelledHelp: "Live tracking has stopped. The assigned driver and Admin can see your cancellation reason.",
+    reason: "Cancellation reason",
+    cancelledAt: "Cancelled",
+    cancelOrder: "Cancel this order",
   },
   om: {
     eyebrow: "HORDOFFII FEʼUMSAA LIVE",
@@ -46,6 +57,11 @@ const copy: Record<HalloLanguage, {
     notFound: "Order kun account kee keessatti hin argamne.",
     loadError: "Live tracking feʼuun hin dandaʼamne.",
     verified: "Driver fi truck verified",
+    cancelled: "Dhiifame",
+    cancelledHelp: "Hordoffiin kallattii dhaabbateera. Konkolaachisaa ramadamee fi Admin sababaa dhiisuu kee ni argu.",
+    reason: "Sababa ajaja dhiisuu",
+    cancelledAt: "Yeroo dhiifame",
+    cancelOrder: "Ajaja kana dhiisi",
   },
   am: {
     eyebrow: "ቀጥታ የጭነት ክትትል",
@@ -59,6 +75,11 @@ const copy: Record<HalloLanguage, {
     notFound: "ይህ ትዕዛዝ በመለያዎ ውስጥ አልተገኘም።",
     loadError: "ቀጥታ ክትትሉን መጫን አልተቻለም።",
     verified: "የተረጋገጠ አሽከርካሪና መኪና",
+    cancelled: "ተሰርዟል",
+    cancelledHelp: "ቀጥታ ክትትሉ ቆሟል። የተመደበው አሽከርካሪና Admin የስረዛ ምክንያትዎን ማየት ይችላሉ።",
+    reason: "የስረዛ ምክንያት",
+    cancelledAt: "የተሰረዘበት ጊዜ",
+    cancelOrder: "ይህን ትዕዛዝ ሰርዝ",
   },
 };
 
@@ -70,6 +91,7 @@ export function CustomerTrackingPage() {
   const [assignment, setAssignment] = useState<CustomerDriverAssignment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,12 +119,28 @@ export function CustomerTrackingPage() {
     };
   }, [orderId, t.loadError, t.notFound]);
 
+  useEffect(() => {
+    if (!cancelOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [cancelOpen]);
+
+  async function refreshAfterCancellation() {
+    setCancelOpen(false);
+    const data = await getCustomerPortalData();
+    const currentOrder = data.orders.find((item) => item.id === orderId) ?? null;
+    setOrder(currentOrder);
+    setAssignment(data.assignments.find((item) => item.order_id === orderId) ?? null);
+  }
+
   const initials = useMemo(() => {
     const parts = (assignment?.driver_name ?? "Driver").trim().split(/\s+/).slice(0, 2);
     return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "DR";
   }, [assignment?.driver_name]);
 
   const trackable = order && ["accepted", "in_transit", "delivered"].includes(order.status);
+  const cancellable = order && ["quoted", "placed", "accepted", "in_transit"].includes(order.status);
 
   return (
     <main className="customer-live-page">
@@ -112,7 +150,7 @@ export function CustomerTrackingPage() {
           <p>{t.eyebrow}</p>
           <h1>{order?.tracking_id ?? (loading ? "Loading…" : "HALLOTRUCK")}</h1>
         </div>
-        <span className="customer-live-page__badge">● {t.live}</span>
+        <span className={`customer-live-page__badge${order?.status === "cancelled" ? " is-cancelled" : ""}`}>{order?.status === "cancelled" ? t.cancelled : `● ${t.live}`}</span>
       </header>
 
       <section className="customer-live-page__content">
@@ -120,7 +158,7 @@ export function CustomerTrackingPage() {
 
         {order && (
           <>
-            {assignment && (
+            {assignment && order.status !== "cancelled" && (
               <article className="customer-live-page__driver">
                 <div className="customer-live-page__avatar">{initials}</div>
                 <div>
@@ -139,7 +177,16 @@ export function CustomerTrackingPage() {
               <div><strong>{order.dropoff_address}</strong><small>{t.dropoff}</small></div>
             </article>
 
-            {assignment && trackable ? (
+            {cancellable && <button type="button" className="customer-live-page__cancel-order" onClick={() => setCancelOpen(true)}>{t.cancelOrder}</button>}
+
+            {order.status === "cancelled" ? (
+              <article className="customer-live-page__cancelled">
+                <h2>{t.cancelled}</h2>
+                <p>{t.cancelledHelp}</p>
+                <div><small>{t.reason}</small><strong>{order.cancellation_reason ?? "—"}</strong></div>
+                {order.cancelled_at && <time>{t.cancelledAt}: {new Date(order.cancelled_at).toLocaleString()}</time>}
+              </article>
+            ) : assignment && trackable ? (
               <article className="customer-live-page__map-shell">
                 <CustomerLiveTripMap orderId={order.id} totalDistanceKm={order.distance_km} standalone />
               </article>
@@ -152,6 +199,8 @@ export function CustomerTrackingPage() {
           </>
         )}
       </section>
+
+      {cancelOpen && order && <CustomerCancelOrderModal order={order} onClose={() => setCancelOpen(false)} onCancelled={refreshAfterCancellation} />}
     </main>
   );
 }

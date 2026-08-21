@@ -525,6 +525,10 @@
   text-transform: uppercase;
 }
 
+.customer-live-page__badge.is-cancelled {
+  background: #a4472d;
+}
+
 .customer-live-page__content {
   width: min(100%, 60rem);
   margin: 0 auto;
@@ -534,11 +538,60 @@
 .customer-live-page__driver,
 .customer-live-page__route,
 .customer-live-page__map-shell,
-.customer-live-page__waiting {
+.customer-live-page__waiting,
+.customer-live-page__cancelled {
   border: 1px solid rgb(29 34 42 / 0.08);
   border-radius: 1.2rem;
   background: white;
   box-shadow: 0 14px 35px rgb(29 34 42 / 0.08);
+}
+
+.customer-live-page__cancelled {
+  margin-top: 0.8rem;
+  border-color: rgb(164 71 45 / 0.22);
+  padding: 1.25rem;
+}
+
+.customer-live-page__cancelled h2 {
+  color: #a4472d;
+  font-size: 1.15rem;
+}
+
+.customer-live-page__cancelled > p {
+  margin-top: 0.5rem;
+  color: #747a84;
+  font-size: 0.72rem;
+  line-height: 1.2rem;
+}
+
+.customer-live-page__cancelled div {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  border-left: 4px solid #a4472d;
+  background: #fff8f5;
+  padding: 0.9rem;
+}
+
+.customer-live-page__cancelled small {
+  color: #a4472d;
+  font-family: monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.customer-live-page__cancelled strong {
+  font-size: 0.78rem;
+  line-height: 1.25rem;
+}
+
+.customer-live-page__cancelled time {
+  display: block;
+  margin-top: 0.8rem;
+  color: #747a84;
+  font-size: 0.65rem;
 }
 
 .customer-live-page__driver {
@@ -606,6 +659,23 @@
 .customer-live-page__route strong,
 .customer-live-page__route small {
   display: block;
+}
+
+.customer-live-page__cancel-order {
+  width: 100%;
+  min-height: 3rem;
+  margin-top: 0.8rem;
+  border: 1px solid rgb(164 71 45 / 0.3);
+  border-radius: 0.9rem;
+  background: #fff8f5;
+  color: #a4472d;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.customer-live-page__cancel-order:focus-visible {
+  outline: 3px solid rgb(164 71 45 / 0.2);
+  outline-offset: 2px;
 }
 
 .customer-live-page__route strong {

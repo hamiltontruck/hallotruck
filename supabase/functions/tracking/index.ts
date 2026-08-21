@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
       if (order.driver_id !== user.id) {
         return json({ error: "Not assigned to this order" }, 403);
       }
+      if (!["accepted", "in_transit"].includes(order.status)) {
+        return json({ error: order.status === "cancelled" ? "Customer cancelled this order" : "This order is not active" }, 409);
+      }
 
       const { error: pingErr } = await service.from("tracking_pings").insert({
         order_id: orderId,
@@ -53,7 +56,7 @@ Deno.serve(async (req) => {
       }
 
       if (order.status === "accepted") {
-        await service.from("orders").update({ status: "in_transit" }).eq("id", orderId);
+        await service.from("orders").update({ status: "in_transit" }).eq("id", orderId).eq("status", "accepted");
       }
 
       return json({ ok: true });
