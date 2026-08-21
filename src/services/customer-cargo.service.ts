@@ -1,31 +1,7 @@
 import { supabase } from "./supabase.client";
-import {
-  calculateTransportQuote,
-  getQuotePricingRules,
-  type QuotePricingRule,
-} from "./quote-pricing.service";
+import { calculateTransportQuote } from "./quote-pricing.service";
 
 export type CargoUnit = "ton" | "quintal";
-
-type CachedPricingRule = Pick<
-  QuotePricingRule,
-  "rate_per_ton_km" | "rate_per_km" | "rate_per_ton" | "market_adjustment_percent"
->;
-
-const defaultPricing: Record<string, CachedPricingRule> = {
-  pickup: { rate_per_ton_km: null, rate_per_km: 48, rate_per_ton: 650, market_adjustment_percent: 0 },
-  van: { rate_per_ton_km: null, rate_per_km: 58, rate_per_ton: 650, market_adjustment_percent: 0 },
-  "isuzu 5 ton": { rate_per_ton_km: null, rate_per_km: 58, rate_per_ton: 650, market_adjustment_percent: 0 },
-  "dry cargo": { rate_per_ton_km: null, rate_per_km: 72, rate_per_ton: 650, market_adjustment_percent: 0 },
-  refrigerated: { rate_per_ton_km: null, rate_per_km: 92, rate_per_ton: 650, market_adjustment_percent: 0 },
-  "truck 22 ton": { rate_per_ton_km: 22.222222, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
-  "truck 25 ton": { rate_per_ton_km: 22.222222, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
-  "truck 30 ton": { rate_per_ton_km: 22.222222, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
-  trailer: { rate_per_ton_km: null, rate_per_km: 110, rate_per_ton: 650, market_adjustment_percent: 0 },
-};
-
-let pricingCache: Record<string, CachedPricingRule> = { ...defaultPricing };
-let pricingLoad: Promise<void> | null = null;
 
 export const vehicleCapacityTons: Record<string, number> = {
   pickup: 3,
@@ -39,27 +15,6 @@ export const vehicleCapacityTons: Record<string, number> = {
   trailer: 45,
 };
 
-export async function refreshQuotePricing() {
-  const rules = await getQuotePricingRules();
-  if (!rules.length) return;
-  pricingCache = Object.fromEntries(rules.map((rule) => [rule.vehicle_key, {
-    rate_per_ton_km: rule.rate_per_ton_km,
-    rate_per_km: rule.rate_per_km,
-    rate_per_ton: rule.rate_per_ton,
-    market_adjustment_percent: rule.market_adjustment_percent,
-  }]));
-}
-
-function warmQuotePricing() {
-  if (!pricingLoad) {
-    pricingLoad = refreshQuotePricing()
-      .catch(() => undefined)
-      .finally(() => { pricingLoad = null; });
-  }
-}
-
-warmQuotePricing();
-
 export function cargoToTons(quantity: number, unit: CargoUnit) {
   if (!Number.isFinite(quantity) || quantity <= 0) return 0;
   return unit === "quintal" ? quantity / 10 : quantity;
@@ -68,17 +23,6 @@ export function cargoToTons(quantity: number, unit: CargoUnit) {
 export function formatCargoLoad(quantity: number, unit: CargoUnit) {
   const value = Number.isInteger(quantity) ? quantity.toLocaleString() : quantity.toLocaleString(undefined, { maximumFractionDigits: 2 });
   return `${value} ${unit === "quintal" ? "quintal" : "ton"}`;
-}
-
-export function calculateCargoQuote(distanceKm: number, vehicleType: string, cargoQuantity: number, cargoUnit: CargoUnit) {
-  warmQuotePricing();
-  const rule = pricingCache[vehicleType.toLowerCase()] ?? pricingCache["dry cargo"] ?? defaultPricing["dry cargo"];
-  const cargoTons = cargoToTons(cargoQuantity, cargoUnit);
-  const transportCharge = rule.rate_per_ton_km && rule.rate_per_ton_km > 0
-    ? distanceKm * cargoTons * rule.rate_per_ton_km
-    : (distanceKm * rule.rate_per_km) + (cargoTons * rule.rate_per_ton);
-  const adjusted = transportCharge * (1 + rule.market_adjustment_percent / 100);
-  return Math.max(0, Math.round(adjusted / 50) * 50);
 }
 
 export function validateCargoLoad(vehicleType: string, cargoQuantity: number, cargoUnit: CargoUnit) {

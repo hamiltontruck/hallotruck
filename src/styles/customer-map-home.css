@@ -271,6 +271,74 @@
   font-size: 1rem;
 }
 
+.customer-map-home__quote small {
+  display: block;
+  max-width: 12rem;
+  margin-top: 0.2rem;
+  color: #7a838f;
+  font-size: 0.55rem;
+  line-height: 0.8rem;
+}
+
+.customer-map-home__quote-state {
+  margin-top: 0.7rem;
+  border-radius: 0.8rem;
+  background: rgb(214 142 37 / 0.1);
+  padding: 0.65rem 0.75rem;
+  color: #8a5a16;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.customer-quote-map__status {
+  min-height: 2.8rem;
+}
+
+.customer-quote-map__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.customer-quote-map__actions button {
+  min-height: 2rem;
+  border: 1px solid rgb(29 34 42 / 0.12);
+  border-radius: 0.6rem;
+  background: white;
+  padding: 0.35rem 0.55rem;
+  color: #315f94;
+  font-size: 0.62rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.customer-quote-map__actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.customer-quote-map__marker {
+  cursor: grab;
+}
+
+.customer-quote-map__marker:active {
+  cursor: grabbing;
+}
+
+.customer-quote-map__result span {
+  display: inline-flex;
+  margin-right: 0.35rem;
+  border-radius: 999px;
+  background: #087f5b;
+  padding: 0.2rem 0.45rem;
+  color: white;
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .customer-map-home__vehicles {
   display: grid;
   grid-auto-columns: minmax(7.6rem, 1fr);
@@ -459,6 +527,19 @@
 
   .customer-map-home__map > div > .grid:first-child input {
     min-height: 2.75rem;
+  }
+
+  .customer-quote-map__status {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .customer-quote-map__actions {
+    justify-content: flex-start;
+  }
+
+  .customer-quote-map__actions button {
+    flex: 1 1 auto;
   }
 
   .customer-map-home__map > div > .h-64,

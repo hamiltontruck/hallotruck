@@ -2,14 +2,14 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CustomerQuoteMap, QuotePoints } from "../navigation/CustomerQuoteMap";
 import { createAdminSmartOrder } from "../../services/admin-order.service";
 import {
-  calculateCargoQuote,
   cargoToTons,
   vehicleCapacityTons,
   type CargoUnit,
 } from "../../services/customer-cargo.service";
 import { AdminOrder, Driver, Truck, assignOrder, getDashboardData } from "../../services/admin.service";
+import { useTransportQuote } from "../../hooks/useTransportQuote";
 
-const vehicleOptions = ["Pickup", "Van", "Isuzu 5 Ton", "Dry Cargo", "Refrigerated", "Trailer"];
+const vehicleOptions = ["Pickup", "Van", "Isuzu 5 Ton", "Dry Cargo", "Refrigerated", "Truck 22 Ton", "Truck 25 Ton", "Truck 30 Ton", "Trailer"];
 const ethiopianMobilePattern = /^(?:09\d{8}|\+2519\d{8})$/;
 
 export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void | Promise<void> }) {
@@ -52,10 +52,17 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
       ? `${vehicleType} supports up to ${selectedCapacity} tons. Reduce the load or choose a larger vehicle.`
       : "";
 
-  const quote = useMemo(() => {
-    if (!route || !vehicleType || cargoValidation) return null;
-    return calculateCargoQuote(route.distanceKm, vehicleType, cargoAmount, cargoUnit);
-  }, [cargoAmount, cargoUnit, cargoValidation, route, vehicleType]);
+  const {
+    quote: quoteBreakdown,
+    loading: quoteLoading,
+    error: quoteError,
+  } = useTransportQuote({
+    distanceKm: route?.distanceKm ?? 0,
+    vehicleType,
+    cargoTons,
+    enabled: Boolean(route && vehicleType && !cargoValidation),
+  });
+  const quote = quoteBreakdown?.total_quote_etb ?? null;
 
   const busyDriverIds = useMemo(
     () => new Set(orders.filter((order) => ["accepted", "in_transit"].includes(order.status)).map((order) => order.driver_id).filter(Boolean)),
@@ -98,6 +105,10 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
     }
     if (cargoValidation) {
       setError(cargoValidation);
+      return;
+    }
+    if (!quoteBreakdown) {
+      setError(quoteError || "The latest server price is unavailable. Try again.");
       return;
     }
 
@@ -181,7 +192,7 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
             <h3 className="font-semibold">Pickup & delivery route</h3>
             <p className="mt-1 text-[11px] text-steel">Use place search or tap the map. The saved order keeps both coordinates and the road distance.</p>
           </div>
-          <CustomerQuoteMap onChange={setRoute} />
+          <CustomerQuoteMap onChange={setRoute} vehicleType={vehicleType || "Dry Cargo"} />
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -263,12 +274,12 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
           <Summary label="Road distance" value={route ? `${route.distanceKm.toLocaleString()} km` : "Select route"} />
           <Summary label="Load" value={cargoTons > 0 ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} t` : "Enter load"} />
           <Summary label="Vehicle" value={vehicleType || "Select vehicle"} />
-          <Summary label="Freight quote" value={quote != null ? `ETB ${quote.toLocaleString()}` : "Waiting"} emphasis />
+          <Summary label="Freight quote" value={quoteLoading ? "Loading…" : quote != null ? `ETB ${quote.toLocaleString()}` : "Waiting"} emphasis />
         </div>
 
-        <p className="mt-3 text-[11px] text-steel">Final freight uses the active server pricing rule. HALLO's 2% share is included inside that amount, not added on top.</p>
-        <button disabled={saving || Boolean(createdTrackingId) || !route || !vehicleType || Boolean(cargoValidation)} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">
-          {createdTrackingId ? `Order ${createdTrackingId} created` : saving ? "Creating order…" : quote != null ? `Create order · ETB ${quote.toLocaleString()}` : "Create order"}
+        <p className={`mt-3 text-[11px] ${quoteError ? "text-route" : "text-steel"}`}>{quoteError ? `Latest price unavailable: ${quoteError}` : "Final freight uses the latest admin-managed Supabase pricing rule. HALLO's 2% share is included inside that amount, not added on top."}</p>
+        <button disabled={saving || quoteLoading || !quoteBreakdown || Boolean(createdTrackingId) || !route || !vehicleType || Boolean(cargoValidation)} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">
+          {createdTrackingId ? `Order ${createdTrackingId} created` : saving ? "Creating order…" : quoteLoading ? "Getting latest price…" : quote != null ? `Create order · ETB ${quote.toLocaleString()}` : "Create order"}
         </button>
       </form>
     </div>
