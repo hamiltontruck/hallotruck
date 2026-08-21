@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getMyActiveOrders,
+  getMyAssignedOrder,
+  getMyLatestCancelledOrder,
   getNavigation,
   MyOrder,
   NavigationRoute,
@@ -14,6 +16,7 @@ import { TripMap } from "../components/navigation/TripMap";
 import { DriverDeliveryProofForm } from "../components/driver/DriverDeliveryProofForm";
 import { DriverCustomerContact } from "../components/driver/DriverCustomerContact";
 import { DriverPaymentConfirmation } from "../components/driver/DriverPaymentConfirmation";
+import { DriverOrderCancellationNotice } from "../components/driver/DriverOrderCancellationNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { getDriverTripDocumentsCopy } from "../i18n/driverTripDocumentsCopy";
 
@@ -90,6 +93,7 @@ export function ActiveTrip() {
   const c = getDriverTripDocumentsCopy(language).trip;
   const action = tripActionCopy[language];
   const [order, setOrder] = useState<MyOrder | null>(null);
+  const [cancelledOrder, setCancelledOrder] = useState<MyOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [gpsSharing, setGpsSharing] = useState(false);
   const [lastPing, setLastPing] = useState<string | null>(null);
@@ -102,11 +106,49 @@ export function ActiveTrip() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   useEffect(() => {
-    getMyActiveOrders()
-      .then((orders) => setOrder(orders[0] ?? null))
+    Promise.all([getMyActiveOrders(), getMyLatestCancelledOrder()])
+      .then(([orders, latestCancellation]) => {
+        const activeOrder = orders[0] ?? null;
+        setOrder(activeOrder);
+        if (!activeOrder && latestCancellation) {
+          const dismissed = window.localStorage.getItem(`hallotruck-dismissed-cancellation-${latestCancellation.id}`) === "1";
+          setCancelledOrder(dismissed ? null : latestCancellation);
+        }
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!order) return;
+    let disposed = false;
+    const activeOrderId = order.id;
+    const activeOrderStatus = order.status;
+
+    async function refreshOrderStatus() {
+      try {
+        const current = await getMyAssignedOrder(activeOrderId);
+        if (disposed || !current) return;
+        if (current.status === "cancelled") {
+          stopSharing();
+          setCancelledOrder(current);
+          setOrder(null);
+          setError(null);
+          return;
+        }
+        if (current.status !== activeOrderStatus) setOrder(current);
+      } catch (err) {
+        if (!disposed) setError(err instanceof Error ? err.message : c.noTrip);
+      }
+    }
+
+    void refreshOrderStatus();
+    const interval = window.setInterval(() => void refreshOrderStatus(), 5000);
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, [order?.id, order?.status, c.noTrip]);
 
   useEffect(() => {
     if (!order) return;
@@ -180,6 +222,13 @@ export function ActiveTrip() {
   useEffect(() => () => stopSharing(), []);
 
   if (loading) return <div className="max-w-2xl mx-auto px-6 py-16 font-body text-steel">{c.loading}</div>;
+
+  if (cancelledOrder) {
+    return <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-16"><DriverOrderCancellationNotice order={cancelledOrder} onBrowseJobs={() => {
+      window.localStorage.setItem(`hallotruck-dismissed-cancellation-${cancelledOrder.id}`, "1");
+      navigate("/driver/jobs");
+    }} /></div>;
+  }
 
   if (!order) {
     return (

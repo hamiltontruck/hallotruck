@@ -89,7 +89,21 @@ export const customerCopy = {
     uploading: "Uploading & submitting…",
     submitForVerification: "Submit payment for verification",
     uploadRequired: "Upload the bank / payment receipt as JPG, PNG, WebP or PDF.",
-    paymentSubmitError: "Payment could not be submitted."
+    paymentSubmitError: "Payment could not be submitted.",
+    cancelOrder: "Cancel order",
+    cancelOrderTitle: "Cancel this transport order?",
+    cancelOrderHelp: "Write the reason clearly. The assigned driver and Admin will see it, and any payment or trip-cost review stays with Finance.",
+    cancelReason: "Cancellation reason",
+    cancelReasonPlaceholder: "Example: My delivery date or destination changed.",
+    cancelInTransitWarning: "The driver has already started this trip. Cancelling now immediately stops the active job and requires an Admin review of payment and trip costs.",
+    keepOrder: "Keep order",
+    confirmCancelOrder: "Cancel order with reason",
+    cancellingOrder: "Cancelling…",
+    cancelOrderError: "The order could not be cancelled.",
+    cancelSuccess: "Order cancelled. The assigned driver can now see your reason.",
+    cancelledReason: "CANCELLATION REASON",
+    cancelledAt: "Cancelled",
+    reasonLength: "Enter at least 5 characters (maximum 500)."
   },
   om: {
     portalLabel: "POORTAALII SMART MAAMILAA",
@@ -179,7 +193,21 @@ export const customerCopy = {
     uploading: "Olkaa'aa fi ergaa jira…",
     submitForVerification: "Kaffaltii mirkaneessaaf ergi",
     uploadRequired: "Receipt baankii / kaffaltii JPG, PNG, WebP ykn PDF ta'een olkaa'i.",
-    paymentSubmitError: "Kaffaltiin ergamuu hin dandeenye."
+    paymentSubmitError: "Kaffaltiin ergamuu hin dandeenye.",
+    cancelOrder: "Ajaja dhiisi",
+    cancelOrderTitle: "Ajaja geejjibaa kana dhiisuu?",
+    cancelOrderHelp: "Sababa isaa ifatti barreessi. Konkolaachisaa ramadamee fi Admin ni argu; kaffaltii ykn baasii imalaa yoo jiraate Finance ni qorata.",
+    cancelReason: "Sababa ajaja dhiisuu",
+    cancelReasonPlaceholder: "Fakkeenyaaf: Guyyaan geejjibaa ykn bakki geessuu jijjiirameera.",
+    cancelInTransitWarning: "Konkolaachisaan imala kana jalqabeera. Amma dhiisuun hojii kallattii ni dhaaba; kaffaltii fi baasii imalaa Adminiin qoratamuu qaba.",
+    keepOrder: "Ajaja itti fufi",
+    confirmCancelOrder: "Sababa waliin ajaja dhiisi",
+    cancellingOrder: "Ajaja dhiisaa jira…",
+    cancelOrderError: "Ajajni dhiifamuu hin dandeenye.",
+    cancelSuccess: "Ajajni dhiifameera. Konkolaachisaan ramadame sababaa kee ni arga.",
+    cancelledReason: "SABABA AJAJA DHIISUU",
+    cancelledAt: "Kan dhiifame",
+    reasonLength: "Qubee yoo xiqqaate 5 galchi (hanga 500)."
   },
   am: {
     portalLabel: "የደንበኛ ስማርት ፖርታል",
@@ -269,7 +297,21 @@ export const customerCopy = {
     uploading: "በመጫን እና በመላክ ላይ…",
     submitForVerification: "ክፍያን ለማረጋገጫ ላክ",
     uploadRequired: "የባንክ / የክፍያ ደረሰኙን JPG, PNG, WebP ወይም PDF አድርገው ይጫኑ።",
-    paymentSubmitError: "ክፍያው ሊላክ አልቻለም።"
+    paymentSubmitError: "ክፍያው ሊላክ አልቻለም።",
+    cancelOrder: "ትዕዛዝ ሰርዝ",
+    cancelOrderTitle: "ይህን የትራንስፖርት ትዕዛዝ ይሰርዙ?",
+    cancelOrderHelp: "ምክንያቱን በግልጽ ይጻፉ። የተመደበው አሽከርካሪና Admin ያዩታል፤ የክፍያ ወይም የጉዞ ወጪ ግምገማ በFinance ይከናወናል።",
+    cancelReason: "የስረዛ ምክንያት",
+    cancelReasonPlaceholder: "ለምሳሌ፦ የመላኪያ ቀን ወይም መድረሻ ተቀይሯል።",
+    cancelInTransitWarning: "አሽከርካሪው ጉዞውን ጀምሯል። አሁን መሰረዝ ንቁ ሥራውን ወዲያውኑ ያቆማል፣ ክፍያና የጉዞ ወጪ በAdmin መገምገም አለበት።",
+    keepOrder: "ትዕዛዙን አቆይ",
+    confirmCancelOrder: "ከምክንያት ጋር ሰርዝ",
+    cancellingOrder: "በመሰረዝ ላይ…",
+    cancelOrderError: "ትዕዛዙ ሊሰረዝ አልቻለም።",
+    cancelSuccess: "ትዕዛዙ ተሰርዟል። የተመደበው አሽከርካሪ ምክንያትዎን ማየት ይችላል።",
+    cancelledReason: "የስረዛ ምክንያት",
+    cancelledAt: "የተሰረዘበት ጊዜ",
+    reasonLength: "ቢያንስ 5 ፊደላት ያስገቡ (ከፍተኛው 500)።"
   }
 } as const;
 

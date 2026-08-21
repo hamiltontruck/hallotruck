@@ -341,17 +341,57 @@ export interface MyOrder {
   pickup_address: string;
   dropoff_address: string;
   price_etb: number;
+  cancellation_reason: string | null;
+  cancelled_at: string | null;
 }
 
 export async function getMyActiveOrders(): Promise<MyOrder[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Driver session expired.");
+
   const { data, error } = await supabase
     .from("orders")
-    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb")
+    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, cancellation_reason, cancelled_at")
+    .eq("driver_id", auth.user.id)
     .in("status", ["accepted", "in_transit"])
     .order("accepted_at", { ascending: true });
 
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function getMyAssignedOrder(orderId: string): Promise<MyOrder | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Driver session expired.");
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, cancellation_reason, cancelled_at")
+    .eq("id", orderId)
+    .eq("driver_id", auth.user.id)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
+export async function getMyLatestCancelledOrder(): Promise<MyOrder | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Driver session expired.");
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, cancellation_reason, cancelled_at")
+    .eq("driver_id", auth.user.id)
+    .eq("status", "cancelled")
+    .gte("cancelled_at", sevenDaysAgo)
+    .order("cancelled_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data ?? null;
 }
 
 export async function getEarnings(): Promise<{ totalTrips: number; totalEtb: number }> {

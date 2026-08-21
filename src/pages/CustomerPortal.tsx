@@ -9,6 +9,7 @@ import { CustomerDriverAssignmentCard } from "../components/customer/CustomerDri
 import { CustomerRatingCard } from "../components/customer/CustomerRatingCard";
 import { CustomerProfilePanel } from "../components/customer/CustomerProfilePanel";
 import { CustomerPaymentModal } from "../components/customer/CustomerPaymentModal";
+import { CustomerCancelOrderModal } from "../components/customer/CustomerCancelOrderModal";
 import { LanguageSwitcher, useLanguage } from "../i18n/LanguageProvider";
 import { getCustomerCopy } from "../i18n/customerCopy";
 import { calculatePaymentSummary } from "../utils/paymentSummary";
@@ -16,6 +17,7 @@ import { useTransportQuote } from "../hooks/useTransportQuote";
 
 const emptyData: CustomerPortalData = { orders: [], proofs: [], payments: [], assignments: [], profile: null };
 const activeStatuses = new Set(["assigned", "accepted", "in_transit"]);
+const cancellableStatuses = new Set(["quoted", "placed", "accepted", "in_transit"]);
 
 type CargoMeta = {
   cargo_quantity: number | null;
@@ -23,7 +25,7 @@ type CargoMeta = {
   cargo_description: string | null;
 };
 
-type OrderFilter = "all" | "active" | "payment" | "delivered";
+type OrderFilter = "all" | "active" | "payment" | "delivered" | "cancelled";
 
 const cargoCopy = {
   en: {
@@ -84,6 +86,7 @@ const dashboardCopy = {
     active: "Active",
     payment: "Payment",
     delivered: "Delivered",
+    cancelled: "Cancelled",
     details: "View details",
     less: "Hide details",
     route: "Route",
@@ -104,6 +107,7 @@ const dashboardCopy = {
     active: "Hojii irra",
     payment: "Kaffaltii",
     delivered: "Geessame",
+    cancelled: "Dhiifame",
     details: "Bal'inaan ilaali",
     less: "Bal'ina cufi",
     route: "Daandii",
@@ -124,6 +128,7 @@ const dashboardCopy = {
     active: "ንቁ",
     payment: "ክፍያ",
     delivered: "ደርሷል",
+    cancelled: "ተሰርዟል",
     details: "ዝርዝር ይመልከቱ",
     less: "ዝርዝር ዝጋ",
     route: "መንገድ",
@@ -152,6 +157,7 @@ export function CustomerPortal() {
   const [showOrder, setShowOrder] = useState(false);
   const [paymentOrder, setPaymentOrder] = useState<CustomerOrder | null>(null);
   const [trackingOrder, setTrackingOrder] = useState<CustomerOrder | null>(null);
+  const [cancelOrder, setCancelOrder] = useState<CustomerOrder | null>(null);
   const [routePoints, setRoutePoints] = useState<QuotePoints | null>(null);
   const [vehicle, setVehicle] = useState("Dry Cargo");
   const [cargoQuantity, setCargoQuantity] = useState("1");
@@ -160,6 +166,7 @@ export function CustomerPortal() {
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const distance = routePoints?.distanceKm ?? 0;
   const cargoAmount = Number(cargoQuantity);
@@ -185,11 +192,13 @@ export function CustomerPortal() {
 
   const activeCount = data.orders.filter((order) => activeStatuses.has(order.status)).length;
   const deliveredCount = data.orders.filter((order) => order.status === "delivered").length;
-  const amountDue = data.orders.reduce((total, order) => total + remainingPayment(order, data.payments), 0);
+  const amountDue = data.orders.reduce((total, order) => order.status === "cancelled" ? total : total + remainingPayment(order, data.payments), 0);
   const filteredOrders = data.orders.filter((order) => {
     if (orderFilter === "active") return activeStatuses.has(order.status);
     if (orderFilter === "delivered") return order.status === "delivered";
+    if (orderFilter === "cancelled") return order.status === "cancelled";
     if (orderFilter === "payment") {
+      if (order.status === "cancelled") return false;
       const summary = calculatePaymentSummary(order.price_etb, data.payments.filter((payment) => payment.order_id === order.id));
       return summary.remainingToSubmit > 0 || summary.pendingVerification > 0;
     }
@@ -230,11 +239,11 @@ export function CustomerPortal() {
   }, []);
 
   useEffect(() => {
-    if (!showOrder && !trackingOrder && !paymentOrder) return;
+    if (!showOrder && !trackingOrder && !paymentOrder && !cancelOrder) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previous; };
-  }, [paymentOrder, showOrder, trackingOrder]);
+  }, [cancelOrder, paymentOrder, showOrder, trackingOrder]);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -269,6 +278,15 @@ export function CustomerPortal() {
     setExpandedOrders((current) => ({ ...current, [orderId]: !currentlyExpanded }));
   }
 
+  async function handleOrderCancelled(order: CustomerOrder) {
+    setCancelOrder(null);
+    if (trackingOrder?.id === order.id) setTrackingOrder(null);
+    if (paymentOrder?.id === order.id) setPaymentOrder(null);
+    setExpandedOrders((current) => ({ ...current, [order.id]: true }));
+    setNotice(c.cancelSuccess);
+    await load();
+  }
+
   return (
     <main className="customer-main min-h-screen bg-bone text-asphalt">
       <header className="customer-main-header border-b border-asphalt/10 bg-white">
@@ -295,7 +313,7 @@ export function CustomerPortal() {
             <SummaryValue label={ui.deliveredCount} value={deliveredCount.toLocaleString()} />
           </div>
           <div className="customer-order-filters" role="group" aria-label="Order filters">
-            {(["all", "active", "payment", "delivered"] as OrderFilter[]).map((filter) => (
+            {(["all", "active", "payment", "delivered", "cancelled"] as OrderFilter[]).map((filter) => (
               <button key={filter} type="button" onClick={() => setOrderFilter(filter)} className={orderFilter === filter ? "is-active" : ""}>
                 {ui[filter]}
               </button>
@@ -304,6 +322,7 @@ export function CustomerPortal() {
         </section>
 
         {error && <p className="customer-error mt-6 border border-route/30 bg-route/5 p-3 text-sm text-route">{error}</p>}
+        {notice && <p className="customer-notice mt-6 border border-emerald-700/25 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800" role="status">✓ {notice}</p>}
 
         {busy && !data.orders.length ? <p className="customer-loading py-16 text-center font-mono text-sm text-steel">{c.loading}</p> :
           <div className="customer-orders-list mt-8 grid gap-4">
@@ -316,6 +335,8 @@ export function CustomerPortal() {
               const paymentSummary = calculatePaymentSummary(order.price_etb, orderPayments);
               const pending = paymentSummary.pendingVerification > 0;
               const trackable = ["accepted", "in_transit"].includes(order.status);
+              const cancellable = cancellableStatuses.has(order.status);
+              const canSubmitPayment = order.status !== "cancelled";
               const remaining = paymentSummary.remainingToSubmit;
               const cargo = cargoMeta[order.id];
               const loadValue = cargo?.cargo_quantity && cargo.cargo_unit
@@ -334,9 +355,10 @@ export function CustomerPortal() {
 
                 <div className="customer-order-card__actions mt-5 flex flex-wrap gap-3 border-t border-asphalt/10 pt-5">
                   {trackable && <button onClick={() => setTrackingOrder(order)} className="is-primary bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{c.liveTracking}</button>}
-                  {remaining > 0 ? <button onClick={() => setPaymentOrder(order)} className="is-payment bg-asphalt px-4 py-3 text-xs font-semibold text-white">{c.submitPayment} · ETB {remaining.toLocaleString()}</button> : <span className="customer-payment-state self-center bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{pending ? c.pendingVerification : c.paymentRecorded}</span>}
+                  {canSubmitPayment && (remaining > 0 ? <button onClick={() => setPaymentOrder(order)} className="is-payment bg-asphalt px-4 py-3 text-xs font-semibold text-white">{c.submitPayment} · ETB {remaining.toLocaleString()}</button> : <span className="customer-payment-state self-center bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{pending ? c.pendingVerification : c.paymentRecorded}</span>)}
                   <button onClick={() => printCustomerInvoice(order, orderPayments)} className="is-secondary border border-asphalt px-4 py-3 text-xs font-semibold">{c.invoice}</button>
                   <button type="button" onClick={() => toggleOrder(order.id, expanded)} className="is-details">{expanded ? ui.less : ui.details}</button>
+                  {cancellable && <button type="button" onClick={() => { setNotice(""); setCancelOrder(order); }} className="is-cancel">{c.cancelOrder}</button>}
                 </div>
 
                 {expanded && <div className="customer-order-card__details">
@@ -358,6 +380,7 @@ export function CustomerPortal() {
                     }}
                   />}
                   {order.status === "delivered" && <span className="customer-delivery-complete">{c.deliveryComplete}</span>}
+                  {order.status === "cancelled" && order.cancellation_reason && <div className="customer-cancellation-record"><p>{c.cancelledReason}</p><strong>{order.cancellation_reason}</strong>{order.cancelled_at && <small>{c.cancelledAt}: {new Date(order.cancelled_at).toLocaleString()}</small>}</div>}
                   {orderPayments.length > 0 && <div className="customer-payment-history mt-4 border border-asphalt/10 bg-bone p-4"><p className="font-mono text-[10px] tracking-[.16em] text-steel">{c.paymentHistory}</p><div className="mt-3 grid gap-2">{orderPayments.map((payment) => <div key={payment.id} className="customer-payment-row flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 text-xs"><span><strong>{payment.provider.replace(/_/g, " ")}</strong> · ETB {Number(payment.amount_etb).toLocaleString()} · <span className="capitalize">{payment.event.replace(/_/g, " ")}</span></span>{payment.receipt_path && <button onClick={() => void openCustomerPaymentReceipt(payment.receipt_path!)} className="font-semibold text-emerald-800">{c.viewReceipt}</button>}</div>)}</div></div>}
                   {proof && <div className="customer-proof mt-5 flex flex-wrap items-center justify-between gap-3 bg-emerald-50 p-4 text-sm"><span>{c.deliveredTo} <strong>{proof.recipient_name}</strong></span><div className="flex gap-4"><button onClick={() => void openCustomerProof(proof.photo_path)} className="font-semibold text-emerald-800">{c.photo}</button><button onClick={() => void openCustomerProof(proof.signature_path)} className="font-semibold text-emerald-800">{c.signature}</button></div></div>}
                   {order.status === "delivered" && assignment && <CustomerRatingCard orderId={order.id} driverName={assignment.driver_name} />}
@@ -381,6 +404,7 @@ export function CustomerPortal() {
       </form></div>}
 
       {paymentOrder && <CustomerPaymentModal order={paymentOrder} maxAmount={remainingPayment(paymentOrder, data.payments)} onClose={() => setPaymentOrder(null)} onSubmitted={load} />}
+      {cancelOrder && <CustomerCancelOrderModal order={cancelOrder} onClose={() => setCancelOrder(null)} onCancelled={() => handleOrderCancelled(cancelOrder)} />}
     </main>
   );
 }
