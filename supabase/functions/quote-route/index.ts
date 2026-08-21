@@ -22,6 +22,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const service = createClient(supabaseUrl, serviceRoleKey);
 const orsDirectionsUrl = "https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson";
+const expandedSnapRadiusMeters = 5_000;
 
 function bearerToken(req: Request) {
   const header = req.headers.get("Authorization") ?? "";
@@ -79,7 +80,7 @@ Deno.serve(async (req) => {
   const timeout = setTimeout(() => controller.abort(), 15_000);
   let response: Response;
   try {
-    response = await fetch(orsDirectionsUrl, {
+    const requestRoute = (radiuses?: [number, number]) => fetch(orsDirectionsUrl, {
       method: "POST",
       signal: controller.signal,
       headers: {
@@ -91,9 +92,22 @@ Deno.serve(async (req) => {
         coordinates: [body.pickup, body.dropoff],
         preference: "recommended",
         instructions: false,
+        radiuses,
         options: { vehicle_type: "hgv" },
       }),
     });
+
+    response = await requestRoute();
+    const retryWithExpandedSnapping = !response.ok && ![401, 403, 429].includes(response.status);
+    if (retryWithExpandedSnapping) {
+      const providerMessage = (await response.text()).slice(0, 600);
+      console.warn(
+        "OpenRouteService could not snap the default HGV route; retrying with expanded snapping",
+        response.status,
+        providerMessage,
+      );
+      response = await requestRoute([expandedSnapRadiusMeters, expandedSnapRadiusMeters]);
+    }
   } catch (error) {
     console.error("OpenRouteService request failed", error);
     return json({ error: "Truck routing service is temporarily unavailable" }, 502);

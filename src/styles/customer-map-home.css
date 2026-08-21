@@ -667,6 +667,7 @@
   z-index: 28;
   top: 6.55rem;
   right: auto;
+  bottom: auto;
   left: 50%;
   display: flex;
   width: min(calc(100% - 1.7rem), 56rem);
@@ -885,7 +886,7 @@
 
   .customer-quote-map__actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
     width: 100%;
   }
 
