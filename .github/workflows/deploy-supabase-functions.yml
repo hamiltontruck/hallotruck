@@ -18,7 +18,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.115.0
 
       - name: Deploy tracking
         run: supabase functions deploy tracking --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
