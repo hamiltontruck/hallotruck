@@ -30,6 +30,10 @@ export function AdminSidebarLeadershipLinks() {
         <span className="grid h-[18px] w-[18px] place-items-center border border-amber/60 font-mono text-[7px] font-bold text-amber">DR</span>
         <span>Driver control</span>
       </Link>
+      <Link to="/admin/manual-driver-documents" className="flex w-full items-center gap-3 px-3 py-3 text-sm text-white/60 transition hover:bg-white/5 hover:text-white">
+        <span className="grid h-[18px] w-[18px] place-items-center border border-amber/60 font-mono text-[7px] font-bold text-amber">DOC</span>
+        <span>Manual documents</span>
+      </Link>
       <Link to="/admin/payment-review" className="flex w-full items-center gap-3 px-3 py-3 text-sm text-white/60 transition hover:bg-white/5 hover:text-white">
         <span className="grid h-[18px] w-[18px] place-items-center border border-amber/60 font-mono text-[8px] font-bold text-amber">PAY</span>
         <span>Payment review</span>
