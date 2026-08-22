@@ -1,0 +1,4 @@
+-- Production migration version retained for history alignment.
+-- The recursive visibility draft was superseded immediately by
+-- 20260822201001_fix_driver_order_visibility_recursion.sql, which installs
+-- the final non-recursive SECURITY DEFINER helper and RLS policy.
