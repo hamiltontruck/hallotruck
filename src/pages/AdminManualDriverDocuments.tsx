@@ -51,7 +51,7 @@ const vehicleDocuments = [
 ] as const;
 
 const allDocuments = [...identityDocuments, ...vehicleDocuments] as const;
-const vehicleDocumentKeys = new Set(vehicleDocuments.map(([key]) => key));
+const vehicleDocumentKeys = new Set<string>(vehicleDocuments.map(([key]) => key));
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 
 function labelFor(key: string) {
