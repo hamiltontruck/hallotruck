@@ -152,7 +152,9 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
       payoutStatus,
       lastReleaseAt: lastRelease?.created_at ?? null,
     };
-  });
+  }).filter((trip) =>
+    trip.heldEtb > 0 || trip.releasedEtb > 0 || trip.partialReleasedEtb > 0,
+  );
 
   const released = trips.filter((trip) => trip.payoutStatus === "released");
   const pending = trips.filter((trip) => trip.payoutStatus !== "released");
