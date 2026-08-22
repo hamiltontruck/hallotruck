@@ -126,13 +126,15 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
         ? "partial"
         : heldEtb > 0
           ? "held_escrow"
-          : initiatedEtb > 0
-            ? "initiated"
-            : "unpaid";
+          : "initiated";
     const lastRelease = rows.find((payment) => payment.event === "released");
     const grossPaid = fullyReleased ? invoiceEtb : releasedToInvoice;
     const paidSplit = splitHalloCommission(grossPaid);
-    const remainingSplit = splitHalloCommission(remainingEtb);
+
+    // Only Admin-verified escrow may create an expected pending payout.
+    // A delivered trip with no verified funds remains visible, but every money value stays zero.
+    const verifiedPendingGross = Math.min(remainingEtb, heldEtb);
+    const verifiedPendingSplit = splitHalloCommission(verifiedPendingGross);
 
     return {
       id: order.id,
@@ -148,13 +150,11 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
       heldEtb,
       initiatedEtb,
       remainingEtb,
-      remainingDriverNetEtb: remainingSplit.driverNetEtb,
+      remainingDriverNetEtb: verifiedPendingSplit.driverNetEtb,
       payoutStatus,
       lastReleaseAt: lastRelease?.created_at ?? null,
     };
-  }).filter((trip) =>
-    trip.heldEtb > 0 || trip.releasedEtb > 0 || trip.partialReleasedEtb > 0,
-  );
+  });
 
   const released = trips.filter((trip) => trip.payoutStatus === "released");
   const pending = trips.filter((trip) => trip.payoutStatus !== "released");
@@ -171,7 +171,7 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
     totalDriverNetEtb: totalSplit.driverNetEtb,
     partialReleasedEtb: pending.reduce((sum, trip) => sum + trip.partialReleasedEtb, 0),
     pendingTrips: pending.length,
-    pendingBalanceEtb: pending.reduce((sum, trip) => sum + trip.remainingEtb, 0),
+    pendingBalanceEtb: pending.reduce((sum, trip) => sum + Math.min(trip.remainingEtb, trip.heldEtb), 0),
     pendingDriverBalanceEtb: pending.reduce((sum, trip) => sum + trip.remainingDriverNetEtb, 0),
     released,
     pending,

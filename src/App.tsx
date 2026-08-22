@@ -2,6 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { CustomerBottomNav } from "./components/customer/CustomerBottomNav";
+import { DriverPaymentCollectionBanner } from "./components/driver/DriverPaymentCollectionBanner";
 import { AdminSidebarLeadershipLinks } from "./components/admin/AdminSidebarLeadershipLinks";
 import { AdminToolShell } from "./components/admin/AdminToolShell";
 import { SmartLogistics } from "./pages/SmartLogistics";
@@ -10,11 +11,13 @@ import { AdminDriverCommission } from "./pages/AdminDriverCommission";
 import { AdminFleetMaintenance } from "./pages/AdminFleetMaintenance";
 import { AdminQuotePricing } from "./pages/AdminQuotePricing";
 import { AdminPaymentReview } from "./pages/AdminPaymentReview";
+import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
 import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
 import { Earnings } from "./pages/Earnings";
 import { DriverCommission } from "./pages/DriverCommission";
+import { DriverPaymentCollection } from "./pages/DriverPaymentCollection";
 import { AdminGate } from "./components/auth/AdminGate";
 import { CustomerGate } from "./components/auth/CustomerGate";
 import { PortalLanding } from "./pages/PortalLanding";
@@ -39,6 +42,7 @@ function DriverShell({ children }: { children: React.ReactNode }) {
     <div className="driver-mobile-flow min-h-screen bg-bone">
       <OfflineBanner />
       <Header />
+      <DriverPaymentCollectionBanner />
       {children}
     </div>
   );
@@ -78,6 +82,7 @@ export default function App() {
           <Route path="/admin/fleet-maintenance" element={<AdminGate><AdminToolShell><div className="fleet-maintenance-mobile"><AdminFleetMaintenance /></div></AdminToolShell></AdminGate>} />
           <Route path="/admin/quote-pricing" element={<AdminGate><AdminToolShell><AdminQuotePricing /></AdminToolShell></AdminGate>} />
           <Route path="/admin/payment-review" element={<AdminGate><AdminToolShell><AdminPaymentReview /></AdminToolShell></AdminGate>} />
+          <Route path="/admin/manual-driver-documents" element={<AdminGate><AdminToolShell><AdminManualDriverDocuments /></AdminToolShell></AdminGate>} />
           <Route path="/customer/login" element={<CustomerLogin />} />
           <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="home" /></CustomerGate>} />
           <Route path="/customer/orders" element={<CustomerGate><CustomerWorkspace section="orders" /></CustomerGate>} />
@@ -90,6 +95,7 @@ export default function App() {
           <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
           <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
           <Route path="/driver/commission" element={<DriverGate><DriverShell><DriverCommission /></DriverShell></DriverGate>} />
+          <Route path="/driver/payment/:orderId" element={<DriverGate><DriverShell><DriverPaymentCollection /></DriverShell></DriverGate>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
