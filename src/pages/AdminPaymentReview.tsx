@@ -2,8 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabase.client";
 
 type ReviewFilter = "pending" | "rejected" | "verified" | "all";
+type PaymentEvent = "initiated" | "failed" | "held_escrow" | "released";
 
-type PaymentEvent = "initiated" | "failed" | "held_escrow";
+type PaymentPayload = {
+  source?: string;
+  collection_method?: string;
+  collected_by?: string;
+  direct_to_driver?: boolean;
+  note?: string;
+  tracking_id?: string;
+  payment_terms?: string;
+};
 
 interface PaymentReviewRow {
   id: string;
@@ -16,6 +25,7 @@ interface PaymentReviewRow {
   rejection_reason: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
+  raw_payload: PaymentPayload | null;
   created_at: string;
 }
 
@@ -28,6 +38,13 @@ interface ReviewOrderRow {
   dropoff_address: string;
   price_etb: number | string | null;
   status: string;
+  driver_id: string | null;
+}
+
+interface DriverRow {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
 }
 
 interface AuditRow {
@@ -39,19 +56,18 @@ interface AuditRow {
   created_at: string;
 }
 
-const filterEvent: Record<Exclude<ReviewFilter, "all">, PaymentEvent> = {
-  pending: "initiated",
-  rejected: "failed",
-  verified: "held_escrow",
-};
-
 function money(value: number | string | null | undefined) {
   return Number(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function isDriverCollection(payment: PaymentReviewRow) {
+  return payment.raw_payload?.source === "driver_collection";
 }
 
 export function AdminPaymentReview() {
   const [payments, setPayments] = useState<PaymentReviewRow[]>([]);
   const [orders, setOrders] = useState<ReviewOrderRow[]>([]);
+  const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [filter, setFilter] = useState<ReviewFilter>("pending");
   const [reasons, setReasons] = useState<Record<string, string>>({});
@@ -63,21 +79,30 @@ export function AdminPaymentReview() {
     try {
       const { data: paymentData, error: paymentError } = await supabase
         .from("payments")
-        .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,rejection_reason,reviewed_by,reviewed_at,created_at")
-        .in("event", ["initiated", "failed", "held_escrow"])
-        .order("created_at", { ascending: false });
+        .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,rejection_reason,reviewed_by,reviewed_at,raw_payload,created_at")
+        .in("event", ["initiated", "failed", "held_escrow", "released"])
+        .order("created_at", { ascending: false })
+        .limit(1000);
 
       if (paymentError) throw paymentError;
       const nextPayments = (paymentData ?? []) as PaymentReviewRow[];
       const orderIds = [...new Set(nextPayments.map((payment) => payment.order_id))];
       const paymentIds = nextPayments.map((payment) => payment.id);
 
-      const [orderResult, auditResult] = await Promise.all([
-        orderIds.length
-          ? supabase
-              .from("orders")
-              .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,price_etb,status")
-              .in("id", orderIds)
+      const orderResult = orderIds.length
+        ? await supabase
+            .from("orders")
+            .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,price_etb,status,driver_id")
+            .in("id", orderIds)
+        : { data: [], error: null };
+
+      if (orderResult.error) throw orderResult.error;
+      const nextOrders = (orderResult.data ?? []) as ReviewOrderRow[];
+      const driverIds = [...new Set(nextOrders.map((order) => order.driver_id).filter((value): value is string => Boolean(value)))];
+
+      const [driverResult, auditResult] = await Promise.all([
+        driverIds.length
+          ? supabase.from("profiles").select("id,full_name,phone").in("id", driverIds)
           : Promise.resolve({ data: [], error: null }),
         paymentIds.length
           ? supabase
@@ -88,11 +113,12 @@ export function AdminPaymentReview() {
           : Promise.resolve({ data: [], error: null }),
       ]);
 
-      if (orderResult.error) throw orderResult.error;
+      if (driverResult.error) throw driverResult.error;
       if (auditResult.error) throw auditResult.error;
 
       setPayments(nextPayments);
-      setOrders((orderResult.data ?? []) as ReviewOrderRow[]);
+      setOrders(nextOrders);
+      setDrivers((driverResult.data ?? []) as DriverRow[]);
       setAudit((auditResult.data ?? []) as AuditRow[]);
       setError("");
     } catch (loadError) {
@@ -112,19 +138,23 @@ export function AdminPaymentReview() {
   }, [load]);
 
   const ordersById = useMemo(() => new Map(orders.map((order) => [order.id, order])), [orders]);
+  const driversById = useMemo(() => new Map(drivers.map((driver) => [driver.id, driver])), [drivers]);
   const latestAudit = useMemo(() => {
     const result = new Map<string, AuditRow>();
     for (const entry of audit) if (!result.has(entry.payment_id)) result.set(entry.payment_id, entry);
     return result;
   }, [audit]);
 
-  const filteredPayments = filter === "all"
-    ? payments
-    : payments.filter((payment) => payment.event === filterEvent[filter]);
+  const filteredPayments = payments.filter((payment) => {
+    if (filter === "all") return true;
+    if (filter === "pending") return payment.event === "initiated";
+    if (filter === "rejected") return payment.event === "failed";
+    return payment.event === "held_escrow" || payment.event === "released";
+  });
 
   const pending = payments.filter((payment) => payment.event === "initiated");
   const rejected = payments.filter((payment) => payment.event === "failed");
-  const verified = payments.filter((payment) => payment.event === "held_escrow");
+  const verified = payments.filter((payment) => payment.event === "held_escrow" || payment.event === "released");
 
   async function review(paymentId: string, approve: boolean) {
     const reason = reasons[paymentId]?.trim() ?? "";
@@ -168,14 +198,14 @@ export function AdminPaymentReview() {
           <p className="font-mono text-[10px] tracking-[.22em] text-amber">FINANCE CONTROL</p>
           <h1 className="mt-3 font-display text-3xl font-bold">Customer payment review</h1>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/60">
-            Open the customer receipt, verify valid funds or reject the submission with a reason. A driver cannot see or accept the load until the invoice is fully verified.
+            Review prepaid customer receipts and post-delivery cash or bank payments reported by drivers. Driver-collected money creates no earnings or commission until Admin verifies it.
           </p>
         </header>
 
         <div className="mt-5 grid grid-cols-3 gap-3">
           <Summary label="Pending review" value={pending.length} amount={pending.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
           <Summary label="Rejected" value={rejected.length} amount={rejected.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
-          <Summary label="Held in escrow" value={verified.length} amount={verified.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
+          <Summary label="Verified / released" value={verified.length} amount={verified.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -199,30 +229,54 @@ export function AdminPaymentReview() {
           {!loading && filteredPayments.length === 0 && <p className="border border-asphalt/10 bg-white p-8 text-center text-sm text-steel">No payments in this review state.</p>}
           {filteredPayments.map((payment) => {
             const order = ordersById.get(payment.order_id);
+            const driver = order?.driver_id ? driversById.get(order.driver_id) : null;
             const lastAudit = latestAudit.get(payment.id);
             const busy = busyPayment === payment.id;
+            const driverCollected = isDriverCollection(payment);
+            const collectionMethod = payment.raw_payload?.collection_method?.replace(/_/g, " ") ?? "payment";
             const badge = payment.event === "initiated"
               ? "Pending review"
               : payment.event === "failed"
                 ? "Rejected"
-                : "Verified · held escrow";
+                : payment.event === "released"
+                  ? driverCollected ? "Verified · driver received" : "Released"
+                  : "Verified · held escrow";
+            const badgeClass = payment.event === "initiated"
+              ? "bg-amber/15 text-amber-dim"
+              : payment.event === "failed"
+                ? "bg-route/10 text-route"
+                : "bg-emerald-100 text-emerald-800";
 
             return (
-              <article key={payment.id} className="border border-asphalt/10 bg-white p-5 sm:p-6">
+              <article key={payment.id} className={`border bg-white p-5 sm:p-6 ${driverCollected ? "border-amber/45" : "border-asphalt/10"}`}>
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                   <div className="min-w-0">
-                    <p className="font-mono text-xs font-semibold">{order?.tracking_id ?? payment.order_id}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-mono text-xs font-semibold">{order?.tracking_id ?? payment.order_id}</p>
+                      {driverCollected && <span className="bg-asphalt px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide text-amber">Driver collected · {collectionMethod}</span>}
+                    </div>
                     <h2 className="mt-2 font-display text-2xl font-bold">ETB {money(payment.amount_etb)}</h2>
                     <p className="mt-2 text-sm text-steel">{order ? `${order.pickup_address} → ${order.dropoff_address}` : "Order details unavailable"}</p>
                     <p className="mt-2 text-xs text-steel">Customer: <strong className="text-asphalt">{order?.customer_name ?? "Customer"}</strong>{order?.customer_phone ? ` · ${order.customer_phone}` : ""}</p>
+                    <p className="mt-1 text-xs text-steel">Driver: <strong className="text-asphalt">{driver?.full_name ?? driver?.phone ?? (order?.driver_id ? "Driver profile unavailable" : "Unassigned")}</strong></p>
                     <p className="mt-1 text-xs text-steel">Invoice: ETB {money(order?.price_etb)} · Order: <span className="capitalize">{order?.status?.replace(/_/g, " ") ?? "—"}</span></p>
                   </div>
-                  <span className={`self-start px-3 py-2 text-xs font-semibold ${payment.event === "initiated" ? "bg-amber/15 text-amber-dim" : payment.event === "failed" ? "bg-route/10 text-route" : "bg-emerald-100 text-emerald-800"}`}>{badge}</span>
+                  <span className={`self-start px-3 py-2 text-xs font-semibold ${badgeClass}`}>{badge}</span>
                 </div>
+
+                {driverCollected && (
+                  <div className="mt-5 border border-amber/35 bg-amber/10 p-4 text-sm">
+                    <p className="font-semibold text-asphalt">Direct-to-driver collection report</p>
+                    <p className="mt-2 text-xs leading-5 text-steel">
+                      The driver reported receiving the full invoice by <strong className="capitalize text-asphalt">{collectionMethod}</strong>. Verification releases the ledger amount and creates the 2% HALLO Smart commission charge; rejection keeps every driver earning value at zero.
+                    </p>
+                    {payment.raw_payload?.note && <p className="mt-3 border-l-4 border-amber bg-white/70 p-3 text-xs"><strong>Driver note:</strong> {payment.raw_payload.note}</p>}
+                  </div>
+                )}
 
                 <div className="mt-5 grid gap-3 border-y border-asphalt/10 py-4 text-xs sm:grid-cols-3">
                   <p><span className="block text-steel">Provider</span><strong className="mt-1 block capitalize">{payment.provider.replace(/_/g, " ")}</strong></p>
-                  <p><span className="block text-steel">Transaction ID</span><strong className="mt-1 block break-all">{payment.provider_ref ?? "Not supplied"}</strong></p>
+                  <p><span className="block text-steel">Transaction ID</span><strong className="mt-1 block break-all">{payment.provider_ref ?? (driverCollected && collectionMethod === "cash" ? "Cash · no bank reference" : "Not supplied")}</strong></p>
                   <p><span className="block text-steel">Submitted</span><strong className="mt-1 block">{new Date(payment.created_at).toLocaleString()}</strong></p>
                 </div>
 
@@ -241,11 +295,11 @@ export function AdminPaymentReview() {
 
                 <div className="mt-5 flex flex-wrap gap-3">
                   {payment.receipt_path
-                    ? <button type="button" onClick={() => void openReceipt(payment.receipt_path!)} className="border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800">Open receipt</button>
-                    : <span className="border border-route/30 bg-route/5 px-4 py-3 text-sm text-route">Receipt missing</span>}
+                    ? <button type="button" onClick={() => void openReceipt(payment.receipt_path!)} className="border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800">Open payment evidence</button>
+                    : <span className="border border-route/30 bg-route/5 px-4 py-3 text-sm text-route">Evidence missing</span>}
                   {payment.event === "initiated" && (
                     <button type="button" disabled={busy || !payment.receipt_path} onClick={() => void review(payment.id, true)} className="bg-emerald-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">
-                      {busy ? "Saving…" : "Verify payment"}
+                      {busy ? "Saving…" : driverCollected ? "Verify received money" : "Verify payment"}
                     </button>
                   )}
                 </div>
@@ -258,12 +312,12 @@ export function AdminPaymentReview() {
                         onChange={(event) => setReasons((current) => ({ ...current, [payment.id]: event.target.value }))}
                         rows={3}
                         maxLength={500}
-                        placeholder="Example: transaction amount does not match the receipt."
+                        placeholder="Example: cash receipt is unclear or transaction amount does not match."
                         className="mt-2 block w-full border border-asphalt/15 bg-white p-3 text-sm font-normal outline-none focus:border-route"
                       />
                     </label>
                     <button type="button" disabled={busy || (reasons[payment.id]?.trim().length ?? 0) < 5} onClick={() => void review(payment.id, false)} className="mt-3 border border-route bg-white px-5 py-3 text-sm font-semibold text-route disabled:opacity-40">
-                      {busy ? "Saving…" : "Reject payment"}
+                      {busy ? "Saving…" : "Reject payment evidence"}
                     </button>
                   </div>
                 )}
