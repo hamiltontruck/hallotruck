@@ -27,7 +27,8 @@ import { CustomerMapHome } from "./pages/CustomerMapHome";
 import { CustomerTrackingPage } from "./pages/CustomerTrackingPage";
 import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
-import { LanguageProvider } from "./i18n/LanguageProvider";
+import { LanguageProvider, useLanguage } from "./i18n/LanguageProvider";
+import { useRuntimePageTranslation } from "./i18n/runtimePageTranslations";
 import "./styles/fleet-maintenance-mobile.css";
 import "./styles/customer-portal-mobile.css";
 import "./styles/customer-portal-sections.css";
@@ -70,9 +71,18 @@ function CustomerWorkspace({ section }: { section: "home" | "profile" | "orders"
   );
 }
 
+function RuntimeLocalization() {
+  const { selectedLanguage } = useLanguage();
+  useRuntimePageTranslation(
+    selectedLanguage === "so" || selectedLanguage === "ti" ? selectedLanguage : null,
+  );
+  return null;
+}
+
 export default function App() {
   return (
     <LanguageProvider>
+      <RuntimeLocalization />
       <HashRouter>
         <Routes>
           <Route path="/" element={<PortalLanding />} />
