@@ -6,17 +6,32 @@ import {
   vehicleCapacityTons,
   type CargoUnit,
 } from "../../services/customer-cargo.service";
+import {
+  CARGO_CATEGORIES,
+  PACKAGING_TYPES,
+  cargoDetailsCopy,
+  isContainerPackaging,
+  validateCargoDetails,
+  type CargoCategory,
+  type PackagingType,
+} from "../../domain/cargo-details";
 import { AdminOrder, Driver, Truck, assignOrder, getDashboardData } from "../../services/admin.service";
 import { useTransportQuote } from "../../hooks/useTransportQuote";
+import { useLanguage } from "../../i18n/LanguageProvider";
 
 const vehicleOptions = ["Pickup", "Van", "Isuzu 5 Ton", "Dry Cargo", "Refrigerated", "Truck 22 Ton", "Truck 25 Ton", "Truck 30 Ton", "Trailer"];
 const ethiopianMobilePattern = /^(?:09\d{8}|\+2519\d{8})$/;
 
 export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void | Promise<void> }) {
+  const { selectedLanguage } = useLanguage();
+  const cargoCopy = cargoDetailsCopy[selectedLanguage];
   const [route, setRoute] = useState<QuotePoints | null>(null);
   const [vehicleType, setVehicleType] = useState("");
   const [cargoQuantity, setCargoQuantity] = useState("1");
   const [cargoUnit, setCargoUnit] = useState<CargoUnit>("ton");
+  const [cargoCategory, setCargoCategory] = useState<CargoCategory>("general_goods");
+  const [packagingType, setPackagingType] = useState<PackagingType>("loose_bulk");
+  const [cargoNotes, setCargoNotes] = useState("");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -46,11 +61,19 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
   const cargoAmount = Number(cargoQuantity);
   const cargoTons = cargoToTons(cargoAmount, cargoUnit);
   const selectedCapacity = vehicleCapacityTons[vehicleType.toLowerCase()] ?? 0;
-  const cargoValidation = !Number.isFinite(cargoAmount) || cargoAmount <= 0
+  const loadValidation = !Number.isFinite(cargoAmount) || cargoAmount <= 0
     ? "Enter a load amount greater than zero."
     : selectedCapacity > 0 && cargoTons > selectedCapacity
       ? `${vehicleType} supports up to ${selectedCapacity} tons. Reduce the load or choose a larger vehicle.`
       : "";
+  const cargoDetailsErrorCode = validateCargoDetails({
+    category: cargoCategory,
+    packagingType,
+    vehicleType,
+    notes: cargoNotes,
+  });
+  const cargoDetailsValidation = cargoDetailsErrorCode ? cargoCopy.errors[cargoDetailsErrorCode] : "";
+  const cargoValidation = loadValidation || cargoDetailsValidation;
 
   const {
     quote: quoteBreakdown,
@@ -131,7 +154,9 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
       const created = await createAdminSmartOrder({
         customerName: String(form.get("customerName") ?? ""),
         customerPhone,
-        cargoDescription: String(form.get("cargoDescription") ?? ""),
+        cargoDescription: cargoNotes,
+        cargoCategory,
+        packagingType,
         cargoQuantity: cargoAmount,
         cargoUnit,
         vehicleType,
@@ -208,7 +233,42 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
               {vehicleOptions.map((vehicle) => <option key={vehicle} value={vehicle}>{vehicle}</option>)}
             </select>
           </label>
-          <Field name="cargoDescription" label="Cargo description" required={false} />
+          <label className="text-xs font-semibold">
+            {cargoCopy.category}
+            <select
+              value={cargoCategory}
+              onChange={(event) => setCargoCategory(event.target.value as CargoCategory)}
+              className="mt-2 block w-full border border-asphalt/20 bg-white px-3 py-3 text-sm outline-none focus:border-amber"
+            >
+              {CARGO_CATEGORIES.map((category) => <option key={category} value={category}>{cargoCopy.categories[category]}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-semibold">
+            {cargoCopy.packaging}
+            <select
+              value={packagingType}
+              onChange={(event) => {
+                const next = event.target.value as PackagingType;
+                setPackagingType(next);
+                if (isContainerPackaging(next)) setVehicleType("Trailer");
+              }}
+              className="mt-2 block w-full border border-asphalt/20 bg-white px-3 py-3 text-sm outline-none focus:border-amber"
+            >
+              {PACKAGING_TYPES.map((packaging) => <option key={packaging} value={packaging}>{cargoCopy.packagingTypes[packaging]}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-semibold">
+            {cargoCopy.notes}
+            <textarea
+              value={cargoNotes}
+              onChange={(event) => setCargoNotes(event.target.value)}
+              required={cargoCategory === "other"}
+              maxLength={500}
+              rows={3}
+              placeholder={cargoCopy.notesPlaceholder}
+              className="mt-2 block w-full border border-asphalt/20 px-3 py-3 text-sm font-normal outline-none focus:border-amber"
+            />
+          </label>
           <label className="text-xs font-semibold">
             Load amount
             <input
@@ -233,7 +293,7 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
 
         <div className={`mt-3 border p-3 text-xs ${cargoValidation ? "border-route/30 bg-route/10 text-route" : "border-asphalt/10 bg-[#f5f3ed] text-steel"}`}>
           {cargoValidation || (vehicleType
-            ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} tons · ${vehicleType} policy capacity ${selectedCapacity || "—"} tons`
+            ? `${cargoCopy.categories[cargoCategory]} · ${cargoCopy.packagingTypes[packagingType]} · ${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} tons · ${vehicleType} policy capacity ${selectedCapacity || "—"} tons`
             : "Select a vehicle to check load capacity.")}
         </div>
 

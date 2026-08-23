@@ -1,5 +1,12 @@
 import { supabase } from "./supabase.client";
 import { calculateTransportQuote } from "./quote-pricing.service";
+import {
+  buildCargoDescription,
+  cargoDetailsCopy,
+  validateCargoDetails,
+  type CargoCategory,
+  type PackagingType,
+} from "../domain/cargo-details";
 
 export type CargoUnit = "ton" | "quintal";
 
@@ -44,11 +51,25 @@ export async function createCustomerCargoOrder(input: {
   dropoff: [number, number];
   cargoQuantity: number;
   cargoUnit: CargoUnit;
+  cargoCategory?: CargoCategory;
+  packagingType?: PackagingType;
+  cargoNotes?: string;
 }) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Customer session expired.");
 
+  const cargoCategory = input.cargoCategory ?? "general_goods";
+  const packagingType = input.packagingType ?? "loose_bulk";
+  const cargoNotes = input.cargoNotes?.trim() || null;
   const cargoTons = validateCargoLoad(input.vehicleType, input.cargoQuantity, input.cargoUnit);
+  const cargoDetailsError = validateCargoDetails({
+    category: cargoCategory,
+    packagingType,
+    vehicleType: input.vehicleType,
+    notes: cargoNotes,
+  });
+  if (cargoDetailsError) throw new Error(cargoDetailsCopy.en.errors[cargoDetailsError]);
+
   const quote = await calculateTransportQuote(input.distanceKm, input.vehicleType, cargoTons);
 
   const { data: profile } = await supabase
@@ -59,7 +80,12 @@ export async function createCustomerCargoOrder(input: {
 
   const trackingId = `HT-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
   const priceEtb = quote.total_quote_etb;
-  const cargoDescription = formatCargoLoad(input.cargoQuantity, input.cargoUnit);
+  const cargoDescription = buildCargoDescription({
+    category: cargoCategory,
+    packagingType,
+    load: formatCargoLoad(input.cargoQuantity, input.cargoUnit),
+    notes: cargoNotes,
+  });
 
   const { data: order, error } = await supabase.from("orders").insert({
     tracking_id: trackingId,
@@ -74,6 +100,9 @@ export async function createCustomerCargoOrder(input: {
     distance_km: input.distanceKm,
     cargo_quantity: input.cargoQuantity,
     cargo_unit: input.cargoUnit,
+    cargo_category: cargoCategory,
+    packaging_type: packagingType,
+    cargo_notes: cargoNotes,
     cargo_description: cargoDescription,
     price_etb: priceEtb,
     status: "placed",
