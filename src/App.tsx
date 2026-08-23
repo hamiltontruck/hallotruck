@@ -3,6 +3,7 @@ import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { CustomerBottomNav } from "./components/customer/CustomerBottomNav";
 import { DriverPaymentCollectionBanner } from "./components/driver/DriverPaymentCollectionBanner";
+import { DriverDocumentExpiryAlert } from "./components/driver/DriverDocumentExpiryAlert";
 import { AdminSidebarLeadershipLinks } from "./components/admin/AdminSidebarLeadershipLinks";
 import { AdminToolShell } from "./components/admin/AdminToolShell";
 import { SmartLogistics } from "./pages/SmartLogistics";
@@ -45,6 +46,7 @@ function DriverShell({ children }: { children: React.ReactNode }) {
       <OfflineBanner />
       <Header />
       <DriverPaymentCollectionBanner />
+      <DriverDocumentExpiryAlert />
       {children}
     </div>
   );
