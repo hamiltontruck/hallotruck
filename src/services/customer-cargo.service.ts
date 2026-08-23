@@ -51,19 +51,22 @@ export async function createCustomerCargoOrder(input: {
   dropoff: [number, number];
   cargoQuantity: number;
   cargoUnit: CargoUnit;
-  cargoCategory: CargoCategory;
-  packagingType: PackagingType;
+  cargoCategory?: CargoCategory;
+  packagingType?: PackagingType;
   cargoNotes?: string;
 }) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Customer session expired.");
 
+  const cargoCategory = input.cargoCategory ?? "general_goods";
+  const packagingType = input.packagingType ?? "loose_bulk";
+  const cargoNotes = input.cargoNotes?.trim() || null;
   const cargoTons = validateCargoLoad(input.vehicleType, input.cargoQuantity, input.cargoUnit);
   const cargoDetailsError = validateCargoDetails({
-    category: input.cargoCategory,
-    packagingType: input.packagingType,
+    category: cargoCategory,
+    packagingType,
     vehicleType: input.vehicleType,
-    notes: input.cargoNotes,
+    notes: cargoNotes,
   });
   if (cargoDetailsError) throw new Error(cargoDetailsCopy.en.errors[cargoDetailsError]);
 
@@ -77,10 +80,9 @@ export async function createCustomerCargoOrder(input: {
 
   const trackingId = `HT-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
   const priceEtb = quote.total_quote_etb;
-  const cargoNotes = input.cargoNotes?.trim() || null;
   const cargoDescription = buildCargoDescription({
-    category: input.cargoCategory,
-    packagingType: input.packagingType,
+    category: cargoCategory,
+    packagingType,
     load: formatCargoLoad(input.cargoQuantity, input.cargoUnit),
     notes: cargoNotes,
   });
@@ -98,8 +100,8 @@ export async function createCustomerCargoOrder(input: {
     distance_km: input.distanceKm,
     cargo_quantity: input.cargoQuantity,
     cargo_unit: input.cargoUnit,
-    cargo_category: input.cargoCategory,
-    packaging_type: input.packagingType,
+    cargo_category: cargoCategory,
+    packaging_type: packagingType,
     cargo_notes: cargoNotes,
     cargo_description: cargoDescription,
     price_etb: priceEtb,
