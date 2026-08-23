@@ -183,7 +183,7 @@ try {
     new Promise((resolve) => preview.once("exit", resolve)),
     new Promise((resolve) => setTimeout(resolve, 2_000)),
   ]);
-  if (!preview.killed) preview.kill("SIGKILL");
+  if (preview.exitCode === null) preview.kill("SIGKILL");
 
   await Promise.all([
     rm(path.join(root, "dist", "e2e-language-so.html"), { force: true }),
