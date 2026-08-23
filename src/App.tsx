@@ -31,6 +31,7 @@ import { Login } from "./pages/Login";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageProvider";
 import { useRuntimePageTranslation } from "./i18n/runtimePageTranslations";
 import { useRuntimeAdminTranslation } from "./i18n/runtimeAdminTranslations";
+import { useRuntimeCustomerOperationalTranslation } from "./i18n/runtimeCustomerOperationalTranslations";
 import "./styles/fleet-maintenance-mobile.css";
 import "./styles/customer-portal-mobile.css";
 import "./styles/customer-portal-sections.css";
@@ -81,6 +82,7 @@ function RuntimeLocalization() {
     : null;
   useRuntimePageTranslation(runtimeLanguage);
   useRuntimeAdminTranslation(runtimeLanguage);
+  useRuntimeCustomerOperationalTranslation(selectedLanguage);
   return null;
 }
 
