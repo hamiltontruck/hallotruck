@@ -29,6 +29,7 @@ import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageProvider";
 import { useRuntimePageTranslation } from "./i18n/runtimePageTranslations";
+import { useRuntimeAdminTranslation } from "./i18n/runtimeAdminTranslations";
 import "./styles/fleet-maintenance-mobile.css";
 import "./styles/customer-portal-mobile.css";
 import "./styles/customer-portal-sections.css";
@@ -73,9 +74,11 @@ function CustomerWorkspace({ section }: { section: "home" | "profile" | "orders"
 
 function RuntimeLocalization() {
   const { selectedLanguage } = useLanguage();
-  useRuntimePageTranslation(
-    selectedLanguage === "so" || selectedLanguage === "ti" ? selectedLanguage : null,
-  );
+  const runtimeLanguage = selectedLanguage === "so" || selectedLanguage === "ti"
+    ? selectedLanguage
+    : null;
+  useRuntimePageTranslation(runtimeLanguage);
+  useRuntimeAdminTranslation(runtimeLanguage);
   return null;
 }
 
