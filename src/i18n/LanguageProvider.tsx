@@ -1,242 +1,215 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  LanguageProvider as LegacyLanguageProvider,
+  useLanguage as useLegacyLanguage,
+  type HalloLanguage as LegacyLanguage,
+} from "./LegacyLanguageProvider";
 
-export type HalloLanguage = "en" | "om" | "am";
+export type HalloLanguage = LegacyLanguage;
+export type SupportedLanguage = HalloLanguage | "so" | "ti";
+
+type ExtraLanguage = "so" | "ti";
 
 type LanguageContextValue = {
+  /**
+   * Operational screens that have not yet supplied Somali/Tigrinya copy use
+   * English safely instead of rendering an undefined translation object.
+   */
   language: HalloLanguage;
-  setLanguage: (language: HalloLanguage) => void;
+  selectedLanguage: SupportedLanguage;
+  setLanguage: (language: SupportedLanguage) => void;
   t: (key: string) => string;
 };
 
-const STORAGE_KEY = "hallo_language";
+const EXTENDED_STORAGE_KEY = "hallo_extended_language";
 
-const translations: Record<HalloLanguage, Record<string, string>> = {
-  en: {
-    "common.openPortal": "Open portal",
-    "common.signOut": "Sign out",
-    "common.online": "Online",
-    "common.email": "Email",
-    "common.password": "Password",
-    "common.fullName": "Full name",
-    "common.phone": "Phone number",
-    "common.wait": "Please wait…",
-    "common.createAccount": "Create account",
-    "common.signIn": "Sign in",
-    "common.backPortal": "Back to portal selection",
-    "landing.oneNetwork": "ONE NETWORK",
-    "landing.chooseWorkspace": "CHOOSE YOUR WORKSPACE",
-    "landing.hero": "Logistics built around every role.",
-    "landing.heroText": "Secure portals for leadership, drivers and customers—connected by live GPS, road routing, payments and one shared transport network.",
-    "landing.capabilities": "LIVE PLATFORM CAPABILITIES",
-    "landing.adminLabel": "ADMIN / CEO",
-    "landing.adminTitle": "Control Center",
-    "landing.adminDesc": "Orders, live operations, fleet, finance, delivery proof and business reports.",
-    "landing.driverLabel": "DRIVER",
-    "landing.driverTitle": "Mobile Workspace",
-    "landing.driverDesc": "Find loads, share live GPS, follow turn-by-turn routes, manage trips, documents and earnings.",
-    "landing.customerLabel": "CUSTOMER",
-    "landing.customerTitle": "Smart Portal",
-    "landing.customerDesc": "Request transport, get route-aware quotes, follow the truck live, submit payments and view delivery proof.",
-    "cap.driverGps": "Live driver GPS",
-    "cap.customerTracking": "Customer truck tracking",
-    "cap.routeQuote": "Route-aware quotes",
-    "cap.navigation": "Turn-by-turn navigation",
-    "cap.autoSteps": "Automatic route steps",
-    "cap.payment": "Secure payment flow",
-    "driver.workspace": "DRIVER WORKSPACE",
-    "driver.nav.jobs": "Jobs",
-    "driver.nav.trip": "Trip",
-    "driver.nav.docs": "Docs",
-    "driver.nav.earnings": "Earnings",
-    "driver.menu.signedIn": "Signed in as",
-    "driver.login.title": "Driver login",
-    "driver.signup.title": "Create driver account",
-    "driver.login.desc": "Sign in to view available loads and manage trips.",
-    "driver.signup.desc": "Register as a Hallo Truck driver.",
-    "driver.login.submit": "Sign in",
-    "driver.signup.submit": "Create account",
-    "driver.login.switchSignup": "New driver? Create an account",
-    "driver.login.switchLogin": "Already registered? Sign in",
-    "driver.error.namePhone": "Full name and phone number are required.",
-    "driver.error.access": "This account does not have Driver access.",
-    "driver.error.auth": "Authentication failed.",
-    "driver.message.pending": "Account created. Driver access is pending approval.",
-    "driver.message.confirm": "Account created. Check your email to confirm your account.",
-    "customer.smartPortal": "CUSTOMER SMART PORTAL",
-    "customer.hero": "Book. Track. Receive.",
-    "customer.heroText": "Your orders, payments, invoices and proof of delivery in one secure workspace.",
-    "customer.label": "CUSTOMER",
-    "customer.login.title": "Welcome back",
-    "customer.signup.title": "Create customer account",
-    "customer.login.desc": "Sign in to manage your shipments.",
-    "customer.signup.desc": "Start booking and tracking transport.",
-    "customer.login.submit": "Open customer portal",
-    "customer.signup.submit": "Create account",
-    "customer.login.switchSignup": "New customer? Create an account",
-    "customer.login.switchLogin": "Already registered? Sign in",
-    "customer.error.access": "This account does not have Customer access.",
-    "customer.error.auth": "Authentication failed.",
-    "customer.message.confirm": "Account created. Check your email to confirm it, then sign in."
+const extraTranslations: Record<ExtraLanguage, Record<string, string>> = {
+  so: {
+    "common.openPortal": "Fur bogga",
+    "common.signOut": "Ka bax",
+    "common.online": "Khadka ku jira",
+    "common.email": "Iimayl",
+    "common.password": "Furaha sirta",
+    "common.fullName": "Magaca oo buuxa",
+    "common.phone": "Lambarka taleefanka",
+    "common.wait": "Fadlan sug…",
+    "common.createAccount": "Samee akoon",
+    "common.signIn": "Gal",
+    "common.backPortal": "Ku noqo xulashada bogga",
+    "landing.oneNetwork": "HAL SHABAKAD",
+    "landing.chooseWorkspace": "DOORO GOOBTA SHAQADA",
+    "landing.hero": "Saad loo dhisay door kasta.",
+    "landing.heroText": "Bogag ammaan ah oo loogu talagalay maamulka, darawallada iyo macaamiisha—laguna mideeyey GPS toos ah, jid-marin, lacag-bixin iyo hal shabakad gaadiid.",
+    "landing.capabilities": "AWOODAHA MADASHA TOOSKA AH",
+    "landing.adminLabel": "MAAMULE / CEO",
+    "landing.adminTitle": "Xarunta Xakamaynta",
+    "landing.adminDesc": "Dalabyo, hawlgallo toos ah, gaadiid, maaliyad, caddaynta gaarsiinta iyo warbixinno ganacsi.",
+    "landing.driverLabel": "DARAWAL",
+    "landing.driverTitle": "Goobta Shaqada Moobaylka",
+    "landing.driverDesc": "Raadi xamuul, la wadaag GPS toos ah, raac tilmaamaha jidka, maamul safarrada, dukumentiyada iyo dakhliga.",
+    "landing.customerLabel": "MACMIIL",
+    "landing.customerTitle": "Bogga Casriga ah",
+    "landing.customerDesc": "Dalbo gaadiid, hel qiime jidka ku salaysan, si toos ah ula soco gaadhiga, gudbi lacag-bixin oo eeg caddaynta gaarsiinta.",
+    "cap.driverGps": "GPS-ka darawalka oo toos ah",
+    "cap.customerTracking": "La socodka gaadhiga macmiilka",
+    "cap.routeQuote": "Qiime jidka ku salaysan",
+    "cap.navigation": "Hagitaan tallaabo-tallaabo ah",
+    "cap.autoSteps": "Tallaabooyinka jidka oo otomaatig ah",
+    "cap.payment": "Hab lacag-bixin ammaan ah",
+    "driver.workspace": "GOOBTA SHAQADA DARAWALKA",
+    "driver.nav.jobs": "Shaqooyin",
+    "driver.nav.trip": "Safar",
+    "driver.nav.docs": "Dukumenti",
+    "driver.nav.earnings": "Dakhli",
+    "driver.menu.signedIn": "Waxaad ku gashay",
+    "driver.login.title": "Gelitaanka darawalka",
+    "driver.signup.title": "Samee akoon darawal",
+    "driver.login.desc": "Gal si aad u aragto xamuulka jira oo aad u maamusho safarrada.",
+    "driver.signup.desc": "Iska diiwaangeli darawal Hallo Truck ahaan.",
+    "driver.login.submit": "Gal",
+    "driver.signup.submit": "Samee akoon",
+    "driver.login.switchSignup": "Darawal cusub? Samee akoon",
+    "driver.login.switchLogin": "Hore ma isu diiwaangelisay? Gal",
+    "driver.error.namePhone": "Magaca oo buuxa iyo lambarka taleefanka waa waajib.",
+    "driver.error.access": "Akoonkan ma laha gelitaanka Darawalka.",
+    "driver.error.auth": "Xaqiijinta gelitaanka way fashilantay.",
+    "driver.message.pending": "Akoonka waa la sameeyey. Gelitaanka darawalku wuxuu sugayaa ansixin.",
+    "driver.message.confirm": "Akoonka waa la sameeyey. Ka hubi iimaylkaaga si aad u xaqiijiso.",
+    "customer.smartPortal": "BOGGA CASRIGA AH EE MACMIILKA",
+    "customer.hero": "Dalbo. La soco. Guddoon.",
+    "customer.heroText": "Dalabyadaada, lacag-bixinnada, qaansheegadaha iyo caddaynta gaarsiinta oo ku jira hal goob ammaan ah.",
+    "customer.label": "MACMIIL",
+    "customer.login.title": "Soo dhowow mar kale",
+    "customer.signup.title": "Samee akoon macmiil",
+    "customer.login.desc": "Gal si aad u maamusho xamuulkaaga.",
+    "customer.signup.desc": "Bilow dalbashada iyo la socodka gaadiidka.",
+    "customer.login.submit": "Fur bogga macmiilka",
+    "customer.signup.submit": "Samee akoon",
+    "customer.login.switchSignup": "Macmiil cusub? Samee akoon",
+    "customer.login.switchLogin": "Hore ma isu diiwaangelisay? Gal",
+    "customer.error.access": "Akoonkan ma laha gelitaanka Macmiilka.",
+    "customer.error.auth": "Xaqiijinta gelitaanka way fashilantay.",
+    "customer.message.confirm": "Akoonka waa la sameeyey. Xaqiiji iimaylkaaga, dabadeed gal."
   },
-  om: {
-    "common.openPortal": "Poortaalii bani",
-    "common.signOut": "Ba'i",
-    "common.online": "Online",
-    "common.email": "Imeelii",
-    "common.password": "Jecha iccitii",
-    "common.fullName": "Maqaa guutuu",
-    "common.phone": "Lakkoofsa bilbilaa",
-    "common.wait": "Mee eegi…",
-    "common.createAccount": "Akkaawuntii uumi",
-    "common.signIn": "Seeni",
-    "common.backPortal": "Gara filannoo poortaaliitti deebi'i",
-    "landing.oneNetwork": "NETWORKII TOKKO",
-    "landing.chooseWorkspace": "BAKKA HOJII KEE FILADHU",
-    "landing.hero": "Loojistikii gahee hundaaf ijaarame.",
-    "landing.heroText": "Poortaalii nageenya qabu hoggansa, konkolaachisaa fi maamiltootaaf—GPS kallattii, daandii, kaffaltii fi networkii geejjibaa tokkoon wal qunnamsiifame.",
-    "landing.capabilities": "DANDEETTII PLATFORMII KALLATTII",
-    "landing.adminLabel": "ADMIN / CEO",
-    "landing.adminTitle": "Giddugala To'annoo",
-    "landing.adminDesc": "Ajajoota, hojii kallattii, fleet, faayinaansii, ragaa geejjibaa fi gabaasa daldalaa.",
-    "landing.driverLabel": "KONKOLAACHISAA",
-    "landing.driverTitle": "Bakka Hojii Moobaayilaa",
-    "landing.driverDesc": "Fe'umsa barbaadi, GPS kallattii qoodi, daandii tartiibaan hordofi, imala, dokumentii fi galii bulchi.",
-    "landing.customerLabel": "MAAMILA",
-    "landing.customerTitle": "Poortaalii Smart",
-    "landing.customerDesc": "Geejjiba gaafadhu, gatii daandii irratti hundaa'e argadhu, konkolaataa kallattiin hordofi, kaffaltii ergi fi ragaa geejjibaa ilaali.",
-    "cap.driverGps": "GPS konkolaachisaa kallattii",
-    "cap.customerTracking": "Hordoffii konkolaataa maamilaa",
-    "cap.routeQuote": "Gatii daandii irratti hundaa'e",
-    "cap.navigation": "Qajeelfama tartiiba daandii",
-    "cap.autoSteps": "Tarkaanfii daandii ofumaan",
-    "cap.payment": "Kaffaltii nageenya qabu",
-    "driver.workspace": "BAKKA HOJII KONKOLAACHISAA",
-    "driver.nav.jobs": "Hojii",
-    "driver.nav.trip": "Imala",
-    "driver.nav.docs": "Dokumentii",
-    "driver.nav.earnings": "Galii",
-    "driver.menu.signedIn": "Seentee jirta akka",
-    "driver.login.title": "Seensa konkolaachisaa",
-    "driver.signup.title": "Akkaawuntii konkolaachisaa uumi",
-    "driver.login.desc": "Fe'umsa jiru ilaaluufi imala bulchuuf seeni.",
-    "driver.signup.desc": "Akka konkolaachisaa Hallo Truck tti galmaa'i.",
-    "driver.login.submit": "Seeni",
-    "driver.signup.submit": "Akkaawuntii uumi",
-    "driver.login.switchSignup": "Konkolaachisaa haaraa? Akkaawuntii uumi",
-    "driver.login.switchLogin": "Dura galmoofteetta? Seeni",
-    "driver.error.namePhone": "Maqaa guutuu fi lakkoofsi bilbilaa barbaachisaa dha.",
-    "driver.error.access": "Akkaawuntiin kun hayyama Konkolaachisaa hin qabu.",
-    "driver.error.auth": "Seenuun hin milkoofne.",
-    "driver.message.pending": "Akkaawuntiin uumameera. Hayyamni konkolaachisaa mirkaneessa eeggachaa jira.",
-    "driver.message.confirm": "Akkaawuntiin uumameera. Imeelii kee irratti mirkaneessi.",
-    "customer.smartPortal": "POORTAALII SMART MAAMILAA",
-    "customer.hero": "Ajaji. Hordofi. Fudhadhu.",
-    "customer.heroText": "Ajajoota, kaffaltii, invoice fi ragaa geejjibaa bakka hojii nageenya qabu tokko keessatti.",
-    "customer.label": "MAAMILA",
-    "customer.login.title": "Baga nagaan deebite",
-    "customer.signup.title": "Akkaawuntii maamilaa uumi",
-    "customer.login.desc": "Geejjiba kee bulchuuf seeni.",
-    "customer.signup.desc": "Geejjiba ajajuu fi hordofuu jalqabi.",
-    "customer.login.submit": "Poortaalii maamilaa bani",
-    "customer.signup.submit": "Akkaawuntii uumi",
-    "customer.login.switchSignup": "Maamila haaraa? Akkaawuntii uumi",
-    "customer.login.switchLogin": "Dura galmoofteetta? Seeni",
-    "customer.error.access": "Akkaawuntiin kun hayyama Maamilaa hin qabu.",
-    "customer.error.auth": "Seenuun hin milkoofne.",
-    "customer.message.confirm": "Akkaawuntiin uumameera. Imeelii kee mirkaneessi, sana booda seeni."
-  },
-  am: {
+  ti: {
     "common.openPortal": "ፖርታል ክፈት",
-    "common.signOut": "ውጣ",
+    "common.signOut": "ውጻእ",
     "common.online": "ኦንላይን",
-    "common.email": "ኢሜይል",
-    "common.password": "የይለፍ ቃል",
-    "common.fullName": "ሙሉ ስም",
-    "common.phone": "ስልክ ቁጥር",
-    "common.wait": "እባክዎ ይጠብቁ…",
-    "common.createAccount": "መለያ ፍጠር",
-    "common.signIn": "ግባ",
-    "common.backPortal": "ወደ ፖርታል ምርጫ ተመለስ",
-    "landing.oneNetwork": "አንድ ኔትወርክ",
-    "landing.chooseWorkspace": "የስራ ቦታዎን ይምረጡ",
-    "landing.hero": "ለእያንዳንዱ ሚና የተገነባ ሎጂስቲክስ።",
-    "landing.heroText": "ለአመራር፣ ለአሽከርካሪዎች እና ለደንበኞች የተጠበቁ ፖርታሎች—በቀጥታ GPS፣ የመንገድ አቅጣጫ፣ ክፍያ እና አንድ የትራንስፖርት ኔትወርክ የተገናኙ።",
-    "landing.capabilities": "የቀጥታ ፕላትፎርም አቅሞች",
-    "landing.adminLabel": "ADMIN / CEO",
-    "landing.adminTitle": "የቁጥጥር ማዕከል",
-    "landing.adminDesc": "ትዕዛዞች፣ የቀጥታ ኦፕሬሽን፣ ፍሊት፣ ፋይናንስ፣ የማድረስ ማስረጃ እና የንግድ ሪፖርቶች።",
-    "landing.driverLabel": "አሽከርካሪ",
-    "landing.driverTitle": "የሞባይል የስራ ቦታ",
-    "landing.driverDesc": "ጭነቶችን ፈልግ፣ የቀጥታ GPS አጋራ፣ የመንገድ መመሪያን ተከተል፣ ጉዞ፣ ሰነዶች እና ገቢን አስተዳድር።",
-    "landing.customerLabel": "ደንበኛ",
+    "common.email": "ኢመይል",
+    "common.password": "መሕለፊ ቃል",
+    "common.fullName": "ምሉእ ስም",
+    "common.phone": "ቁጽሪ ተሌፎን",
+    "common.wait": "በጃኻ ተጸበ…",
+    "common.createAccount": "ኣካውንት ፍጠር",
+    "common.signIn": "እቶ",
+    "common.backPortal": "ናብ ምርጫ ፖርታል ተመለስ",
+    "landing.oneNetwork": "ሓደ መርበብ",
+    "landing.chooseWorkspace": "ናይ ስራሕ ቦታኻ ምረጽ",
+    "landing.hero": "ንኹሉ ተራ ዝተሃንጸ ሎጂስቲክስ።",
+    "landing.heroText": "ንኣመራርሓ፣ ንመራሕቲ መኪናን ንዓማዊልን ውሑስ ፖርታላት—ብቀጥታ GPS፣ መስመር መንገዲ፣ ክፍሊትን ሓደ መርበብ መጓዓዝያን ዝተኣሳሰሩ።",
+    "landing.capabilities": "ዓቕምታት ቀጥታ ፕላትፎርም",
+    "landing.adminLabel": "ኣድሚን / CEO",
+    "landing.adminTitle": "ማእከል ቁጽጽር",
+    "landing.adminDesc": "ትእዛዛት፣ ቀጥታ ስርሒት፣ ፍሊት፣ ፋይናንስ፣ መረጋገጺ ምብጻሕን ናይ ንግዲ ጸብጻባትን።",
+    "landing.driverLabel": "መራሕ መኪና",
+    "landing.driverTitle": "ናይ ሞባይል ስራሕ ቦታ",
+    "landing.driverDesc": "ጽዕነት ድለ፣ ቀጥታ GPS ኣካፍል፣ መምርሒ መንገዲ ተኸተል፣ ጉዕዞ፣ ሰነዳትን ኣታዊን ኣመሓድር።",
+    "landing.customerLabel": "ዓሚል",
     "landing.customerTitle": "ስማርት ፖርታል",
-    "landing.customerDesc": "ትራንስፖርት ጠይቅ፣ በመንገድ ርቀት የተመሰረተ ዋጋ አግኝ፣ መኪናውን በቀጥታ ተከታተል፣ ክፍያ ላክ እና የማድረስ ማስረጃ ተመልከት።",
-    "cap.driverGps": "የአሽከርካሪ ቀጥታ GPS",
-    "cap.customerTracking": "የደንበኛ መኪና ክትትል",
-    "cap.routeQuote": "በመንገድ የተመሰረተ ዋጋ",
-    "cap.navigation": "ደረጃ በደረጃ አቅጣጫ",
-    "cap.autoSteps": "ራስ-ሰር የመንገድ ደረጃዎች",
-    "cap.payment": "የተጠበቀ የክፍያ ሂደት",
-    "driver.workspace": "የአሽከርካሪ የስራ ቦታ",
-    "driver.nav.jobs": "ስራዎች",
-    "driver.nav.trip": "ጉዞ",
-    "driver.nav.docs": "ሰነዶች",
-    "driver.nav.earnings": "ገቢ",
-    "driver.menu.signedIn": "የገቡት",
-    "driver.login.title": "የአሽከርካሪ መግቢያ",
-    "driver.signup.title": "የአሽከርካሪ መለያ ፍጠር",
-    "driver.login.desc": "ያሉ ጭነቶችን ለማየት እና ጉዞዎችን ለማስተዳደር ይግቡ።",
-    "driver.signup.desc": "እንደ Hallo Truck አሽከርካሪ ይመዝገቡ።",
-    "driver.login.submit": "ግባ",
-    "driver.signup.submit": "መለያ ፍጠር",
-    "driver.login.switchSignup": "አዲስ አሽከርካሪ? መለያ ፍጠር",
-    "driver.login.switchLogin": "ቀድሞ ተመዝግበዋል? ይግቡ",
-    "driver.error.namePhone": "ሙሉ ስም እና ስልክ ቁጥር ያስፈልጋሉ።",
-    "driver.error.access": "ይህ መለያ የአሽከርካሪ ፈቃድ የለውም።",
-    "driver.error.auth": "መግባት አልተሳካም።",
-    "driver.message.pending": "መለያው ተፈጥሯል። የአሽከርካሪ ፈቃድ ማረጋገጫ በመጠበቅ ላይ ነው።",
-    "driver.message.confirm": "መለያው ተፈጥሯል። ኢሜይልዎን ይፈትሹ እና ያረጋግጡ።",
-    "customer.smartPortal": "የደንበኛ ስማርት ፖርታል",
-    "customer.hero": "ይዘዙ። ይከታተሉ። ይቀበሉ።",
-    "customer.heroText": "ትዕዛዞችዎ፣ ክፍያዎችዎ፣ ደረሰኞችዎ እና የማድረስ ማስረጃ በአንድ የተጠበቀ የስራ ቦታ።",
-    "customer.label": "ደንበኛ",
-    "customer.login.title": "እንኳን ደህና መጡ",
-    "customer.signup.title": "የደንበኛ መለያ ፍጠር",
-    "customer.login.desc": "ጭነቶችዎን ለማስተዳደር ይግቡ።",
-    "customer.signup.desc": "ትራንስፖርት መያዝ እና መከታተል ይጀምሩ።",
-    "customer.login.submit": "የደንበኛ ፖርታል ክፈት",
-    "customer.signup.submit": "መለያ ፍጠር",
-    "customer.login.switchSignup": "አዲስ ደንበኛ? መለያ ፍጠር",
-    "customer.login.switchLogin": "ቀድሞ ተመዝግበዋል? ይግቡ",
-    "customer.error.access": "ይህ መለያ የደንበኛ ፈቃድ የለውም።",
-    "customer.error.auth": "መግባት አልተሳካም።",
-    "customer.message.confirm": "መለያው ተፈጥሯል። ኢሜይልዎን ያረጋግጡ እና ከዚያ ይግቡ።"
+    "landing.customerDesc": "መጓዓዝያ ሕተት፣ ኣብ መንገዲ ዝተመርኮሰ ዋጋ ርኸብ፣ መኪና ብቀጥታ ተኸታተል፣ ክፍሊት ኣቕርብን መረጋገጺ ምብጻሕ ርአን።",
+    "cap.driverGps": "ቀጥታ GPS መራሕ መኪና",
+    "cap.customerTracking": "ምክትታል መኪና ዓሚል",
+    "cap.routeQuote": "ኣብ መንገዲ ዝተመርኮሰ ዋጋ",
+    "cap.navigation": "ደረጃ ብደረጃ መምርሒ",
+    "cap.autoSteps": "ኣውቶማቲክ ደረጃታት መንገዲ",
+    "cap.payment": "ውሑስ መስርሕ ክፍሊት",
+    "driver.workspace": "ናይ መራሕ መኪና ስራሕ ቦታ",
+    "driver.nav.jobs": "ስራሓት",
+    "driver.nav.trip": "ጉዕዞ",
+    "driver.nav.docs": "ሰነዳት",
+    "driver.nav.earnings": "ኣታዊ",
+    "driver.menu.signedIn": "ከምዚ ኣቲኻ",
+    "driver.login.title": "መእተዊ መራሕ መኪና",
+    "driver.signup.title": "ኣካውንት መራሕ መኪና ፍጠር",
+    "driver.login.desc": "ዘለዉ ጽዕነታት ንምርኣይን ጉዕዞታት ንምምሕዳርን እቶ።",
+    "driver.signup.desc": "ከም መራሕ መኪና Hallo Truck ተመዝገብ።",
+    "driver.login.submit": "እቶ",
+    "driver.signup.submit": "ኣካውንት ፍጠር",
+    "driver.login.switchSignup": "ሓድሽ መራሕ መኪና? ኣካውንት ፍጠር",
+    "driver.login.switchLogin": "ቅድሚ ሕጂ ተመዝጊብካ? እቶ",
+    "driver.error.namePhone": "ምሉእ ስምን ቁጽሪ ተሌፎንን የድሊ።",
+    "driver.error.access": "እዚ ኣካውንት ናይ መራሕ መኪና ፍቓድ የብሉን።",
+    "driver.error.auth": "ምርግጋጽ መእተዊ ኣይተዓወተን።",
+    "driver.message.pending": "ኣካውንት ተፈጢሩ። ፍቓድ መራሕ መኪና ምጽዳቕ ይጽበ ኣሎ።",
+    "driver.message.confirm": "ኣካውንት ተፈጢሩ። ንምርግጋጽ ኢመይልካ ርአ።",
+    "customer.smartPortal": "ስማርት ፖርታል ዓሚል",
+    "customer.hero": "ኣዝዝ። ተኸታተል። ተቐበል።",
+    "customer.heroText": "ትእዛዛትካ፣ ክፍሊታትካ፣ ኢንቮይሳትካን መረጋገጺ ምብጻሕን ኣብ ሓደ ውሑስ ስራሕ ቦታ።",
+    "customer.label": "ዓሚል",
+    "customer.login.title": "እንቋዕ ደሓን መጻእካ",
+    "customer.signup.title": "ኣካውንት ዓሚል ፍጠር",
+    "customer.login.desc": "ጽዕነታትካ ንምምሕዳር እቶ።",
+    "customer.signup.desc": "መጓዓዝያ ምእዛዝን ምክትታልን ጀምር።",
+    "customer.login.submit": "ፖርታል ዓሚል ክፈት",
+    "customer.signup.submit": "ኣካውንት ፍጠር",
+    "customer.login.switchSignup": "ሓድሽ ዓሚል? ኣካውንት ፍጠር",
+    "customer.login.switchLogin": "ቅድሚ ሕጂ ተመዝጊብካ? እቶ",
+    "customer.error.access": "እዚ ኣካውንት ናይ ዓሚል ፍቓድ የብሉን።",
+    "customer.error.auth": "ምርግጋጽ መእተዊ ኣይተዓወተን።",
+    "customer.message.confirm": "ኣካውንት ተፈጢሩ። ኢመይልካ ኣረጋግጽ፣ ድሕሪኡ እቶ።"
   }
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function readInitialLanguage(): HalloLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem(STORAGE_KEY);
-  return saved === "om" || saved === "am" || saved === "en" ? saved : "en";
+function isSupportedLanguage(value: string | null): value is SupportedLanguage {
+  return value === "en" || value === "om" || value === "am" || value === "so" || value === "ti";
 }
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<HalloLanguage>(readInitialLanguage);
+function readInitialLanguage(): SupportedLanguage {
+  if (typeof window === "undefined") return "en";
+  const extended = window.localStorage.getItem(EXTENDED_STORAGE_KEY);
+  if (isSupportedLanguage(extended)) return extended;
+  const legacy = window.localStorage.getItem("hallo_language");
+  return isSupportedLanguage(legacy) ? legacy : "en";
+}
+
+function LanguageBridge({ children }: { children: ReactNode }) {
+  const legacy = useLegacyLanguage();
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>(readInitialLanguage);
+  const language: HalloLanguage = selectedLanguage === "so" || selectedLanguage === "ti" ? "en" : selectedLanguage;
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, language);
-    document.documentElement.lang = language === "om" ? "om" : language === "am" ? "am" : "en";
-  }, [language]);
+    window.localStorage.setItem(EXTENDED_STORAGE_KEY, selectedLanguage);
+    if (legacy.language !== language) legacy.setLanguage(language);
+
+    const timer = window.setTimeout(() => {
+      document.documentElement.lang = selectedLanguage;
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [language, legacy, selectedLanguage]);
 
   const value = useMemo<LanguageContextValue>(() => ({
     language,
-    setLanguage: setLanguageState,
-    t: (key) => translations[language][key] ?? translations.en[key] ?? key,
-  }), [language]);
+    selectedLanguage,
+    setLanguage: setSelectedLanguage,
+    t: (key) => {
+      if (selectedLanguage === "so" || selectedLanguage === "ti") {
+        return extraTranslations[selectedLanguage][key] ?? legacy.t(key);
+      }
+      return legacy.t(key);
+    },
+  }), [language, legacy, selectedLanguage]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  return (
+    <LegacyLanguageProvider>
+      <LanguageBridge>{children}</LanguageBridge>
+    </LegacyLanguageProvider>
+  );
 }
 
 export function useLanguage() {
@@ -246,19 +219,21 @@ export function useLanguage() {
 }
 
 export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
-  const { language, setLanguage } = useLanguage();
+  const { selectedLanguage, setLanguage } = useLanguage();
   return (
     <label className={`inline-flex items-center border px-2 py-1.5 text-[10px] font-mono tracking-wide ${dark ? "border-white/15 text-white/70" : "border-asphalt/15 text-steel"}`}>
       <span className="sr-only">Language</span>
       <select
         aria-label="Language"
-        value={language}
-        onChange={(event) => setLanguage(event.target.value as HalloLanguage)}
+        value={selectedLanguage}
+        onChange={(event) => setLanguage(event.target.value as SupportedLanguage)}
         className={`bg-transparent outline-none ${dark ? "text-white" : "text-asphalt"}`}
       >
         <option value="en" className="text-asphalt">EN</option>
         <option value="om" className="text-asphalt">OR</option>
         <option value="am" className="text-asphalt">አማ</option>
+        <option value="so" className="text-asphalt">SO</option>
+        <option value="ti" className="text-asphalt">ትግ</option>
       </select>
     </label>
   );
