@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:regression": "node scripts/run-regression-tests.mjs",
+    "test:e2e-smoke": "node scripts/e2e-smoke.mjs",
+    "test:ci": "npm run test:regression && npm run build && npm run test:e2e-smoke"
   },
   "dependencies": {
     "@sentry/react": "^10.70.0",
