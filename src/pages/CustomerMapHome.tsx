@@ -14,6 +14,15 @@ import {
   vehicleCapacityTons,
   type CargoUnit,
 } from "../services/customer-cargo.service";
+import {
+  CARGO_CATEGORIES,
+  PACKAGING_TYPES,
+  cargoDetailsCopy,
+  isContainerPackaging,
+  validateCargoDetails,
+  type CargoCategory,
+  type PackagingType,
+} from "../domain/cargo-details";
 import { useTransportQuote } from "../hooks/useTransportQuote";
 
 const copy: Record<HalloLanguage, {
@@ -192,13 +201,17 @@ const vehicleOptions = [
 
 export function CustomerMapHome() {
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  const { language, selectedLanguage } = useLanguage();
   const c = getCustomerCopy(language);
   const t = copy[language];
+  const cargoCopy = cargoDetailsCopy[selectedLanguage];
   const [routePoints, setRoutePoints] = useState<QuotePoints | null>(null);
   const [vehicle, setVehicle] = useState<(typeof vehicleOptions)[number]>("Dry Cargo");
   const [cargoQuantity, setCargoQuantity] = useState("1");
   const [cargoUnit, setCargoUnit] = useState<CargoUnit>("ton");
+  const [cargoCategory, setCargoCategory] = useState<CargoCategory>("general_goods");
+  const [packagingType, setPackagingType] = useState<PackagingType>("loose_bulk");
+  const [cargoNotes, setCargoNotes] = useState("");
   const [matchingOrder, setMatchingOrder] = useState<DispatchOrderSummary | null>(null);
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -208,11 +221,19 @@ export function CustomerMapHome() {
   const cargoAmount = Number(cargoQuantity);
   const cargoTons = cargoToTons(cargoAmount, cargoUnit);
   const selectedCapacity = vehicleCapacityTons[vehicle.toLowerCase()] ?? 0;
-  const validation = !Number.isFinite(cargoAmount) || cargoAmount <= 0
+  const loadValidation = !Number.isFinite(cargoAmount) || cargoAmount <= 0
     ? t.required
     : selectedCapacity > 0 && cargoTons > selectedCapacity
       ? `${t.exceeds} ${vehicle}: ${selectedCapacity} ${t.ton}.`
       : "";
+  const cargoDetailsErrorCode = validateCargoDetails({
+    category: cargoCategory,
+    packagingType,
+    vehicleType: vehicle,
+    notes: cargoNotes,
+  });
+  const cargoDetailsValidation = cargoDetailsErrorCode ? cargoCopy.errors[cargoDetailsErrorCode] : "";
+  const validation = loadValidation || cargoDetailsValidation;
   const {
     quote: quoteBreakdown,
     loading: quoteLoading,
@@ -256,6 +277,9 @@ export function CustomerMapHome() {
         dropoff: routePoints.dropoff,
         cargoQuantity: cargoAmount,
         cargoUnit,
+        cargoCategory,
+        packagingType,
+        cargoNotes,
       });
       setMatchingOrder({
         id: order.id,
@@ -321,6 +345,39 @@ export function CustomerMapHome() {
                   <small>{vehicleCapacityTons[option.toLowerCase()] ?? "—"} {t.ton}</small>
                 </button>
               ))}
+            </div>
+
+            <div className="customer-map-home__load-grid">
+              <label>
+                {cargoCopy.category}
+                <select value={cargoCategory} onChange={(event) => setCargoCategory(event.target.value as CargoCategory)}>
+                  {CARGO_CATEGORIES.map((category) => <option key={category} value={category}>{cargoCopy.categories[category]}</option>)}
+                </select>
+              </label>
+              <label>
+                {cargoCopy.packaging}
+                <select
+                  value={packagingType}
+                  onChange={(event) => {
+                    const next = event.target.value as PackagingType;
+                    setPackagingType(next);
+                    if (isContainerPackaging(next)) setVehicle("Trailer");
+                  }}
+                >
+                  {PACKAGING_TYPES.map((packaging) => <option key={packaging} value={packaging}>{cargoCopy.packagingTypes[packaging]}</option>)}
+                </select>
+              </label>
+              <label className="sm:col-span-2">
+                {cargoCopy.notes}
+                <textarea
+                  value={cargoNotes}
+                  onChange={(event) => setCargoNotes(event.target.value)}
+                  maxLength={500}
+                  rows={2}
+                  required={cargoCategory === "other"}
+                  placeholder={cargoCopy.notesPlaceholder}
+                />
+              </label>
             </div>
 
             <div className="customer-map-home__load-grid">
