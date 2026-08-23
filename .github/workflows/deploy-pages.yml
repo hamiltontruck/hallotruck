@@ -32,6 +32,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Business regression tests
+        run: npm run test:regression
+
       - name: Build
         run: npm run build
         env:
@@ -39,6 +42,9 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
           VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
+
+      - name: Browser E2E smoke tests
+        run: npm run test:e2e-smoke
 
       - name: Configure Pages
         if: github.event_name != 'pull_request'
