@@ -9,12 +9,14 @@ export interface PaymentSummary {
   heldEscrow: number;
   releasedGross: number;
   refunded: number;
+  rawVerified: number;
   verifiedPaid: number;
   pendingVerification: number;
   committed: number;
   balanceToPay: number;
   remainingToSubmit: number;
   customerCredit: number;
+  ledgerAnomaly: number;
 }
 
 function totalFor(entries: PaymentLedgerEntry[], event: string) {
@@ -30,6 +32,8 @@ function totalFor(entries: PaymentLedgerEntry[], event: string) {
  * - Initiated payments are pending verification, not verified paid.
  * - Balance to pay uses verified money only.
  * - Remaining to submit also reserves pending initiated money to prevent duplicates.
+ * - A negative raw verified amount is surfaced as a ledger anomaly instead of silently
+ *   becoming a valid zero balance.
  */
 export function calculatePaymentSummary(
   invoiceTotalInput: number | string | null | undefined,
@@ -40,8 +44,8 @@ export function calculatePaymentSummary(
   const heldEscrow = totalFor(entries, "held_escrow");
   const releasedGross = totalFor(entries, "released");
   const refunded = totalFor(entries, "refunded");
-
-  const verifiedPaid = Math.max(0, releasedGross + heldEscrow - refunded);
+  const rawVerified = releasedGross + heldEscrow - refunded;
+  const verifiedPaid = Math.max(0, rawVerified);
   const pendingVerification = Math.max(0, initiated);
   const committed = Math.max(0, verifiedPaid + pendingVerification);
 
@@ -51,11 +55,13 @@ export function calculatePaymentSummary(
     heldEscrow,
     releasedGross,
     refunded,
+    rawVerified,
     verifiedPaid,
     pendingVerification,
     committed,
     balanceToPay: Math.max(0, invoiceTotal - verifiedPaid),
     remainingToSubmit: Math.max(0, invoiceTotal - committed),
     customerCredit: Math.max(0, verifiedPaid - invoiceTotal),
+    ledgerAnomaly: Math.max(0, -rawVerified),
   };
 }
