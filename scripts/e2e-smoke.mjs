@@ -162,10 +162,12 @@ try {
   const driverProtected = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/driver/jobs`, profile));
   assertContains(driverProtected, ["Driver login"], "Protected driver redirect");
 
-  const somali = await withProfile((profile) => dumpDom(chrome, await writeLanguageBootstrap("e2e-language-so.html", "so"), profile));
+  const somaliUrl = await writeLanguageBootstrap("e2e-language-so.html", "so");
+  const somali = await withProfile((profile) => dumpDom(chrome, somaliUrl, profile));
   assertContains(somali, ["Soo dhowow mar kale", "Fur bogga macmiilka", "lang=\"so\""], "Somali language persistence");
 
-  const tigrinya = await withProfile((profile) => dumpDom(chrome, await writeLanguageBootstrap("e2e-language-ti.html", "ti"), profile));
+  const tigrinyaUrl = await writeLanguageBootstrap("e2e-language-ti.html", "ti");
+  const tigrinya = await withProfile((profile) => dumpDom(chrome, tigrinyaUrl, profile));
   assertContains(tigrinya, ["እንቋዕ ደሓን መጻእካ", "ፖርታል ዓሚል ክፈት", "lang=\"ti\""], "Tigrinya language persistence");
 
   console.log("E2E smoke tests passed: landing, mobile/desktop customer login, customer signup, auth redirects and language persistence.");
