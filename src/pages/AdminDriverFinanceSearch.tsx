@@ -2,6 +2,10 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabase.client";
 import { formatEtb } from "../utils/currency";
 
+const MIN_DEPOSIT_ETB = 5_000;
+const MAX_DEPOSIT_ETB = 100_000;
+const QUICK_DEPOSITS = [5_000, 10_000, 25_000, 50_000, 100_000];
+
 type ProfileRow = {
   id: string;
   full_name: string | null;
@@ -36,6 +40,16 @@ type OrderRow = {
   created_at: string;
 };
 
+type DepositRow = {
+  id: string;
+  driver_id: string;
+  amount_etb: number | string;
+  reference: string | null;
+  note: string | null;
+  status: string;
+  created_at: string;
+};
+
 type DriverFinancialSummary = {
   completed_trips: number | string;
   gross_released_etb: number | string;
@@ -65,6 +79,7 @@ export function AdminDriverFinanceSearch() {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [trucks, setTrucks] = useState<TruckRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [deposits, setDeposits] = useState<DepositRow[]>([]);
   const [summaries, setSummaries] = useState<SummaryMap>({});
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"drivers" | "orders">("drivers");
@@ -74,20 +89,18 @@ export function AdminDriverFinanceSearch() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const drivers = useMemo(
-    () => profiles.filter((profile) => profile.role === "driver"),
-    [profiles],
-  );
+  const drivers = useMemo(() => profiles.filter((profile) => profile.role === "driver"), [profiles]);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [profileResult, truckResult, orderResult] = await Promise.all([
+    const [profileResult, truckResult, orderResult, depositResult] = await Promise.all([
       supabase.from("profiles").select("id,full_name,phone,email,role,driver_status").order("full_name"),
       supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,driver_id").order("plate_number"),
       supabase.from("orders").select("id,tracking_id,customer_id,driver_id,truck_id,pickup_address,dropoff_address,cargo_description,price_etb,status,payment_status,accepted_at,delivered_at,created_at").order("created_at", { ascending: false }).limit(2000),
+      supabase.from("driver_commission_deposits").select("id,driver_id,amount_etb,reference,note,status,created_at").order("created_at", { ascending: false }).limit(500),
     ]);
 
-    const queryError = profileResult.error || truckResult.error || orderResult.error;
+    const queryError = profileResult.error || truckResult.error || orderResult.error || depositResult.error;
     if (queryError) {
       setError(queryError.message);
       setLoading(false);
@@ -110,6 +123,7 @@ export function AdminDriverFinanceSearch() {
     setProfiles(nextProfiles);
     setTrucks((truckResult.data ?? []) as TruckRow[]);
     setOrders((orderResult.data ?? []) as OrderRow[]);
+    setDeposits((depositResult.data ?? []) as DepositRow[]);
     setSummaries(nextSummaries);
     setError("");
     setLoading(false);
@@ -117,15 +131,8 @@ export function AdminDriverFinanceSearch() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const profileById = useMemo(
-    () => new Map(profiles.map((profile) => [profile.id, profile])),
-    [profiles],
-  );
-  const truckById = useMemo(
-    () => new Map(trucks.map((truck) => [truck.id, truck])),
-    [trucks],
-  );
-
+  const profileById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
+  const truckById = useMemo(() => new Map(trucks.map((truck) => [truck.id, truck])), [trucks]);
   const normalizedQuery = query.trim().toLowerCase();
 
   const visibleDrivers = useMemo(() => drivers.filter((driver) => {
@@ -161,16 +168,27 @@ export function AdminDriverFinanceSearch() {
     ].some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
   }), [normalizedQuery, orders, profileById, truckById]);
 
+  const totals = useMemo(() => Object.values(summaries).reduce((acc, item) => ({
+    trips: acc.trips + numberOf(item.completed_trips),
+    gross: acc.gross + numberOf(item.gross_released_etb),
+    deposits: acc.deposits + numberOf(item.admin_deposit_etb),
+    available: acc.available + numberOf(item.available_deposit_etb),
+    due: acc.due + numberOf(item.commission_due_etb),
+  }), { trips: 0, gross: 0, deposits: 0, available: 0, due: 0 }), [summaries]);
+
   async function recordDeposit(event: FormEvent<HTMLFormElement>, driver: ProfileRow) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const amountEtb = Number(form.get("amountEtb") ?? 0);
     const reference = String(form.get("reference") ?? "").trim();
     const note = String(form.get("note") ?? "").trim();
-    if (!Number.isFinite(amountEtb) || amountEtb <= 0) {
-      setError("Enter a valid deposit amount.");
+
+    if (!Number.isFinite(amountEtb) || amountEtb < MIN_DEPOSIT_ETB || amountEtb > MAX_DEPOSIT_ETB) {
+      setError(`Deposit must be between ETB ${MIN_DEPOSIT_ETB.toLocaleString()} and ETB ${MAX_DEPOSIT_ETB.toLocaleString()}.`);
       return;
     }
+
     setBusy(driver.id);
     setError("");
     setSuccess("");
@@ -180,10 +198,11 @@ export function AdminDriverFinanceSearch() {
       p_reference: reference || null,
       p_note: note || null,
     });
+
     if (result.error) {
       setError(result.error.message);
     } else {
-      event.currentTarget.reset();
+      formElement.reset();
       setSuccess(`${formatEtb(amountEtb)} deposit recorded for ${nameOf(driver, "driver")}.`);
       await load();
     }
@@ -198,10 +217,18 @@ export function AdminDriverFinanceSearch() {
           <div className="mt-3 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <h1 className="font-display text-3xl font-bold sm:text-4xl">Search every order, customer and driver</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">See which driver accepted each order, review each driver’s trips and released earnings, and manage the prepaid commission deposit balance.</p>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">See which driver accepted each order, review trips and released earnings, and manage commission deposits from ETB 5,000 to ETB 100,000.</p>
             </div>
             <a href="#/admin" className="border border-white/20 px-4 py-3 text-sm font-semibold">← Operations</a>
           </div>
+        </section>
+
+        <section className="mt-5 grid grid-cols-2 gap-px bg-asphalt/10 md:grid-cols-5">
+          <Metric label="Completed trips" value={String(totals.trips)} />
+          <Metric label="Gross released" value={formatEtb(totals.gross)} />
+          <Metric label="Deposits received" value={formatEtb(totals.deposits)} />
+          <Metric label="Available deposit" value={formatEtb(totals.available)} strong />
+          <Metric label="Commission due" value={formatEtb(totals.due)} danger={totals.due > 0} />
         </section>
 
         <section className="mt-5 border border-asphalt/10 bg-white p-4 sm:p-5">
@@ -243,6 +270,7 @@ export function AdminDriverFinanceSearch() {
             {visibleDrivers.length === 0 ? <p className="border border-asphalt/10 bg-white p-10 text-center text-sm text-steel">No matching drivers.</p> : visibleDrivers.map((driver) => {
               const summary = summaries[driver.id];
               const driverOrders = orders.filter((order) => order.driver_id === driver.id);
+              const driverDeposits = deposits.filter((deposit) => deposit.driver_id === driver.id);
               const assignedTruck = trucks.find((truck) => truck.driver_id === driver.id);
               const expanded = expandedDriver === driver.id;
               return <article key={driver.id} className="border border-asphalt/10 bg-white">
@@ -261,26 +289,28 @@ export function AdminDriverFinanceSearch() {
                   <Metric label="Commission due" value={formatEtb(numberOf(summary?.commission_due_etb))} danger={numberOf(summary?.commission_due_etb) > 0} />
                 </div>
 
-                {expanded && <div className="grid gap-5 bg-[#faf9f5] p-5 sm:p-6 xl:grid-cols-[.75fr_1.25fr]">
-                  <form onSubmit={(event) => void recordDeposit(event, driver)} className="border border-asphalt/10 bg-white p-5">
-                    <p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">ADMIN DEPOSIT</p>
-                    <h3 className="mt-2 font-display text-xl font-semibold">Fund commission wallet</h3>
-                    <p className="mt-2 text-xs leading-5 text-steel">Example: record ETB 5,000 received from this driver. Verified 2% commission charges consume this balance automatically.</p>
-                    <label className="mt-5 block text-xs font-semibold">Amount ETB<input name="amountEtb" type="number" min="0.01" step="0.01" required className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
-                    <label className="mt-4 block text-xs font-semibold">Reference<input name="reference" maxLength={120} placeholder="Cash receipt or internal reference" className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
-                    <label className="mt-4 block text-xs font-semibold">Note<textarea name="note" maxLength={500} rows={3} placeholder="Who received it and where" className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
-                    <button disabled={busy === driver.id} className="mt-5 w-full bg-asphalt px-4 py-4 text-sm font-semibold text-white disabled:opacity-40">{busy === driver.id ? "Recording…" : "Record driver deposit"}</button>
-                  </form>
+                {expanded && <div className="grid gap-5 bg-[#faf9f5] p-5 sm:p-6 xl:grid-cols-[.7fr_1.3fr]">
+                  <div className="space-y-5">
+                    <form onSubmit={(event) => void recordDeposit(event, driver)} className="border border-asphalt/10 bg-white p-5">
+                      <p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">ADMIN DEPOSIT</p>
+                      <h3 className="mt-2 font-display text-xl font-semibold">Fund commission wallet</h3>
+                      <p className="mt-2 text-xs leading-5 text-steel">Allowed deposit: ETB 5,000–100,000. Verified 2% commission charges consume this balance automatically.</p>
+                      <div className="mt-4 flex flex-wrap gap-2">{QUICK_DEPOSITS.map((amount) => <button key={amount} type="button" onClick={(event) => { const form = event.currentTarget.closest("form"); const input = form?.elements.namedItem("amountEtb") as HTMLInputElement | null; if (input) input.value = String(amount); }} className="border border-asphalt/15 px-3 py-2 text-[11px] font-semibold">{amount.toLocaleString()}</button>)}</div>
+                      <label className="mt-5 block text-xs font-semibold">Amount ETB<input name="amountEtb" type="number" min={MIN_DEPOSIT_ETB} max={MAX_DEPOSIT_ETB} step="0.01" required className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
+                      <label className="mt-4 block text-xs font-semibold">Reference<input name="reference" maxLength={120} placeholder="Cash receipt or internal reference" className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
+                      <label className="mt-4 block text-xs font-semibold">Note<textarea name="note" maxLength={500} rows={3} placeholder="Who received it and where" className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
+                      <button disabled={busy === driver.id} className="mt-5 w-full bg-asphalt px-4 py-4 text-sm font-semibold text-white disabled:opacity-40">{busy === driver.id ? "Recording…" : "Record driver deposit"}</button>
+                    </form>
+
+                    <div className="border border-asphalt/10 bg-white p-5">
+                      <p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">DEPOSIT HISTORY</p>
+                      <div className="mt-4 space-y-3">{driverDeposits.length === 0 ? <p className="text-sm text-steel">No deposits recorded.</p> : driverDeposits.slice(0, 10).map((deposit) => <div key={deposit.id} className="border border-asphalt/10 p-3"><div className="flex items-start justify-between gap-3"><strong>{formatEtb(numberOf(deposit.amount_etb))}</strong><span className="text-[10px] uppercase text-steel">{deposit.status}</span></div><p className="mt-1 text-[11px] text-steel">{dateTime(deposit.created_at)}</p>{deposit.reference && <p className="mt-1 text-xs">Ref: {deposit.reference}</p>}{deposit.note && <p className="mt-1 text-xs text-steel">{deposit.note}</p>}</div>)}</div>
+                    </div>
+                  </div>
 
                   <div className="border border-asphalt/10 bg-white p-5">
                     <div className="flex items-end justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">TRIP HISTORY</p><h3 className="mt-2 font-display text-xl font-semibold">All assigned orders</h3></div><span className="font-mono text-xs text-steel">{driverOrders.length} trips</span></div>
-                    <div className="mt-4 max-h-[34rem] space-y-3 overflow-y-auto pr-1">
-                      {driverOrders.length === 0 ? <p className="border border-asphalt/10 p-5 text-sm text-steel">No trips assigned to this driver.</p> : driverOrders.map((order) => {
-                        const customer = order.customer_id ? profileById.get(order.customer_id) : undefined;
-                        const truck = order.truck_id ? truckById.get(order.truck_id) : undefined;
-                        return <div key={order.id} className="border border-asphalt/10 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-xs font-semibold">{order.tracking_id}</p><p className="mt-2 text-sm">{order.pickup_address} → {order.dropoff_address}</p></div><span className="bg-[#f5f3ed] px-2.5 py-1 text-[10px] font-semibold capitalize text-steel">{order.status.replace("_", " ")}</span></div><p className="mt-3 text-xs text-steel">Customer: {nameOf(customer, "Customer")}{truck ? ` · Truck ${truck.plate_number}` : ""}</p><p className="mt-2 font-semibold">{formatEtb(numberOf(order.price_etb))}</p></div>;
-                      })}
-                    </div>
+                    <div className="mt-4 max-h-[48rem] space-y-3 overflow-y-auto pr-1">{driverOrders.length === 0 ? <p className="border border-asphalt/10 p-5 text-sm text-steel">No trips assigned to this driver.</p> : driverOrders.map((order) => { const customer = order.customer_id ? profileById.get(order.customer_id) : undefined; const truck = order.truck_id ? truckById.get(order.truck_id) : undefined; return <div key={order.id} className="border border-asphalt/10 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-xs font-semibold">{order.tracking_id}</p><p className="mt-2 text-sm">{order.pickup_address} → {order.dropoff_address}</p></div><span className="bg-[#f5f3ed] px-2.5 py-1 text-[10px] font-semibold capitalize text-steel">{order.status.replace("_", " ")}</span></div><p className="mt-3 text-xs text-steel">Customer: {nameOf(customer, "Customer")}{truck ? ` · Truck ${truck.plate_number}` : ""}</p><p className="mt-2 font-semibold">{formatEtb(numberOf(order.price_etb))}</p></div>; })}</div>
                   </div>
                 </div>}
               </article>;
