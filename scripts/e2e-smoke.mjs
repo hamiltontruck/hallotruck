@@ -86,23 +86,22 @@ location.replace("./#/customer/login");
   return `${baseUrl}${fileName}`;
 }
 
-async function writeSignupBootstrap() {
-  const fileName = "e2e-customer-signup.html";
+async function writeModeBootstrap({ fileName, route, switchText, marker }) {
   await writeFile(path.join(root, "dist", fileName), `<!doctype html><html><body>
-<iframe id="app" src="./#/customer/login" style="width:100%;height:100vh;border:0"></iframe>
+<iframe id="app" src="./#/${route}" style="width:100%;height:100vh;border:0"></iframe>
 <script>
 const frame = document.getElementById("app");
 frame.addEventListener("load", () => {
   setTimeout(() => {
     const doc = frame.contentDocument;
-    const switchButton = Array.from(doc.querySelectorAll("button")).find((button) => button.textContent.includes("Create an account"));
+    const switchButton = Array.from(doc.querySelectorAll("button")).find((button) => button.textContent.includes(${JSON.stringify(switchText)}));
     if (!switchButton) {
-      document.body.innerHTML = "SIGNUP_SWITCH_NOT_FOUND";
+      document.body.innerHTML = "MODE_SWITCH_NOT_FOUND";
       return;
     }
     switchButton.click();
     setTimeout(() => {
-      document.body.innerHTML = '<main data-e2e-view="signup">' + doc.body.innerHTML + '</main>';
+      document.body.innerHTML = '<main data-e2e-view="${marker}">' + doc.body.innerHTML + '</main>';
     }, 300);
   }, 900);
 });
@@ -126,41 +125,60 @@ try {
   const landing = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/`, profile));
   assertContains(landing, ["HALLO", "Logistics built around every role.", "Control Center", "Mobile Workspace", "Smart Portal"], "Landing page");
 
-  const mobileLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/customer/login`, profile, { width: 412, height: 915 }));
-  assertContains(mobileLogin, [
-    "Welcome back",
-    "Open customer portal",
-    "New customer? Create an account",
-    "autocomplete=\"email\"",
-    "autocomplete=\"current-password\"",
-  ], "Mobile customer login");
+  const mobileCustomerLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/customer/login`, profile));
+  assertContains(mobileCustomerLogin, ["Welcome back", "Open customer portal", "New customer? Create an account", "autocomplete=\"email\"", "autocomplete=\"current-password\""], "Mobile customer login");
 
-  const desktopLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/customer/login`, profile, { width: 1440, height: 1000 }));
-  assertContains(desktopLogin, [
-    "Welcome back",
-    "Hamilton Truck Transportation",
-    "lg:grid-cols-2",
-  ], "Desktop customer login");
+  const desktopCustomerLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/customer/login`, profile, { width: 1440, height: 1000 }));
+  assertContains(desktopCustomerLogin, ["Welcome back", "Hamilton Truck Transportation", "lg:grid-cols-2"], "Desktop customer login");
 
-  const signupUrl = await writeSignupBootstrap();
-  const mobileSignup = await withProfile((profile) => dumpDom(chrome, signupUrl, profile, { width: 412, height: 915 }));
-  assertContains(mobileSignup, [
-    "data-e2e-view=\"signup\"",
+  const customerSignupUrl = await writeModeBootstrap({
+    fileName: "e2e-customer-signup.html",
+    route: "customer/login",
+    switchText: "Create an account",
+    marker: "customer-signup",
+  });
+  const customerSignup = await withProfile((profile) => dumpDom(chrome, customerSignupUrl, profile));
+  assertContains(customerSignup, ["data-e2e-view=\"customer-signup\"", "autocomplete=\"name\"", "autocomplete=\"tel\"", "autocomplete=\"new-password\"", "minlength=\"10\""], "Customer signup");
+
+  const mobileDriverLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/driver/login`, profile));
+  assertContains(mobileDriverLogin, ["Driver login", "Sign in", "New driver? Create an account", "autocomplete=\"email\"", "autocomplete=\"current-password\""], "Mobile driver login");
+
+  const desktopDriverLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/driver/login`, profile, { width: 1440, height: 1000 }));
+  assertContains(desktopDriverLogin, ["HALLO", "DRIVER", "Driver login", "max-w-md"], "Desktop driver login");
+
+  const driverSignupUrl = await writeModeBootstrap({
+    fileName: "e2e-driver-signup.html",
+    route: "driver/login",
+    switchText: "Create an account",
+    marker: "driver-signup",
+  });
+  const driverSignup = await withProfile((profile) => dumpDom(chrome, driverSignupUrl, profile));
+  assertContains(driverSignup, [
+    "data-e2e-view=\"driver-signup\"",
+    "Create your driver account",
     "autocomplete=\"name\"",
     "autocomplete=\"tel\"",
     "autocomplete=\"email\"",
     "autocomplete=\"new-password\"",
     "minlength=\"10\"",
-  ], "Mobile customer signup");
+    "Create account &amp; continue to documents",
+  ], "Driver signup");
 
-  const customerProtected = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/customer`, profile));
-  assertContains(customerProtected, ["Welcome back"], "Protected customer redirect");
+  const protectedCustomer = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/customer`, profile));
+  assertContains(protectedCustomer, ["Welcome back"], "Protected customer redirect");
 
-  const driverLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/driver/login`, profile));
-  assertContains(driverLogin, ["Driver login", "Sign in", "New driver? Create an account"], "Driver login");
-
-  const driverProtected = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/driver/jobs`, profile));
-  assertContains(driverProtected, ["Driver login"], "Protected driver redirect");
+  const protectedDriverRoutes = [
+    "/driver/jobs",
+    "/driver/trip",
+    "/driver/documents",
+    "/driver/earnings",
+    "/driver/commission",
+    "/driver/payment/00000000-0000-0000-0000-000000000000",
+  ];
+  for (const route of protectedDriverRoutes) {
+    const dom = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#${route}`, profile));
+    assertContains(dom, ["Driver login", "Sign in"], `Protected driver redirect ${route}`);
+  }
 
   const somaliUrl = await writeLanguageBootstrap("e2e-language-so.html", "so");
   const somali = await withProfile((profile) => dumpDom(chrome, somaliUrl, profile));
@@ -170,7 +188,7 @@ try {
   const tigrinya = await withProfile((profile) => dumpDom(chrome, tigrinyaUrl, profile));
   assertContains(tigrinya, ["እንቋዕ ደሓን መጻእካ", "ፖርታል ዓሚል ክፈት", "lang=\"ti\""], "Tigrinya language persistence");
 
-  console.log("E2E smoke tests passed: landing, mobile/desktop customer login, customer signup, auth redirects and language persistence.");
+  console.log("E2E smoke tests passed: customer and driver login/signup, mobile/desktop layouts, protected routes and language persistence.");
 } catch (error) {
   if (previewOutput.trim()) console.error(previewOutput.trim());
   throw error;
@@ -185,5 +203,6 @@ try {
     rm(path.join(root, "dist", "e2e-language-so.html"), { force: true }),
     rm(path.join(root, "dist", "e2e-language-ti.html"), { force: true }),
     rm(path.join(root, "dist", "e2e-customer-signup.html"), { force: true }),
+    rm(path.join(root, "dist", "e2e-driver-signup.html"), { force: true }),
   ]);
 }
