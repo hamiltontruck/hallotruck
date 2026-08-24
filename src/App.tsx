@@ -8,6 +8,7 @@ import { AdminSidebarLeadershipLinks } from "./components/admin/AdminSidebarLead
 import { AdminToolShell } from "./components/admin/AdminToolShell";
 import { SmartLogistics } from "./pages/SmartLogistics";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
+import { AdminDriverFinanceSearch } from "./pages/AdminDriverFinanceSearch";
 import { AdminDriverCommission } from "./pages/AdminDriverCommission";
 import { AdminFleetMaintenance } from "./pages/AdminFleetMaintenance";
 import { AdminQuotePricing } from "./pages/AdminQuotePricing";
@@ -95,6 +96,7 @@ export default function App() {
           <Route path="/" element={<PortalLanding />} />
           <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
           <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
+          <Route path="/admin/driver-finance-search" element={<AdminGate><AdminToolShell><AdminDriverFinanceSearch /></AdminToolShell></AdminGate>} />
           <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
           <Route path="/admin/fleet-maintenance" element={<AdminGate><AdminToolShell><div className="fleet-maintenance-mobile"><AdminFleetMaintenance /></div></AdminToolShell></AdminGate>} />
           <Route path="/admin/quote-pricing" element={<AdminGate><AdminToolShell><AdminQuotePricing /></AdminToolShell></AdminGate>} />
