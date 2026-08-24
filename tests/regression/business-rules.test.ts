@@ -17,6 +17,14 @@ import {
   isDelayedOrder,
   isLegacyCompletedPayment,
 } from "../../src/domain/admin-control-center";
+import {
+  getPaymentLedgerIndicators,
+  getPaymentLedgerPage,
+  isLegacyCompletedLedgerPayment,
+  matchesPaymentLedgerDate,
+  matchesPaymentLedgerSearch,
+  matchesPaymentLedgerStatus,
+} from "../../src/domain/payment-ledger";
 import type { ControlCenterData, ControlPayment } from "../../src/services/admin-control-center.service";
 import { calculatePaymentSummary } from "../../src/utils/paymentSummary";
 
@@ -133,6 +141,65 @@ test("duplicate payment events are counted once in CEO totals", () => {
 test("legacy completed released payment is recognized", () => {
   const legacy = payment({ raw_payload: { legacy_completed: true } });
   assert.equal(isLegacyCompletedPayment(legacy), true);
+});
+
+test("payment ledger search covers every finance lookup field", () => {
+  const record = {
+    provider: "cbe",
+    transactionId: "cbe20260805-001",
+    trackingId: "HT-2026-F44A0E",
+    customerName: "Sofi Husse",
+    customerPhone: "+251913509926",
+    pickupAddress: "Hirna, West Harerghe",
+    dropoffAddress: "Dessie, South Wollo",
+    driverName: "Adil Abdu",
+    driverPhone: "+251900000001",
+  };
+
+  for (const query of ["f44a0e", "sofi", "913509926", "adil", "900000001", "hirna", "dessie", "cbe20260805-001"]) {
+    assert.equal(matchesPaymentLedgerSearch(record, query), true, `expected ${query} to match`);
+  }
+  assert.equal(matchesPaymentLedgerSearch(record, "unknown payment"), false);
+});
+
+test("payment ledger status and date filters use exact finance states", () => {
+  assert.equal(matchesPaymentLedgerStatus("initiated", "pending"), true);
+  assert.equal(matchesPaymentLedgerStatus("failed", "rejected"), true);
+  assert.equal(matchesPaymentLedgerStatus("held_escrow", "escrow"), true);
+  assert.equal(matchesPaymentLedgerStatus("released", "released"), true);
+  assert.equal(matchesPaymentLedgerStatus("released", "pending"), false);
+
+  const now = new Date("2026-08-25T12:00:00.000Z");
+  assert.equal(matchesPaymentLedgerDate("2026-08-25T09:00:00.000Z", "today", now), true);
+  assert.equal(matchesPaymentLedgerDate("2026-08-18T12:00:00.000Z", "7d", now), true);
+  assert.equal(matchesPaymentLedgerDate("2026-08-18T11:59:59.000Z", "7d", now), false);
+  assert.equal(matchesPaymentLedgerDate("not-a-date", "30d", now), false);
+});
+
+test("payment ledger indicators distinguish mismatch direction and missing receipts", () => {
+  const overpaid = getPaymentLedgerIndicators({ invoiceTotal: 50_000, paymentAmount: 65_500, hasOrder: true, hasReceipt: false, evidenceRequired: true });
+  assert.equal(overpaid.invoiceMismatch, true);
+  assert.equal(overpaid.overpaymentEtb, 15_500);
+  assert.equal(overpaid.underpaymentEtb, 0);
+  assert.equal(overpaid.missingReceipt, true);
+
+  const underpaid = getPaymentLedgerIndicators({ invoiceTotal: 50_000, paymentAmount: 20_000, hasOrder: true, hasReceipt: true, evidenceRequired: true });
+  assert.equal(underpaid.invoiceMismatch, true);
+  assert.equal(underpaid.overpaymentEtb, 0);
+  assert.equal(underpaid.underpaymentEtb, 30_000);
+  assert.equal(underpaid.missingReceipt, false);
+});
+
+test("legacy completed ledger rows never require receipt evidence", () => {
+  assert.equal(isLegacyCompletedLedgerPayment("released", true), true);
+  assert.equal(isLegacyCompletedLedgerPayment("initiated", true), false);
+  const legacy = getPaymentLedgerIndicators({ invoiceTotal: 65_500, paymentAmount: 65_500, hasOrder: true, hasReceipt: false, evidenceRequired: false });
+  assert.equal(legacy.missingReceipt, false);
+});
+
+test("payment ledger pagination clamps stale pages after filtering", () => {
+  assert.deepEqual(getPaymentLedgerPage(25, 4, 12), { page: 3, pageCount: 3, startIndex: 24, endIndex: 25 });
+  assert.deepEqual(getPaymentLedgerPage(0, 8, 12), { page: 1, pageCount: 1, startIndex: 0, endIndex: 0 });
 });
 
 test("delayed active order is detected after 48 hours", () => {
