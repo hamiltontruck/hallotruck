@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test:regression": "node scripts/run-regression-tests.mjs",
-    "test:e2e-smoke": "node scripts/e2e-smoke.mjs",
+    "test:e2e-smoke": "node scripts/e2e-smoke.mjs && node scripts/admin-e2e-smoke.mjs",
     "test:ci": "npm run test:regression && npm run build && npm run test:e2e-smoke"
   },
   "dependencies": {
