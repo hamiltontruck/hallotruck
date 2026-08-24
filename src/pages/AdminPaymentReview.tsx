@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabase.client";
 
-type ReviewFilter = "pending" | "rejected" | "verified" | "all";
+type ReviewFilter = "pending" | "rejected" | "escrow" | "released" | "all";
 type PaymentEvent = "initiated" | "failed" | "held_escrow" | "released";
 
 type PaymentPayload = {
@@ -62,6 +62,10 @@ function money(value: number | string | null | undefined) {
 
 function isDriverCollection(payment: PaymentReviewRow) {
   return payment.raw_payload?.source === "driver_collection";
+}
+
+function isCashCollection(payment: PaymentReviewRow) {
+  return isDriverCollection(payment) && payment.raw_payload?.collection_method === "cash";
 }
 
 export function AdminPaymentReview() {
@@ -149,12 +153,14 @@ export function AdminPaymentReview() {
     if (filter === "all") return true;
     if (filter === "pending") return payment.event === "initiated";
     if (filter === "rejected") return payment.event === "failed";
-    return payment.event === "held_escrow" || payment.event === "released";
+    if (filter === "escrow") return payment.event === "held_escrow";
+    return payment.event === "released";
   });
 
   const pending = payments.filter((payment) => payment.event === "initiated");
   const rejected = payments.filter((payment) => payment.event === "failed");
-  const verified = payments.filter((payment) => payment.event === "held_escrow" || payment.event === "released");
+  const escrow = payments.filter((payment) => payment.event === "held_escrow");
+  const released = payments.filter((payment) => payment.event === "released");
 
   async function review(paymentId: string, approve: boolean) {
     const reason = reasons[paymentId]?.trim() ?? "";
@@ -198,18 +204,19 @@ export function AdminPaymentReview() {
           <p className="font-mono text-[10px] tracking-[.22em] text-amber">FINANCE CONTROL</p>
           <h1 className="mt-3 font-display text-3xl font-bold">Customer payment review</h1>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/60">
-            Review prepaid customer receipts and post-delivery cash or bank payments reported by drivers. Driver-collected money creates no earnings or commission until Admin verifies it.
+            Cash reports are verified from the driver declaration. Bank and mobile-money reports require a receipt and transaction reference. Escrow and released funds are shown separately.
           </p>
         </header>
 
-        <div className="mt-5 grid grid-cols-3 gap-3">
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Summary label="Pending review" value={pending.length} amount={pending.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
           <Summary label="Rejected" value={rejected.length} amount={rejected.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
-          <Summary label="Verified / released" value={verified.length} amount={verified.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
+          <Summary label="Held in escrow" value={escrow.length} amount={escrow.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
+          <Summary label="Released" value={released.length} amount={released.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          {(["pending", "rejected", "verified", "all"] as ReviewFilter[]).map((item) => (
+          {(["pending", "rejected", "escrow", "released", "all"] as ReviewFilter[]).map((item) => (
             <button
               type="button"
               key={item}
@@ -233,7 +240,10 @@ export function AdminPaymentReview() {
             const lastAudit = latestAudit.get(payment.id);
             const busy = busyPayment === payment.id;
             const driverCollected = isDriverCollection(payment);
+            const cashCollection = isCashCollection(payment);
             const collectionMethod = payment.raw_payload?.collection_method?.replace(/_/g, " ") ?? "payment";
+            const evidenceRequired = !cashCollection;
+            const canApprove = !evidenceRequired || Boolean(payment.receipt_path);
             const badge = payment.event === "initiated"
               ? "Pending review"
               : payment.event === "failed"
@@ -268,15 +278,16 @@ export function AdminPaymentReview() {
                   <div className="mt-5 border border-amber/35 bg-amber/10 p-4 text-sm">
                     <p className="font-semibold text-asphalt">Direct-to-driver collection report</p>
                     <p className="mt-2 text-xs leading-5 text-steel">
-                      The driver reported receiving the full invoice by <strong className="capitalize text-asphalt">{collectionMethod}</strong>. Verification releases the ledger amount and creates the 2% HALLO Smart commission charge; rejection keeps every driver earning value at zero.
+                      The driver reported receiving the full invoice by <strong className="capitalize text-asphalt">{collectionMethod}</strong>. Admin verification releases the ledger amount and creates the 2% HALLO Smart commission charge.
                     </p>
+                    {cashCollection && <p className="mt-3 border-l-4 border-emerald-600 bg-white/70 p-3 text-xs text-emerald-800"><strong>Cash declaration:</strong> no receipt file is required. Verify only when the driver declaration and order details are correct.</p>}
                     {payment.raw_payload?.note && <p className="mt-3 border-l-4 border-amber bg-white/70 p-3 text-xs"><strong>Driver note:</strong> {payment.raw_payload.note}</p>}
                   </div>
                 )}
 
                 <div className="mt-5 grid gap-3 border-y border-asphalt/10 py-4 text-xs sm:grid-cols-3">
                   <p><span className="block text-steel">Provider</span><strong className="mt-1 block capitalize">{payment.provider.replace(/_/g, " ")}</strong></p>
-                  <p><span className="block text-steel">Transaction ID</span><strong className="mt-1 block break-all">{payment.provider_ref ?? (driverCollected && collectionMethod === "cash" ? "Cash · no bank reference" : "Not supplied")}</strong></p>
+                  <p><span className="block text-steel">Transaction ID</span><strong className="mt-1 block break-all">{payment.provider_ref ?? (cashCollection ? "Cash · no bank reference" : "Not supplied")}</strong></p>
                   <p><span className="block text-steel">Submitted</span><strong className="mt-1 block">{new Date(payment.created_at).toLocaleString()}</strong></p>
                 </div>
 
@@ -296,10 +307,12 @@ export function AdminPaymentReview() {
                 <div className="mt-5 flex flex-wrap gap-3">
                   {payment.receipt_path
                     ? <button type="button" onClick={() => void openReceipt(payment.receipt_path!)} className="border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800">Open payment evidence</button>
-                    : <span className="border border-route/30 bg-route/5 px-4 py-3 text-sm text-route">Evidence missing</span>}
+                    : cashCollection
+                      ? <span className="border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Cash declaration · no file required</span>
+                      : <span className="border border-route/30 bg-route/5 px-4 py-3 text-sm text-route">Evidence required</span>}
                   {payment.event === "initiated" && (
-                    <button type="button" disabled={busy || !payment.receipt_path} onClick={() => void review(payment.id, true)} className="bg-emerald-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">
-                      {busy ? "Saving…" : driverCollected ? "Verify received money" : "Verify payment"}
+                    <button type="button" disabled={busy || !canApprove} onClick={() => void review(payment.id, true)} className="bg-emerald-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">
+                      {busy ? "Saving…" : cashCollection ? "Verify cash received" : driverCollected ? "Verify received money" : "Verify payment"}
                     </button>
                   )}
                 </div>
@@ -312,12 +325,12 @@ export function AdminPaymentReview() {
                         onChange={(event) => setReasons((current) => ({ ...current, [payment.id]: event.target.value }))}
                         rows={3}
                         maxLength={500}
-                        placeholder="Example: cash receipt is unclear or transaction amount does not match."
+                        placeholder={cashCollection ? "Example: driver declaration does not match the order or customer confirmation." : "Example: receipt is unclear or transaction amount does not match."}
                         className="mt-2 block w-full border border-asphalt/15 bg-white p-3 text-sm font-normal outline-none focus:border-route"
                       />
                     </label>
                     <button type="button" disabled={busy || (reasons[payment.id]?.trim().length ?? 0) < 5} onClick={() => void review(payment.id, false)} className="mt-3 border border-route bg-white px-5 py-3 text-sm font-semibold text-route disabled:opacity-40">
-                      {busy ? "Saving…" : "Reject payment evidence"}
+                      {busy ? "Saving…" : cashCollection ? "Reject cash report" : "Reject payment evidence"}
                     </button>
                   </div>
                 )}
