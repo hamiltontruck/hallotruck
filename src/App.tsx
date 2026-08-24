@@ -1,4 +1,4 @@
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { CustomerBottomNav } from "./components/customer/CustomerBottomNav";
@@ -44,12 +44,15 @@ import "./styles/customer-nearby-home-bridge.css";
 import "./styles/driver-mobile-flow.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const showOperationalAlerts = pathname === "/driver/jobs" || pathname === "/driver/trip";
+
   return (
-    <div className="driver-mobile-flow min-h-screen bg-bone">
+    <div className="driver-mobile-flow min-h-screen bg-bone pb-24 md:pb-0">
       <OfflineBanner />
       <Header />
-      <DriverPaymentCollectionBanner />
-      <DriverDocumentExpiryAlert />
+      {showOperationalAlerts && <DriverPaymentCollectionBanner />}
+      {showOperationalAlerts && <DriverDocumentExpiryAlert />}
       {children}
     </div>
   );
