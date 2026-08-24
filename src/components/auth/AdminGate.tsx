@@ -7,6 +7,8 @@ export function AdminGate({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     function check(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
@@ -23,7 +25,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
   async function login(event: FormEvent) {
     event.preventDefault();
     setLoading(true); setError("");
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (loginError) { setError(loginError.message); setLoading(false); return; }
     const role = data.user.app_metadata?.role;
     if (role !== "admin" && role !== "ceo") {
@@ -31,6 +33,22 @@ export function AdminGate({ children }: { children: ReactNode }) {
       setError("This account does not have CEO or Admin access.");
       setLoading(false);
     }
+  }
+
+  async function requestPasswordReset(event: FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    setResetSent(false);
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    if (resetError) {
+      setError(resetError.message);
+      setLoading(false);
+      return;
+    }
+    setResetSent(true);
+    setLoading(false);
   }
 
   if (loading) return <div className="min-h-screen bg-asphalt grid place-items-center text-amber font-mono text-sm">Loading secure workspace…</div>;
@@ -43,17 +61,21 @@ export function AdminGate({ children }: { children: ReactNode }) {
       <p className="text-xs text-white/25">Hamilton Truck Transportation</p>
     </section>
     <section className="p-6 sm:p-12 grid place-items-center">
-      <form onSubmit={login} className="w-full max-w-md bg-white text-asphalt p-7 sm:p-10">
+      <form onSubmit={resetMode ? requestPasswordReset : login} className="w-full max-w-md bg-white text-asphalt p-7 sm:p-10">
         <span className="inline-flex w-12 h-12 items-center justify-center bg-amber font-display font-bold">HT</span>
-        <h2 className="font-display font-bold text-3xl mt-7">CEO / Admin login</h2>
-        <p className="text-sm text-steel mt-2">Sign in with your authorized company account.</p>
+        <h2 className="font-display font-bold text-3xl mt-7">{resetMode ? "Reset Admin password" : "CEO / Admin login"}</h2>
+        <p className="text-sm text-steel mt-2">{resetMode ? "Enter your authorized email. We will send a secure password-reset link." : "Sign in with your authorized company account."}</p>
         {error && <p className="mt-5 bg-route/10 border border-route/30 text-route text-sm p-3">{error}</p>}
+        {resetSent && <p className="mt-5 border border-emerald-700/30 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">Reset email sent. Open the newest email and tap “Reset password”.</p>}
         <label className="block text-xs font-semibold mt-7 mb-2">Email address</label>
-        <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-asphalt/20 px-4 py-3 outline-none focus:border-amber" placeholder="ceo@hallotruck.com" />
-        <label className="block text-xs font-semibold mt-5 mb-2">Password</label>
-        <input required minLength={6} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-asphalt/20 px-4 py-3 outline-none focus:border-amber" placeholder="••••••••" />
-        <button disabled={loading} className="w-full bg-asphalt text-white py-4 mt-7 font-semibold hover:bg-line disabled:opacity-60">{loading ? "Signing in…" : "Open control center"}</button>
-        <a href="#/driver" className="block text-center text-xs text-amber-dim mt-6">Open driver portal instead</a>
+        <input required type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-asphalt/20 px-4 py-3 outline-none focus:border-amber" placeholder="ceo@hallotruck.com" />
+        {!resetMode && <>
+          <label className="block text-xs font-semibold mt-5 mb-2">Password</label>
+          <input required minLength={6} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-asphalt/20 px-4 py-3 outline-none focus:border-amber" placeholder="••••••••" />
+        </>}
+        <button disabled={loading} className="w-full bg-asphalt text-white py-4 mt-7 font-semibold hover:bg-line disabled:opacity-60">{loading ? "Please wait…" : resetMode ? "Send reset email" : "Open control center"}</button>
+        <button type="button" onClick={() => { setResetMode((value) => !value); setResetSent(false); setError(""); }} className="block w-full text-center text-xs font-semibold text-amber-dim mt-5">{resetMode ? "Back to Admin login" : "Forgot password?"}</button>
+        {!resetMode && <a href="#/driver" className="block text-center text-xs text-amber-dim mt-5">Open driver portal instead</a>}
       </form>
     </section>
   </main>;
