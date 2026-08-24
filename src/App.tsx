@@ -21,6 +21,7 @@ import { Earnings } from "./pages/Earnings";
 import { DriverCommission } from "./pages/DriverCommission";
 import { DriverPaymentCollection } from "./pages/DriverPaymentCollection";
 import { AdminGate } from "./components/auth/AdminGate";
+import { PasswordRecoveryGate } from "./components/auth/PasswordRecoveryGate";
 import { CustomerGate } from "./components/auth/CustomerGate";
 import { PortalLanding } from "./pages/PortalLanding";
 import { CustomerLogin } from "./pages/CustomerLogin";
@@ -91,33 +92,35 @@ export default function App() {
   return (
     <LanguageProvider>
       <RuntimeLocalization />
-      <HashRouter>
-        <Routes>
-          <Route path="/" element={<PortalLanding />} />
-          <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
-          <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
-          <Route path="/admin/driver-finance-search" element={<AdminGate><AdminToolShell><AdminDriverFinanceSearch /></AdminToolShell></AdminGate>} />
-          <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
-          <Route path="/admin/fleet-maintenance" element={<AdminGate><AdminToolShell><div className="fleet-maintenance-mobile"><AdminFleetMaintenance /></div></AdminToolShell></AdminGate>} />
-          <Route path="/admin/quote-pricing" element={<AdminGate><AdminToolShell><AdminQuotePricing /></AdminToolShell></AdminGate>} />
-          <Route path="/admin/payment-review" element={<AdminGate><AdminToolShell><AdminPaymentWorkspace /></AdminToolShell></AdminGate>} />
-          <Route path="/admin/manual-driver-documents" element={<AdminGate><AdminToolShell><AdminManualDriverDocuments /></AdminToolShell></AdminGate>} />
-          <Route path="/customer/login" element={<CustomerLogin />} />
-          <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="home" /></CustomerGate>} />
-          <Route path="/customer/orders" element={<CustomerGate><CustomerWorkspace section="orders" /></CustomerGate>} />
-          <Route path="/customer/profile" element={<CustomerGate><CustomerWorkspace section="profile" /></CustomerGate>} />
-          <Route path="/customer/tracking/:orderId" element={<CustomerGate><CustomerTrackingPage /></CustomerGate>} />
-          <Route path="/driver/login" element={<Login />} />
-          <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
-          <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
-          <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
-          <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
-          <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
-          <Route path="/driver/commission" element={<DriverGate><DriverShell><DriverCommission /></DriverShell></DriverGate>} />
-          <Route path="/driver/payment/:orderId" element={<DriverGate><DriverShell><DriverPaymentCollection /></DriverShell></DriverGate>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </HashRouter>
+      <PasswordRecoveryGate>
+        <HashRouter>
+          <Routes>
+            <Route path="/" element={<PortalLanding />} />
+            <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
+            <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
+            <Route path="/admin/driver-finance-search" element={<AdminGate><AdminToolShell><AdminDriverFinanceSearch /></AdminToolShell></AdminGate>} />
+            <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
+            <Route path="/admin/fleet-maintenance" element={<AdminGate><AdminToolShell><div className="fleet-maintenance-mobile"><AdminFleetMaintenance /></div></AdminToolShell></AdminGate>} />
+            <Route path="/admin/quote-pricing" element={<AdminGate><AdminToolShell><AdminQuotePricing /></AdminToolShell></AdminGate>} />
+            <Route path="/admin/payment-review" element={<AdminGate><AdminToolShell><AdminPaymentWorkspace /></AdminToolShell></AdminGate>} />
+            <Route path="/admin/manual-driver-documents" element={<AdminGate><AdminToolShell><AdminManualDriverDocuments /></AdminToolShell></AdminGate>} />
+            <Route path="/customer/login" element={<CustomerLogin />} />
+            <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="home" /></CustomerGate>} />
+            <Route path="/customer/orders" element={<CustomerGate><CustomerWorkspace section="orders" /></CustomerGate>} />
+            <Route path="/customer/profile" element={<CustomerGate><CustomerWorkspace section="profile" /></CustomerGate>} />
+            <Route path="/customer/tracking/:orderId" element={<CustomerGate><CustomerTrackingPage /></CustomerGate>} />
+            <Route path="/driver/login" element={<Login />} />
+            <Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
+            <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
+            <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
+            <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
+            <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
+            <Route path="/driver/commission" element={<DriverGate><DriverShell><DriverCommission /></DriverShell></DriverGate>} />
+            <Route path="/driver/payment/:orderId" element={<DriverGate><DriverShell><DriverPaymentCollection /></DriverShell></DriverGate>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </HashRouter>
+      </PasswordRecoveryGate>
     </LanguageProvider>
   );
 }
