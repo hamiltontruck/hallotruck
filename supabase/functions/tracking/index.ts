@@ -1,89 +1,111 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { handleOptions, json } from "../_shared/cors.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const service = createClient(supabaseUrl, serviceRoleKey);
+const service = createClient(supabaseUrl, serviceRoleKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
-function bearerToken(req: Request) {
-  const header = req.headers.get("Authorization") ?? "";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function bearerToken(request: Request) {
+  const header = request.headers.get("Authorization") ?? "";
   return header.startsWith("Bearer ") ? header.slice(7) : "";
 }
 
-Deno.serve(async (req) => {
-  const opt = handleOptions(req);
-  if (opt) return opt;
+Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const token = bearerToken(req);
+  const token = bearerToken(request);
   if (!token) return json({ error: "Authentication required" }, 401);
 
   const { data: authData, error: authError } = await service.auth.getUser(token);
   const user = authData.user;
   if (authError || !user) return json({ error: "Authentication required" }, 401);
 
-  if (req.method === "POST") {
+  if (request.method === "POST") {
     try {
-      const { orderId, lng, lat, heading, speedKmh } = await req.json();
-      if (!orderId || lng === undefined || lat === undefined) {
-        return json({ error: "orderId, lng, lat are required" }, 400);
+      const payload = await request.json();
+      const orderId = String(payload.orderId ?? "");
+      const lng = Number(payload.lng);
+      const lat = Number(payload.lat);
+      const heading = payload.heading === undefined || payload.heading === null ? null : Number(payload.heading);
+      const speedKmh = payload.speedKmh === undefined || payload.speedKmh === null ? null : Number(payload.speedKmh);
+      const accuracyM = payload.accuracyM === undefined || payload.accuracyM === null ? null : Number(payload.accuracyM);
+      const recordedAt = payload.recordedAt ? String(payload.recordedAt) : null;
+      const androidDeviceId = payload.androidDeviceId ? String(payload.androidDeviceId) : null;
+
+      if (!orderId || !Number.isFinite(lng) || !Number.isFinite(lat)) {
+        return json({ error: "orderId, lng and lat are required" }, 400);
       }
 
-      const { data: order, error: orderErr } = await service
-        .from("orders")
-        .select("id, driver_id, status")
-        .eq("id", orderId)
-        .single();
-
-      if (orderErr || !order) return json({ error: "Order not found" }, 404);
-      if (order.driver_id !== user.id) {
-        return json({ error: "Not assigned to this order" }, 403);
-      }
-      if (!["accepted", "in_transit"].includes(order.status)) {
-        return json({ error: order.status === "cancelled" ? "Customer cancelled this order" : "This order is not active" }, 409);
-      }
-
-      const { error: pingErr } = await service.from("tracking_pings").insert({
-        order_id: orderId,
-        driver_id: user.id,
-        location: `POINT(${lng} ${lat})`,
-        heading: heading ?? null,
-        speed_kmh: speedKmh ?? null,
+      const { data, error } = await service.rpc("record_driver_tracking_ping", {
+        p_driver_id: user.id,
+        p_order_id: orderId,
+        p_lng: lng,
+        p_lat: lat,
+        p_heading: Number.isFinite(heading) ? heading : null,
+        p_speed_kmh: Number.isFinite(speedKmh) ? speedKmh : null,
+        p_accuracy_m: Number.isFinite(accuracyM) ? accuracyM : null,
+        p_source_recorded_at: recordedAt,
+        p_android_device_id: androidDeviceId,
       });
 
-      if (pingErr) {
-        console.error(pingErr);
-        return json({ error: "Failed to record ping" }, 500);
+      if (error) {
+        const status = error.code === "42501" ? 403
+          : error.code === "P0002" ? 404
+          : error.code === "23514" ? 409
+          : error.code === "22023" ? 400
+          : 500;
+        return json({ error: error.message }, status);
       }
 
-      if (order.status === "accepted") {
-        await service.from("orders").update({ status: "in_transit" }).eq("id", orderId).eq("status", "accepted");
-      }
-
-      return json({ ok: true });
-    } catch (err) {
-      console.error(err);
+      const row = Array.isArray(data) ? data[0] : data;
+      return json({
+        ok: true,
+        pingId: row?.ping_id ?? null,
+        inserted: row?.inserted ?? false,
+        throttled: row?.inserted === false,
+        recordedAt: row?.recorded_at ?? null,
+      });
+    } catch (error) {
+      console.error(error);
       return json({ error: "Invalid request body" }, 400);
     }
   }
 
-  if (req.method === "GET") {
-    const orderId = new URL(req.url).searchParams.get("orderId");
-    if (!orderId) return json({ error: "orderId query param required" }, 400);
+  if (request.method === "GET") {
+    const orderId = new URL(request.url).searchParams.get("orderId");
+    if (!orderId) return json({ error: "orderId query parameter is required" }, 400);
 
-    const { data: order, error: orderErr } = await service
+    const { data: order, error: orderError } = await service
       .from("orders")
-      .select("id, driver_id, customer_id")
+      .select("id,driver_id,customer_id")
       .eq("id", orderId)
-      .single();
+      .maybeSingle();
 
-    if (orderErr || !order) return json({ error: "Order not found" }, 404);
-    if (order.driver_id !== user.id && order.customer_id !== user.id) {
-      return json({ error: "Not authorized for this order" }, 403);
-    }
+    if (orderError || !order) return json({ error: "Order not found" }, 404);
+    const role = String(user.app_metadata?.role ?? "");
+    const allowed = order.driver_id === user.id
+      || order.customer_id === user.id
+      || role === "admin"
+      || role === "ceo";
+    if (!allowed) return json({ error: "Not authorized for this order" }, 403);
 
     const { data, error } = await service
       .from("tracking_pings")
-      .select("location, heading, speed_kmh, recorded_at")
+      .select("id,location,heading,speed_kmh,accuracy_m,source_recorded_at,recorded_at")
       .eq("order_id", orderId)
       .order("recorded_at", { ascending: false })
       .limit(1)
