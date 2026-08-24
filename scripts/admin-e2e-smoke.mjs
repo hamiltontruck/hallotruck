@@ -102,10 +102,18 @@ try {
 
   for (const route of routes) {
     const mobile = await render(chrome, route, { width: 412, height: 915 });
-    assertContains(mobile, ["Control Center", "Logistics built around every role."], `Admin mobile guard ${route}`);
+    assertContains(mobile, [
+      "CEO / Admin login",
+      "Sign in with your authorized company account.",
+      "Open control center",
+    ], `Admin mobile guard ${route}`);
 
     const desktop = await render(chrome, route, { width: 1440, height: 1000 });
-    assertContains(desktop, ["Control Center", "Hamilton Truck Transportation"], `Admin desktop guard ${route}`);
+    assertContains(desktop, [
+      "CEO / Admin login",
+      "SECURE CONTROL CENTER",
+      "Hamilton Truck Transportation",
+    ], `Admin desktop guard ${route}`);
   }
 
   console.log("Admin/Finance browser smoke passed: protected approval, assignment, payment review, commission/report and operational routes on mobile and desktop.");
