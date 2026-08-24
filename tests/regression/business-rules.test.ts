@@ -105,6 +105,17 @@ test("verified and released payment clears the invoice balance", () => {
   assert.equal(summary.customerCredit, 0);
 });
 
+test("held escrow is verified but not released", () => {
+  const summary = calculatePaymentSummary(100_000, [
+    { amount_etb: 60_000, event: "held_escrow" },
+  ]);
+
+  assert.equal(summary.heldEscrow, 60_000);
+  assert.equal(summary.releasedGross, 0);
+  assert.equal(summary.verifiedPaid, 60_000);
+  assert.equal(summary.balanceToPay, 40_000);
+});
+
 test("refunds reopen only the refunded balance", () => {
   const summary = calculatePaymentSummary(100_000, [
     { amount_etb: 100_000, event: "released" },
@@ -123,4 +134,16 @@ test("overpayment is represented as customer credit", () => {
 
   assert.equal(summary.balanceToPay, 0);
   assert.equal(summary.customerCredit, 10_000);
+});
+
+test("refunds beyond verified funds are flagged as a ledger anomaly", () => {
+  const summary = calculatePaymentSummary(100_000, [
+    { amount_etb: 20_000, event: "released" },
+    { amount_etb: 35_000, event: "refunded" },
+  ]);
+
+  assert.equal(summary.rawVerified, -15_000);
+  assert.equal(summary.verifiedPaid, 0);
+  assert.equal(summary.ledgerAnomaly, 15_000);
+  assert.equal(summary.balanceToPay, 100_000);
 });
