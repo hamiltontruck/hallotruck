@@ -130,7 +130,7 @@ frame.addEventListener("load", () => {
     }
     switchButton.click();
     setTimeout(() => {
-      document.body.innerHTML = `<main data-e2e-view="signup">${doc.body.innerHTML}</main>`;
+      document.body.innerHTML = '<main data-e2e-view="signup">' + doc.body.innerHTML + '</main>';
     }, 250);
   }, 800);
 });
