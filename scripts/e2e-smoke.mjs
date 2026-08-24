@@ -57,7 +57,7 @@ function assertContains(dom, expected, label) {
   }
 }
 
-function dumpDom(chrome, url, profileDirectory) {
+function dumpDom(chrome, url, profileDirectory, viewport = { width: 412, height: 915 }) {
   const common = [
     "--no-sandbox",
     "--disable-gpu",
@@ -67,7 +67,7 @@ function dumpDom(chrome, url, profileDirectory) {
     "--no-first-run",
     "--no-default-browser-check",
     "--hide-scrollbars",
-    "--window-size=412,915",
+    `--window-size=${viewport.width},${viewport.height}`,
     "--virtual-time-budget=8000",
     `--user-data-dir=${profileDirectory}`,
     "--dump-dom",
@@ -111,6 +111,33 @@ location.replace("./#/customer/login");
   return `${baseUrl}${fileName}`;
 }
 
+async function writeSignupBootstrap() {
+  const fileName = "e2e-customer-signup.html";
+  const target = path.join(root, "dist", fileName);
+  await writeFile(target, `<!doctype html>
+<html><head><meta charset="UTF-8"><title>E2E customer signup</title></head>
+<body><iframe id="app" src="./#/customer/login" style="width:100%;height:100vh;border:0"></iframe>
+<script>
+const frame = document.getElementById("app");
+frame.addEventListener("load", () => {
+  setTimeout(() => {
+    const doc = frame.contentDocument;
+    const buttons = Array.from(doc.querySelectorAll("button"));
+    const switchButton = buttons.find((button) => button.type === "button" && button.textContent.trim());
+    if (!switchButton) {
+      document.body.innerHTML = "SIGNUP_SWITCH_NOT_FOUND";
+      return;
+    }
+    switchButton.click();
+    setTimeout(() => {
+      document.body.innerHTML = `<main data-e2e-view="signup">${doc.body.innerHTML}</main>`;
+    }, 250);
+  }, 800);
+});
+</script></body></html>`, "utf8");
+  return `${baseUrl}${fileName}`;
+}
+
 const preview = spawn(viteBinary, [
   "preview",
   "--host",
@@ -140,12 +167,48 @@ try {
     "Smart Portal",
   ], "Landing page");
 
-  const customerLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/customer/login`, profile));
-  assertContains(customerLogin, [
+  const mobileCustomerLogin = await withProfile((profile) => dumpDom(
+    chrome,
+    `${baseUrl}#/customer/login`,
+    profile,
+    { width: 412, height: 915 },
+  ));
+  assertContains(mobileCustomerLogin, [
     "Welcome back",
     "Open customer portal",
     "New customer? Create an account",
-  ], "Customer login");
+    "autocomplete=\"email\"",
+    "autocomplete=\"current-password\"",
+  ], "Mobile customer login");
+
+  const desktopCustomerLogin = await withProfile((profile) => dumpDom(
+    chrome,
+    `${baseUrl}#/customer/login`,
+    profile,
+    { width: 1440, height: 1000 },
+  ));
+  assertContains(desktopCustomerLogin, [
+    "Welcome back",
+    "Smart Portal",
+    "Hamilton Truck Transportation",
+    "lg:grid-cols-2",
+  ], "Desktop customer login");
+
+  const signupUrl = await writeSignupBootstrap();
+  const mobileSignup = await withProfile((profile) => dumpDom(
+    chrome,
+    signupUrl,
+    profile,
+    { width: 412, height: 915 },
+  ));
+  assertContains(mobileSignup, [
+    "data-e2e-view=\"signup\"",
+    "autocomplete=\"name\"",
+    "autocomplete=\"tel\"",
+    "autocomplete=\"email\"",
+    "autocomplete=\"new-password\"",
+    "minlength=\"10\"",
+  ], "Mobile customer signup");
 
   const driverLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/driver/login`, profile));
   assertContains(driverLogin, [
@@ -153,6 +216,9 @@ try {
     "Sign in",
     "New driver? Create an account",
   ], "Driver login");
+
+  const protectedCustomerRoute = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/customer`, profile));
+  assertContains(protectedCustomerRoute, ["Welcome back"], "Protected customer redirect");
 
   const protectedDriverRoute = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/driver/jobs`, profile));
   assertContains(protectedDriverRoute, ["Driver login"], "Protected driver redirect");
@@ -173,7 +239,7 @@ try {
     "lang=\"ti\"",
   ], "Tigrinya language persistence");
 
-  console.log("E2E smoke tests passed: landing, login portals, auth redirect and language persistence.");
+  console.log("E2E smoke tests passed: landing, mobile/desktop customer login, customer signup, auth redirects and language persistence.");
 } catch (error) {
   if (previewOutput.trim()) console.error(previewOutput.trim());
   throw error;
@@ -188,5 +254,6 @@ try {
   await Promise.all([
     rm(path.join(root, "dist", "e2e-language-so.html"), { force: true }),
     rm(path.join(root, "dist", "e2e-language-ti.html"), { force: true }),
+    rm(path.join(root, "dist", "e2e-customer-signup.html"), { force: true }),
   ]);
 }
