@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  getPaymentLedgerIndicators,
+  getPaymentLedgerPage,
+  isLegacyCompletedLedgerPayment,
+  matchesPaymentLedgerDate,
+  matchesPaymentLedgerSearch,
+  matchesPaymentLedgerStatus,
+  type PaymentLedgerDateFilter,
+  type PaymentLedgerEvent,
+  type PaymentLedgerStatusFilter,
+} from "../domain/payment-ledger";
 import { supabase } from "../services/supabase.client";
-
-type ReviewFilter = "pending" | "rejected" | "escrow" | "released" | "all";
-type PaymentEvent = "initiated" | "failed" | "held_escrow" | "released";
 
 type PaymentPayload = {
   source?: string;
@@ -12,15 +20,16 @@ type PaymentPayload = {
   note?: string;
   tracking_id?: string;
   payment_terms?: string;
+  legacy_completed?: boolean;
 };
 
-interface PaymentReviewRow {
+export interface PaymentReviewRow {
   id: string;
   order_id: string;
   provider: string;
   provider_ref: string | null;
   amount_etb: number | string;
-  event: PaymentEvent;
+  event: PaymentLedgerEvent;
   receipt_path: string | null;
   rejection_reason: string | null;
   reviewed_by: string | null;
@@ -29,7 +38,7 @@ interface PaymentReviewRow {
   created_at: string;
 }
 
-interface ReviewOrderRow {
+export interface ReviewOrderRow {
   id: string;
   tracking_id: string;
   customer_name: string | null;
@@ -41,13 +50,13 @@ interface ReviewOrderRow {
   driver_id: string | null;
 }
 
-interface DriverRow {
+export interface DriverRow {
   id: string;
   full_name: string | null;
   phone: string | null;
 }
 
-interface AuditRow {
+export interface AuditRow {
   id: string;
   payment_id: string;
   action: "verified" | "rejected" | "resubmitted";
@@ -56,8 +65,31 @@ interface AuditRow {
   created_at: string;
 }
 
+const PAGE_SIZE = 12;
+const QUERY_BATCH_SIZE = 100;
+
+export interface AdminPaymentReviewFixture {
+  payments: PaymentReviewRow[];
+  orders: ReviewOrderRow[];
+  drivers: DriverRow[];
+  audit: AuditRow[];
+}
+
+function amount(value: number | string | null | undefined) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function money(value: number | string | null | undefined) {
-  return Number(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return amount(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function batches<T>(values: T[]) {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += QUERY_BATCH_SIZE) {
+    result.push(values.slice(index, index + QUERY_BATCH_SIZE));
+  }
+  return result;
 }
 
 function isDriverCollection(payment: PaymentReviewRow) {
@@ -68,18 +100,33 @@ function isCashCollection(payment: PaymentReviewRow) {
   return isDriverCollection(payment) && payment.raw_payload?.collection_method === "cash";
 }
 
-export function AdminPaymentReview() {
-  const [payments, setPayments] = useState<PaymentReviewRow[]>([]);
-  const [orders, setOrders] = useState<ReviewOrderRow[]>([]);
-  const [drivers, setDrivers] = useState<DriverRow[]>([]);
-  const [audit, setAudit] = useState<AuditRow[]>([]);
-  const [filter, setFilter] = useState<ReviewFilter>("pending");
+export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFixture } = {}) {
+  const [payments, setPayments] = useState<PaymentReviewRow[]>(fixture?.payments ?? []);
+  const [orders, setOrders] = useState<ReviewOrderRow[]>(fixture?.orders ?? []);
+  const [drivers, setDrivers] = useState<DriverRow[]>(fixture?.drivers ?? []);
+  const [audit, setAudit] = useState<AuditRow[]>(fixture?.audit ?? []);
+  const [filter, setFilter] = useState<PaymentLedgerStatusFilter>("all");
+  const [provider, setProvider] = useState("all");
+  const [dateFilter, setDateFilter] = useState<PaymentLedgerDateFilter>("all");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busyPayment, setBusyPayment] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!fixture);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
+    if (fixture) {
+      setPayments(fixture.payments);
+      setOrders(fixture.orders);
+      setDrivers(fixture.drivers);
+      setAudit(fixture.audit);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     try {
       const { data: paymentData, error: paymentError } = await supabase
         .from("payments")
@@ -87,80 +134,96 @@ export function AdminPaymentReview() {
         .in("event", ["initiated", "failed", "held_escrow", "released"])
         .order("created_at", { ascending: false })
         .limit(1000);
-
       if (paymentError) throw paymentError;
+
       const nextPayments = (paymentData ?? []) as PaymentReviewRow[];
       const orderIds = [...new Set(nextPayments.map((payment) => payment.order_id))];
       const paymentIds = nextPayments.map((payment) => payment.id);
+      const orderResults = await Promise.all(batches(orderIds).map((ids) => supabase
+        .from("orders")
+        .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,price_etb,status,driver_id")
+        .in("id", ids)));
+      for (const result of orderResults) if (result.error) throw result.error;
 
-      const orderResult = orderIds.length
-        ? await supabase
-            .from("orders")
-            .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,price_etb,status,driver_id")
-            .in("id", orderIds)
-        : { data: [], error: null };
-
-      if (orderResult.error) throw orderResult.error;
-      const nextOrders = (orderResult.data ?? []) as ReviewOrderRow[];
+      const nextOrders = orderResults.flatMap((result) => (result.data ?? []) as ReviewOrderRow[]);
       const driverIds = [...new Set(nextOrders.map((order) => order.driver_id).filter((value): value is string => Boolean(value)))];
-
-      const [driverResult, auditResult] = await Promise.all([
-        driverIds.length
-          ? supabase.from("profiles").select("id,full_name,phone").in("id", driverIds)
-          : Promise.resolve({ data: [], error: null }),
-        paymentIds.length
-          ? supabase
-              .from("payment_review_audit")
-              .select("id,payment_id,action,actor_id,reason,created_at")
-              .in("payment_id", paymentIds)
-              .order("created_at", { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
+      const [driverResults, auditResults] = await Promise.all([
+        Promise.all(batches(driverIds).map((ids) => supabase.from("profiles").select("id,full_name,phone").in("id", ids))),
+        Promise.all(batches(paymentIds).map((ids) => supabase.from("payment_review_audit").select("id,payment_id,action,actor_id,reason,created_at").in("payment_id", ids).order("created_at", { ascending: false }))),
       ]);
-
-      if (driverResult.error) throw driverResult.error;
-      if (auditResult.error) throw auditResult.error;
+      for (const result of driverResults) if (result.error) throw result.error;
+      for (const result of auditResults) if (result.error) throw result.error;
 
       setPayments(nextPayments);
       setOrders(nextOrders);
-      setDrivers((driverResult.data ?? []) as DriverRow[]);
-      setAudit((auditResult.data ?? []) as AuditRow[]);
+      setDrivers(driverResults.flatMap((result) => (result.data ?? []) as DriverRow[]));
+      setAudit(auditResults.flatMap((result) => (result.data ?? []) as AuditRow[]));
       setError("");
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Payment review data could not be loaded.");
+      setError(loadError instanceof Error ? loadError.message : "Payment ledger could not be loaded.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fixture]);
 
   useEffect(() => {
     void load();
-    const channel = supabase
-      .channel("admin-payment-review")
+    if (fixture) return;
+    const channel = supabase.channel("admin-payment-review")
       .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => void load())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [load]);
+  }, [fixture, load]);
 
   const ordersById = useMemo(() => new Map(orders.map((order) => [order.id, order])), [orders]);
   const driversById = useMemo(() => new Map(drivers.map((driver) => [driver.id, driver])), [drivers]);
-  const latestAudit = useMemo(() => {
-    const result = new Map<string, AuditRow>();
-    for (const entry of audit) if (!result.has(entry.payment_id)) result.set(entry.payment_id, entry);
+  const auditByPayment = useMemo(() => {
+    const result = new Map<string, AuditRow[]>();
+    for (const entry of audit) {
+      const entries = result.get(entry.payment_id) ?? [];
+      entries.push(entry);
+      result.set(entry.payment_id, entries);
+    }
     return result;
   }, [audit]);
 
-  const filteredPayments = payments.filter((payment) => {
-    if (filter === "all") return true;
-    if (filter === "pending") return payment.event === "initiated";
-    if (filter === "rejected") return payment.event === "failed";
-    if (filter === "escrow") return payment.event === "held_escrow";
-    return payment.event === "released";
-  });
+  const providerOptions = useMemo(() => [...new Set(payments.map((payment) => payment.provider.trim()).filter(Boolean))].sort(), [payments]);
+  const totals = useMemo(() => ({
+    pending: payments.filter((payment) => payment.event === "initiated"),
+    rejected: payments.filter((payment) => payment.event === "failed"),
+    escrow: payments.filter((payment) => payment.event === "held_escrow"),
+    released: payments.filter((payment) => payment.event === "released"),
+  }), [payments]);
 
-  const pending = payments.filter((payment) => payment.event === "initiated");
-  const rejected = payments.filter((payment) => payment.event === "failed");
-  const escrow = payments.filter((payment) => payment.event === "held_escrow");
-  const released = payments.filter((payment) => payment.event === "released");
+  const filteredPayments = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return payments.filter((payment) => {
+      const order = ordersById.get(payment.order_id);
+      const driver = order?.driver_id ? driversById.get(order.driver_id) : null;
+      const matchesStatus = matchesPaymentLedgerStatus(payment.event, filter);
+      const matchesProvider = provider === "all" || payment.provider.trim() === provider;
+      const matchesSearch = matchesPaymentLedgerSearch({
+        provider: payment.provider,
+        transactionId: payment.provider_ref,
+        trackingId: order?.tracking_id,
+        customerName: order?.customer_name,
+        customerPhone: order?.customer_phone,
+        pickupAddress: order?.pickup_address,
+        dropoffAddress: order?.dropoff_address,
+        driverName: driver?.full_name,
+        driverPhone: driver?.phone,
+      }, normalized);
+      return matchesStatus && matchesProvider && matchesPaymentLedgerDate(payment.created_at, dateFilter) && matchesSearch;
+    });
+  }, [payments, ordersById, driversById, filter, provider, dateFilter, query]);
+
+  useEffect(() => { setPage(1); }, [filter, provider, dateFilter, query]);
+  const pagination = getPaymentLedgerPage(filteredPayments.length, page, PAGE_SIZE);
+  const visiblePayments = filteredPayments.slice(pagination.startIndex, pagination.endIndex);
+
+  useEffect(() => {
+    if (page !== pagination.page) setPage(pagination.page);
+  }, [page, pagination.page]);
 
   async function review(paymentId: string, approve: boolean) {
     const reason = reasons[paymentId]?.trim() ?? "";
@@ -168,7 +231,6 @@ export function AdminPaymentReview() {
       setError("Write a clear rejection reason of at least 5 characters.");
       return;
     }
-
     setBusyPayment(paymentId);
     setError("");
     try {
@@ -190,165 +252,136 @@ export function AdminPaymentReview() {
   async function openReceipt(path: string) {
     setError("");
     const { data, error: signedError } = await supabase.storage.from("payment-receipts").createSignedUrl(path, 300);
-    if (signedError) {
-      setError(signedError.message);
-      return;
-    }
+    if (signedError) { setError(signedError.message); return; }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
-  return (
-    <main className="min-h-screen bg-[#f5f3ed] p-4 text-asphalt sm:p-7">
-      <section className="mx-auto max-w-5xl">
-        <header className="border border-asphalt/10 bg-asphalt p-6 text-white sm:p-8">
-          <p className="font-mono text-[10px] tracking-[.22em] text-amber">FINANCE CONTROL</p>
-          <h1 className="mt-3 font-display text-3xl font-bold">Customer payment review</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/60">
-            Cash reports are verified from the driver declaration. Bank and mobile-money reports require a receipt and transaction reference. Escrow and released funds are shown separately.
-          </p>
-        </header>
-
-        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Summary label="Pending review" value={pending.length} amount={pending.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
-          <Summary label="Rejected" value={rejected.length} amount={rejected.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
-          <Summary label="Held in escrow" value={escrow.length} amount={escrow.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
-          <Summary label="Released" value={released.length} amount={released.reduce((sum, row) => sum + Number(row.amount_etb || 0), 0)} />
+  return <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f5f3ed] p-3 text-asphalt sm:p-7">
+    <section className="mx-auto w-full min-w-0 max-w-6xl">
+      <header className="min-w-0 border border-asphalt/10 bg-asphalt p-4 text-white min-[360px]:p-5 sm:p-8">
+        <p className="font-mono text-[10px] tracking-[.22em] text-amber">FINANCE CONTROL</p>
+        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0"><h1 className="break-words font-display text-[clamp(1.75rem,9vw,2.25rem)] font-bold leading-tight">Payment ledger</h1><p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/60">Search, filter, audit and review every customer payment without losing order, driver, receipt or transaction context.</p></div>
+          <button type="button" onClick={() => void load()} className="w-full border border-white/20 px-4 py-3 text-sm font-semibold min-[360px]:w-auto lg:self-start">↻ Refresh ledger</button>
         </div>
+      </header>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          {(["pending", "rejected", "escrow", "released", "all"] as ReviewFilter[]).map((item) => (
-            <button
-              type="button"
-              key={item}
-              onClick={() => setFilter(item)}
-              className={`border px-4 py-2 text-xs font-semibold capitalize ${filter === item ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white text-steel"}`}
-            >
-              {item}
-            </button>
-          ))}
-          <button type="button" onClick={() => void load()} className="ml-auto border border-amber/40 bg-white px-4 py-2 text-xs font-semibold text-amber-dim">↻ Refresh</button>
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Summary label="Pending review" rows={totals.pending} tone="warning" />
+        <Summary label="Held in escrow" rows={totals.escrow} tone="warning" />
+        <Summary label="Released" rows={totals.released} tone="good" />
+        <Summary label="Rejected / failed" rows={totals.rejected} tone="critical" />
+      </div>
+
+      <section className="mt-4 min-w-0 border border-asphalt/10 bg-white p-3 min-[360px]:p-4">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 md:grid-cols-4">
+          <label className="min-w-0 sm:col-span-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Search ledger</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tracking, customer, driver, phone, route, transaction…" className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 px-3 py-3 text-sm outline-none focus:border-amber" /></label>
+          <label className="min-w-0"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Provider</span><select value={provider} onChange={(event) => setProvider(event.target.value)} className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white px-3 py-3 text-sm"><option value="all">All providers</option>{providerOptions.map((item) => <option key={item} value={item}>{item.replace(/_/g, " ")}</option>)}</select></label>
+          <label className="min-w-0"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Date</span><select value={dateFilter} onChange={(event) => setDateFilter(event.target.value as PaymentLedgerDateFilter)} className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white px-3 py-3 text-sm"><option value="all">All dates</option><option value="today">Today</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
         </div>
-
-        {error && <p className="mt-5 border border-route/35 bg-route/5 p-4 text-sm text-route">{error}</p>}
-
-        <div className="mt-5 grid gap-4">
-          {loading && <p className="border border-asphalt/10 bg-white p-8 text-center font-mono text-sm text-steel">Loading payment review queue…</p>}
-          {!loading && filteredPayments.length === 0 && <p className="border border-asphalt/10 bg-white p-8 text-center text-sm text-steel">No payments in this review state.</p>}
-          {filteredPayments.map((payment) => {
-            const order = ordersById.get(payment.order_id);
-            const driver = order?.driver_id ? driversById.get(order.driver_id) : null;
-            const lastAudit = latestAudit.get(payment.id);
-            const busy = busyPayment === payment.id;
-            const driverCollected = isDriverCollection(payment);
-            const cashCollection = isCashCollection(payment);
-            const collectionMethod = payment.raw_payload?.collection_method?.replace(/_/g, " ") ?? "payment";
-            const evidenceRequired = !cashCollection;
-            const canApprove = !evidenceRequired || Boolean(payment.receipt_path);
-            const badge = payment.event === "initiated"
-              ? "Pending review"
-              : payment.event === "failed"
-                ? "Rejected"
-                : payment.event === "released"
-                  ? driverCollected ? "Verified · driver received" : "Released"
-                  : "Verified · held escrow";
-            const badgeClass = payment.event === "initiated"
-              ? "bg-amber/15 text-amber-dim"
-              : payment.event === "failed"
-                ? "bg-route/10 text-route"
-                : "bg-emerald-100 text-emerald-800";
-
-            return (
-              <article key={payment.id} className={`border bg-white p-5 sm:p-6 ${driverCollected ? "border-amber/45" : "border-asphalt/10"}`}>
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-mono text-xs font-semibold">{order?.tracking_id ?? payment.order_id}</p>
-                      {driverCollected && <span className="bg-asphalt px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide text-amber">Driver collected · {collectionMethod}</span>}
-                    </div>
-                    <h2 className="mt-2 font-display text-2xl font-bold">ETB {money(payment.amount_etb)}</h2>
-                    <p className="mt-2 text-sm text-steel">{order ? `${order.pickup_address} → ${order.dropoff_address}` : "Order details unavailable"}</p>
-                    <p className="mt-2 text-xs text-steel">Customer: <strong className="text-asphalt">{order?.customer_name ?? "Customer"}</strong>{order?.customer_phone ? ` · ${order.customer_phone}` : ""}</p>
-                    <p className="mt-1 text-xs text-steel">Driver: <strong className="text-asphalt">{driver?.full_name ?? driver?.phone ?? (order?.driver_id ? "Driver profile unavailable" : "Unassigned")}</strong></p>
-                    <p className="mt-1 text-xs text-steel">Invoice: ETB {money(order?.price_etb)} · Order: <span className="capitalize">{order?.status?.replace(/_/g, " ") ?? "—"}</span></p>
-                  </div>
-                  <span className={`self-start px-3 py-2 text-xs font-semibold ${badgeClass}`}>{badge}</span>
-                </div>
-
-                {driverCollected && (
-                  <div className="mt-5 border border-amber/35 bg-amber/10 p-4 text-sm">
-                    <p className="font-semibold text-asphalt">Direct-to-driver collection report</p>
-                    <p className="mt-2 text-xs leading-5 text-steel">
-                      The driver reported receiving the full invoice by <strong className="capitalize text-asphalt">{collectionMethod}</strong>. Admin verification releases the ledger amount and creates the 2% HALLO Smart commission charge.
-                    </p>
-                    {cashCollection && <p className="mt-3 border-l-4 border-emerald-600 bg-white/70 p-3 text-xs text-emerald-800"><strong>Cash declaration:</strong> no receipt file is required. Verify only when the driver declaration and order details are correct.</p>}
-                    {payment.raw_payload?.note && <p className="mt-3 border-l-4 border-amber bg-white/70 p-3 text-xs"><strong>Driver note:</strong> {payment.raw_payload.note}</p>}
-                  </div>
-                )}
-
-                <div className="mt-5 grid gap-3 border-y border-asphalt/10 py-4 text-xs sm:grid-cols-3">
-                  <p><span className="block text-steel">Provider</span><strong className="mt-1 block capitalize">{payment.provider.replace(/_/g, " ")}</strong></p>
-                  <p><span className="block text-steel">Transaction ID</span><strong className="mt-1 block break-all">{payment.provider_ref ?? (cashCollection ? "Cash · no bank reference" : "Not supplied")}</strong></p>
-                  <p><span className="block text-steel">Submitted</span><strong className="mt-1 block">{new Date(payment.created_at).toLocaleString()}</strong></p>
-                </div>
-
-                {payment.event === "failed" && (
-                  <div className="mt-4 border-l-4 border-route bg-route/5 p-4 text-sm">
-                    <p className="font-semibold text-route">Rejection reason</p>
-                    <p className="mt-2 whitespace-pre-wrap">{payment.rejection_reason ?? "No reason recorded"}</p>
-                  </div>
-                )}
-
-                {lastAudit && (
-                  <p className="mt-4 text-[11px] text-steel">
-                    Audit: <span className="font-semibold capitalize text-asphalt">{lastAudit.action}</span> · {new Date(lastAudit.created_at).toLocaleString()}{lastAudit.actor_id ? ` · reviewer ${lastAudit.actor_id.slice(0, 8)}` : ""}
-                  </p>
-                )}
-
-                <div className="mt-5 flex flex-wrap gap-3">
-                  {payment.receipt_path
-                    ? <button type="button" onClick={() => void openReceipt(payment.receipt_path!)} className="border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800">Open payment evidence</button>
-                    : cashCollection
-                      ? <span className="border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Cash declaration · no file required</span>
-                      : <span className="border border-route/30 bg-route/5 px-4 py-3 text-sm text-route">Evidence required</span>}
-                  {payment.event === "initiated" && (
-                    <button type="button" disabled={busy || !canApprove} onClick={() => void review(payment.id, true)} className="bg-emerald-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">
-                      {busy ? "Saving…" : cashCollection ? "Verify cash received" : driverCollected ? "Verify received money" : "Verify payment"}
-                    </button>
-                  )}
-                </div>
-
-                {payment.event === "initiated" && (
-                  <div className="mt-4 border border-route/25 bg-route/5 p-4">
-                    <label className="text-xs font-semibold text-asphalt">Reason required when rejecting
-                      <textarea
-                        value={reasons[payment.id] ?? ""}
-                        onChange={(event) => setReasons((current) => ({ ...current, [payment.id]: event.target.value }))}
-                        rows={3}
-                        maxLength={500}
-                        placeholder={cashCollection ? "Example: driver declaration does not match the order or customer confirmation." : "Example: receipt is unclear or transaction amount does not match."}
-                        className="mt-2 block w-full border border-asphalt/15 bg-white p-3 text-sm font-normal outline-none focus:border-route"
-                      />
-                    </label>
-                    <button type="button" disabled={busy || (reasons[payment.id]?.trim().length ?? 0) < 5} onClick={() => void review(payment.id, false)} className="mt-3 border border-route bg-white px-5 py-3 text-sm font-semibold text-route disabled:opacity-40">
-                      {busy ? "Saving…" : cashCollection ? "Reject cash report" : "Reject payment evidence"}
-                    </button>
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
+        <div className="mt-4 flex min-w-0 flex-wrap gap-2" aria-label="Payment status filter">{(["all", "pending", "escrow", "released", "rejected"] as PaymentLedgerStatusFilter[]).map((item) => <button key={item} type="button" aria-pressed={filter === item} onClick={() => setFilter(item)} className={`min-w-[5.25rem] flex-1 whitespace-normal border px-3 py-2 text-xs font-semibold capitalize min-[412px]:flex-none ${filter === item ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white text-steel"}`}>{item}</button>)}</div>
       </section>
-    </main>
-  );
+
+      {error && <p className="mt-4 border border-route/35 bg-route/5 p-4 text-sm text-route">{error}</p>}
+
+      <div className="mt-4 grid gap-3">
+        {loading && <p className="border border-asphalt/10 bg-white p-8 text-center font-mono text-sm text-steel">Loading payment ledger…</p>}
+        {!loading && visiblePayments.length === 0 && <p className="border border-asphalt/10 bg-white p-8 text-center text-sm text-steel">No payments match these filters.</p>}
+        {visiblePayments.map((payment) => {
+          const order = ordersById.get(payment.order_id);
+          const driver = order?.driver_id ? driversById.get(order.driver_id) : null;
+          const cashCollection = isCashCollection(payment);
+          const driverCollected = isDriverCollection(payment);
+          const legacy = isLegacyCompletedLedgerPayment(payment.event, payment.raw_payload?.legacy_completed);
+          const evidenceRequired = !cashCollection && !legacy;
+          const canApprove = !evidenceRequired || Boolean(payment.receipt_path);
+          const invoice = amount(order?.price_etb);
+          const indicators = getPaymentLedgerIndicators({
+            invoiceTotal: order?.price_etb,
+            paymentAmount: payment.amount_etb,
+            hasOrder: Boolean(order),
+            hasReceipt: Boolean(payment.receipt_path),
+            evidenceRequired,
+          });
+          const isOpen = expanded === payment.id;
+          const busy = busyPayment === payment.id;
+          const auditEntries = auditByPayment.get(payment.id) ?? [];
+          const detailsId = `payment-details-${payment.id}`;
+          return <article key={payment.id} className="w-full min-w-0 max-w-full overflow-hidden border border-asphalt/10 bg-white">
+            <div className="grid min-w-0 gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_auto]">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2"><h2 className="font-display text-xl font-bold">ETB {money(payment.amount_etb)}</h2><StatusBadge event={payment.event} legacy={legacy} driverCollected={driverCollected} /></div>
+                <p className="mt-2 break-all font-mono text-xs font-semibold">{order?.tracking_id ?? payment.order_id}</p>
+                <p className="mt-2 text-sm text-steel [overflow-wrap:anywhere]">{order ? `${order.pickup_address} → ${order.dropoff_address}` : "Order details unavailable"}</p>
+                <div className="mt-3 grid min-w-0 gap-1 text-xs text-steel sm:grid-cols-2">
+                  <p className="min-w-0 [overflow-wrap:anywhere]">Customer: <strong className="text-asphalt">{order?.customer_name ?? "Customer"}</strong>{order?.customer_phone ? ` · ${order.customer_phone}` : ""}</p>
+                  <p className="min-w-0 [overflow-wrap:anywhere]">Driver: <strong className="text-asphalt">{driver?.full_name ?? driver?.phone ?? "Unassigned"}</strong></p>
+                  <p className="min-w-0 [overflow-wrap:anywhere]">Provider: <strong className="capitalize text-asphalt">{payment.provider.replace(/_/g, " ")}</strong></p>
+                  <p className="min-w-0 [overflow-wrap:anywhere]">Submitted: <strong className="text-asphalt">{new Date(payment.created_at).toLocaleString()}</strong></p>
+                </div>
+                <div className="mt-3 flex min-w-0 flex-wrap gap-2 text-[10px] font-semibold uppercase">
+                  <Indicator tone="neutral">Invoice ETB {money(invoice)}</Indicator>
+                  {indicators.invoiceMismatch && <Indicator tone="critical">Invoice mismatch</Indicator>}
+                  {indicators.overpaymentEtb > 0 && <Indicator tone="warning">Overpayment ETB {money(indicators.overpaymentEtb)}</Indicator>}
+                  {indicators.underpaymentEtb > 0 && <Indicator tone="critical">Underpayment ETB {money(indicators.underpaymentEtb)}</Indicator>}
+                  {indicators.missingReceipt && <Indicator tone="critical">Missing receipt</Indicator>}
+                  {legacy && <Indicator tone="good">Receipt exempt · legacy completed</Indicator>}
+                </div>
+              </div>
+              <div className="grid w-full min-w-0 grid-cols-1 items-start gap-2 min-[360px]:grid-cols-2 lg:flex lg:w-auto lg:max-w-[230px] lg:flex-wrap lg:justify-end"><button type="button" aria-expanded={isOpen} aria-controls={detailsId} onClick={() => setExpanded(isOpen ? null : payment.id)} className="min-w-0 whitespace-normal border border-asphalt/15 px-3 py-2 text-xs font-semibold">{isOpen ? "Hide details" : "View details"}</button>{payment.receipt_path && <button type="button" onClick={() => void openReceipt(payment.receipt_path!)} className="min-w-0 whitespace-normal border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800">Open receipt</button>}</div>
+            </div>
+
+            {isOpen && <div id={detailsId} className="min-w-0 border-t border-asphalt/10 bg-[#faf9f5] p-4 sm:p-5">
+              <div className="grid gap-3 text-xs sm:grid-cols-3"><Info label="Transaction ID" value={payment.provider_ref ?? (cashCollection ? "Cash · no bank reference" : "Not supplied")} mono /><Info label="Order status" value={order?.status?.replace(/_/g, " ") ?? "—"} /><Info label="Reviewed" value={payment.reviewed_at ? new Date(payment.reviewed_at).toLocaleString() : "Not reviewed"} /></div>
+              {payment.raw_payload?.note && <p className="mt-4 border-l-4 border-amber bg-white p-3 text-xs [overflow-wrap:anywhere]"><strong>Driver note:</strong> {payment.raw_payload.note}</p>}
+              {payment.event === "failed" && <p className="mt-4 border-l-4 border-route bg-route/5 p-3 text-xs [overflow-wrap:anywhere]"><strong>Rejection reason:</strong> {payment.rejection_reason ?? "No reason recorded"}</p>}
+              <AuditHistory entries={auditEntries} />
+              {legacy && <p className="mt-4 border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"><strong>Legacy completed:</strong> historical released payment; receipt warning is suppressed.</p>}
+              {payment.event === "initiated" && <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"><label className="min-w-0 text-xs font-semibold">Rejection reason<textarea value={reasons[payment.id] ?? ""} onChange={(event) => setReasons((current) => ({ ...current, [payment.id]: event.target.value }))} rows={3} maxLength={500} placeholder="Explain mismatch, unclear receipt, duplicate transaction or fraud concern." className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white p-3 text-sm font-normal outline-none focus:border-route" /></label><div className="flex min-w-0 flex-col items-stretch gap-2 min-[360px]:flex-row min-[360px]:flex-wrap lg:items-end"><button type="button" disabled={busy || !canApprove} onClick={() => void review(payment.id, true)} className="w-full min-w-0 whitespace-normal bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40 min-[360px]:w-auto">{busy ? "Saving…" : cashCollection ? "Verify cash" : "Verify payment"}</button><button type="button" disabled={busy || (reasons[payment.id]?.trim().length ?? 0) < 5} onClick={() => void review(payment.id, false)} className="w-full min-w-0 whitespace-normal border border-route bg-white px-4 py-3 text-sm font-semibold text-route disabled:opacity-40 min-[360px]:w-auto">Reject</button></div></div>}
+            </div>}
+          </article>;
+        })}
+      </div>
+
+      {!loading && filteredPayments.length > 0 && <nav aria-label="Payment ledger pagination" className="mt-4 flex min-w-0 flex-col gap-3 border border-asphalt/10 bg-white p-4 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="text-steel">Showing {pagination.startIndex + 1}–{pagination.endIndex} of {filteredPayments.length}</p><div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2"><button type="button" disabled={pagination.page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="min-w-0 whitespace-normal border border-asphalt/15 px-3 py-2 font-semibold disabled:opacity-30 min-[360px]:px-4">Previous</button><span className="whitespace-nowrap px-1 py-2 text-center min-[360px]:px-3">{pagination.page} / {pagination.pageCount}</span><button type="button" disabled={pagination.page === pagination.pageCount} onClick={() => setPage((value) => Math.min(pagination.pageCount, value + 1))} className="min-w-0 whitespace-normal border border-asphalt/15 px-3 py-2 font-semibold disabled:opacity-30 min-[360px]:px-4">Next</button></div></nav>}
+    </section>
+  </main>;
 }
 
-function Summary({ label, value, amount }: { label: string; value: number; amount: number }) {
-  return (
-    <div className="border border-asphalt/10 bg-white p-4 sm:p-5">
-      <p className="font-mono text-[9px] uppercase tracking-wide text-steel">{label}</p>
-      <p className="mt-3 font-display text-2xl font-bold">{value}</p>
-      <p className="mt-1 text-xs text-steel">ETB {money(amount)}</p>
-    </div>
-  );
+function Summary({ label, rows, tone }: { label: string; rows: PaymentReviewRow[]; tone: "good" | "warning" | "critical" }) {
+  const border = tone === "good" ? "border-emerald-600/50" : tone === "critical" ? "border-route/40" : "border-amber/50";
+  return <div className={`min-w-0 border bg-white p-4 ${border}`}><p className="break-words font-mono text-[9px] uppercase tracking-wide text-steel">{label}</p><p className="mt-3 font-display text-2xl font-bold">{rows.length}</p><p className="mt-1 break-words text-xs text-steel">ETB {money(rows.reduce((sum, row) => sum + amount(row.amount_etb), 0))}</p></div>;
+}
+
+function StatusBadge({ event, legacy, driverCollected }: { event: PaymentLedgerEvent; legacy: boolean; driverCollected: boolean }) {
+  if (legacy) return <span className="bg-emerald-50 px-2.5 py-1.5 text-[10px] font-semibold uppercase text-emerald-800">Legacy completed</span>;
+  const label = event === "initiated" ? "Pending review" : event === "failed" ? "Rejected" : event === "held_escrow" ? "Held escrow" : driverCollected ? "Released · driver" : "Released";
+  const cls = event === "failed" ? "bg-route/10 text-route" : event === "initiated" || event === "held_escrow" ? "bg-amber/15 text-amber-dim" : "bg-emerald-50 text-emerald-800";
+  return <span className={`break-words px-2.5 py-1.5 text-[10px] font-semibold uppercase ${cls}`}>{label}</span>;
+}
+
+function Info({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return <p className="min-w-0"><span className="block text-steel">{label}</span><strong className={`mt-1 block break-all capitalize text-asphalt ${mono ? "font-mono" : ""}`}>{value}</strong></p>;
+}
+
+function Indicator({ children, tone }: { children: ReactNode; tone: "neutral" | "good" | "warning" | "critical" }) {
+  const colors = tone === "good"
+    ? "bg-emerald-50 text-emerald-800"
+    : tone === "warning"
+      ? "bg-amber/15 text-amber-dim"
+      : tone === "critical"
+        ? "bg-route/10 text-route"
+        : "bg-[#f5f3ed] text-asphalt";
+  return <span className={`max-w-full px-2.5 py-1.5 [overflow-wrap:anywhere] ${colors}`}>{children}</span>;
+}
+
+function AuditHistory({ entries }: { entries: AuditRow[] }) {
+  return <section className="mt-4 min-w-0 border border-asphalt/10 bg-white p-3" aria-label="Payment audit history">
+    <h3 className="text-[10px] font-semibold uppercase tracking-wide text-steel">Audit history</h3>
+    {entries.length === 0
+      ? <p className="mt-2 text-[11px] text-steel">No review action recorded yet.</p>
+      : <ol className="mt-2 grid min-w-0 gap-2">
+        {entries.map((entry) => <li key={entry.id} className="min-w-0 border-l-2 border-asphalt/15 pl-3 text-[11px] text-steel [overflow-wrap:anywhere]"><strong className="capitalize text-asphalt">{entry.action}</strong> · {new Date(entry.created_at).toLocaleString()}{entry.actor_id ? ` · reviewer ${entry.actor_id.slice(0, 8)}` : ""}{entry.reason ? <span className="mt-1 block text-asphalt">{entry.reason}</span> : null}</li>)}
+      </ol>}
+  </section>;
 }
