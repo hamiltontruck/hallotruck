@@ -7,6 +7,7 @@ import { DriverDocumentExpiryAlert } from "./components/driver/DriverDocumentExp
 import { AdminSidebarLeadershipLinks } from "./components/admin/AdminSidebarLeadershipLinks";
 import { AdminToolShell } from "./components/admin/AdminToolShell";
 import { SmartLogistics } from "./pages/SmartLogistics";
+import { AdminCeoOverview } from "./pages/AdminCeoOverview";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
 import { AdminDriverFinanceSearch } from "./pages/AdminDriverFinanceSearch";
 import { AdminDriverCommission } from "./pages/AdminDriverCommission";
@@ -61,6 +62,15 @@ function DriverShell({ children }: { children: React.ReactNode }) {
 function AdminWorkspace() {
   return (
     <>
+      <AdminCeoOverview />
+      <AdminSidebarLeadershipLinks />
+    </>
+  );
+}
+
+function AdminOperationsWorkspace() {
+  return (
+    <>
       <SmartLogistics />
       <AdminSidebarLeadershipLinks />
     </>
@@ -100,6 +110,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<PortalLanding />} />
             <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
+            <Route path="/admin/operations" element={<AdminGate><AdminOperationsWorkspace /></AdminGate>} />
             <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
             <Route path="/admin/driver-finance-search" element={<AdminGate><AdminToolShell><AdminDriverFinanceSearch /></AdminToolShell></AdminGate>} />
             <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
