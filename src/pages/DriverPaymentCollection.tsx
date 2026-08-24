@@ -26,7 +26,7 @@ const copy = {
   en: {
     kicker: "POST-DELIVERY PAYMENT",
     title: "Report money received from the customer",
-    help: "Record whether the customer paid cash or transferred money directly to you. Admin must verify the evidence before any amount appears in Earnings.",
+    help: "For cash, simply confirm that you received the full invoice. Bank or mobile transfers still require a transaction ID and evidence. Admin must verify the report before earnings are released.",
     route: "Route",
     invoice: "Full invoice",
     method: "How did the customer pay?",
@@ -35,17 +35,17 @@ const copy = {
     provider: "Bank or provider",
     transaction: "Transaction ID",
     evidence: "Payment evidence",
-    evidenceHelp: "Upload a cash receipt, signed note, bank screenshot or PDF. Maximum 10 MB.",
+    evidenceHelp: "Upload a bank or mobile transfer screenshot or PDF. Maximum 10 MB.",
     note: "Collection note",
     notePlaceholder: "Who paid, where it was received, or any useful detail.",
     warningTitle: "Money remains zero until Admin verifies",
     warning: "Pending trips can show in your history, but Gross, commission, Driver Net and payout remain ETB 0 until verification.",
     submit: "Submit for Admin verification",
-    submitting: "Submitting evidence…",
+    submitting: "Submitting…",
     notPaid: "Customer has not paid yet",
     pendingTitle: "Waiting for Admin verification",
     pendingText: "Your report was submitted. Earnings, commission and payout remain zero until Admin verifies it.",
-    rejectedTitle: "Payment evidence rejected",
+    rejectedTitle: "Payment report rejected",
     releasedTitle: "Admin verified the payment",
     releasedText: "The verified amount is now included in Earnings and the HALLO Smart commission ledger.",
     backJobs: "Back to jobs",
@@ -57,7 +57,7 @@ const copy = {
   om: {
     kicker: "KAFFALTII GEEJJIBA BOODAA",
     title: "Maallaqa customer irraa fudhatte gabaasi",
-    help: "Customer cash siif kenne moo bank/mobile irratti siif erge galmeessi. Hanga Admin ragaa mirkaneessutti maallaqni Galii keessatti hin mul'atu.",
+    help: "Cash yoo fudhatte invoice guutuu akka fudhatte qofa mirkaneessi. Bank/mobile transfer irratti Transaction ID fi ragaan barbaachisa. Hanga Admin mirkaneessutti galiin hin gadhiifamu.",
     route: "Daandii",
     invoice: "Invoice guutuu",
     method: "Customer akkamitti kaffale?",
@@ -66,17 +66,17 @@ const copy = {
     provider: "Bankii ykn provider",
     transaction: "Transaction ID",
     evidence: "Ragaa kaffaltii",
-    evidenceHelp: "Cash receipt, barruu mallatteeffame, screenshot bankii ykn PDF olkaa'i. Hanga 10 MB.",
+    evidenceHelp: "Screenshot bank/mobile transfer ykn PDF olkaa'i. Hanga 10 MB.",
     note: "Ibsa gabaabaa",
     notePlaceholder: "Eenyu kaffale, eessatti fudhatte, ykn odeeffannoo barbaachisaa.",
     warningTitle: "Hanga Admin mirkaneessutti maallaqni zeeroo dha",
     warning: "Imalli pending seenaa keessatti mul'achuu danda'a; garuu Gross, commission, Driver Net fi payout ETB 0 ta'anii turu.",
     submit: "Admin akka mirkaneessuuf ergi",
-    submitting: "Ragaa ergaa jira…",
+    submitting: "Ergaa jira…",
     notPaid: "Customer amma hin kaffalle",
     pendingTitle: "Mirkaneessa Admin eeggachaa jira",
     pendingText: "Gabaasni kee ergameera. Hanga Admin mirkaneessutti galii, commission fi payout zeeroo ta'anii turu.",
-    rejectedTitle: "Ragaan kaffaltii reject ta'e",
+    rejectedTitle: "Gabaasni kaffaltii reject ta'e",
     releasedTitle: "Admin kaffaltii mirkaneesseera",
     releasedText: "Maallaqni mirkanaa'e amma Galii fi galmee commission HALLO Smart keessatti dabalameera.",
     backJobs: "Gara hojii deebi'i",
@@ -88,7 +88,7 @@ const copy = {
   am: {
     kicker: "ከማድረስ በኋላ ክፍያ",
     title: "ከደንበኛው የተቀበሉትን ገንዘብ ሪፖርት ያድርጉ",
-    help: "ደንበኛው ጥሬ ገንዘብ ከፍሎዎት ወይም በባንክ/ሞባይል በቀጥታ ልኮሎት ከሆነ ይመዝግቡ። Admin ማስረጃውን እስኪያረጋግጥ ድረስ በገቢ ውስጥ አይታይም።",
+    help: "ጥሬ ገንዘብ ከተቀበሉ ሙሉ የክፍያ መጠኑን እንደተቀበሉ ብቻ ያረጋግጡ። የባንክ/ሞባይል ዝውውር የግብይት መለያና ማስረጃ ይፈልጋል። Admin እስኪያረጋግጥ ድረስ ገቢ አይለቀቅም።",
     route: "መንገድ",
     invoice: "ሙሉ ደረሰኝ",
     method: "ደንበኛው እንዴት ከፈለ?",
@@ -97,17 +97,17 @@ const copy = {
     provider: "ባንክ ወይም አቅራቢ",
     transaction: "የግብይት መለያ",
     evidence: "የክፍያ ማስረጃ",
-    evidenceHelp: "የጥሬ ገንዘብ ደረሰኝ፣ የተፈረመ ማስታወሻ፣ የባንክ ስክሪንሾት ወይም PDF ይጫኑ። እስከ 10 MB።",
+    evidenceHelp: "የባንክ/ሞባይል ዝውውር screenshot ወይም PDF ይጫኑ። እስከ 10 MB።",
     note: "የመሰብሰቢያ ማስታወሻ",
     notePlaceholder: "ማን ከፈለ፣ የት ተቀበሉ ወይም ሌላ ጠቃሚ መረጃ።",
     warningTitle: "Admin እስኪያረጋግጥ ድረስ ገንዘቡ ዜሮ ነው",
     warning: "ጉዞው pending ሆኖ ሊታይ ይችላል፣ ነገር ግን Gross፣ commission፣ Driver Net እና payout ETB 0 ይቆያሉ።",
     submit: "ለAdmin ማረጋገጫ ላክ",
-    submitting: "ማስረጃ በመላክ ላይ…",
+    submitting: "በመላክ ላይ…",
     notPaid: "ደንበኛው ገና አልከፈለም",
     pendingTitle: "የAdmin ማረጋገጫ በመጠበቅ ላይ",
     pendingText: "ሪፖርቱ ተልኳል። Admin እስኪያረጋግጥ ድረስ ገቢ፣ commission እና payout ዜሮ ይቆያሉ።",
-    rejectedTitle: "የክፍያ ማስረጃው ውድቅ ተደርጓል",
+    rejectedTitle: "የክፍያ ሪፖርቱ ውድቅ ተደርጓል",
     releasedTitle: "Admin ክፍያውን አረጋግጧል",
     releasedText: "የተረጋገጠው መጠን አሁን በገቢ እና በHALLO Smart commission መዝገብ ውስጥ ተካቷል።",
     backJobs: "ወደ ስራዎች ተመለስ",
@@ -159,7 +159,7 @@ export function DriverPaymentCollection() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!order || !receipt) {
+    if (!order || (method === "bank" && !receipt)) {
       setError(c.evidenceHelp);
       return;
     }
@@ -244,12 +244,19 @@ export function DriverPaymentCollection() {
             </div>
           </fieldset>
 
-          {method === "bank" && <div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-sm">{c.provider}<select value={provider} onChange={(event) => setProvider(event.target.value)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3">{providers.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className="text-sm">{c.transaction}<input required value={providerRef} onChange={(event) => setProviderRef(event.target.value)} className="mt-2 block w-full border border-asphalt/20 p-3" /></label></div>}
+          {method === "bank" ? (
+            <>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-sm">{c.provider}<select value={provider} onChange={(event) => setProvider(event.target.value)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3">{providers.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className="text-sm">{c.transaction}<input required value={providerRef} onChange={(event) => setProviderRef(event.target.value)} className="mt-2 block w-full border border-asphalt/20 p-3" /></label></div>
+              <label className="mt-5 block text-sm">{c.evidence}<input required type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf" onChange={(event) => setReceipt(event.target.files?.[0] ?? null)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3" /><span className="mt-2 block text-xs text-steel">{c.evidenceHelp}</span></label>
+              <label className="mt-5 block text-sm">{c.note}<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} rows={3} placeholder={c.notePlaceholder} className="mt-2 block w-full border border-asphalt/20 p-3" /></label>
+            </>
+          ) : (
+            <div className="mt-5 border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              ✓ {c.cash} — {formatEtb(amount)}
+            </div>
+          )}
 
-          <label className="mt-5 block text-sm">{c.evidence}<input required type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf" onChange={(event) => setReceipt(event.target.files?.[0] ?? null)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3" /><span className="mt-2 block text-xs text-steel">{c.evidenceHelp}</span></label>
-          <label className="mt-5 block text-sm">{c.note}<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} rows={3} placeholder={c.notePlaceholder} className="mt-2 block w-full border border-asphalt/20 p-3" /></label>
-
-          <button disabled={saving || !receipt} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">{saving ? c.submitting : c.submit}</button>
+          <button disabled={saving || (method === "bank" && !receipt)} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">{saving ? c.submitting : c.submit}</button>
           <button type="button" onClick={() => navigate("/driver/jobs")} className="mt-3 w-full border border-asphalt py-3 text-sm font-semibold">{c.notPaid}</button>
         </form>
       )}
