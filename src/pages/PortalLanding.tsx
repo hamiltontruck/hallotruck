@@ -9,6 +9,13 @@ const portalSpecs = [
     accent: "bg-amber text-asphalt",
   },
   {
+    label: "LOGISTICS PARTNER",
+    title: "Partner Workspace",
+    description: "Secure projects, progress, payments, private documents, shared folders and project messages.",
+    path: "/partner/login",
+    accent: "bg-sky-700 text-white",
+  },
+  {
     label: "DRIVER",
     title: "Mobile Workspace",
     description: "Find loads, share live GPS, follow turn-by-turn routes, manage trips, documents and earnings.",
@@ -28,8 +35,8 @@ const capabilities = [
   "Live driver GPS",
   "Customer truck tracking",
   "Route-aware quotes",
-  "Turn-by-turn navigation",
-  "Automatic route steps",
+  "Partner project control",
+  "Private document sharing",
   "Secure payment flow",
 ];
 
@@ -58,7 +65,7 @@ export function PortalLanding() {
             Logistics built around every role.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-7 text-white/55 sm:text-lg">
-            Secure portals for leadership, drivers and customers—connected by live GPS, road routing, payments and one shared transport network.
+            Secure portals for leadership, logistics partners, drivers and customers—connected by live operations, projects, payments and one shared transport network.
           </p>
         </div>
 
@@ -76,12 +83,12 @@ export function PortalLanding() {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {portalSpecs.map((portal, index) => (
             <Link
               key={portal.path}
               to={portal.path}
-              className="group border border-white/12 bg-white/[.04] p-6 transition hover:-translate-y-1 hover:border-amber/60 sm:p-8"
+              className="group min-w-0 border border-white/12 bg-white/[.04] p-6 transition hover:-translate-y-1 hover:border-amber/60 sm:p-8"
             >
               <div className="flex items-start justify-between gap-4">
                 <span className={`inline-flex px-3 py-2 font-mono text-[10px] tracking-[.18em] ${portal.accent}`}>
@@ -89,7 +96,7 @@ export function PortalLanding() {
                 </span>
                 <span className="font-mono text-xs text-white/25">0{index + 1}</span>
               </div>
-              <h2 className="mt-10 font-display text-2xl font-semibold">{portal.title}</h2>
+              <h2 className="mt-10 break-words font-display text-2xl font-semibold">{portal.title}</h2>
               <p className="mt-3 min-h-14 text-sm leading-6 text-white/45">{portal.description}</p>
               <span className="mt-8 inline-flex items-center gap-3 text-sm font-semibold text-amber">
                 Open portal <span className="transition group-hover:translate-x-1">→</span>
