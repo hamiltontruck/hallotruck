@@ -28,6 +28,12 @@ import {
 import type { ControlCenterData, ControlPayment } from "../../src/services/admin-control-center.service";
 import { calculatePaymentSummary } from "../../src/utils/paymentSummary";
 import { getDriverPaymentSubmissionIssue } from "../../src/domain/driver-payment-collection";
+import {
+  buildPasswordResetRedirectUrl,
+  isPasswordRecoveryLocation,
+  recoveryLoginHash,
+  recoveryPortalFromRole,
+} from "../../src/domain/password-recovery";
 
 test("cargo units convert to actual tons", () => {
   assert.equal(cargoToTons(50, "quintal"), 5);
@@ -80,6 +86,23 @@ test("driver collection requires an explicit safe payment choice", () => {
   assert.equal(getDriverPaymentSubmissionIssue("cash", false), null);
   assert.equal(getDriverPaymentSubmissionIssue("bank", false), "evidence_required");
   assert.equal(getDriverPaymentSubmissionIssue("bank", true), null);
+});
+
+test("password recovery returns each account role to the correct login", () => {
+  assert.equal(recoveryPortalFromRole("customer"), "customer");
+  assert.equal(recoveryPortalFromRole("driver"), "driver");
+  assert.equal(recoveryPortalFromRole("ceo"), "admin");
+  assert.equal(recoveryPortalFromRole("unknown"), "account");
+  assert.equal(recoveryLoginHash("customer"), "#/customer/login");
+  assert.equal(recoveryLoginHash("driver"), "#/driver/login");
+  assert.equal(recoveryLoginHash("admin"), "#/admin");
+});
+
+test("password recovery recognizes only recovery links and keeps the approved base redirect", () => {
+  assert.equal(isPasswordRecoveryLocation("https://example.com/hallotruck/#access_token=token&type=recovery"), true);
+  assert.equal(isPasswordRecoveryLocation("https://example.com/hallotruck/#access_token=token&type=signup"), false);
+  assert.equal(isPasswordRecoveryLocation("https://example.com/hallotruck/#access_token=token"), false);
+  assert.equal(buildPasswordResetRedirectUrl("https://hamiltontruck.github.io", "/hallotruck/"), "https://hamiltontruck.github.io/hallotruck/");
 });
 
 test("verified and released payment clears the invoice balance", () => {

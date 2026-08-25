@@ -2,6 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { LanguageSwitcher, useLanguage, type HalloLanguage } from "../i18n/LanguageProvider";
+import {
+  requestPasswordResetEmail,
+  type PasswordResetRequester,
+} from "../services/password-recovery.service";
+import { passwordRecoveryCopy } from "../i18n/passwordRecoveryCopy";
 
 type Feedback = {
   kind: "error" | "success";
@@ -54,11 +59,19 @@ async function withSingleNetworkRetry<T>(operation: () => Promise<T>): Promise<T
   }
 }
 
-export function CustomerLogin() {
+export function CustomerLogin({
+  passwordResetRequester = requestPasswordResetEmail,
+  initialResetMode = false,
+}: {
+  passwordResetRequester?: PasswordResetRequester;
+  initialResetMode?: boolean;
+} = {}) {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const connection = connectionCopy[language];
+  const resetCopy = passwordRecoveryCopy[language];
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [resetMode, setResetMode] = useState(initialResetMode);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -150,9 +163,42 @@ export function CustomerLogin() {
     }
   }
 
+  async function requestPasswordReset() {
+    setBusy(true);
+    setFeedback(null);
+
+    try {
+      if (!navigator.onLine) {
+        setOnline(false);
+        throw new Error(connection.offline);
+      }
+
+      await withSingleNetworkRetry(() => passwordResetRequester(email.trim()));
+      setFeedback({ kind: "success", text: resetCopy.sent });
+    } catch (error) {
+      const networkFailure = isNetworkFailure(error) || !navigator.onLine;
+      setOnline(navigator.onLine);
+      setFeedback({
+        kind: "error",
+        text: networkFailure
+          ? navigator.onLine ? connection.unavailable : connection.offline
+          : error instanceof Error ? error.message : t("customer.error.auth"),
+        retryable: networkFailure,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retryCurrentAction() {
+    if (resetMode) await requestPasswordReset();
+    else await authenticate();
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await authenticate();
+    if (resetMode) await requestPasswordReset();
+    else await authenticate();
   }
 
   return (
@@ -169,17 +215,17 @@ export function CustomerLogin() {
 
       <section className="grid place-items-center p-5 py-10">
         <form onSubmit={submit} className="w-full max-w-md border border-line bg-white p-7 sm:p-9">
-          <div className="flex items-center justify-between gap-4"><Link to="/" className="font-display text-xl font-bold">HALLO<span className="text-amber">TRUCK</span></Link><div className="lg:hidden"><LanguageSwitcher /></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-4"><Link to="/" className="font-display text-xl font-bold">HALLO<span className="text-amber">TRUCK</span></Link><div className="lg:hidden"><LanguageSwitcher /></div></div>
           <p className="mt-2 font-mono text-[10px] tracking-[.2em] text-emerald-700">{t("customer.label")}</p>
-          <h2 className="mt-8 font-display text-3xl font-bold">{mode === "login" ? t("customer.login.title") : t("customer.signup.title")}</h2>
-          <p className="mt-2 text-sm text-steel">{mode === "login" ? t("customer.login.desc") : t("customer.signup.desc")}</p>
+          <h2 className="mt-8 font-display text-3xl font-bold">{resetMode ? resetCopy.customerTitle : mode === "login" ? t("customer.login.title") : t("customer.signup.title")}</h2>
+          <p className="mt-2 text-sm leading-6 text-steel">{resetMode ? resetCopy.customerDescription : mode === "login" ? t("customer.login.desc") : t("customer.signup.desc")}</p>
 
           {!online && !feedback && <p className="mt-5 border border-route/30 bg-route/5 p-3 text-sm text-route">{connection.offline}</p>}
           {feedback && (
             <div className={`mt-5 border p-3 text-sm ${feedback.kind === "error" ? "border-route/30 bg-route/5 text-route" : "border-emerald-700/30 bg-emerald-50 text-emerald-800"}`}>
               <p>{feedback.text}</p>
               {feedback.kind === "error" && feedback.retryable && (
-                <button type="button" onClick={() => void authenticate()} disabled={busy || !online} className="mt-3 border border-route px-3 py-2 text-xs font-semibold disabled:opacity-40">
+                <button type="button" onClick={() => void retryCurrentAction()} disabled={busy || !online} className="mt-3 border border-route px-3 py-2 text-xs font-semibold disabled:opacity-40">
                   {connection.retry}
                 </button>
               )}
@@ -187,20 +233,29 @@ export function CustomerLogin() {
           )}
 
           <div className="mt-6 space-y-4">
-            {mode === "signup" && <>
+            {!resetMode && mode === "signup" && <>
               <Field label={t("common.fullName")} value={fullName} onChange={setFullName} autoComplete="name" />
               <Field label={t("common.phone")} value={phone} onChange={setPhone} autoComplete="tel" placeholder="+251…" />
             </>}
-            <Field label={t("common.email")} value={email} onChange={setEmail} type="email" autoComplete="email" />
-            <Field label={t("common.password")} value={password} onChange={setPassword} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={10} />
+            <Field label={resetMode ? resetCopy.email : t("common.email")} value={email} onChange={setEmail} type="email" autoComplete="email" />
+            {!resetMode && <Field label={t("common.password")} value={password} onChange={setPassword} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={10} />}
           </div>
 
           <button disabled={busy || !online} className="mt-6 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-50">
-            {busy ? t("common.wait") : mode === "login" ? t("customer.login.submit") : t("customer.signup.submit")}
+            {busy ? t("common.wait") : resetMode ? resetCopy.send : mode === "login" ? t("customer.login.submit") : t("customer.signup.submit")}
           </button>
-          <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setFeedback(null); }} className="mt-5 w-full text-sm text-steel underline">
-            {mode === "login" ? t("customer.login.switchSignup") : t("customer.login.switchLogin")}
-          </button>
+          {resetMode ? (
+            <button type="button" onClick={() => { setResetMode(false); setFeedback(null); }} className="mt-5 w-full text-sm font-semibold text-emerald-700 underline">
+              {resetCopy.backCustomer}
+            </button>
+          ) : (
+            <>
+              {mode === "login" && <button type="button" onClick={() => { setResetMode(true); setFeedback(null); }} className="mt-5 w-full text-sm font-semibold text-emerald-700 underline">{resetCopy.forgot}</button>}
+              <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setResetMode(false); setFeedback(null); }} className="mt-5 w-full text-sm text-steel underline">
+                {mode === "login" ? t("customer.login.switchSignup") : t("customer.login.switchLogin")}
+              </button>
+            </>
+          )}
           <Link to="/" className="mt-5 block text-center text-xs text-steel">{t("common.backPortal")}</Link>
         </form>
       </section>
