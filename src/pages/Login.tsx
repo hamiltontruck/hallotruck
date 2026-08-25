@@ -2,11 +2,24 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { LanguageSwitcher, useLanguage } from "../i18n/LanguageProvider";
+import {
+  requestPasswordResetEmail,
+  type PasswordResetRequester,
+} from "../services/password-recovery.service";
+import { passwordRecoveryCopy } from "../i18n/passwordRecoveryCopy";
 
-export function Login() {
+export function Login({
+  passwordResetRequester = requestPasswordResetEmail,
+  initialResetMode = false,
+}: {
+  passwordResetRequester?: PasswordResetRequester;
+  initialResetMode?: boolean;
+} = {}) {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const resetCopy = passwordRecoveryCopy[language];
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [resetMode, setResetMode] = useState(initialResetMode);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -44,6 +57,12 @@ export function Login() {
     setMessage(null);
 
     try {
+      if (resetMode) {
+        await passwordResetRequester(email.trim());
+        setMessage(resetCopy.sent);
+        return;
+      }
+
       if (mode === "signup") {
         if (!fullName.trim() || !phone.trim()) {
           throw new Error(t("driver.error.namePhone"));
@@ -95,7 +114,7 @@ export function Login() {
   return (
     <main className="min-h-screen bg-bone flex items-center justify-center px-4 py-10">
       <section className="w-full max-w-md border border-line bg-white p-6 sm:p-8">
-        <div className="mb-8 flex items-start justify-between gap-4">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="font-display font-bold text-2xl text-asphalt">
               HALLO<span className="text-amber">TRUCK</span>
@@ -107,18 +126,18 @@ export function Login() {
         </div>
 
         <h1 className="font-display font-bold text-2xl text-asphalt">
-          {mode === "login" ? t("driver.login.title") : t("driver.signup.title")}
+          {resetMode ? resetCopy.driverTitle : mode === "login" ? t("driver.login.title") : t("driver.signup.title")}
         </h1>
 
-        <p className="font-body text-sm text-steel mt-2 mb-6">
-          {mode === "login" ? t("driver.login.desc") : "Create your driver account. Verification documents are required before Jobs, Trip and Earnings are unlocked."}
+        <p className="font-body text-sm leading-6 text-steel mt-2 mb-6">
+          {resetMode ? resetCopy.driverDescription : mode === "login" ? t("driver.login.desc") : "Create your driver account. Verification documents are required before Jobs, Trip and Earnings are unlocked."}
         </p>
 
         {error && <div className="border border-route/50 bg-route/5 text-route px-4 py-3 text-sm mb-5">{error}</div>}
         {message && <div className="border border-amber bg-amber/10 text-asphalt px-4 py-3 text-sm mb-5">{message}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "signup" && (
+          {!resetMode && mode === "signup" && (
             <>
               <label className="block">
                 <span className="font-body text-sm text-asphalt">{t("common.fullName")}</span>
@@ -132,23 +151,30 @@ export function Login() {
           )}
 
           <label className="block">
-            <span className="font-body text-sm text-asphalt">{t("common.email")}</span>
+            <span className="font-body text-sm text-asphalt">{resetMode ? resetCopy.email : t("common.email")}</span>
             <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" autoComplete="email" required />
           </label>
 
-          <label className="block">
+          {!resetMode && <label className="block">
             <span className="font-body text-sm text-asphalt">{t("common.password")}</span>
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} required />
-          </label>
+          </label>}
 
           <button type="submit" disabled={busy} className="w-full bg-route text-bone font-display font-semibold px-6 py-3 disabled:opacity-50">
-            {busy ? t("common.wait") : mode === "login" ? t("driver.login.submit") : "Create account & continue to documents"}
+            {busy ? t("common.wait") : resetMode ? resetCopy.send : mode === "login" ? t("driver.login.submit") : "Create account & continue to documents"}
           </button>
         </form>
 
-        <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); setMessage(null); }} className="w-full mt-5 font-body text-sm text-steel underline">
-          {mode === "login" ? t("driver.login.switchSignup") : t("driver.login.switchLogin")}
-        </button>
+        {resetMode ? (
+          <button type="button" onClick={() => { setResetMode(false); setError(null); setMessage(null); }} className="w-full mt-5 font-body text-sm font-semibold text-route underline">{resetCopy.backDriver}</button>
+        ) : (
+          <>
+            {mode === "login" && <button type="button" onClick={() => { setResetMode(true); setError(null); setMessage(null); }} className="w-full mt-5 font-body text-sm font-semibold text-route underline">{resetCopy.forgot}</button>}
+            <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setResetMode(false); setError(null); setMessage(null); }} className="w-full mt-5 font-body text-sm text-steel underline">
+              {mode === "login" ? t("driver.login.switchSignup") : t("driver.login.switchLogin")}
+            </button>
+          </>
+        )}
       </section>
     </main>
   );
