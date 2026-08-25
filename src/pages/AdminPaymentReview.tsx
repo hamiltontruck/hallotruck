@@ -100,6 +100,11 @@ function isCashCollection(payment: PaymentReviewRow) {
   return isDriverCollection(payment) && payment.raw_payload?.collection_method === "cash";
 }
 
+function initialHashQuery() {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ?? "";
+}
+
 export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFixture } = {}) {
   const [payments, setPayments] = useState<PaymentReviewRow[]>(fixture?.payments ?? []);
   const [orders, setOrders] = useState<ReviewOrderRow[]>(fixture?.orders ?? []);
@@ -108,7 +113,7 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
   const [filter, setFilter] = useState<PaymentLedgerStatusFilter>("all");
   const [provider, setProvider] = useState("all");
   const [dateFilter, setDateFilter] = useState<PaymentLedgerDateFilter>("all");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialHashQuery);
   const [page, setPage] = useState(1);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busyPayment, setBusyPayment] = useState<string | null>(null);

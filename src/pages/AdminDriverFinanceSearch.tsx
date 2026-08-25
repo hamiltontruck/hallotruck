@@ -72,13 +72,18 @@ function dateTime(value: string | null) {
   return value ? new Date(value).toLocaleString() : "—";
 }
 
+function initialHashQuery() {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ?? "";
+}
+
 export function AdminDriverFinanceSearch() {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [trucks, setTrucks] = useState<TruckRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [deposits, setDeposits] = useState<DriverDepositHistoryItem[]>([]);
   const [summaries, setSummaries] = useState<SummaryMap>({});
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialHashQuery);
   const [view, setView] = useState<"drivers" | "orders">("drivers");
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
