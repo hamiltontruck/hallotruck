@@ -57,6 +57,17 @@ export interface ControlDocument {
   expiry_date: string | null;
 }
 
+export interface ControlDriverFinancialSummary {
+  driver_id: string;
+  completed_trips: number | string;
+  gross_released_etb: number | string;
+  commission_charged_etb: number | string;
+  commission_paid_etb: number | string;
+  admin_deposit_etb: number | string;
+  available_deposit_etb: number | string;
+  commission_due_etb: number | string;
+}
+
 export interface ControlCenterData {
   orders: ControlOrder[];
   payments: ControlPayment[];
@@ -65,6 +76,7 @@ export interface ControlCenterData {
   customers: ControlCustomer[];
   proofs: ControlProof[];
   documents: ControlDocument[];
+  driverFinancialSummaries?: ControlDriverFinancialSummary[];
 }
 
 function fail(message: string): never {
@@ -100,14 +112,22 @@ export async function getControlCenterData(): Promise<ControlCenterData> {
   // Older deployments may not have driver verification tables yet. The control
   // center remains usable and links to the dedicated compliance page.
   const documentRows = documents.error ? [] : documents.data ?? [];
+  const driverRows = (drivers.data ?? []) as ControlDriver[];
+  const driverFinancialSummaries = await Promise.all(driverRows.map(async (driver) => {
+    const result = await supabase.rpc("driver_financial_summary", { p_driver_id: driver.id });
+    if (result.error) fail(`Driver finance summary failed for ${driver.id}: ${result.error.message}`);
+    const summary = (result.data?.[0] ?? null) as Omit<ControlDriverFinancialSummary, "driver_id"> | null;
+    return summary ? { driver_id: driver.id, ...summary } : null;
+  }));
 
   return {
     orders: (orders.data ?? []) as ControlOrder[],
     payments: (payments.data ?? []) as ControlPayment[],
     trucks: (trucks.data ?? []) as ControlTruck[],
-    drivers: (drivers.data ?? []) as ControlDriver[],
+    drivers: driverRows,
     customers: (customers.data ?? []) as ControlCustomer[],
     proofs: (proofs.data ?? []) as ControlProof[],
     documents: documentRows as ControlDocument[],
+    driverFinancialSummaries: driverFinancialSummaries.filter((summary): summary is ControlDriverFinancialSummary => Boolean(summary)),
   };
 }

@@ -61,6 +61,13 @@ export function isComplianceAlert(document: ControlDocument, now = new Date()) {
   return Number.isFinite(expiry) && expiry <= now.getTime() + days30;
 }
 
+function financialTotal(data: ControlCenterData, field: "admin_deposit_etb" | "available_deposit_etb" | "commission_due_etb") {
+  return (data.driverFinancialSummaries ?? []).reduce((total, summary) => {
+    const value = Number(summary[field] ?? 0);
+    return total + (Number.isFinite(value) ? Math.max(0, value) : 0);
+  }, 0);
+}
+
 export function buildControlCenterView(data: ControlCenterData, now = new Date()) {
   const payments = canonicalPayments(data.payments);
   const activeTrips = data.orders.filter((order) => ACTIVE_ORDER_STATUSES.has(order.status));
@@ -104,5 +111,8 @@ export function buildControlCenterView(data: ControlCenterData, now = new Date()
     availableTrucks: data.trucks.filter((truck) => truck.status === "available"),
     activeDrivers: data.drivers.filter((driver) => ACTIVE_DRIVER_STATUSES.has((driver.driver_status || "").toLowerCase())),
     activeCustomersToday: data.customers.filter((customer) => sameLocalDay(customer.created_at, now)),
+    driverCommissionReceivable: financialTotal(data, "commission_due_etb"),
+    totalDriverDeposit: financialTotal(data, "admin_deposit_etb"),
+    availableDriverDeposit: financialTotal(data, "available_deposit_etb"),
   };
 }
