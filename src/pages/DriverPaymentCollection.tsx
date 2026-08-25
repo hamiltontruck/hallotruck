@@ -4,12 +4,15 @@ import {
   getDriverCollectionOrder,
   getDriverCollectionStatus,
   submitDriverCollectedPayment,
-  type DriverCollectionMethod,
   type DriverCollectionOrder,
   type DriverCollectionStatus,
 } from "../services/driver-payment-collection.service";
 import { formatEtb } from "../utils/currency";
 import { useLanguage } from "../i18n/LanguageProvider";
+import {
+  getDriverPaymentSubmissionIssue,
+  type DriverPaymentChoice,
+} from "../domain/driver-payment-collection";
 
 const providers = [
   ["telebirr", "Telebirr"],
@@ -30,6 +33,7 @@ const copy = {
     route: "Route",
     invoice: "Full invoice",
     method: "How did the customer pay?",
+    chooseMethod: "Choose a payment method only after receiving the full invoice.",
     cash: "Cash paid to driver",
     bank: "Bank / mobile transfer paid to driver",
     provider: "Bank or provider",
@@ -42,7 +46,11 @@ const copy = {
     warning: "Pending trips can show in your history, but Gross, commission, Driver Net and payout remain ETB 0 until verification.",
     submit: "Submit for Admin verification",
     submitting: "Submitting…",
-    notPaid: "Customer has not paid yet",
+    notPaid: "Customer has not paid — keep payment open",
+    unpaidTitle: "Payment not received",
+    unpaidText: "No payment was submitted. This delivered order stays financially open and will keep appearing as a reminder until the customer pays.",
+    unpaidReturn: "Confirm and return to Jobs",
+    unpaidResume: "Customer has now paid",
     pendingTitle: "Waiting for Admin verification",
     pendingText: "Your report was submitted. Earnings, commission and payout remain zero until Admin verifies it.",
     rejectedTitle: "Payment report rejected",
@@ -61,6 +69,7 @@ const copy = {
     route: "Daandii",
     invoice: "Invoice guutuu",
     method: "Customer akkamitti kaffale?",
+    chooseMethod: "Invoice guutuu erga fudhattee booda qofa mala kaffaltii filadhu.",
     cash: "Cash driver irratti kaffale",
     bank: "Bank / mobile transfer driver irratti kaffale",
     provider: "Bankii ykn provider",
@@ -73,7 +82,11 @@ const copy = {
     warning: "Imalli pending seenaa keessatti mul'achuu danda'a; garuu Gross, commission, Driver Net fi payout ETB 0 ta'anii turu.",
     submit: "Admin akka mirkaneessuuf ergi",
     submitting: "Ergaa jira…",
-    notPaid: "Customer amma hin kaffalle",
+    notPaid: "Customer hin kaffalle — kaffaltii banaa dhiisi",
+    unpaidTitle: "Kaffaltiin hin fudhatamne",
+    unpaidText: "Gabaasni kaffaltii hin ergamne. Order geeffame kun gama maallaqaatiin banaa ta'ee tura; customer hanga kaffalutti yaadachiisni ni mul'ata.",
+    unpaidReturn: "Mirkaneessi; gara hojii deebi'i",
+    unpaidResume: "Customer amma kaffale",
     pendingTitle: "Mirkaneessa Admin eeggachaa jira",
     pendingText: "Gabaasni kee ergameera. Hanga Admin mirkaneessutti galii, commission fi payout zeeroo ta'anii turu.",
     rejectedTitle: "Gabaasni kaffaltii reject ta'e",
@@ -92,6 +105,7 @@ const copy = {
     route: "መንገድ",
     invoice: "ሙሉ ደረሰኝ",
     method: "ደንበኛው እንዴት ከፈለ?",
+    chooseMethod: "ሙሉውን የክፍያ መጠን ከተቀበሉ በኋላ ብቻ የክፍያ ዘዴ ይምረጡ።",
     cash: "ለአሽከርካሪው ጥሬ ገንዘብ",
     bank: "ለአሽከርካሪው የባንክ/ሞባይል ዝውውር",
     provider: "ባንክ ወይም አቅራቢ",
@@ -104,7 +118,11 @@ const copy = {
     warning: "ጉዞው pending ሆኖ ሊታይ ይችላል፣ ነገር ግን Gross፣ commission፣ Driver Net እና payout ETB 0 ይቆያሉ።",
     submit: "ለAdmin ማረጋገጫ ላክ",
     submitting: "በመላክ ላይ…",
-    notPaid: "ደንበኛው ገና አልከፈለም",
+    notPaid: "ደንበኛው አልከፈለም — ክፍያውን ክፍት ያቆዩ",
+    unpaidTitle: "ክፍያ አልተቀበሉም",
+    unpaidText: "ምንም የክፍያ ሪፖርት አልተላከም። ይህ የደረሰ ትዕዛዝ ደንበኛው እስኪከፍል ድረስ በገንዘብ ረገድ ክፍት ሆኖ ይቆያል።",
+    unpaidReturn: "አረጋግጠው ወደ ስራዎች ይመለሱ",
+    unpaidResume: "ደንበኛው አሁን ከፍሏል",
     pendingTitle: "የAdmin ማረጋገጫ በመጠበቅ ላይ",
     pendingText: "ሪፖርቱ ተልኳል። Admin እስኪያረጋግጥ ድረስ ገቢ፣ commission እና payout ዜሮ ይቆያሉ።",
     rejectedTitle: "የክፍያ ሪፖርቱ ውድቅ ተደርጓል",
@@ -118,23 +136,36 @@ const copy = {
   },
 } as const;
 
-export function DriverPaymentCollection() {
+export interface DriverPaymentCollectionFixture {
+  order: DriverCollectionOrder;
+  status?: DriverCollectionStatus | null;
+}
+
+export function DriverPaymentCollection({ fixture }: { fixture?: DriverPaymentCollectionFixture } = {}) {
   const { orderId = "" } = useParams();
   const navigate = useNavigate();
   const { language } = useLanguage();
   const c = copy[language];
-  const [order, setOrder] = useState<DriverCollectionOrder | null>(null);
-  const [status, setStatus] = useState<DriverCollectionStatus | null>(null);
-  const [method, setMethod] = useState<DriverCollectionMethod>("cash");
+  const [order, setOrder] = useState<DriverCollectionOrder | null>(fixture?.order ?? null);
+  const [status, setStatus] = useState<DriverCollectionStatus | null>(fixture?.status ?? null);
+  const [method, setMethod] = useState<DriverPaymentChoice>(fixture?.status?.collection_method ?? null);
   const [provider, setProvider] = useState("telebirr");
   const [providerRef, setProviderRef] = useState("");
   const [note, setNote] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!fixture);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showUnpaidNotice, setShowUnpaidNotice] = useState(false);
 
   const load = useCallback(async () => {
+    if (fixture) {
+      setOrder(fixture.order);
+      setStatus(fixture.status ?? null);
+      setMethod(fixture.status?.collection_method ?? null);
+      setLoading(false);
+      return;
+    }
     if (!orderId) return;
     setLoading(true);
     try {
@@ -153,14 +184,16 @@ export function DriverPaymentCollection() {
     } finally {
       setLoading(false);
     }
-  }, [c.invalid, orderId]);
+  }, [c.invalid, fixture, orderId]);
 
   useEffect(() => { void load(); }, [load]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!order || (method === "bank" && !receipt)) {
-      setError(c.evidenceHelp);
+    const selectedMethod = method;
+    const submissionIssue = getDriverPaymentSubmissionIssue(selectedMethod, Boolean(receipt));
+    if (!order || !selectedMethod || submissionIssue) {
+      setError(submissionIssue === "method_required" ? c.chooseMethod : c.evidenceHelp);
       return;
     }
 
@@ -169,7 +202,7 @@ export function DriverPaymentCollection() {
     try {
       await submitDriverCollectedPayment({
         orderId: order.id,
-        method,
+        method: selectedMethod,
         provider,
         providerRef,
         amountEtb: Number(order.price_etb ?? 0),
@@ -195,6 +228,7 @@ export function DriverPaymentCollection() {
   const pending = status?.payment_event === "initiated" || status?.payment_event === "held_escrow";
   const released = status?.payment_event === "released";
   const rejected = status?.payment_event === "failed";
+  const submissionIssue = getDriverPaymentSubmissionIssue(method, Boolean(receipt));
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-10 sm:py-16">
@@ -227,6 +261,15 @@ export function DriverPaymentCollection() {
           <div className="mt-5 grid grid-cols-3 gap-3"><Zero label="Gross" /><Zero label="Commission" /><Zero label="Driver Net" /></div>
           <button type="button" onClick={() => navigate("/driver/jobs")} className="mt-5 border border-asphalt px-5 py-3 text-sm font-semibold">{c.backJobs}</button>
         </section>
+      ) : showUnpaidNotice ? (
+        <section role="status" aria-live="polite" className="mt-5 border border-amber/40 bg-white p-5 sm:p-6">
+          <p className="font-display text-2xl font-bold text-asphalt">{c.unpaidTitle}</p>
+          <p className="mt-3 text-sm leading-6 text-steel">{c.unpaidText}</p>
+          <div className="mt-6 grid gap-3">
+            <button type="button" onClick={() => navigate("/driver/jobs")} className="w-full bg-asphalt px-4 py-4 text-sm font-semibold text-white">{c.unpaidReturn}</button>
+            <button type="button" onClick={() => setShowUnpaidNotice(false)} className="w-full border border-asphalt px-4 py-3 text-sm font-semibold">{c.unpaidResume}</button>
+          </div>
+        </section>
       ) : (
         <form onSubmit={submit} className="mt-5 border border-asphalt/10 bg-white p-5 sm:p-6">
           {rejected && <div className="mb-5 border-l-4 border-route bg-route/5 p-4"><p className="font-semibold text-route">{c.rejectedTitle}</p><p className="mt-2 text-sm">{status?.rejection_reason}</p></div>}
@@ -238,6 +281,7 @@ export function DriverPaymentCollection() {
 
           <fieldset className="mt-6">
             <legend className="text-sm font-semibold">{c.method}</legend>
+            <p className="mt-2 text-xs leading-5 text-steel">{c.chooseMethod}</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className={`border p-4 text-sm ${method === "cash" ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15"}`}><input type="radio" name="method" value="cash" checked={method === "cash"} onChange={() => setMethod("cash")} className="mr-2" />{c.cash}</label>
               <label className={`border p-4 text-sm ${method === "bank" ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15"}`}><input type="radio" name="method" value="bank" checked={method === "bank"} onChange={() => setMethod("bank")} className="mr-2" />{c.bank}</label>
@@ -250,14 +294,14 @@ export function DriverPaymentCollection() {
               <label className="mt-5 block text-sm">{c.evidence}<input required type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf" onChange={(event) => setReceipt(event.target.files?.[0] ?? null)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3" /><span className="mt-2 block text-xs text-steel">{c.evidenceHelp}</span></label>
               <label className="mt-5 block text-sm">{c.note}<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} rows={3} placeholder={c.notePlaceholder} className="mt-2 block w-full border border-asphalt/20 p-3" /></label>
             </>
-          ) : (
+          ) : method === "cash" ? (
             <div className="mt-5 border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
               ✓ {c.cash} — {formatEtb(amount)}
             </div>
-          )}
+          ) : null}
 
-          <button disabled={saving || (method === "bank" && !receipt)} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">{saving ? c.submitting : c.submit}</button>
-          <button type="button" onClick={() => navigate("/driver/jobs")} className="mt-3 w-full border border-asphalt py-3 text-sm font-semibold">{c.notPaid}</button>
+          <button disabled={saving || Boolean(submissionIssue)} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">{saving ? c.submitting : c.submit}</button>
+          <button type="button" onClick={() => { setMethod(null); setReceipt(null); setProviderRef(""); setError(""); setShowUnpaidNotice(true); }} className="mt-3 w-full border border-asphalt px-3 py-3 text-sm font-semibold">{c.notPaid}</button>
         </form>
       )}
     </main>
