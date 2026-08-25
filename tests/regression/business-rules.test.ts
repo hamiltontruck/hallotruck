@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import {
   buildCargoDescription,
@@ -34,6 +36,12 @@ import {
   recoveryLoginHash,
   recoveryPortalFromRole,
 } from "../../src/domain/password-recovery";
+import {
+  calculateDriverDepositWallet,
+  isDriverDepositAmountAllowed,
+  MAX_DRIVER_DEPOSIT_ETB,
+  MIN_DRIVER_DEPOSIT_ETB,
+} from "../../src/domain/driver-deposit";
 
 test("cargo units convert to actual tons", () => {
   assert.equal(cargoToTons(50, "quintal"), 5);
@@ -103,6 +111,55 @@ test("password recovery recognizes only recovery links and keeps the approved ba
   assert.equal(isPasswordRecoveryLocation("https://example.com/hallotruck/#access_token=token&type=signup"), false);
   assert.equal(isPasswordRecoveryLocation("https://example.com/hallotruck/#access_token=token"), false);
   assert.equal(buildPasswordResetRedirectUrl("https://hamiltontruck.github.io", "/hallotruck/"), "https://hamiltontruck.github.io/hallotruck/");
+});
+
+test("driver deposit balance reconciles approved commission payments before consuming the wallet", () => {
+  const wallet = calculateDriverDepositWallet({
+    depositedEtb: 100_000,
+    commissionChargedEtb: 18_678,
+    commissionPaidEtb: 18_272,
+  });
+
+  assert.equal(wallet.unpaidCommissionEtb, 406);
+  assert.equal(wallet.depositConsumedEtb, 406);
+  assert.equal(wallet.availableDepositEtb, 99_594);
+  assert.equal(wallet.commissionDueEtb, 0);
+});
+
+test("driver deposit balance never becomes negative when unpaid commission exceeds the wallet", () => {
+  const wallet = calculateDriverDepositWallet({
+    depositedEtb: 5_000,
+    commissionChargedEtb: 10_000,
+    commissionPaidEtb: 2_000,
+  });
+
+  assert.equal(wallet.unpaidCommissionEtb, 8_000);
+  assert.equal(wallet.depositConsumedEtb, 5_000);
+  assert.equal(wallet.availableDepositEtb, 0);
+  assert.equal(wallet.commissionDueEtb, 3_000);
+});
+
+test("driver deposit amount guard enforces the shared ETB 5,000-100,000 limits", () => {
+  assert.equal(isDriverDepositAmountAllowed(MIN_DRIVER_DEPOSIT_ETB - 1), false);
+  assert.equal(isDriverDepositAmountAllowed(MIN_DRIVER_DEPOSIT_ETB), true);
+  assert.equal(isDriverDepositAmountAllowed(MAX_DRIVER_DEPOSIT_ETB), true);
+  assert.equal(isDriverDepositAmountAllowed(MAX_DRIVER_DEPOSIT_ETB + 1), false);
+  assert.equal(isDriverDepositAmountAllowed(Number.NaN), false);
+});
+
+test("driver deposit migration removes bypass paths and restricts audited RPCs", () => {
+  const migration = readFileSync(
+    path.join(process.cwd(), "supabase", "migrations", "20260825133000_harden_driver_deposit_wallet.sql"),
+    "utf8",
+  );
+
+  assert.match(migration, /drop policy if exists driver_commission_deposits_admin_write/i);
+  assert.match(migration, /revoke insert, update, delete on table public\.driver_commission_deposits\s+from anon, authenticated/i);
+  assert.match(migration, /drop function if exists public\.admin_add_driver_commission_deposit\(uuid,numeric,text\)/i);
+  assert.match(migration, /revoke all on function public\.admin_record_driver_deposit\(uuid,numeric,text,text\)\s+from public, anon/i);
+  assert.match(migration, /revoke all on function public\.admin_reverse_driver_commission_deposit\(uuid,text\)\s+from public, anon/i);
+  assert.match(migration, /driver_deposit_added/);
+  assert.match(migration, /driver_deposit_reversed/);
 });
 
 test("verified and released payment clears the invoice balance", () => {
