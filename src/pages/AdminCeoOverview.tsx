@@ -25,9 +25,9 @@ function paymentTotal(payments: ControlPayment[], event: string) {
     .reduce((sum, payment) => sum + Math.max(0, Number(payment.amount_etb || 0)), 0);
 }
 
-export function AdminCeoOverview() {
-  const [data, setData] = useState<ControlCenterData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterData | null } = {}) {
+  const [data, setData] = useState<ControlCenterData | null>(fixture);
+  const [loading, setLoading] = useState(!fixture);
   const [error, setError] = useState("");
 
   async function load() {
@@ -42,7 +42,9 @@ export function AdminCeoOverview() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (!fixture) void load();
+  }, [fixture]);
 
   const view = useMemo(() => data ? buildControlCenterView(data) : null, [data]);
 
@@ -69,15 +71,20 @@ export function AdminCeoOverview() {
 
   const cards = [
     { label: "Today's Revenue", value: money(view.todayRevenue), detail: "Released minus refunds today", to: "#finance-summary", tone: "good" as Tone },
-    { label: "Today's Orders", value: String(view.todayOrders.length), detail: "Orders created today", to: "/admin/operations", tone: "neutral" as Tone },
-    { label: "Active Trips", value: String(view.activeTrips.length), detail: "Accepted or in transit", to: "/admin/operations", tone: "neutral" as Tone },
-    { label: "Delivered Today", value: String(view.deliveredToday.length), detail: "Completed today", to: "/admin/operations", tone: "good" as Tone },
+    { label: "Total Orders", value: String(data.orders.length), detail: "All operational records", to: "/admin/operations?section=Orders", tone: "neutral" as Tone },
+    { label: "Today's Orders", value: String(view.todayOrders.length), detail: "Orders created today", to: "/admin/operations?section=Orders", tone: "neutral" as Tone },
+    { label: "Active Trips", value: String(view.activeTrips.length), detail: "Accepted or in transit", to: "/admin/operations?section=Live%20trips", tone: "neutral" as Tone },
+    { label: "Delivered Today", value: String(view.deliveredToday.length), detail: "Completed today", to: "/admin/operations?section=Orders&status=delivered", tone: "good" as Tone },
     { label: "Delayed Trips", value: String(view.delayedTrips.length), detail: "Active longer than 48 hours", to: "#delayed-queue", tone: view.delayedTrips.length ? "critical" as Tone : "good" as Tone },
+    { label: "Unassigned Orders", value: String(view.unassignedOrders.length), detail: "Missing driver or truck", to: "#delayed-queue", tone: view.unassignedOrders.length ? "warning" as Tone : "good" as Tone },
     { label: "Available Trucks", value: String(view.availableTrucks.length), detail: `${data.trucks.length} total fleet`, to: "/admin/fleet-maintenance", tone: "neutral" as Tone },
     { label: "Active Drivers", value: String(view.activeDrivers.length), detail: `${data.drivers.length} registered`, to: "/admin/driver-compliance", tone: "neutral" as Tone },
-    { label: "Online Customers", value: String(view.activeCustomersToday.length), detail: "Customer activity today", to: "/admin/operations", tone: "neutral" as Tone },
+    { label: "New Customers Today", value: String(view.activeCustomersToday.length), detail: "Accounts created today", to: "/admin/operations?section=Customers", tone: "neutral" as Tone },
     { label: "Pending Payments", value: String(view.pendingPayments.length), detail: "Waiting for admin review", to: "#payment-queue", tone: view.pendingPayments.length ? "warning" as Tone : "good" as Tone },
     { label: "Missing Evidence", value: String(view.missingEvidenceOrders.length), detail: "Delivered without POD", to: "#evidence-queue", tone: view.missingEvidenceOrders.length ? "warning" as Tone : "good" as Tone },
+    { label: "Legacy Completed", value: String(view.legacyOrderIds.size), detail: "Historical released payments", to: "#legacy-queue", tone: "neutral" as Tone },
+    { label: "Commission Receivable", value: money(view.driverCommissionReceivable), detail: "Outstanding driver commission", to: "/admin/driver-commission", tone: view.driverCommissionReceivable ? "warning" as Tone : "good" as Tone },
+    { label: "Available Driver Deposits", value: money(view.availableDriverDeposit), detail: `${money(view.totalDriverDeposit)} deposited`, to: "/admin/driver-finance-search", tone: "good" as Tone },
     { label: "Driver Compliance Alerts", value: String(complianceTotal), detail: "Onboarding, rejected or expiring", to: "#compliance-queue", tone: complianceTotal ? "warning" as Tone : "good" as Tone },
     { label: "Fleet Maintenance Alerts", value: String(view.maintenanceAlerts.length), detail: "Maintenance or service due", to: "#maintenance-queue", tone: view.maintenanceAlerts.length ? "warning" as Tone : "good" as Tone },
   ];
@@ -116,11 +123,13 @@ export function AdminCeoOverview() {
 
       <section id="finance-summary" className="mt-7 scroll-mt-5">
         <SectionHeader eyebrow="FINANCE CONTROL" title="Payment and revenue summary" actionTo="/admin/payment-review" actionLabel="Open finance review" />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
           <Metric label="Released" value={money(released)} tone="good" />
           <Metric label="Held in escrow" value={money(escrow)} tone="warning" />
           <Metric label="Refunded" value={money(refunded)} tone={refunded ? "critical" : "neutral"} />
           <Metric label="Failed payments" value={String(failed)} tone={failed ? "critical" : "good"} />
+          <Metric label="Commission receivable" value={money(view.driverCommissionReceivable)} tone={view.driverCommissionReceivable ? "warning" : "good"} />
+          <Metric label="Available driver deposits" value={money(view.availableDriverDeposit)} tone="good" />
         </div>
       </section>
 
@@ -161,13 +170,14 @@ export function AdminCeoOverview() {
             </div>
           </QueueCard>
 
-          <QueueCard id="modules" title="Control modules" count={5} actionTo="/admin/operations">
+          <QueueCard id="modules" title="Control modules" count={6} actionTo="/admin/operations">
             <div className="grid gap-2 p-4 sm:p-5">
               <ModuleLink to="/admin/payment-review" title="Finance review" detail="Payments, escrow, released, refunds and evidence" />
               <ModuleLink to="/admin/driver-compliance" title="Driver compliance" detail="Documents, approvals and expiry risk" />
               <ModuleLink to="/admin/driver-commission" title="Commission control" detail="Settlements and HALLO commission" />
               <ModuleLink to="/admin/fleet-maintenance" title="Fleet maintenance" detail="Vehicle readiness and service exceptions" />
               <ModuleLink to="/admin/driver-finance-search" title="Driver finance search" detail="Wallet and payment reconciliation" />
+              <ModuleLink to="/admin/quote-pricing" title="Quote pricing" detail="Price requests and commercial decisions" />
             </div>
           </QueueCard>
         </div>

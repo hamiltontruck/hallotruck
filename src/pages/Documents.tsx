@@ -12,6 +12,11 @@ import {
 } from "../services/driver.service";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { getDriverTripDocumentsCopy } from "../i18n/driverTripDocumentsCopy";
+import {
+  DRIVER_IDENTITY_DOCUMENT_KEYS,
+  DRIVER_VEHICLE_DOCUMENT_KEYS,
+  getDriverOnboardingProgress,
+} from "../domain/driver-onboarding";
 
 type DocumentSpec = {
   key: VerificationDocumentKey;
@@ -85,17 +90,11 @@ export function Documents() {
     [data?.documents],
   );
 
-  const required = data?.truck ? [...DRIVER_DOCS, ...TRUCK_DOCS] : DRIVER_DOCS;
-  const verified = required.filter((spec) => docsByKey.get(spec.key)?.status === "verified").length;
-  const pending = required.filter((spec) => docsByKey.get(spec.key)?.status === "pending").length;
-  const rejected = required.filter((spec) => docsByKey.get(spec.key)?.status === "rejected").length;
-  const missing = Math.max(0, required.length - verified - pending - rejected);
-  const percent = required.length ? Math.round((verified / required.length) * 100) : 0;
+  const progress = getDriverOnboardingProgress(data?.documents ?? []);
+  const { required, verified, pending, rejected, missing, percent, identityVerified, vehicleVerified } = progress;
   const profileComplete = Boolean(data?.profile.full_name && data.profile.phone && data.profile.home_address);
-  const identityVerified = DRIVER_DOCS.filter((spec) => docsByKey.get(spec.key)?.status === "verified").length;
-  const vehicleVerified = TRUCK_DOCS.filter((spec) => docsByKey.get(spec.key)?.status === "verified").length;
-  const identityComplete = identityVerified === DRIVER_DOCS.length;
-  const vehicleComplete = Boolean(data?.truck) && vehicleVerified === TRUCK_DOCS.length;
+  const identityComplete = identityVerified === DRIVER_IDENTITY_DOCUMENT_KEYS.length;
+  const vehicleComplete = Boolean(data?.truck) && vehicleVerified === DRIVER_VEHICLE_DOCUMENT_KEYS.length;
   const initials = (data?.profile.full_name ?? "Driver")
     .split(/\s+/)
     .filter(Boolean)
@@ -189,7 +188,7 @@ export function Documents() {
         </div>
 
         <div className="relative mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Metric label={c.verified} value={`${percent}%`} detail={`${verified} / ${required.length}`} accent />
+          <Metric label={c.verified} value={`${percent}%`} detail={`${verified} / ${required}`} accent />
           <Metric label={c.statusPending} value={String(pending)} detail={c.requiredItems} />
           <Metric label={c.statusRejected} value={String(rejected)} detail={c.reviewNote} />
           <Metric label={c.statusMissing} value={String(missing)} detail={c.requiredItems} />
@@ -207,8 +206,8 @@ export function Documents() {
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <SetupStep number="01" label={c.stepProfile} detail={profileComplete ? c.complete : c.inProgress} complete={profileComplete} />
-          <SetupStep number="02" label={c.stepIdentity} detail={`${identityVerified} / ${DRIVER_DOCS.length}`} complete={identityComplete} />
-          <SetupStep number="03" label={c.stepVehicle} detail={data?.truck ? `${vehicleVerified} / ${TRUCK_DOCS.length}` : c.inProgress} complete={vehicleComplete} />
+          <SetupStep number="02" label={c.stepIdentity} detail={`${identityVerified} / ${DRIVER_IDENTITY_DOCUMENT_KEYS.length}`} complete={identityComplete} />
+          <SetupStep number="03" label={c.stepVehicle} detail={`${vehicleVerified} / ${DRIVER_VEHICLE_DOCUMENT_KEYS.length}`} complete={vehicleComplete} />
         </div>
       </section>
 

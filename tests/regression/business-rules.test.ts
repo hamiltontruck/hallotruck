@@ -42,6 +42,7 @@ import {
   MAX_DRIVER_DEPOSIT_ETB,
   MIN_DRIVER_DEPOSIT_ETB,
 } from "../../src/domain/driver-deposit";
+import { getDriverOnboardingProgress } from "../../src/domain/driver-onboarding";
 
 test("cargo units convert to actual tons", () => {
   assert.equal(cargoToTons(50, "quintal"), 5);
@@ -334,4 +335,60 @@ test("legacy delivered order is excluded from missing evidence queue", () => {
   const view = buildControlCenterView(data, new Date("2026-08-25T12:00:00.000Z"));
   assert.equal(view.legacyOrderIds.has("order-legacy"), true);
   assert.equal(view.missingEvidenceOrders.length, 0);
+});
+
+test("driver onboarding always counts identity and vehicle requirements", () => {
+  const progress = getDriverOnboardingProgress([
+    { document_key: "driver_photo", status: "verified" },
+    { document_key: "license_front", status: "verified" },
+    { document_key: "license_back", status: "verified" },
+    { document_key: "national_id_front", status: "verified" },
+    { document_key: "national_id_back", status: "verified" },
+  ]);
+
+  assert.equal(progress.identityVerified, 5);
+  assert.equal(progress.vehicleVerified, 0);
+  assert.equal(progress.verified, 5);
+  assert.equal(progress.required, 12);
+  assert.equal(progress.percent, 42);
+  assert.equal(progress.missing, 7);
+});
+
+test("CEO finance KPIs reconcile driver deposits and commission due", () => {
+  const data: ControlCenterData = {
+    orders: [],
+    payments: [],
+    trucks: [],
+    drivers: [],
+    customers: [],
+    proofs: [],
+    documents: [],
+    driverFinancialSummaries: [
+      {
+        driver_id: "driver-1",
+        completed_trips: 4,
+        gross_released_etb: 220_000,
+        commission_charged_etb: 18_678,
+        commission_paid_etb: 18_272,
+        admin_deposit_etb: 100_000,
+        available_deposit_etb: 99_594,
+        commission_due_etb: 0,
+      },
+      {
+        driver_id: "driver-2",
+        completed_trips: 1,
+        gross_released_etb: 50_000,
+        commission_charged_etb: 3_000,
+        commission_paid_etb: 0,
+        admin_deposit_etb: 5_000,
+        available_deposit_etb: 5_000,
+        commission_due_etb: 3_000,
+      },
+    ],
+  };
+
+  const view = buildControlCenterView(data, new Date("2026-08-25T12:00:00.000Z"));
+  assert.equal(view.totalDriverDeposit, 105_000);
+  assert.equal(view.availableDriverDeposit, 104_594);
+  assert.equal(view.driverCommissionReceivable, 3_000);
 });

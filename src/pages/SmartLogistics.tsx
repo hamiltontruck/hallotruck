@@ -1,10 +1,11 @@
 import { FormEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { AdminLiveTripsPanel } from "../components/admin/AdminLiveTripsPanel";
 import { AdminCreateOrderModal } from "../components/admin/AdminCreateOrderModal";
 import { AdminOrder, Customer, DashboardMetrics, DeliveryProof, Driver, Payment, Truck, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, openDeliveryProof, openPaymentReceipt, printInvoice, recordPayment, refundOverpaymentCredit, submitDeliveryProof, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
-type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "bell" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
+type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
 
 function Icon({ name, className = "w-5 h-5" }: { name: IconName; className?: string }) {
   const paths: Record<IconName, React.ReactNode> = {
@@ -15,7 +16,6 @@ function Icon({ name, className = "w-5 h-5" }: { name: IconName; className?: str
     users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 1 3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
     wallet: <><path d="M4 5h15a2 2 0 0 1 2 2v12H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h13"/><path d="M16 11h5v4h-5a2 2 0 0 1 0-4Z"/></>,
     chart: <><path d="M3 3v18h18"/><path d="m7 16 4-5 3 3 5-7"/></>,
-    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
     search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
     arrow: <><path d="M5 12h14M13 6l6 6-6 6"/></>,
     pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2"/></>,
@@ -34,7 +34,10 @@ const nav = [
 const emptyMetrics: DashboardMetrics = { totalOrders: 0, activeOrders: 0, deliveredOrders: 0, availableTrucks: 0, totalCustomers: 0, revenueEtb: 0 };
 
 export function SmartLogistics() {
-  const [section, setSection] = useState("Overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get("section");
+  const initialSection = nav.some(([label]) => label === requestedSection) ? requestedSection as string : "Overview";
+  const [section, setSection] = useState(initialSection);
   const [menuOpen, setMenuOpen] = useState(false);
   const [modal, setModal] = useState<"order" | "customer" | "truck" | null>(null);
   const [metrics, setMetrics] = useState(emptyMetrics);
@@ -49,7 +52,13 @@ export function SmartLogistics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const select = (label: string) => { setSection(label); setMenuOpen(false); };
+  const select = (label: string) => {
+    setSection(label);
+    setMenuOpen(false);
+    const next = new URLSearchParams();
+    if (label !== "Overview") next.set("section", label);
+    setSearchParams(next, { replace: true });
+  };
 
   const load = useCallback(async () => {
     try {
@@ -64,6 +73,10 @@ export function SmartLogistics() {
     const channel = subscribeToAdminData(load);
     return () => { supabase.removeChannel(channel); };
   }, [load]);
+
+  useEffect(() => {
+    if (requestedSection && nav.some(([label]) => label === requestedSection)) setSection(requestedSection);
+  }, [requestedSection]);
 
   return (
     <div className="min-h-screen bg-[#f5f3ed] text-asphalt font-body lg:flex">
@@ -99,14 +112,13 @@ export function SmartLogistics() {
             <div className="hidden sm:block min-w-0"><p className="font-display font-semibold text-lg truncate">{section}</p><p className="hidden md:block text-xs text-steel mt-0.5">Live operations</p></div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <label className="hidden md:flex items-center gap-2 bg-[#f5f3ed] px-3 py-2.5 w-64 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label="Search operations" value={searchQuery} onChange={(event)=>{const value=event.target.value;setSearchQuery(value);if(section==="Overview"&&value.trim())setSection("Orders");}} className="bg-transparent outline-none text-sm w-full" placeholder="Tracking, customer, truck..." /></label>
-            <button className="relative border border-asphalt/10 p-2.5 text-steel"><Icon name="bell" className="w-5 h-5"/><span className="absolute top-2 right-2 w-2 h-2 bg-route rounded-full border border-white" /></button>
+            <label className="hidden md:flex items-center gap-2 bg-[#f5f3ed] px-3 py-2.5 w-64 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label="Search operations" value={searchQuery} onChange={(event)=>{const value=event.target.value;setSearchQuery(value);if(section==="Overview"&&value.trim())select("Orders");}} className="bg-transparent outline-none text-sm w-full" placeholder="Tracking, customer, truck..." /></label>
             <button onClick={() => setModal("order")} className="bg-asphalt text-white font-semibold text-xs sm:text-sm px-3 sm:px-5 py-3 hover:bg-line whitespace-nowrap"><span className="sm:hidden">+ Order</span><span className="hidden sm:inline">+ New order</span></button>
           </div>
         </header>
         <div className="p-5 sm:p-8 max-w-[1500px] mx-auto">
           {error && <p className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5">{error}</p>}
-          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} searchQuery={searchQuery} onSearch={setSearchQuery} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
+          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} onSearch={setSearchQuery} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
         </div>
       </main>
       {modal === "order" ? <AdminCreateOrderModal onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} /> : modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
@@ -168,8 +180,12 @@ function includesQuery(values: Array<string | number | null | undefined>, query:
   return values.some((value) => String(value ?? "").toLowerCase().includes(query));
 }
 
-function ModulePage({ section, orders, customers, trucks, payments, drivers, searchQuery, onSearch, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; searchQuery:string; onSearch:(value:string)=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
-  const [orderStatus,setOrderStatus]=useState("all");
+function ModulePage({ section, orders, customers, trucks, payments, drivers, searchQuery, initialOrderStatus, onSearch, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; searchQuery:string; initialOrderStatus:string; onSearch:(value:string)=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+  const allowedOrderStatuses = ["all", "placed", "accepted", "in_transit", "delivered", "cancelled"];
+  const [orderStatus,setOrderStatus]=useState(allowedOrderStatuses.includes(initialOrderStatus) ? initialOrderStatus : "all");
+  useEffect(() => {
+    setOrderStatus(allowedOrderStatuses.includes(initialOrderStatus) ? initialOrderStatus : "all");
+  }, [initialOrderStatus]);
   const descriptions:Record<string,string> = {Orders:"Create, assign and monitor every customer order.","Live trips":"Track active vehicles and delivery progress in real time.","Fleet & drivers":"Manage trucks, drivers, availability and documents.",Customers:"View accounts, order history and customer value.",Finance:"Verify customer payments, link each payment to its order and driver, then release eligible payouts.",Reports:"Measure delivery performance and business growth."};
   const addKind = section === "Customers" ? "customer" : section === "Fleet & drivers" ? "truck" : "order";
   const query=searchQuery.trim().toLowerCase();
