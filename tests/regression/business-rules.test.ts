@@ -27,6 +27,7 @@ import {
 } from "../../src/domain/payment-ledger";
 import type { ControlCenterData, ControlPayment } from "../../src/services/admin-control-center.service";
 import { calculatePaymentSummary } from "../../src/utils/paymentSummary";
+import { getDriverPaymentSubmissionIssue } from "../../src/domain/driver-payment-collection";
 
 test("cargo units convert to actual tons", () => {
   assert.equal(cargoToTons(50, "quintal"), 5);
@@ -72,6 +73,13 @@ test("unverified payment never becomes driver earnings", () => {
   assert.equal(summary.verifiedPaid, 0);
   assert.equal(summary.balanceToPay, 100_000);
   assert.equal(summary.remainingToSubmit, 0);
+});
+
+test("driver collection requires an explicit safe payment choice", () => {
+  assert.equal(getDriverPaymentSubmissionIssue(null, false), "method_required");
+  assert.equal(getDriverPaymentSubmissionIssue("cash", false), null);
+  assert.equal(getDriverPaymentSubmissionIssue("bank", false), "evidence_required");
+  assert.equal(getDriverPaymentSubmissionIssue("bank", true), null);
 });
 
 test("verified and released payment clears the invoice balance", () => {
