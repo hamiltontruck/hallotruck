@@ -131,7 +131,7 @@ try {
       assertContains(dom, [
         'data-ready="true"', 'data-search-link="true"', 'data-overflow="false"',
         "Search everything.", "Global search", "TEL-NEXTGEN-001", "matching records",
-        "Net revenue", "Smart signals", "7-DAY REVENUE PULSE", "Top routes",
+        "Net revenue", "SMART SIGNALS", "7-DAY REVENUE PULSE", "Top routes",
         "Payment providers", "ETB 72,350",
       ], `Admin intelligence ${width}px smoke`);
     } finally {
