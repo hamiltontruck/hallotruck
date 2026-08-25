@@ -1,5 +1,5 @@
 import { FormEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { AdminLiveTripsPanel } from "../components/admin/AdminLiveTripsPanel";
 import { AdminCreateOrderModal } from "../components/admin/AdminCreateOrderModal";
@@ -36,6 +36,7 @@ const emptyMetrics: DashboardMetrics = { totalOrders: 0, activeOrders: 0, delive
 export function SmartLogistics() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
+  const requestedQuery = searchParams.get("q") ?? "";
   const initialSection = nav.some(([label]) => label === requestedSection) ? requestedSection as string : "Overview";
   const [section, setSection] = useState(initialSection);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -48,7 +49,7 @@ export function SmartLogistics() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [deliveryProofs, setDeliveryProofs] = useState<DeliveryProof[]>([]);
   const [managedOrder, setManagedOrder] = useState<AdminOrder | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(requestedQuery);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -77,6 +78,8 @@ export function SmartLogistics() {
   useEffect(() => {
     if (requestedSection && nav.some(([label]) => label === requestedSection)) setSection(requestedSection);
   }, [requestedSection]);
+
+  useEffect(() => { setSearchQuery(requestedQuery); }, [requestedQuery]);
 
   return (
     <div className="min-h-screen bg-[#f5f3ed] text-asphalt font-body lg:flex">
@@ -225,6 +228,7 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, sea
     </>}
     {section === "Live trips" && <AdminLiveTripsPanel orders={orders} trucks={trucks} drivers={drivers} onManage={onManage} />}
     {section === "Reports" && <>
+      <Link to="/admin/intelligence" className="mb-5 flex min-w-0 flex-col gap-4 overflow-hidden bg-asphalt p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="min-w-0"><p className="font-mono text-[10px] tracking-[.18em] text-amber">ADMIN INTELLIGENCE</p><p className="mt-2 break-words font-display text-2xl font-bold">Open next-generation Reports & Global Search</p><p className="mt-2 max-w-2xl break-words text-xs leading-5 text-white/55">Search every operational record, change report periods, inspect revenue trends, top routes and actionable smart signals.</p></div><span className="shrink-0 font-semibold text-amber">Open intelligence →</span></Link>
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4"><ReportCard label="Delivery completion" value={`${completionRate}%`} note={`${deliveredCount} delivered of ${orders.length}`}/><ReportCard label="Active shipments" value={activeCount} note="Accepted + in transit"/><ReportCard label="Fleet utilization" value={`${fleetUtilization}%`} note={`${busyFleet} assigned of ${trucks.length}`}/><ReportCard label="Approved drivers" value={approvedDrivers} note={`${drivers.length} driver profiles`}/><ReportCard label="Released revenue" value={`ETB ${compactMoney(releasedNet)}`} note="Net of recorded credit refunds"/><ReportCard label="Held escrow" value={`ETB ${compactMoney(heldTotal)}`} note="Verified, not released"/><ReportCard label="Pending verification" value={`ETB ${compactMoney(initiatedTotal)}`} note="Initiated customer payments"/><ReportCard label="Customers" value={customers.length} note="Live customer records"/></div>
       <div className="mt-5 border border-asphalt/10 bg-white p-5"><p className="font-display text-lg font-semibold">Operational health</p><div className="mt-4 grid gap-3 sm:grid-cols-3"><HealthRow label="Orders waiting assignment" value={orders.filter((order)=>order.status==="placed").length}/><HealthRow label="Available trucks" value={trucks.filter((truck)=>truck.status==="available").length}/><HealthRow label="Payments needing verification" value={payments.filter((payment)=>payment.event==="initiated").length}/></div></div>
     </>}

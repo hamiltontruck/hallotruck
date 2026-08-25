@@ -99,6 +99,7 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/60">Live KPIs, operational exceptions, finance, evidence, driver compliance and fleet readiness in one control center.</p>
           </div>
           <div className="flex min-w-0 flex-wrap gap-2">
+            <Link to="/admin/intelligence" className="border border-white/20 px-4 py-3 text-sm font-semibold">Reports & Search</Link>
             <Link to="/admin/operations" className="bg-amber px-4 py-3 text-sm font-semibold text-asphalt">Open Operations</Link>
             <button type="button" onClick={() => void load()} className="border border-white/20 px-4 py-3 text-sm font-semibold">Refresh</button>
           </div>
@@ -170,8 +171,9 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
             </div>
           </QueueCard>
 
-          <QueueCard id="modules" title="Control modules" count={6} actionTo="/admin/operations">
+          <QueueCard id="modules" title="Control modules" count={7} actionTo="/admin/intelligence">
             <div className="grid gap-2 p-4 sm:p-5">
+              <ModuleLink to="/admin/intelligence" title="Reports & global search" detail="Cross-workspace search, trends, routes and smart signals" />
               <ModuleLink to="/admin/payment-review" title="Finance review" detail="Payments, escrow, released, refunds and evidence" />
               <ModuleLink to="/admin/driver-compliance" title="Driver compliance" detail="Documents, approvals and expiry risk" />
               <ModuleLink to="/admin/driver-commission" title="Commission control" detail="Settlements and HALLO commission" />

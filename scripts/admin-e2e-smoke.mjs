@@ -92,6 +92,7 @@ try {
   const chrome = findChrome();
   const routes = [
     "/admin",
+    "/admin/intelligence",
     "/admin/driver-compliance",
     "/admin/driver-commission",
     "/admin/payment-review",

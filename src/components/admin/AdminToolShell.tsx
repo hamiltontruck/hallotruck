@@ -4,9 +4,14 @@ import { supabase } from "../../services/supabase.client";
 
 const links = [
   { to: "/admin", label: "Overview", icon: "▦" },
+  { to: "/admin/intelligence", label: "Intelligence", icon: "⌕" },
+  { to: "/admin/operations", label: "Operations", icon: "OPS" },
+  { to: "/admin/payment-review", label: "Payment review", icon: "PAY" },
+  { to: "/admin/driver-finance-search", label: "Driver finance", icon: "ETB" },
   { to: "/admin/driver-compliance", label: "Driver control", icon: "DRV" },
   { to: "/admin/fleet-maintenance", label: "Fleet maintenance", icon: "MNT" },
   { to: "/admin/driver-commission", label: "Commission control", icon: "%" },
+  { to: "/admin/quote-pricing", label: "Quote pricing", icon: "QTE" },
 ];
 
 export function AdminToolShell({ children }: { children: ReactNode }) {
@@ -33,7 +38,7 @@ export function AdminToolShell({ children }: { children: ReactNode }) {
           <button type="button" onClick={() => setOpen(false)} className="text-2xl text-white/55 lg:hidden" aria-label="Close Admin menu">×</button>
         </div>
 
-        <nav className="flex-1 space-y-1 px-4 py-7">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-7">
           <p className="mb-4 px-3 font-mono text-[10px] tracking-[.2em] text-white/35">LEADERSHIP</p>
           {links.map((link) => {
             const active = location.pathname === link.to;

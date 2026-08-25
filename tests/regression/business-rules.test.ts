@@ -43,6 +43,12 @@ import {
   MIN_DRIVER_DEPOSIT_ETB,
 } from "../../src/domain/driver-deposit";
 import { getDriverOnboardingProgress } from "../../src/domain/driver-onboarding";
+import {
+  buildAdminIntelligenceReport,
+  isWithinAdminReportRange,
+  searchAdminIntelligence,
+  type AdminIntelligenceData,
+} from "../../src/domain/admin-intelligence";
 
 test("cargo units convert to actual tons", () => {
   assert.equal(cargoToTons(50, "quintal"), 5);
@@ -391,4 +397,84 @@ test("CEO finance KPIs reconcile driver deposits and commission due", () => {
   assert.equal(view.totalDriverDeposit, 105_000);
   assert.equal(view.availableDriverDeposit, 104_594);
   assert.equal(view.driverCommissionReceivable, 3_000);
+});
+
+function intelligenceFixture(): AdminIntelligenceData {
+  const order = (overrides: Partial<AdminIntelligenceData["orders"][number]> = {}): AdminIntelligenceData["orders"][number] => ({
+    id: "order-1",
+    tracking_id: "HT-2026-SEARCH1",
+    customer_name: "Sofi Husse",
+    customer_phone: "+251913509926",
+    pickup_address: "Addis Ababa",
+    dropoff_address: "Adama",
+    cargo_description: "Coffee",
+    vehicle_type: "Dry Cargo",
+    price_etb: 1_000,
+    status: "delivered",
+    payment_status: "released",
+    driver_id: "driver-1",
+    truck_id: "truck-1",
+    accepted_at: "2026-08-25T08:00:00.000Z",
+    delivered_at: "2026-08-25T10:00:00.000Z",
+    cancellation_reason: null,
+    cancellation_source: null,
+    cancelled_at: null,
+    created_at: "2026-08-25T08:00:00.000Z",
+    ...overrides,
+  });
+  const paymentRow = (overrides: Partial<AdminIntelligenceData["payments"][number]> = {}): AdminIntelligenceData["payments"][number] => ({
+    id: "payment-1",
+    order_id: "order-1",
+    provider: "telebirr",
+    provider_ref: "TEL-20260825-001",
+    amount_etb: 1_000,
+    event: "released",
+    receipt_path: "receipt.jpg",
+    created_at: "2026-08-25T10:00:00.000Z",
+    ...overrides,
+  });
+
+  return {
+    orders: [
+      order(),
+      order({ id: "order-2", tracking_id: "HT-2026-UNASSIGNED", customer_name: "Ali", customer_phone: "+251900000002", pickup_address: "Mojo", dropoff_address: "Dire Dawa", price_etb: 500, status: "placed", payment_status: "pending", driver_id: null, truck_id: null, accepted_at: null, delivered_at: null, created_at: "2026-08-20T08:00:00.000Z" }),
+      order({ id: "order-old", tracking_id: "HT-2026-OLD", status: "cancelled", payment_status: "unpaid", driver_id: null, truck_id: null, accepted_at: null, delivered_at: null, cancellation_reason: "Other order", cancellation_source: "customer", cancelled_at: "2026-07-01T09:00:00.000Z", created_at: "2026-07-01T08:00:00.000Z" }),
+    ],
+    payments: [
+      paymentRow(),
+      paymentRow({ id: "payment-refund", provider_ref: "TEL-REFUND", amount_etb: 100, event: "refunded" }),
+      paymentRow({ id: "payment-pending", order_id: "order-2", provider: "cbe", provider_ref: "CBE-20260824-001", amount_etb: 500, event: "initiated", created_at: "2026-08-24T10:00:00.000Z" }),
+    ],
+    customers: [{ id: "customer-1", full_name: "Sofi Husse", phone: "+251913509926", email: "sofi@example.com", company_name: "Sofi Logistics", is_credit_customer: true, created_at: "2026-08-25T07:00:00.000Z" }],
+    drivers: [{ id: "driver-1", full_name: "Mebruk", phone: "+251911766093", driver_status: "approved" }],
+    trucks: [{ id: "truck-1", plate_number: "3-A12345", vehicle_type: "Dry Cargo", capacity_tons: 12, status: "assigned", created_at: "2026-08-01T08:00:00.000Z" }],
+  };
+}
+
+test("Admin report ranges use exact local-day boundaries", () => {
+  const now = new Date("2026-08-25T12:00:00.000Z");
+  assert.equal(isWithinAdminReportRange("2026-08-25T00:00:00.000Z", "today", now), true);
+  assert.equal(isWithinAdminReportRange("2026-08-24T23:59:59.000Z", "today", now), false);
+  assert.equal(isWithinAdminReportRange("2026-08-19T00:00:00.000Z", "7d", now), true);
+  assert.equal(isWithinAdminReportRange("2026-08-18T23:59:59.000Z", "7d", now), false);
+});
+
+test("Admin global search preserves transaction, driver, phone and plate context", () => {
+  const data = intelligenceFixture();
+  assert.equal(searchAdminIntelligence(data, "TEL-20260825-001").payments.length, 1);
+  assert.equal(searchAdminIntelligence(data, "Mebruk").drivers.length, 1);
+  assert.equal(searchAdminIntelligence(data, "+251911766093").payments.length, 2);
+  assert.equal(searchAdminIntelligence(data, "3-A12345").trucks.length, 1);
+  assert.equal(searchAdminIntelligence(data, "Addis Ababa").orders.length, 2);
+});
+
+test("Admin intelligence report reconciles finance, assignment and route signals", () => {
+  const report = buildAdminIntelligenceReport(intelligenceFixture(), "7d", new Date("2026-08-25T12:00:00.000Z"));
+  assert.equal(report.orders.length, 2);
+  assert.equal(report.netRevenue, 900);
+  assert.equal(report.pendingEtb, 500);
+  assert.equal(report.unassigned.length, 1);
+  assert.equal(report.completionRate, 50);
+  assert.equal(report.fleetUtilization, 100);
+  assert.equal(report.topRoutes[0].route, "Addis Ababa → Adama");
 });
