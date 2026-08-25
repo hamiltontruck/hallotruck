@@ -16,6 +16,8 @@ import { AdminQuotePricing } from "./pages/AdminQuotePricing";
 import { AdminPaymentWorkspace } from "./pages/AdminPaymentWorkspace";
 import { AdminIntelligence } from "./pages/AdminIntelligence";
 import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
+import { AdminPartnerControl } from "./pages/AdminPartnerControl";
+import { PartnerPortal } from "./pages/PartnerPortal";
 import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
@@ -23,6 +25,7 @@ import { Earnings } from "./pages/Earnings";
 import { DriverCommission } from "./pages/DriverCommission";
 import { DriverPaymentCollection } from "./pages/DriverPaymentCollection";
 import { AdminGate } from "./components/auth/AdminGate";
+import { PartnerGate } from "./components/auth/PartnerGate";
 import { PasswordRecoveryGate } from "./components/auth/PasswordRecoveryGate";
 import { CustomerGate } from "./components/auth/CustomerGate";
 import { PortalLanding } from "./pages/PortalLanding";
@@ -120,6 +123,9 @@ export default function App() {
             <Route path="/admin/quote-pricing" element={<AdminGate><AdminToolShell><AdminQuotePricing /></AdminToolShell></AdminGate>} />
             <Route path="/admin/payment-review" element={<AdminGate><AdminToolShell><AdminPaymentWorkspace /></AdminToolShell></AdminGate>} />
             <Route path="/admin/manual-driver-documents" element={<AdminGate><AdminToolShell><AdminManualDriverDocuments /></AdminToolShell></AdminGate>} />
+            <Route path="/admin/partners" element={<AdminGate><AdminToolShell><AdminPartnerControl /></AdminToolShell></AdminGate>} />
+            <Route path="/partner/login" element={<PartnerGate><PartnerPortal /></PartnerGate>} />
+            <Route path="/partner" element={<PartnerGate><PartnerPortal /></PartnerGate>} />
             <Route path="/customer/login" element={<CustomerLogin />} />
             <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="home" /></CustomerGate>} />
             <Route path="/customer/orders" element={<CustomerGate><CustomerWorkspace section="orders" /></CustomerGate>} />
