@@ -4,7 +4,6 @@ import { spawnSync } from "node:child_process";
 
 const root = process.cwd();
 const outputDirectory = path.join(root, ".test-dist");
-const outputFile = path.join(outputDirectory, "business-rules.test.mjs");
 const esbuildBinary = path.join(
   root,
   "node_modules",
@@ -28,18 +27,24 @@ await rm(outputDirectory, { recursive: true, force: true });
 await mkdir(outputDirectory, { recursive: true });
 
 try {
-  const bundled = run(esbuildBinary, [
-    "tests/regression/business-rules.test.ts",
-    "--bundle",
-    "--platform=node",
-    "--format=esm",
-    "--target=node22",
-    `--outfile=${outputFile}`,
-  ]);
+  const suites = [
+    ["tests/regression/business-rules.test.ts", path.join(outputDirectory, "business-rules.test.mjs")],
+    ["tests/regression/partner-foundation.test.ts", path.join(outputDirectory, "partner-foundation.test.mjs")],
+  ];
 
-  if (!bundled) process.exit(process.exitCode || 1);
+  for (const [source, output] of suites) {
+    const bundled = run(esbuildBinary, [
+      source,
+      "--bundle",
+      "--platform=node",
+      "--format=esm",
+      "--target=node22",
+      `--outfile=${output}`,
+    ]);
+    if (!bundled) process.exit(process.exitCode || 1);
+  }
 
-  const passed = run(process.execPath, ["--test", outputFile]);
+  const passed = run(process.execPath, ["--test", ...suites.map(([, output]) => output)]);
   if (!passed) process.exit(process.exitCode || 1);
 } finally {
   await rm(outputDirectory, { recursive: true, force: true });
