@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../services/supabase.client";
 import { formatEtb } from "../../utils/currency";
+import { calculateDriverDepositWallet } from "../../domain/driver-deposit";
 
 type DriverFinancialSummary = {
   admin_deposit_etb: number | string;
   commission_charged_etb: number | string;
+  commission_paid_etb: number | string;
   available_deposit_etb: number | string;
   commission_due_etb: number | string;
 };
@@ -14,11 +16,12 @@ function amount(value: number | string | null | undefined) {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
-export function DriverDepositBalance() {
-  const [summary, setSummary] = useState<DriverFinancialSummary | null>(null);
+export function DriverDepositBalance({ fixtureSummary = null }: { fixtureSummary?: DriverFinancialSummary | null } = {}) {
+  const [summary, setSummary] = useState<DriverFinancialSummary | null>(fixtureSummary);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (fixtureSummary) return;
     let active = true;
 
     async function load() {
@@ -44,7 +47,7 @@ export function DriverDepositBalance() {
 
     void load();
     return () => { active = false; };
-  }, []);
+  }, [fixtureSummary]);
 
   if (error) {
     return <p className="mt-6 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>;
@@ -55,7 +58,12 @@ export function DriverDepositBalance() {
   }
 
   const deposited = amount(summary.admin_deposit_etb);
-  const deducted = amount(summary.commission_charged_etb);
+  const wallet = calculateDriverDepositWallet({
+    depositedEtb: deposited,
+    commissionChargedEtb: amount(summary.commission_charged_etb),
+    commissionPaidEtb: amount(summary.commission_paid_etb),
+  });
+  const deducted = wallet.depositConsumedEtb;
   const available = amount(summary.available_deposit_etb);
   const due = amount(summary.commission_due_etb);
 

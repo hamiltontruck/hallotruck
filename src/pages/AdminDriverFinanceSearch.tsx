@@ -1,9 +1,16 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabase.client";
 import { formatEtb } from "../utils/currency";
+import {
+  isDriverDepositAmountAllowed,
+  MAX_DRIVER_DEPOSIT_ETB,
+  MIN_DRIVER_DEPOSIT_ETB,
+} from "../domain/driver-deposit";
+import {
+  DriverDepositHistory,
+  type DriverDepositHistoryItem,
+} from "../components/admin/DriverDepositHistory";
 
-const MIN_DEPOSIT_ETB = 5_000;
-const MAX_DEPOSIT_ETB = 100_000;
 const QUICK_DEPOSITS = [5_000, 10_000, 25_000, 50_000, 100_000];
 
 type ProfileRow = {
@@ -40,16 +47,6 @@ type OrderRow = {
   created_at: string;
 };
 
-type DepositRow = {
-  id: string;
-  driver_id: string;
-  amount_etb: number | string;
-  reference: string | null;
-  note: string | null;
-  status: string;
-  created_at: string;
-};
-
 type DriverFinancialSummary = {
   completed_trips: number | string;
   gross_released_etb: number | string;
@@ -79,13 +76,14 @@ export function AdminDriverFinanceSearch() {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [trucks, setTrucks] = useState<TruckRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [deposits, setDeposits] = useState<DepositRow[]>([]);
+  const [deposits, setDeposits] = useState<DriverDepositHistoryItem[]>([]);
   const [summaries, setSummaries] = useState<SummaryMap>({});
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"drivers" | "orders">("drivers");
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
+  const [busyDepositId, setBusyDepositId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -123,7 +121,7 @@ export function AdminDriverFinanceSearch() {
     setProfiles(nextProfiles);
     setTrucks((truckResult.data ?? []) as TruckRow[]);
     setOrders((orderResult.data ?? []) as OrderRow[]);
-    setDeposits((depositResult.data ?? []) as DepositRow[]);
+    setDeposits((depositResult.data ?? []) as DriverDepositHistoryItem[]);
     setSummaries(nextSummaries);
     setError("");
     setLoading(false);
@@ -184,29 +182,52 @@ export function AdminDriverFinanceSearch() {
     const reference = String(form.get("reference") ?? "").trim();
     const note = String(form.get("note") ?? "").trim();
 
-    if (!Number.isFinite(amountEtb) || amountEtb < MIN_DEPOSIT_ETB || amountEtb > MAX_DEPOSIT_ETB) {
-      setError(`Deposit must be between ETB ${MIN_DEPOSIT_ETB.toLocaleString()} and ETB ${MAX_DEPOSIT_ETB.toLocaleString()}.`);
+    if (!isDriverDepositAmountAllowed(amountEtb)) {
+      setError(`Deposit must be between ETB ${MIN_DRIVER_DEPOSIT_ETB.toLocaleString()} and ETB ${MAX_DRIVER_DEPOSIT_ETB.toLocaleString()}.`);
       return;
     }
 
     setBusy(driver.id);
     setError("");
     setSuccess("");
-    const result = await supabase.rpc("admin_record_driver_deposit", {
-      p_driver_id: driver.id,
-      p_amount_etb: amountEtb,
-      p_reference: reference || null,
-      p_note: note || null,
-    });
+    try {
+      const result = await supabase.rpc("admin_record_driver_deposit", {
+        p_driver_id: driver.id,
+        p_amount_etb: amountEtb,
+        p_reference: reference || null,
+        p_note: note || null,
+      });
 
-    if (result.error) {
-      setError(result.error.message);
-    } else {
-      formElement.reset();
-      setSuccess(`${formatEtb(amountEtb)} deposit recorded for ${nameOf(driver, "driver")}.`);
-      await load();
+      if (result.error) {
+        setError(result.error.message);
+      } else {
+        formElement.reset();
+        setSuccess(`${formatEtb(amountEtb)} deposit recorded for ${nameOf(driver, "driver")}. The driver was notified.`);
+        await load();
+      }
+    } catch (depositError) {
+      setError(depositError instanceof Error ? depositError.message : "Deposit could not be recorded.");
+    } finally {
+      setBusy("");
     }
-    setBusy("");
+  }
+
+  async function reverseDeposit(depositId: string, reason: string, driver: ProfileRow) {
+    setBusyDepositId(depositId);
+    setError("");
+    setSuccess("");
+    try {
+      const result = await supabase.rpc("admin_reverse_driver_commission_deposit", {
+        p_deposit_id: depositId,
+        p_reason: reason,
+      });
+
+      if (result.error) throw new Error(result.error.message);
+      setSuccess(`Deposit reversed for ${nameOf(driver, "driver")}. The driver was notified and the audit history was updated.`);
+      await load();
+    } finally {
+      setBusyDepositId("");
+    }
   }
 
   return (
@@ -296,7 +317,7 @@ export function AdminDriverFinanceSearch() {
                       <h3 className="mt-2 font-display text-xl font-semibold">Fund commission wallet</h3>
                       <p className="mt-2 text-xs leading-5 text-steel">Allowed deposit: ETB 5,000–100,000. Verified 2% commission charges consume this balance automatically.</p>
                       <div className="mt-4 flex flex-wrap gap-2">{QUICK_DEPOSITS.map((amount) => <button key={amount} type="button" onClick={(event) => { const form = event.currentTarget.closest("form"); const input = form?.elements.namedItem("amountEtb") as HTMLInputElement | null; if (input) input.value = String(amount); }} className="border border-asphalt/15 px-3 py-2 text-[11px] font-semibold">{amount.toLocaleString()}</button>)}</div>
-                      <label className="mt-5 block text-xs font-semibold">Amount ETB<input name="amountEtb" type="number" min={MIN_DEPOSIT_ETB} max={MAX_DEPOSIT_ETB} step="0.01" required className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
+                      <label className="mt-5 block text-xs font-semibold">Amount ETB<input name="amountEtb" type="number" min={MIN_DRIVER_DEPOSIT_ETB} max={MAX_DRIVER_DEPOSIT_ETB} step="0.01" required className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
                       <label className="mt-4 block text-xs font-semibold">Reference<input name="reference" maxLength={120} placeholder="Cash receipt or internal reference" className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
                       <label className="mt-4 block text-xs font-semibold">Note<textarea name="note" maxLength={500} rows={3} placeholder="Who received it and where" className="mt-2 w-full border border-asphalt/20 p-3 text-sm" /></label>
                       <button disabled={busy === driver.id} className="mt-5 w-full bg-asphalt px-4 py-4 text-sm font-semibold text-white disabled:opacity-40">{busy === driver.id ? "Recording…" : "Record driver deposit"}</button>
@@ -304,7 +325,11 @@ export function AdminDriverFinanceSearch() {
 
                     <div className="border border-asphalt/10 bg-white p-5">
                       <p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">DEPOSIT HISTORY</p>
-                      <div className="mt-4 space-y-3">{driverDeposits.length === 0 ? <p className="text-sm text-steel">No deposits recorded.</p> : driverDeposits.slice(0, 10).map((deposit) => <div key={deposit.id} className="border border-asphalt/10 p-3"><div className="flex items-start justify-between gap-3"><strong>{formatEtb(numberOf(deposit.amount_etb))}</strong><span className="text-[10px] uppercase text-steel">{deposit.status}</span></div><p className="mt-1 text-[11px] text-steel">{dateTime(deposit.created_at)}</p>{deposit.reference && <p className="mt-1 text-xs">Ref: {deposit.reference}</p>}{deposit.note && <p className="mt-1 text-xs text-steel">{deposit.note}</p>}</div>)}</div>
+                      <DriverDepositHistory
+                        deposits={driverDeposits}
+                        busyDepositId={busyDepositId}
+                        onReverse={(depositId, reason) => reverseDeposit(depositId, reason, driver)}
+                      />
                     </div>
                   </div>
 
