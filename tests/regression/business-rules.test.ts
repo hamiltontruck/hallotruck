@@ -452,11 +452,14 @@ function intelligenceFixture(): AdminIntelligenceData {
 }
 
 test("Admin report ranges use exact local-day boundaries", () => {
-  const now = new Date("2026-08-25T12:00:00.000Z");
-  assert.equal(isWithinAdminReportRange("2026-08-25T00:00:00.000Z", "today", now), true);
-  assert.equal(isWithinAdminReportRange("2026-08-24T23:59:59.000Z", "today", now), false);
-  assert.equal(isWithinAdminReportRange("2026-08-19T00:00:00.000Z", "7d", now), true);
-  assert.equal(isWithinAdminReportRange("2026-08-18T23:59:59.000Z", "7d", now), false);
+  const now = new Date(2026, 7, 25, 12, 0, 0, 0);
+  const localIso = (day: number, hour: number, minute: number, second: number, millisecond = 0) =>
+    new Date(2026, 7, day, hour, minute, second, millisecond).toISOString();
+
+  assert.equal(isWithinAdminReportRange(localIso(25, 0, 0, 0), "today", now), true);
+  assert.equal(isWithinAdminReportRange(localIso(24, 23, 59, 59, 999), "today", now), false);
+  assert.equal(isWithinAdminReportRange(localIso(19, 0, 0, 0), "7d", now), true);
+  assert.equal(isWithinAdminReportRange(localIso(18, 23, 59, 59, 999), "7d", now), false);
 });
 
 test("Admin global search preserves transaction, driver, phone and plate context", () => {

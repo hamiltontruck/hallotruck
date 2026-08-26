@@ -2,7 +2,7 @@ export type PartnerRole = "partner" | "admin" | "ceo" | string | null | undefine
 export type PartnerMemberRole = "owner" | "admin" | "editor" | "viewer" | string | null | undefined;
 
 export function canOpenPartnerPortal(role: PartnerRole) {
-  return role === "partner" || role === "admin" || role === "ceo";
+  return role === "partner";
 }
 
 export function canManagePartnerWorkspace(role: PartnerRole, memberRole: PartnerMemberRole) {

@@ -9,10 +9,10 @@ import {
   canOpenPartnerPortal,
 } from "../../src/domain/partner-foundation";
 
-test("Partner role gate allows only partner and leadership roles", () => {
+test("Partner role gate allows only the dedicated Partner role", () => {
   assert.equal(canOpenPartnerPortal("partner"), true);
-  assert.equal(canOpenPartnerPortal("admin"), true);
-  assert.equal(canOpenPartnerPortal("ceo"), true);
+  assert.equal(canOpenPartnerPortal("admin"), false);
+  assert.equal(canOpenPartnerPortal("ceo"), false);
   assert.equal(canOpenPartnerPortal("customer"), false);
   assert.equal(canOpenPartnerPortal("driver"), false);
   assert.equal(canOpenPartnerPortal(null), false);
@@ -84,6 +84,6 @@ test("Partner UI includes projects, documents, payments, activity, chat and mobi
   assert.match(partner, /overflow-x-hidden/);
   assert.match(partner, /min-w-0/);
   assert.match(admin, /Document review queue/);
-  assert.match(admin, /Add verified partner member/);
+  assert.match(admin, /Assign existing account/);
   assert.match(admin, /overflow-x-hidden/);
 });
