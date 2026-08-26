@@ -1,0 +1,17 @@
+drop policy if exists partner_commission_rules_admin_write on public.partner_commission_rules;
+drop policy if exists partner_fleet_admin_write on public.partner_fleet_vehicles;
+drop policy if exists partner_earnings_admin_write on public.partner_freight_earnings;
+drop policy if exists partner_settlements_admin_write on public.partner_settlements;
+create policy partner_commission_rules_admin_insert on public.partner_commission_rules for insert to authenticated with check (public.is_admin());
+create policy partner_commission_rules_admin_update on public.partner_commission_rules for update to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy partner_fleet_admin_insert on public.partner_fleet_vehicles for insert to authenticated with check (public.is_admin());
+create policy partner_fleet_admin_update on public.partner_fleet_vehicles for update to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy partner_earnings_admin_insert on public.partner_freight_earnings for insert to authenticated with check (public.is_admin());
+create policy partner_earnings_admin_update on public.partner_freight_earnings for update to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy partner_settlements_admin_insert on public.partner_settlements for insert to authenticated with check (public.is_admin());
+create policy partner_settlements_admin_update on public.partner_settlements for update to authenticated using (public.is_admin()) with check (public.is_admin());
+create index if not exists idx_partner_commission_rules_created_by on public.partner_commission_rules(created_by);
+create index if not exists idx_partner_fleet_created_by on public.partner_fleet_vehicles(created_by);
+create index if not exists idx_partner_earnings_created_by on public.partner_freight_earnings(created_by);
+create index if not exists idx_partner_settlements_created_by on public.partner_settlements(created_by);
+create index if not exists idx_partner_settlements_approved_by on public.partner_settlements(approved_by) where approved_by is not null;
