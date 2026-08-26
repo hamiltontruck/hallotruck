@@ -5,6 +5,7 @@ import { supabase } from "../../services/supabase.client";
 const links = [
   { to: "/admin", label: "Overview", icon: "▦" },
   { to: "/admin/intelligence", label: "Intelligence", icon: "⌕" },
+  { to: "/admin/partners", label: "Partner onboarding", icon: "LP" },
   { to: "/admin/operations", label: "Operations", icon: "OPS" },
   { to: "/admin/payment-review", label: "Payment review", icon: "PAY" },
   { to: "/admin/driver-finance-search", label: "Driver finance", icon: "ETB" },

@@ -15,9 +15,10 @@ export async function getCurrentPartnerMemberships() {
   if (!userId) return [] as PartnerMembership[];
   const { data, error } = await supabase
     .from("partner_memberships")
-    .select("id,partner_id,user_id,member_role,active,partner_organizations(id,name,code,status,contact_email,contact_phone)")
+    .select("id,partner_id,user_id,member_role,active,partner_organizations!inner(id,name,code,status,contact_email,contact_phone)")
     .eq("user_id", userId)
     .eq("active", true)
+    .eq("partner_organizations.status", "active")
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []) as unknown as PartnerMembership[];

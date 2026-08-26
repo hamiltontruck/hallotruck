@@ -47,6 +47,7 @@ import "./styles/customer-map-home.css";
 import "./styles/customer-nearby-tracking.css";
 import "./styles/customer-nearby-home-bridge.css";
 import "./styles/driver-mobile-flow.css";
+import "./styles/partner-onboarding.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();

@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import {
   createPartnerProject,
@@ -36,6 +37,7 @@ function money(value: number) {
 }
 
 export function PartnerPortal() {
+  const [searchParams] = useSearchParams();
   const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
   const [partnerId, setPartnerId] = useState("");
   const [workspace, setWorkspace] = useState<Workspace>(emptyWorkspace);
@@ -56,7 +58,10 @@ export function PartnerPortal() {
     try {
       const nextMemberships = await getCurrentPartnerMemberships();
       setMemberships(nextMemberships);
-      const nextPartnerId = requestedPartnerId || partnerId || nextMemberships[0]?.partner_id || "";
+      const candidatePartnerId = requestedPartnerId || partnerId;
+      const nextPartnerId = nextMemberships.some((membership) => membership.partner_id === candidatePartnerId)
+        ? candidatePartnerId
+        : nextMemberships[0]?.partner_id || "";
       setPartnerId(nextPartnerId);
       if (!nextPartnerId) {
         setWorkspace(emptyWorkspace);
@@ -72,7 +77,7 @@ export function PartnerPortal() {
   }, [partnerId]);
 
   useEffect(() => {
-    void load();
+    void load(searchParams.get("organization") ?? undefined);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

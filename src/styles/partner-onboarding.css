@@ -1,0 +1,29 @@
+.control-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.5rem;
+  border: 1px solid rgb(27 31 39 / 18%);
+  background: #fff;
+  padding: 0.75rem;
+  color: #1b1f27;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+  outline: none;
+}
+
+.control-input:focus {
+  border-color: #f2a93b;
+  box-shadow: 0 0 0 1px #f2a93b;
+}
+
+.control-input::placeholder {
+  color: rgb(92 100 112 / 72%);
+}
+
+@media (max-width: 412px) {
+  .control-input {
+    font-size: 16px;
+  }
+}

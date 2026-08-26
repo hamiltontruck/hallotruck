@@ -1,16 +1,14 @@
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { supabase } from "../../services/supabase.client";
+import { getPartnerLoginAccess } from "../../services/admin-partner-onboarding.service";
 
 type AccessState = "loading" | "allowed" | "denied";
 
-async function resolveRole(userId: string) {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
-  if (error) throw error;
-  return String(data?.role ?? "");
+function accessError(access: Awaited<ReturnType<typeof getPartnerLoginAccess>>) {
+  if (access.profileRole !== "partner") return "This account does not have the Partner profile role.";
+  if (access.activeMembershipCount === 0) return "This Partner account has no active organization membership.";
+  if (access.activeOrganizationCount === 0) return "The assigned Partner organization is suspended or archived.";
+  return "Partner access could not be verified.";
 }
 
 export function PartnerGate({ children }: { children: ReactNode }) {
@@ -30,12 +28,10 @@ export function PartnerGate({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const role = await resolveRole(data.session.user.id);
+        const access = await getPartnerLoginAccess();
         if (!active) return;
-        setState(role === "partner" || role === "admin" || role === "ceo" ? "allowed" : "denied");
-        if (role !== "partner" && role !== "admin" && role !== "ceo") {
-          setError("This account does not have HALLO Logistics Partner access.");
-        }
+        setState(access.allowed ? "allowed" : "denied");
+        setError(access.allowed ? "" : accessError(access));
       } catch (sessionError) {
         if (!active) return;
         setState("denied");
@@ -61,10 +57,10 @@ export function PartnerGate({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const role = await resolveRole(data.user.id);
-      if (role !== "partner" && role !== "admin" && role !== "ceo") {
+      const access = await getPartnerLoginAccess();
+      if (!access.allowed) {
         await supabase.auth.signOut();
-        setError("This account does not have HALLO Logistics Partner access.");
+        setError(accessError(access));
         setState("denied");
       } else {
         setState("allowed");

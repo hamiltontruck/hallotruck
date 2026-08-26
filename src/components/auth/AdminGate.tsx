@@ -1,5 +1,6 @@
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { supabase } from "../../services/supabase.client";
+import { isDatabaseLeadershipRole } from "../../domain/partner-onboarding";
 
 export function AdminGate({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -11,15 +12,28 @@ export function AdminGate({ children }: { children: ReactNode }) {
   const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
-    function check(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
-      const role = session?.user.app_metadata?.role;
-      setAllowed(role === "admin" || role === "ceo");
-      if (session && role !== "admin" && role !== "ceo") setError("This account does not have CEO or Admin access.");
+    let current = true;
+    async function check(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
+      if (!session) {
+        if (current) { setAllowed(false); setLoading(false); }
+        return;
+      }
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      if (!current) return;
+      const role = String(profile?.role ?? "");
+      const authorized = !profileError && isDatabaseLeadershipRole(role);
+      setAllowed(authorized);
+      if (!authorized) setError(profileError?.message ?? "This account does not have CEO or Admin access.");
+      else setError("");
       setLoading(false);
     }
-    supabase.auth.getSession().then(({ data }) => check(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => check(session));
-    return () => data.subscription.unsubscribe();
+    void supabase.auth.getSession().then(({ data }) => check(data.session));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => { window.setTimeout(() => void check(session), 0); });
+    return () => { current = false; data.subscription.unsubscribe(); };
   }, []);
 
   async function login(event: FormEvent) {
@@ -27,12 +41,16 @@ export function AdminGate({ children }: { children: ReactNode }) {
     setLoading(true); setError("");
     const { data, error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (loginError) { setError(loginError.message); setLoading(false); return; }
-    const role = data.user.app_metadata?.role;
-    if (role !== "admin" && role !== "ceo") {
+    const { data: profile, error: profileError } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+    const role = String(profile?.role ?? "");
+    if (profileError || !isDatabaseLeadershipRole(role)) {
       await supabase.auth.signOut();
-      setError("This account does not have CEO or Admin access.");
+      setError(profileError?.message ?? "This account does not have CEO or Admin access.");
       setLoading(false);
+      return;
     }
+    setAllowed(true);
+    setLoading(false);
   }
 
   async function requestPasswordReset(event: FormEvent) {
