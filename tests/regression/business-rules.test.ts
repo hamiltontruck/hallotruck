@@ -133,6 +133,19 @@ test("driver deposit balance reconciles approved commission payments before cons
   assert.equal(wallet.commissionDueEtb, 0);
 });
 
+test("Abiy bank-confirmed commissions consume the prepaid deposit exactly once", () => {
+  const wallet = calculateDriverDepositWallet({
+    depositedEtb: 10_000,
+    commissionChargedEtb: 598 + 1_447 + 490,
+    commissionPaidEtb: 0,
+  });
+
+  assert.equal(wallet.commissionChargedEtb, 2_535);
+  assert.equal(wallet.depositConsumedEtb, 2_535);
+  assert.equal(wallet.availableDepositEtb, 7_465);
+  assert.equal(wallet.commissionDueEtb, 0);
+});
+
 test("driver deposit balance never becomes negative when unpaid commission exceeds the wallet", () => {
   const wallet = calculateDriverDepositWallet({
     depositedEtb: 5_000,
@@ -167,6 +180,28 @@ test("driver deposit migration removes bypass paths and restricts audited RPCs",
   assert.match(migration, /revoke all on function public\.admin_reverse_driver_commission_deposit\(uuid,text\)\s+from public, anon/i);
   assert.match(migration, /driver_deposit_added/);
   assert.match(migration, /driver_deposit_reversed/);
+});
+
+test("driver wallet migration unifies confirmation and direct-collection commission ledgers", () => {
+  const migration = readFileSync(
+    path.join(process.cwd(), "supabase", "migrations", "20260826214927_unify_driver_commission_wallet.sql"),
+    "utf8",
+  );
+
+  assert.match(migration, /private\.driver_commission_charged_total/i);
+  assert.match(migration, /from public\.driver_payment_confirmations/i);
+  assert.match(migration, /commission_reversed_at is null/i);
+  assert.match(migration, /from public\.driver_commission_charges/i);
+  assert.match(migration, /charge\.status = 'active'/i);
+  assert.match(migration, /not exists[\s\S]*confirmation\.payment_id = charge\.payment_id/i);
+  assert.match(migration, /create or replace function public\.driver_commission_balance/i);
+  assert.match(migration, /create or replace function public\.my_driver_commission_summary/i);
+  assert.match(migration, /create or replace function public\.driver_financial_summary/i);
+  assert.match(migration, /from public\.profiles profile[\s\S]*profile\.role::text in \('admin', 'ceo'\)/i);
+  assert.match(migration, /revoke all on function private\.driver_commission_charged_total\(uuid\)[\s\S]*from public, anon, authenticated/i);
+  assert.match(migration, /grant execute on function public\.driver_financial_summary\(uuid\)[\s\S]*to authenticated, service_role/i);
+  assert.doesNotMatch(migration, /user_metadata|raw_user_meta_data/i);
+  assert.doesNotMatch(migration, /app_metadata[^\n]*role/i);
 });
 
 test("verified and released payment clears the invoice balance", () => {
