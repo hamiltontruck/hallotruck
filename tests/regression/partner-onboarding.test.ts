@@ -18,6 +18,7 @@ import {
 const root = process.cwd();
 const migration = readFileSync(path.join(root, "supabase", "migrations", "20260826013000_admin_partner_onboarding_control.sql"), "utf8");
 const rolePromotionHotfix = readFileSync(path.join(root, "supabase", "migrations", "20260826164740_fix_partner_role_promotion.sql"), "utf8");
+const roleTriggerHotfix = readFileSync(path.join(root, "supabase", "migrations", "20260826173949_fix_partner_role_trigger_guard.sql"), "utf8");
 const adminPage = readFileSync(path.join(root, "src", "pages", "AdminPartnerControl.tsx"), "utf8");
 const adminGate = readFileSync(path.join(root, "src", "components", "auth", "AdminGate.tsx"), "utf8");
 const partnerGate = readFileSync(path.join(root, "src", "components", "auth", "PartnerGate.tsx"), "utf8");
@@ -129,6 +130,21 @@ test("Partner role promotion does not collide with PostgreSQL CURRENT_ROLE", () 
   assert.match(rolePromotionHotfix, /private\.is_admin_or_ceo\(\)/i);
   assert.match(rolePromotionHotfix, /revoke all on function public\.admin_onboard_partner_member[\s\S]*from public, anon/i);
   assert.match(rolePromotionHotfix, /grant execute on function public\.admin_onboard_partner_member[\s\S]*to authenticated/i);
+});
+
+test("Audited Partner promotion bypasses only the exact leadership trigger conflict", () => {
+  assert.match(roleTriggerHotfix, /private\.is_admin_or_ceo\(\)/i);
+  assert.match(roleTriggerHotfix, /set_config\([\s\S]*hallotruck\.partner_role_promotion_profile_id[\s\S]*p_user_id::text[\s\S]*true/i);
+  assert.match(roleTriggerHotfix, /current_setting\([\s\S]*hallotruck\.partner_role_promotion_profile_id[\s\S]*true/i);
+  assert.match(roleTriggerHotfix, /v_partner_promotion_target = old\.id::text/i);
+  assert.match(roleTriggerHotfix, /old\.role::text in \('customer', 'driver'\)/i);
+  assert.match(roleTriggerHotfix, /new\.role::text = 'partner'/i);
+  assert.match(roleTriggerHotfix, /to_jsonb\(new\) - 'role'[\s\S]*to_jsonb\(old\) - 'role'/i);
+  assert.match(roleTriggerHotfix, /Leadership may only change driver approval status through this profile update path/i);
+  assert.match(roleTriggerHotfix, /Admin approval may only change driver_status/i);
+  assert.match(roleTriggerHotfix, /revoke all on function public\.guard_leadership_profile_update\(\) from public, anon, authenticated/i);
+  assert.match(roleTriggerHotfix, /revoke all on function public\.admin_onboard_partner_member[\s\S]*from public, anon/i);
+  assert.doesNotMatch(roleTriggerHotfix, /user_metadata|raw_user_meta_data/i);
 });
 
 test("Suspended organizations are excluded by existing Partner RLS helper policies", () => {
