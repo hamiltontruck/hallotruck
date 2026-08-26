@@ -14,6 +14,7 @@ import { AdminDriverCommission } from "./pages/AdminDriverCommission";
 import { AdminFleetMaintenance } from "./pages/AdminFleetMaintenance";
 import { AdminQuotePricing } from "./pages/AdminQuotePricing";
 import { AdminPaymentWorkspace } from "./pages/AdminPaymentWorkspace";
+import { AdminFinanceDashboardV3 } from "./pages/AdminFinanceDashboardV3";
 import { AdminIntelligence } from "./pages/AdminIntelligence";
 import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
 import { AdminPartnerControl } from "./pages/AdminPartnerControl";
@@ -117,6 +118,7 @@ export default function App() {
             <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
             <Route path="/admin/operations" element={<AdminGate><AdminOperationsWorkspace /></AdminGate>} />
             <Route path="/admin/intelligence" element={<AdminGate><AdminToolShell><AdminIntelligence /></AdminToolShell></AdminGate>} />
+            <Route path="/admin/finance" element={<AdminGate><AdminToolShell><AdminFinanceDashboardV3 /></AdminToolShell></AdminGate>} />
             <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
             <Route path="/admin/driver-finance-search" element={<AdminGate><AdminToolShell><AdminDriverFinanceSearch /></AdminToolShell></AdminGate>} />
             <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
