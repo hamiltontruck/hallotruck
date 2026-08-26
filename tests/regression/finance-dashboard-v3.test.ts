@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { canonicalCommissionAccrued, computeFinanceSummary, dailySeries, type FinanceDashboardData } from "../../src/domain/finance-dashboard";
+
+const accessMigration = readFileSync(
+  path.join(process.cwd(), "supabase", "migrations", "20260826221314_fix_finance_dashboard_access.sql"),
+  "utf8",
+);
 
 const now = new Date("2026-08-26T12:00:00Z");
 const data: FinanceDashboardData = {
@@ -48,4 +55,32 @@ test("daily series never creates negative amounts", () => {
   const series = dailySeries(data.payments, 7, now);
   assert.equal(series.length, 7);
   assert.ok(series.every((row) => row.revenue >= 0 && row.escrow >= 0 && row.commission >= 0));
+});
+
+test("finance dashboard access follows database leadership roles without opening participant data", () => {
+  const existingPolicies = [
+    ["payments admin manage", "payments"],
+    ["orders admin manage", "orders"],
+    ["profiles admin manage", "profiles"],
+    ["profiles self or admin read", "profiles"],
+    ["driver_commission_deposits_read", "driver_commission_deposits"],
+    ["drivers read own commission charges", "driver_commission_charges"],
+    ["drivers read own commission payments", "driver_commission_payments"],
+  ];
+
+  for (const [policy, table] of existingPolicies) {
+    assert.match(
+      accessMigration,
+      new RegExp(`alter policy "${policy}"\\s+on public\\.${table}[\\s\\S]*?private\\.is_admin_or_ceo\\(\\)`, "i"),
+    );
+  }
+
+  assert.match(
+    accessMigration,
+    /create policy "finance dashboard leadership read"\s+on public\.driver_payment_confirmations\s+for select\s+to authenticated\s+using \(\(select private\.is_admin_or_ceo\(\)\)\)/i,
+  );
+  assert.match(accessMigration, /grant select on table public\.driver_payment_confirmations to authenticated/i);
+  assert.match(accessMigration, /revoke all on table public\.driver_payment_confirmations from anon/i);
+  assert.doesNotMatch(accessMigration, /grant\s+select[\s\S]*\s+to\s+anon/i);
+  assert.doesNotMatch(accessMigration, /auth\.jwt\(\)[\s\S]*app_metadata/i);
 });
