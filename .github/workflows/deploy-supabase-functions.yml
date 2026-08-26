@@ -11,6 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT_CONFIGURED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,7 +23,7 @@ jobs:
           version: 2.115.0
 
       - name: Configure Firebase service account when available
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT_CONFIGURED == 'true' }}
         run: supabase secrets set FIREBASE_SERVICE_ACCOUNT_JSON="$FIREBASE_SERVICE_ACCOUNT_JSON" --project-ref "$SUPABASE_PROJECT_REF"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

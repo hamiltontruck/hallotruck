@@ -52,7 +52,7 @@ export function DriverCommissionWallet() {
     <div className="border-b border-line bg-asphalt p-5 text-white sm:p-6">
       <p className="font-mono text-[10px] uppercase tracking-[.18em] text-amber">HALLO SMART COMMISSION WALLET</p>
       <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div><h2 className="font-display text-2xl font-bold">Commission settlement</h2><p className="mt-2 max-w-xl text-xs leading-5 text-white/55">Cash paid directly to you creates the HALLO Smart 2% commission balance. New jobs remain locked while an approved balance is due.</p></div>
+        <div><h2 className="font-display text-2xl font-bold">Commission settlement</h2><p className="mt-2 max-w-xl text-xs leading-5 text-white/55">Every confirmed bank/mobile payment and direct customer collection creates the HALLO Smart 2% commission balance. Your prepaid deposit covers that balance first.</p></div>
         <div className="shrink-0"><p className="text-[10px] uppercase tracking-wide text-white/45">Balance due</p><p className="mt-1 font-display text-2xl font-bold text-amber">{summary ? formatEtb(summary.balanceEtb) : "—"}</p></div>
       </div>
     </div>
