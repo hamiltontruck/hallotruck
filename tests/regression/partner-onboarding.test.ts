@@ -17,6 +17,7 @@ import {
 
 const root = process.cwd();
 const migration = readFileSync(path.join(root, "supabase", "migrations", "20260826013000_admin_partner_onboarding_control.sql"), "utf8");
+const rolePromotionHotfix = readFileSync(path.join(root, "supabase", "migrations", "20260826164740_fix_partner_role_promotion.sql"), "utf8");
 const adminPage = readFileSync(path.join(root, "src", "pages", "AdminPartnerControl.tsx"), "utf8");
 const adminGate = readFileSync(path.join(root, "src", "components", "auth", "AdminGate.tsx"), "utf8");
 const partnerGate = readFileSync(path.join(root, "src", "components", "auth", "PartnerGate.tsx"), "utf8");
@@ -117,6 +118,17 @@ test("Onboarding migration uses database roles, audited RPCs and final-owner pro
   assert.match(migration, /grant execute on function public\.admin_onboard_partner_member/i);
   assert.match(migration, /revoke all on function public\.admin_onboard_partner_member[\s\S]*from public, anon/i);
   assert.doesNotMatch(migration, /user_metadata|raw_user_meta_data/i);
+});
+
+test("Partner role promotion does not collide with PostgreSQL CURRENT_ROLE", () => {
+  assert.match(migration, /v_current_role public\.user_role/i);
+  assert.doesNotMatch(migration, /\bcurrent_role public\.user_role/i);
+  assert.match(rolePromotionHotfix, /select role into v_current_role from public\.profiles/i);
+  assert.match(rolePromotionHotfix, /v_current_role::text not in \('customer', 'driver', 'partner'\)/i);
+  assert.doesNotMatch(rolePromotionHotfix, /\bcurrent_role::text/i);
+  assert.match(rolePromotionHotfix, /private\.is_admin_or_ceo\(\)/i);
+  assert.match(rolePromotionHotfix, /revoke all on function public\.admin_onboard_partner_member[\s\S]*from public, anon/i);
+  assert.match(rolePromotionHotfix, /grant execute on function public\.admin_onboard_partner_member[\s\S]*to authenticated/i);
 });
 
 test("Suspended organizations are excluded by existing Partner RLS helper policies", () => {
