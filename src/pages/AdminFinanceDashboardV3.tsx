@@ -155,7 +155,7 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
           <p className="mt-5 font-mono text-[9px] tracking-wide text-white/35">LIVE · updated {updatedAt.toLocaleTimeString()}</p>
         </section>
 
-        {error && <p className="mt-5 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
+        {error ? <section className="mt-5 border border-route/30 bg-white p-6" role="alert"><p className="font-display text-xl font-bold text-route">Finance data failed to load</p><p className="mt-2 break-words text-sm text-steel">{error}</p><p className="mt-2 text-xs text-steel">No KPI values are shown because one or more finance sources failed.</p><button type="button" onClick={() => void load()} className="mt-4 min-h-11 bg-asphalt px-5 py-3 text-sm font-semibold text-white">Retry finance data</button></section> : loading ? <section className="mt-5 border border-asphalt/10 bg-white p-10 text-center" aria-live="polite"><p className="font-mono text-sm text-steel">Loading all seven finance sources…</p></section> : <>
         <section className="mt-5 grid gap-3 border border-asphalt/10 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           <label className="text-[10px] font-semibold uppercase tracking-wide">Date range<select value={range} onChange={(event) => setRange(event.target.value as FinanceRange)} className="mt-2 w-full border border-asphalt/15 px-3 py-2.5 text-xs normal-case"><option value="today">Today</option><option value="7d">7 days</option><option value="30d">30 days</option><option value="90d">90 days</option><option value="all">All time</option></select></label>
           <Filter label="Provider" value={provider} setValue={setProvider} values={providers} />
@@ -207,8 +207,9 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
         <section className="mt-5 grid gap-5 lg:grid-cols-2"><Breakdown title="Revenue by truck type" rows={byTruck} /><Breakdown title="Monthly comparison" rows={trend.slice(-6).map((item) => ({ label: item.label, value: item.revenue }))} /></section>
 
         <Panel title={activeKpi ? `KPI drill-down · ${activeKpi}` : "Recent finance activity"} eyebrow="ACTIONABLE DETAIL" className="mt-5">
-          {loading ? <p className="p-5 text-sm text-steel">Loading live finance data…</p> : rowsForKpi().length === 0 ? <p className="p-5 text-sm text-steel">No finance records match the current filters.</p> : <div className="divide-y divide-asphalt/10">{rowsForKpi().slice(0, 50).map((payment) => <PaymentRow key={payment.id} payment={payment} order={orderById.get(payment.order_id)} />)}</div>}
+          {rowsForKpi().length === 0 ? <p className="p-5 text-sm text-steel">No finance records match the current filters.</p> : <div className="divide-y divide-asphalt/10">{rowsForKpi().slice(0, 50).map((payment) => <PaymentRow key={payment.id} payment={payment} order={orderById.get(payment.order_id)} />)}</div>}
         </Panel>
+        </>}
       </div>
     </main>
   );

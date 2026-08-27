@@ -5,34 +5,46 @@
   display: none;
 }
 
-.customer-view-orders .customer-profile-slot {
+.customer-view-orders .customer-profile-slot,
+.customer-view-track .customer-profile-slot,
+.customer-view-payments .customer-profile-slot {
   display: none;
 }
 
 .customer-view-profile,
-.customer-view-orders {
+.customer-view-orders,
+.customer-view-track,
+.customer-view-payments {
   display: flex;
   min-height: 100vh;
   flex-direction: column;
 }
 
 .customer-view-profile .customer-main,
-.customer-view-orders .customer-main {
+.customer-view-orders .customer-main,
+.customer-view-track .customer-main,
+.customer-view-payments .customer-main {
   display: contents;
 }
 
 .customer-view-profile .customer-main-header,
-.customer-view-orders .customer-main-header {
+.customer-view-orders .customer-main-header,
+.customer-view-track .customer-main-header,
+.customer-view-payments .customer-main-header {
   order: 0;
 }
 
 .customer-view-profile .customer-dashboard-nav,
-.customer-view-orders .customer-dashboard-nav {
+.customer-view-orders .customer-dashboard-nav,
+.customer-view-track .customer-dashboard-nav,
+.customer-view-payments .customer-dashboard-nav {
   order: 1;
 }
 
 .customer-view-profile .customer-content,
-.customer-view-orders .customer-content {
+.customer-view-orders .customer-content,
+.customer-view-track .customer-content,
+.customer-view-payments .customer-content {
   order: 2;
   width: 100%;
 }
@@ -79,7 +91,7 @@
 .customer-dashboard-nav__tabs {
   display: grid;
   flex: 0 0 auto;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.3rem;
 }
 

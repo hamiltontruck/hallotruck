@@ -19,6 +19,7 @@ import { AdminIntelligence } from "./pages/AdminIntelligence";
 import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
 import { AdminPartnerControl } from "./pages/AdminPartnerControl";
 import { AdminPartnerFinance } from "./pages/AdminPartnerFinance";
+import { AdminMore } from "./pages/AdminMore";
 import { PartnerPortal } from "./pages/PartnerPortal";
 import { PartnerWallet } from "./pages/PartnerWallet";
 import { JobBoard } from "./pages/JobBoard";
@@ -51,17 +52,19 @@ import "./styles/customer-nearby-tracking.css";
 import "./styles/customer-nearby-home-bridge.css";
 import "./styles/driver-mobile-flow.css";
 import "./styles/partner-onboarding.css";
+import "./styles/role-navigation.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const showOperationalAlerts = pathname === "/driver/jobs" || pathname === "/driver/trip";
+  const showOperationalAlerts = pathname === "/driver" || pathname === "/driver/jobs" || pathname === "/driver/trip";
   return <div className="driver-mobile-flow min-h-screen bg-bone pb-24 md:pb-0"><OfflineBanner /><Header />{showOperationalAlerts && <DriverPaymentCollectionBanner />}{showOperationalAlerts && <DriverDocumentExpiryAlert />}{children}</div>;
 }
-function AdminWorkspace(){return <><AdminCeoOverview /><AdminSidebarLeadershipLinks /></>}
+function AdminWorkspace(){return <AdminToolShell><AdminCeoOverview /></AdminToolShell>}
 function AdminOperationsWorkspace(){return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
-function CustomerWorkspace({ section }: { section: "home" | "profile" | "orders" }) {
+function CustomerWorkspace({ section }: { section: "home" | "profile" | "orders" | "track" | "payments" }) {
   if (section === "home") return <div className="customer-portal-mobile customer-view-home"><CustomerMapHome /></div>;
-  return <div className={`customer-portal-mobile customer-view-${section}`}><CustomerBottomNav /><CustomerPortal /></div>;
+  const defaultFilter = section === "track" ? "active" : section === "payments" ? "payment" : "all";
+  return <div className={`customer-portal-mobile customer-view-${section}`}><CustomerBottomNav /><CustomerPortal defaultFilter={defaultFilter} /></div>;
 }
 function RuntimeLocalization(){const {selectedLanguage}=useLanguage();const runtimeLanguage=selectedLanguage==="so"||selectedLanguage==="ti"?selectedLanguage:null;useRuntimePageTranslation(runtimeLanguage);useRuntimeAdminTranslation(runtimeLanguage);useRuntimeCustomerOperationalTranslation(selectedLanguage);return null;}
 
@@ -69,6 +72,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/" element={<PortalLanding />} />
 <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
 <Route path="/admin/operations" element={<AdminGate><AdminOperationsWorkspace /></AdminGate>} />
+<Route path="/admin/more" element={<AdminGate><AdminToolShell><AdminMore /></AdminToolShell></AdminGate>} />
 <Route path="/admin/intelligence" element={<AdminGate><AdminToolShell><AdminIntelligence /></AdminToolShell></AdminGate>} />
 <Route path="/admin/finance" element={<AdminGate><AdminToolShell><AdminFinanceDashboardV3 /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partner-finance" element={<AdminGate><AdminToolShell><AdminPartnerFinance /></AdminToolShell></AdminGate>} />
@@ -86,10 +90,12 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/customer/login" element={<CustomerLogin />} />
 <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="home" /></CustomerGate>} />
 <Route path="/customer/orders" element={<CustomerGate><CustomerWorkspace section="orders" /></CustomerGate>} />
+<Route path="/customer/track" element={<CustomerGate><CustomerWorkspace section="track" /></CustomerGate>} />
+<Route path="/customer/payments" element={<CustomerGate><CustomerWorkspace section="payments" /></CustomerGate>} />
 <Route path="/customer/profile" element={<CustomerGate><CustomerWorkspace section="profile" /></CustomerGate>} />
 <Route path="/customer/tracking/:orderId" element={<CustomerGate><CustomerTrackingPage /></CustomerGate>} />
 <Route path="/driver/login" element={<Login />} />
-<Route path="/driver" element={<Navigate to="/driver/jobs" replace />} />
+<Route path="/driver" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
 <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
 <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
 <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />

@@ -146,7 +146,7 @@ function remainingPayment(order: CustomerOrder, payments: CustomerPayment[]) {
   return calculatePaymentSummary(order.price_etb, relevant).remainingToSubmit;
 }
 
-export function CustomerPortal() {
+export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: OrderFilter }) {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const c = getCustomerCopy(language);
@@ -162,7 +162,7 @@ export function CustomerPortal() {
   const [vehicle, setVehicle] = useState("Dry Cargo");
   const [cargoQuantity, setCargoQuantity] = useState("1");
   const [cargoUnit, setCargoUnit] = useState<CargoUnit>("ton");
-  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>(defaultFilter);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
@@ -237,6 +237,10 @@ export function CustomerPortal() {
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, []);
+
+  useEffect(() => {
+    setOrderFilter(defaultFilter);
+  }, [defaultFilter]);
 
   useEffect(() => {
     if (!showOrder && !trackingOrder && !paymentOrder && !cancelOrder) return;

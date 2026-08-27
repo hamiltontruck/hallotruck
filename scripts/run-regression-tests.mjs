@@ -14,6 +14,7 @@ try{
   ["tests/regression/partner-onboarding.test.ts",path.join(outputDirectory,"partner-onboarding.test.mjs")],
   ["tests/regression/finance-dashboard-v3.test.ts",path.join(outputDirectory,"finance-dashboard-v3.test.mjs")],
   ["tests/regression/partner-wallet-commission.test.ts",path.join(outputDirectory,"partner-wallet-commission.test.mjs")],
+  ["tests/regression/role-navigation.test.ts",path.join(outputDirectory,"role-navigation.test.mjs")],
  ];
  for(const [source,output] of suites){const bundled=run(esbuildBinary,[source,"--bundle","--platform=node","--format=esm","--target=node22",`--outfile=${output}`]);if(!bundled)process.exit(process.exitCode||1);}
  const passed=run(process.execPath,["--test",...suites.map(([,output])=>output)]);if(!passed)process.exit(process.exitCode||1);

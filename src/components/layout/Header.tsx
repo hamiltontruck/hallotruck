@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
 import { LanguageSwitcher, useLanguage } from "../../i18n/LanguageProvider";
+import { DriverBottomNav } from "../driver/DriverBottomNav";
 
-const links = [
+const desktopLinks = [
   { to: "/driver/jobs", label: "driver.nav.jobs", icon: "▦" },
   { to: "/driver/trip", label: "driver.nav.trip", icon: "⌁" },
   { to: "/driver/documents", label: "driver.nav.docs", icon: "▤" },
@@ -80,7 +81,7 @@ export function Header() {
   }
 
   function goHome() {
-    navigate(approved ? "/driver/jobs" : "/driver/documents");
+    navigate(approved ? "/driver" : "/driver/documents");
   }
 
   return <>
@@ -94,7 +95,7 @@ export function Header() {
         </button>
         {approved && (
           <nav className="hidden md:flex items-center gap-6">
-            {links.map(link => <NavLink key={link.to} to={link.to} className={({isActive})=>`text-sm ${isActive?"text-amber font-semibold":"text-white/55 hover:text-white"}`}>{navLabel(link.label)}</NavLink>)}
+            {desktopLinks.map(link => <NavLink key={link.to} to={link.to} className={({isActive})=>`text-sm ${isActive?"text-amber font-semibold":"text-white/55 hover:text-white"}`}>{navLabel(link.label)}</NavLink>)}
           </nav>
         )}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -117,7 +118,7 @@ export function Header() {
             </div>
             <LanguageSwitcher />
           </div>
-          {approved ? links.map(link => (
+          {approved ? desktopLinks.map(link => (
             <NavLink key={link.to} to={link.to} onClick={()=>setMenuOpen(false)} className="block px-3 py-3 text-sm hover:bg-[#f5f3ed]">{navLabel(link.label)}</NavLink>
           )) : (
             <div className="mx-2 my-2 border border-amber/35 bg-amber/10 p-3">
@@ -137,10 +138,6 @@ export function Header() {
       )}
       <div className="h-1 bg-route-dash"/>
     </header>
-    {approved && (
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-asphalt/10 grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
-        {links.map(link=><NavLink key={link.to} to={link.to} className={({isActive})=>`py-3 flex flex-col items-center gap-1 text-[9px] ${isActive?"text-asphalt font-semibold":"text-steel"}`}><span className="text-lg leading-none">{link.icon}</span>{navLabel(link.label)}</NavLink>)}
-      </nav>
-    )}
+    {approved && <DriverBottomNav />}
   </>;
 }
