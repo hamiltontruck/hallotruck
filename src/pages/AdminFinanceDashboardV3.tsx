@@ -17,7 +17,7 @@ type Props = { fixture?: FinanceDashboardData };
 type KpiKey = "released" | "escrow" | "pending" | "refunds" | "failed" | "commission" | "deposits" | "wallets";
 
 const emptyData: FinanceDashboardData = {
-  payments: [], orders: [], profiles: [], deposits: [], commissionCharges: [], commissionPayments: [], confirmations: [],
+  payments: [], orders: [], profiles: [], deposits: [], commissionCharges: [], commissionPayments: [], confirmations: [], corrections: [],
 };
 
 function download(name: string, content: string, type: string) {
@@ -46,7 +46,7 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
   const load = useCallback(async () => {
     if (fixture) return;
     setLoading(true); setError("");
-    const [payments, orders, profiles, deposits, charges, commissionPayments, confirmations] = await Promise.all([
+    const [payments, orders, profiles, deposits, charges, commissionPayments, confirmations, corrections] = await Promise.all([
       supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,created_at,reviewed_at").order("created_at", { ascending: false }).limit(5000),
       supabase.from("orders").select("id,tracking_id,customer_id,customer_name,driver_id,truck_id,pickup_address,dropoff_address,vehicle_type,price_etb,status,payment_status,created_at").order("created_at", { ascending: false }).limit(5000),
       supabase.from("profiles").select("id,full_name,phone,email,role").limit(5000),
@@ -54,8 +54,9 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
       supabase.from("driver_commission_charges").select("id,driver_id,order_id,payment_id,commission_etb,status,created_at").limit(5000),
       supabase.from("driver_commission_payments").select("id,driver_id,amount_etb,status,submitted_at").limit(5000),
       supabase.from("driver_payment_confirmations").select("payment_id,order_id,driver_id,commission_etb,commission_reversed_at,commission_accrued_at").limit(5000),
+      supabase.from("financial_corrections").select("id,source_payment_id,driver_commission_reversal_etb,amount_etb,correction_type,created_at").limit(5000),
     ]);
-    const failed = [payments, orders, profiles, deposits, charges, commissionPayments, confirmations].find((result) => result.error)?.error;
+    const failed = [payments, orders, profiles, deposits, charges, commissionPayments, confirmations, corrections].find((result) => result.error)?.error;
     if (failed) { setError(failed.message); setLoading(false); return; }
     setData({
       payments: (payments.data ?? []) as FinanceDashboardData["payments"],
@@ -65,6 +66,7 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
       commissionCharges: (charges.data ?? []) as FinanceDashboardData["commissionCharges"],
       commissionPayments: (commissionPayments.data ?? []) as FinanceDashboardData["commissionPayments"],
       confirmations: (confirmations.data ?? []) as FinanceDashboardData["confirmations"],
+      corrections: (corrections.data ?? []) as FinanceDashboardData["corrections"],
     });
     setUpdatedAt(new Date()); setLoading(false);
   }, [fixture]);
@@ -77,6 +79,7 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_charges" }, () => void load())
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_payments" }, () => void load())
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_deposits" }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "financial_corrections" }, () => void load())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [fixture, load]);
@@ -155,7 +158,7 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
           <p className="mt-5 font-mono text-[9px] tracking-wide text-white/35">LIVE · updated {updatedAt.toLocaleTimeString()}</p>
         </section>
 
-        {error ? <section className="mt-5 border border-route/30 bg-white p-6" role="alert"><p className="font-display text-xl font-bold text-route">Finance data failed to load</p><p className="mt-2 break-words text-sm text-steel">{error}</p><p className="mt-2 text-xs text-steel">No KPI values are shown because one or more finance sources failed.</p><button type="button" onClick={() => void load()} className="mt-4 min-h-11 bg-asphalt px-5 py-3 text-sm font-semibold text-white">Retry finance data</button></section> : loading ? <section className="mt-5 border border-asphalt/10 bg-white p-10 text-center" aria-live="polite"><p className="font-mono text-sm text-steel">Loading all seven finance sources…</p></section> : <>
+        {error ? <section className="mt-5 border border-route/30 bg-white p-6" role="alert"><p className="font-display text-xl font-bold text-route">Finance data failed to load</p><p className="mt-2 break-words text-sm text-steel">{error}</p><p className="mt-2 text-xs text-steel">No KPI values are shown because one or more finance sources failed.</p><button type="button" onClick={() => void load()} className="mt-4 min-h-11 bg-asphalt px-5 py-3 text-sm font-semibold text-white">Retry finance data</button></section> : loading ? <section className="mt-5 border border-asphalt/10 bg-white p-10 text-center" aria-live="polite"><p className="font-mono text-sm text-steel">Loading all finance sources…</p></section> : <>
         <section className="mt-5 grid gap-3 border border-asphalt/10 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           <label className="text-[10px] font-semibold uppercase tracking-wide">Date range<select value={range} onChange={(event) => setRange(event.target.value as FinanceRange)} className="mt-2 w-full border border-asphalt/15 px-3 py-2.5 text-xs normal-case"><option value="today">Today</option><option value="7d">7 days</option><option value="30d">30 days</option><option value="90d">90 days</option><option value="all">All time</option></select></label>
           <Filter label="Provider" value={provider} setValue={setProvider} values={providers} />

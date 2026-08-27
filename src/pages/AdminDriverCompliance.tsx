@@ -100,10 +100,10 @@ function releasedForOrder(order: DriverOrderRow, payments: PaymentRow[]) {
   const released = rows
     .filter((payment) => payment.event === "released")
     .reduce((sum, payment) => sum + money(payment.amount_etb), 0);
-  const creditRefunded = rows
-    .filter((payment) => payment.event === "refunded" && payment.provider === "credit_refund")
+  const refunded = rows
+    .filter((payment) => payment.event === "refunded")
     .reduce((sum, payment) => sum + money(payment.amount_etb), 0);
-  return Math.min(money(order.price_etb), Math.max(0, released - creditRefunded));
+  return Math.min(money(order.price_etb), Math.max(0, released - refunded));
 }
 
 function statusBadge(status: string | null | undefined) {

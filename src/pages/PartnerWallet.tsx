@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getCurrentPartnerMemberships } from "../services/partner.service";
-import { loadPartnerFinance, type PartnerWalletSummary, type PartnerFreightEarning, type PartnerSettlement } from "../services/partner-finance.service";
+import { loadPartnerFinance, type FinancialCorrection, type PartnerWalletSummary, type PartnerFreightEarning, type PartnerSettlement } from "../services/partner-finance.service";
 import { supabase } from "../services/supabase.client";
 import { formatEtb } from "../utils/currency";
 
@@ -14,6 +14,7 @@ export type PartnerWalletFixture = {
   summary: PartnerWalletSummary;
   earnings: PartnerFreightEarning[];
   settlements: PartnerSettlement[];
+  corrections?: FinancialCorrection[];
 };
 
 export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
@@ -23,12 +24,13 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
   const [summary,setSummary]=useState<PartnerWalletSummary>(fixture?.summary ?? zero);
   const [earnings,setEarnings]=useState<PartnerFreightEarning[]>(fixture?.earnings ?? []);
   const [settlements,setSettlements]=useState<PartnerSettlement[]>(fixture?.settlements ?? []);
+  const [corrections,setCorrections]=useState<FinancialCorrection[]>(fixture?.corrections ?? []);
   const [loading,setLoading]=useState(!fixture);
   const [error,setError]=useState("");
 
   const load=useCallback(async()=>{
     if (fixture) {
-      setPartnerId(fixture.partnerId); setName(fixture.name); setSummary(fixture.summary); setEarnings(fixture.earnings); setSettlements(fixture.settlements); setError(""); setLoading(false);
+      setPartnerId(fixture.partnerId); setName(fixture.name); setSummary(fixture.summary); setEarnings(fixture.earnings); setSettlements(fixture.settlements); setCorrections(fixture.corrections??[]); setError(""); setLoading(false);
       return;
     }
     setLoading(true); setError("");
@@ -40,7 +42,7 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
       if(!["owner","admin"].includes(membership.member_role)) throw new Error("Only Partner owners and admins may view finance.");
       setPartnerId(membership.partner_id); setName(membership.partner_organizations?.name||"Partner wallet");
       const data=await loadPartnerFinance(membership.partner_id);
-      setSummary(data.summary||zero); setEarnings(data.earnings); setSettlements(data.settlements);
+      setSummary(data.summary||zero); setEarnings(data.earnings); setSettlements(data.settlements); setCorrections(data.corrections);
     } catch(e){ setError(e instanceof Error?e.message:"Partner wallet could not be loaded."); }
     finally{ setLoading(false); }
   },[fixture,params,partnerId]);
@@ -50,7 +52,8 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
     if(fixture||!partnerId)return;
     const channel=supabase.channel(`partner-wallet-${partnerId}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"partner_freight_earnings",filter:`partner_id=eq.${partnerId}`},()=>void load())
-      .on("postgres_changes",{event:"*",schema:"public",table:"partner_settlements",filter:`partner_id=eq.${partnerId}`},()=>void load()).subscribe();
+      .on("postgres_changes",{event:"*",schema:"public",table:"partner_settlements",filter:`partner_id=eq.${partnerId}`},()=>void load())
+      .on("postgres_changes",{event:"*",schema:"public",table:"financial_corrections",filter:`partner_id=eq.${partnerId}`},()=>void load()).subscribe();
     return()=>{void supabase.removeChannel(channel);};
   },[fixture,load,partnerId]);
 
@@ -65,8 +68,9 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
           <Card label="Gross freight" value={formatEtb(n(summary.gross_etb))}/><Card label="HALLO share" value={formatEtb(n(summary.hallo_commission_etb))}/><Card label="Partner net" value={formatEtb(n(summary.partner_net_etb))}/><Card label="Payable balance" value={formatEtb(n(summary.payable_etb))} strong/>
           <Card label="Pending settlements" value={formatEtb(n(summary.pending_settlement_etb))}/><Card label="Paid settlements" value={formatEtb(n(summary.paid_settlement_etb))}/><Card label="Fleet" value={`${summary.fleet_total} trucks`} detail={`${summary.fleet_available} available`}/><Card label="HALLO freight" value={String(summary.hallo_freight_count)} detail="Commissionable loads only"/>
         </div>
-        <section className="border border-asphalt/10 bg-white"><Header title="HALLO-generated freight" count={earnings.length}/>{earnings.length===0?<Empty text="No HALLO-generated freight has accrued yet."/>:earnings.map(row=><div key={row.id} className="grid gap-3 border-t border-asphalt/10 p-4 sm:grid-cols-[1fr_auto]"><div className="min-w-0"><p className="break-all font-mono text-xs">{row.order_id}</p><p className="mt-2 font-display text-xl font-bold">{formatEtb(n(row.partner_net_etb))} net</p><p className="mt-1 text-xs text-steel">Gross {formatEtb(n(row.gross_etb))} · HALLO {formatEtb(n(row.hallo_commission_etb))} · {row.commission_type} {row.commission_value}</p></div><span className="h-fit w-fit bg-emerald-50 px-3 py-2 text-[10px] font-semibold uppercase text-emerald-800">{row.status}</span></div>)}</section>
-        <section className="border border-asphalt/10 bg-white"><Header title="Settlements" count={settlements.length}/>{settlements.length===0?<Empty text="No partner settlements recorded yet."/>:settlements.map(row=><div key={row.id} className="grid gap-3 border-t border-asphalt/10 p-4 sm:grid-cols-[1fr_auto]"><div><p className="font-display text-xl font-bold">{formatEtb(n(row.amount_etb))}</p><p className="mt-1 break-all text-xs text-steel">{row.provider||"Provider pending"}{row.transaction_ref?` · ${row.transaction_ref}`:""}</p></div><span className="h-fit w-fit bg-amber/15 px-3 py-2 text-[10px] font-semibold uppercase text-amber-dim">{row.status}</span></div>)}</section>
+        <section className="border border-asphalt/10 bg-white"><Header title="HALLO-generated freight" count={earnings.length}/>{earnings.length===0?<Empty text="No HALLO-generated freight has accrued yet."/>:earnings.map(row=>{const related=corrections.filter(c=>c.partner_earning_id===row.id);const reversedGross=related.reduce((sum,c)=>sum+n(c.partner_gross_reversal_etb),0);const reversedCommission=related.reduce((sum,c)=>sum+n(c.partner_commission_reversal_etb),0);const effectiveNet=Math.max(0,n(row.partner_net_etb)-(reversedGross-reversedCommission));const status=reversedGross>=n(row.gross_etb)?"reversed":reversedGross>0?"partially reversed":row.status;return <div key={row.id} className="grid gap-3 border-t border-asphalt/10 p-4 sm:grid-cols-[1fr_auto]"><div className="min-w-0"><p className="break-all font-mono text-xs">{row.order_id}</p><p className="mt-2 font-display text-xl font-bold">{formatEtb(effectiveNet)} net</p><p className="mt-1 text-xs text-steel">Original gross {formatEtb(n(row.gross_etb))} · HALLO {formatEtb(Math.max(0,n(row.hallo_commission_etb)-reversedCommission))} · {row.commission_type} {row.commission_value}</p>{reversedGross>0&&<p className="mt-2 text-xs font-semibold text-route">Corrected gross: −{formatEtb(reversedGross)} · original row preserved</p>}</div><span className={`h-fit w-fit px-3 py-2 text-[10px] font-semibold uppercase ${reversedGross>0?"bg-route/10 text-route":"bg-emerald-50 text-emerald-800"}`}>{status}</span></div>;})}</section>
+        <section className="border border-asphalt/10 bg-white"><Header title="Settlements" count={settlements.length}/>{settlements.length===0?<Empty text="No partner settlements recorded yet."/>:settlements.map(row=>{const reversed=corrections.some(c=>c.partner_settlement_id===row.id);return <div key={row.id} className="grid gap-3 border-t border-asphalt/10 p-4 sm:grid-cols-[1fr_auto]"><div><p className="font-display text-xl font-bold">{formatEtb(n(row.amount_etb))}</p><p className="mt-1 break-all text-xs text-steel">{row.provider||"Provider pending"}{row.transaction_ref?` · ${row.transaction_ref}`:""}</p>{reversed&&<p className="mt-2 text-xs font-semibold text-route">Reversal recorded · original settlement preserved</p>}</div><span className={`h-fit w-fit px-3 py-2 text-[10px] font-semibold uppercase ${reversed?"bg-route/10 text-route":"bg-amber/15 text-amber-dim"}`}>{reversed?"reversed":row.status}</span></div>;})}</section>
+        <section className="border border-asphalt/10 bg-white"><Header title="Financial corrections" count={corrections.length}/>{corrections.length===0?<Empty text="No refunds or financial reversals recorded."/>:corrections.map(row=><div key={row.id} className="border-t border-asphalt/10 p-4"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><p className="font-display text-lg font-bold text-route">−{formatEtb(n(row.amount_etb))}</p><p className="mt-1 break-words text-xs font-semibold capitalize">{row.correction_type.replaceAll("_"," ")}</p><p className="mt-2 break-words text-xs text-steel">{row.reason}</p></div><time className="shrink-0 text-[10px] text-steel" dateTime={row.created_at}>{new Date(row.created_at).toLocaleString()}</time></div></div>)}</section>
       </>}
     </section>
   </main>;

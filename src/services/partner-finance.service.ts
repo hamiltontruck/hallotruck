@@ -1,4 +1,7 @@
 import { supabase } from "./supabase.client";
+import { reversePartnerSettlement, type FinancialCorrection } from "./financial-correction.service";
+
+export type { FinancialCorrection } from "./financial-correction.service";
 
 export type PartnerWalletSummary = {
   gross_etb: number | string;
@@ -58,14 +61,15 @@ export type PartnerSettlement = {
 };
 
 export async function loadPartnerFinance(partnerId: string) {
-  const [summary, rules, fleet, earnings, settlements] = await Promise.all([
+  const [summary, rules, fleet, earnings, settlements, corrections] = await Promise.all([
     supabase.rpc("partner_wallet_summary", { p_partner_id: partnerId }),
     supabase.from("partner_commission_rules").select("*").eq("partner_id", partnerId).order("effective_from", { ascending: false }),
     supabase.from("partner_fleet_vehicles").select("*").eq("partner_id", partnerId).order("plate_number"),
     supabase.from("partner_freight_earnings").select("*").eq("partner_id", partnerId).order("accrued_at", { ascending: false }).limit(500),
     supabase.from("partner_settlements").select("*").eq("partner_id", partnerId).order("created_at", { ascending: false }).limit(500),
+    supabase.from("financial_corrections").select("*").eq("partner_id", partnerId).order("created_at", { ascending: false }).limit(500),
   ]);
-  const failure = [summary, rules, fleet, earnings, settlements].find((result) => result.error)?.error;
+  const failure = [summary, rules, fleet, earnings, settlements, corrections].find((result) => result.error)?.error;
   if (failure) throw failure;
   return {
     summary: (summary.data?.[0] ?? null) as PartnerWalletSummary | null,
@@ -73,6 +77,7 @@ export async function loadPartnerFinance(partnerId: string) {
     fleet: (fleet.data ?? []) as PartnerFleetVehicle[],
     earnings: (earnings.data ?? []) as PartnerFreightEarning[],
     settlements: (settlements.data ?? []) as PartnerSettlement[],
+    corrections: (corrections.data ?? []) as FinancialCorrection[],
   };
 }
 
@@ -107,4 +112,8 @@ export async function createPartnerSettlement(partnerId: string, amountEtb: numb
 export async function markPartnerSettlementPaid(settlementId: string) {
   const { error } = await supabase.rpc("admin_mark_partner_settlement_paid", { p_settlement_id: settlementId });
   if (error) throw error;
+}
+
+export async function reversePaidPartnerSettlement(settlementId: string, reason: string) {
+  await reversePartnerSettlement(settlementId, reason);
 }

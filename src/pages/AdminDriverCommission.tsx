@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatEtb } from "../utils/currency";
 import { supabase } from "../services/supabase.client";
+import type { FinancialCorrection } from "../services/financial-correction.service";
 import {
   AdminCommissionPayment,
   getAdminCommissionPayments,
@@ -9,7 +10,7 @@ import {
   reviewCommissionPayment,
 } from "../services/driver-commission.service";
 
-type PlatformCommissionStatus = "accrued" | "released" | "reversed";
+type PlatformCommissionStatus = "accrued" | "released" | "partially_reversed" | "reversed";
 
 interface PlatformCommissionAccrual {
   payment_id: string;
@@ -38,6 +39,7 @@ function money(value: unknown) {
 export function AdminDriverCommission() {
   const [rows, setRows] = useState<AdminCommissionPayment[]>([]);
   const [platformRows, setPlatformRows] = useState<PlatformCommissionAccrual[]>([]);
+  const [corrections, setCorrections] = useState<FinancialCorrection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
@@ -45,11 +47,13 @@ export function AdminDriverCommission() {
 
   async function load() {
     try {
-      const [settlements, platformResult] = await Promise.all([
+      const [settlements, platformResult, correctionsResult] = await Promise.all([
         getAdminCommissionPayments(),
         supabase.rpc("admin_platform_commission_accruals"),
+        supabase.from("financial_corrections").select("*").gt("driver_commission_reversal_etb", 0).order("created_at", { ascending: false }).limit(500),
       ]);
       if (platformResult.error) throw new Error(platformResult.error.message);
+      if (correctionsResult.error) throw new Error(correctionsResult.error.message);
       setRows(settlements);
       setPlatformRows(((platformResult.data ?? []) as PlatformCommissionAccrual[]).map((row) => ({
         ...row,
@@ -58,6 +62,7 @@ export function AdminDriverCommission() {
         commission_etb: money(row.commission_etb),
         driver_net_etb: money(row.driver_net_etb),
       })));
+      setCorrections((correctionsResult.data ?? []) as FinancialCorrection[]);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load commission control.");
@@ -75,7 +80,7 @@ export function AdminDriverCommission() {
   const platformCommissionTotal = activePlatformRows.reduce((sum, row) => sum + row.commission_etb, 0);
   const driverNetHeld = activePlatformRows.filter((row) => !row.released_at).reduce((sum, row) => sum + row.driver_net_etb, 0);
   const driverNetReleased = activePlatformRows.filter((row) => row.released_at).reduce((sum, row) => sum + row.driver_net_etb, 0);
-  const reversedCommission = platformRows.filter((row) => row.commission_status === "reversed").reduce((sum, row) => sum + row.commission_etb, 0);
+  const reversedCommission = corrections.reduce((sum, row) => sum + money(row.driver_commission_reversal_etb), 0);
 
   async function approve(row: AdminCommissionPayment) {
     if (!window.confirm(`Confirm that ${formatEtb(row.amount_etb)} is visible in the HALLO Smart ${row.provider} account and approve this settlement?`)) return;
@@ -140,6 +145,7 @@ export function AdminDriverCommission() {
               <div className="text-xs font-semibold text-steel lg:text-right">
                 {row.commission_status === "accrued" && <p className="text-amber-dim">Commission earned · driver net held</p>}
                 {row.commission_status === "released" && <p className="text-emerald-800">Commission earned · driver net released</p>}
+                {row.commission_status === "partially_reversed" && <p className="text-route">Partially refunded · balances recalculated</p>}
                 {row.commission_status === "reversed" && <p className="text-route">Refunded · commission reversed</p>}
               </div>
             </div>
@@ -192,8 +198,8 @@ function PlatformMetric({ label, value, alert = false }: { label: string; value:
 }
 
 function PlatformStatus({ status }: { status: PlatformCommissionStatus }) {
-  const cls = status === "released" ? "bg-emerald-50 text-emerald-800" : status === "reversed" ? "bg-route/10 text-route" : "bg-amber/10 text-amber-dim";
-  return <span className={`px-2.5 py-1.5 text-[10px] font-semibold uppercase ${cls}`}>{status}</span>;
+  const cls = status === "released" ? "bg-emerald-50 text-emerald-800" : status.includes("reversed") ? "bg-route/10 text-route" : "bg-amber/10 text-amber-dim";
+  return <span className={`px-2.5 py-1.5 text-[10px] font-semibold uppercase ${cls}`}>{status.replace("_", " ")}</span>;
 }
 
 function Metric({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) {
