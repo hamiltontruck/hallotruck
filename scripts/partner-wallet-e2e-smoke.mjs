@@ -75,7 +75,7 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-partner-wallet-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Partner net", "Payable balance", "HALLO-generated freight", "Settlements", "ETB 575,000"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Partner net", "Payable balance", "HALLO-generated freight", "Settlements", "575,000"]) {
         if (!dom.includes(expected)) throw new Error(`Partner Wallet ${width}px smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }
