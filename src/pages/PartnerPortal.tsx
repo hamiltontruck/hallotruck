@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
+import { PartnerFleetPanel } from "../components/partner/PartnerFleetPanel";
 import {
   createPartnerProject,
   getCurrentPartnerMemberships,
@@ -17,7 +18,7 @@ import {
   type PartnerProject,
 } from "../services/partner.service";
 
-type PartnerTab = "overview" | "projects" | "payments" | "documents" | "activity" | "chat";
+type PartnerTab = "overview" | "projects" | "payments" | "fleet" | "documents" | "activity" | "chat";
 
 type Workspace = {
   projects: PartnerProject[];
@@ -30,7 +31,7 @@ type Workspace = {
 };
 
 const emptyWorkspace: Workspace = { projects: [], payments: [], documents: [], activity: [], messages: [], folders: [], members: [] };
-const tabs: PartnerTab[] = ["overview", "projects", "payments", "documents", "activity", "chat"];
+const tabs: PartnerTab[] = ["overview", "projects", "payments", "fleet", "documents", "activity", "chat"];
 
 function money(value: number) {
   return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -99,6 +100,8 @@ export function PartnerPortal() {
   const activeProjects = workspace.projects.filter((project) => project.status === "active").length;
   const pendingDocuments = workspace.documents.filter((document) => document.status === "pending").length;
   const canManage = ["owner", "admin", "editor"].includes(currentMembership?.member_role ?? "");
+  const canManageFleet = ["owner", "admin"].includes(currentMembership?.member_role ?? "");
+  const visibleTabs = canManageFleet ? tabs : tabs.filter((item) => item !== "fleet");
 
   const projectsById = useMemo(() => new Map(workspace.projects.map((project) => [project.id, project])), [workspace.projects]);
 
@@ -185,7 +188,7 @@ export function PartnerPortal() {
         {memberships.length > 0 && (
           <>
             <nav className="mb-5 flex max-w-full gap-2 overflow-x-auto pb-2" aria-label="Partner workspace sections">
-              {tabs.map((item) => <button key={item} type="button" onClick={() => setTab(item)} className={`whitespace-nowrap border px-4 py-2 text-xs font-semibold capitalize ${tab === item ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white text-steel"}`}>{item}</button>)}
+              {visibleTabs.map((item) => <button key={item} type="button" onClick={() => setTab(item)} className={`min-h-11 whitespace-nowrap border px-4 py-2 text-xs font-semibold capitalize ${tab === item ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white text-steel"}`}>{item}</button>)}
             </nav>
 
             {loading ? <div className="border border-asphalt/10 bg-white p-10 text-center font-mono text-sm text-steel">Loading partner data…</div> : (
@@ -231,6 +234,8 @@ export function PartnerPortal() {
                 )}
 
                 {tab === "payments" && <Section title="Partner payment records" count={workspace.payments.length} empty="No partner payment records yet.">{workspace.payments.map((payment) => <div key={payment.id} className="grid gap-3 border-b border-asphalt/10 p-4 last:border-b-0 sm:grid-cols-[1fr_auto] sm:items-center"><div className="min-w-0"><p className="font-display text-xl font-bold">ETB {money(Number(payment.amount_etb || 0))}</p><p className="mt-1 break-all text-xs text-steel">{payment.provider ?? "Provider not recorded"}{payment.transaction_ref ? ` · ${payment.transaction_ref}` : ""}</p><p className="mt-1 text-xs text-steel">{payment.project_id ? projectsById.get(payment.project_id)?.name ?? "Project" : "Organization payment"}</p></div><span className="w-fit bg-amber/15 px-3 py-2 text-[10px] font-semibold uppercase text-amber-dim">{payment.status}</span></div>)}</Section>}
+
+                {tab === "fleet" && <PartnerFleetPanel partnerId={partnerId} canManage={canManageFleet} />}
 
                 {tab === "documents" && (
                   <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
