@@ -107,10 +107,10 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
     const releasedGross = rows
       .filter((payment) => payment.event === "released")
       .reduce((sum, payment) => sum + amount(payment.amount_etb), 0);
-    const creditRefunded = rows
-      .filter((payment) => payment.event === "refunded" && payment.provider === "credit_refund")
+    const refunded = rows
+      .filter((payment) => payment.event === "refunded")
       .reduce((sum, payment) => sum + amount(payment.amount_etb), 0);
-    const netReleased = Math.max(0, releasedGross - creditRefunded);
+    const netReleased = Math.max(0, releasedGross - refunded);
     const releasedToInvoice = Math.min(invoiceEtb, netReleased);
     const heldEtb = rows
       .filter((payment) => payment.event === "held_escrow")

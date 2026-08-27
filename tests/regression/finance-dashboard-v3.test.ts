@@ -27,10 +27,21 @@ const data: FinanceDashboardData = {
     { payment_id: "p6", order_id: "o6", driver_id: "driver-1", commission_etb: 535, commission_reversed_at: null, commission_accrued_at: "2026-08-25T10:00:00Z" },
     { payment_id: "p7", order_id: "o7", driver_id: "driver-1", commission_etb: 900, commission_reversed_at: "2026-08-26T09:00:00Z", commission_accrued_at: "2026-08-25T10:00:00Z" },
   ],
+  corrections: [],
 };
 
 test("canonical commission reconciliation deduplicates payment ledgers and excludes reversals", () => {
   assert.equal(canonicalCommissionAccrued(data), 2535);
+});
+
+test("immutable partial refunds reduce canonical commission without double counting", () => {
+  assert.equal(canonicalCommissionAccrued({
+    ...data,
+    corrections: [
+      { id: "fc1", source_payment_id: "p1", driver_commission_reversal_etb: 20, amount_etb: 1000, correction_type: "partial_refund", created_at: now.toISOString() },
+      { id: "fc2", source_payment_id: "p1", driver_commission_reversal_etb: 30, amount_etb: 1500, correction_type: "partial_refund", created_at: now.toISOString() },
+    ],
+  }), 2485);
 });
 
 test("finance summary reconciles revenue, escrow, refunds, commission and deposits", () => {

@@ -131,15 +131,9 @@ export async function transitionOrder(orderId: string, status: "accepted" | "in_
   if (error) fail(error.message);
 }
 
-export async function recordPayment(input: { orderId:string; provider:string; providerRef?:string; amountEtb:number; event:"initiated"|"held_escrow"|"released"|"refunded"|"failed" }) {
+export async function recordPayment(input: { orderId:string; provider:string; providerRef?:string; amountEtb:number; event:"initiated"|"held_escrow"|"released" }) {
   const { error } = await supabase.rpc("admin_record_payment", { p_order_id:input.orderId, p_provider:input.provider, p_provider_ref:input.providerRef || null, p_amount_etb:input.amountEtb, p_event:input.event });
   if (error) fail(error.message);
-}
-
-export async function refundOverpaymentCredit(orderId: string): Promise<number> {
-  const { data, error } = await supabase.rpc("admin_refund_order_credit", { p_order_id: orderId });
-  if (error) fail(error.message);
-  return Number(data ?? 0);
 }
 
 export async function submitDeliveryProof(input: { orderId:string; recipientName:string; deliveryNote:string; photo:File; signature:Blob }) {

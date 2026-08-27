@@ -68,6 +68,15 @@ export type FinanceConfirmation = {
   commission_accrued_at: string;
 };
 
+export type FinanceCorrection = {
+  id: string;
+  source_payment_id: string | null;
+  driver_commission_reversal_etb: number | string;
+  amount_etb: number | string;
+  correction_type: string;
+  created_at: string;
+};
+
 export type FinanceDashboardData = {
   payments: FinancePayment[];
   orders: FinanceOrder[];
@@ -76,6 +85,7 @@ export type FinanceDashboardData = {
   commissionCharges: FinanceCommissionCharge[];
   commissionPayments: FinanceCommissionPayment[];
   confirmations: FinanceConfirmation[];
+  corrections: FinanceCorrection[];
 };
 
 export type FinanceRange = "today" | "7d" | "30d" | "90d" | "all";
@@ -107,10 +117,17 @@ export function canonicalCommissionAccrued(data: FinanceDashboardData) {
     byPayment.set(charge.payment_id, numberOf(charge.commission_etb));
   }
   for (const confirmation of data.confirmations) {
-    if (confirmation.commission_reversed_at) continue;
-    if (!byPayment.has(confirmation.payment_id)) {
-      byPayment.set(confirmation.payment_id, numberOf(confirmation.commission_etb));
-    }
+    if (confirmation.commission_reversed_at) byPayment.set(confirmation.payment_id, 0);
+    else byPayment.set(confirmation.payment_id, numberOf(confirmation.commission_etb));
+  }
+  for (const correction of data.corrections) {
+    if (!correction.source_payment_id) continue;
+    const original = byPayment.get(correction.source_payment_id);
+    if (original === undefined) continue;
+    byPayment.set(
+      correction.source_payment_id,
+      Math.max(original - numberOf(correction.driver_commission_reversal_etb), 0),
+    );
   }
   return [...byPayment.values()].reduce((sum, amount) => sum + amount, 0);
 }

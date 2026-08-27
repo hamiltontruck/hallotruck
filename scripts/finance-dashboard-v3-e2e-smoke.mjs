@@ -65,6 +65,7 @@ const fixture = {
  commissionCharges:[{id:'cc1',driver_id:'d1',order_id:'o1',payment_id:'p1',commission_etb:2500,status:'active',created_at:now}],
  commissionPayments:[],
  confirmations:[{payment_id:'p1',order_id:'o1',driver_id:'d1',commission_etb:2500,commission_reversed_at:null,commission_accrued_at:now}],
+ corrections:[],
 };
 createRoot(document.getElementById('root')).render(React.createElement(AdminFinanceDashboardV3,{fixture}));
 await new Promise(r=>setTimeout(r,300));
