@@ -136,6 +136,7 @@ npm run lint
 npm run test:regression
 npm run build
 npm run test:e2e-smoke
+npm audit --audit-level=moderate
 ```
 
 Migration validation must run inside `BEGIN ... ROLLBACK` against the current production

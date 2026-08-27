@@ -5,7 +5,8 @@ import { spawnSync } from "node:child_process";
 const root = process.cwd();
 const outputDirectory = path.join(root, ".test-dist");
 const esbuildBinary = path.join(root,"node_modules",".bin",process.platform === "win32" ? "esbuild.cmd" : "esbuild");
-function run(command,args){const result=spawnSync(command,args,{cwd:root,stdio:"inherit",shell:false});if(result.error)throw result.error;if(result.status!==0)process.exitCode=result.status??1;return result.status===0;}
+const testEnvironment = { ...process.env, TZ: "UTC" };
+function run(command,args){const result=spawnSync(command,args,{cwd:root,env:testEnvironment,stdio:"inherit",shell:false});if(result.error)throw result.error;if(result.status!==0)process.exitCode=result.status??1;return result.status===0;}
 await rm(outputDirectory,{recursive:true,force:true});await mkdir(outputDirectory,{recursive:true});
 try{
  const suites=[
