@@ -84,7 +84,7 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-partner-settlement-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Create pending settlement", "Start review", "Approve", "Reject", "Record payment", "Reverse settlement", "partially paid", "Outstanding ETB 150,000"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Create pending settlement", "Start review", "Approve", "Reject", "Record payment", "Reverse settlement", "partially paid", "Outstanding 150,000 ETB"]) {
         if (!dom.includes(expected)) throw new Error(`Partner settlement ${width}px smoke missing: ${expected}`);
       }
     } finally {
