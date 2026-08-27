@@ -36,7 +36,7 @@
 }
 
 .customer-map-home .customer-dashboard-nav__tabs {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .customer-map-home__stage {

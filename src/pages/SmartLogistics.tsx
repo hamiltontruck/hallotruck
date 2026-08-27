@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { AdminLiveTripsPanel } from "../components/admin/AdminLiveTripsPanel";
 import { AdminCreateOrderModal } from "../components/admin/AdminCreateOrderModal";
+import { AdminMobileBottomNav } from "../components/admin/AdminMobileBottomNav";
 import { AdminOrder, Customer, DashboardMetrics, DeliveryProof, Driver, Payment, Truck, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, openDeliveryProof, openPaymentReceipt, printInvoice, recordPayment, refundOverpaymentCredit, submitDeliveryProof, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
 type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
@@ -108,7 +109,7 @@ export function SmartLogistics() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
         <header className="h-20 bg-white border-b border-asphalt/10 px-3 sm:px-8 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
             <button className="lg:hidden border border-asphalt/15 p-2" onClick={() => setMenuOpen(true)}><Icon name="menu" /></button>
@@ -126,6 +127,7 @@ export function SmartLogistics() {
       </main>
       {modal === "order" ? <AdminCreateOrderModal onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} /> : modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
       {managedOrder && <ManageOrderModal order={managedOrder} trucks={trucks} drivers={drivers} payments={payments} proof={deliveryProofs.find(p=>p.order_id===managedOrder.id)} onClose={() => setManagedOrder(null)} onSaved={async () => { await load(); setManagedOrder(null); }} />}
+      <AdminMobileBottomNav />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
+import { AdminMobileBottomNav } from "./AdminMobileBottomNav";
 
 const links = [
   { to: "/admin", label: "Overview", icon: "▦" },
@@ -15,6 +16,8 @@ const links = [
   { to: "/admin/fleet-maintenance", label: "Fleet maintenance", icon: "MNT" },
   { to: "/admin/driver-commission", label: "Commission control", icon: "%" },
   { to: "/admin/quote-pricing", label: "Quote pricing", icon: "QTE" },
+  { to: "/admin/manual-driver-documents", label: "Manual documents", icon: "DOC" },
+  { to: "/admin/more", label: "More tools", icon: "•••" },
 ];
 
 export function AdminToolShell({ children }: { children: ReactNode }) {
@@ -27,6 +30,7 @@ export function AdminToolShell({ children }: { children: ReactNode }) {
       <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-7"><p className="mb-4 px-3 font-mono text-[10px] tracking-[.2em] text-white/35">LEADERSHIP</p>{links.map(link=>{const active=location.pathname===link.to;return <Link key={link.to} to={link.to} onClick={()=>setOpen(false)} className={`flex items-center gap-3 px-3 py-3 text-sm transition ${active?"bg-amber font-semibold text-asphalt":"text-white/60 hover:bg-white/5 hover:text-white"}`}><span className="grid h-6 w-7 place-items-center font-mono text-[10px] font-bold">{link.icon}</span>{link.label}</Link>})}</nav>
       <div className="border-t border-white/10 p-4"><div className="flex items-center gap-3 px-2 py-3"><span className="grid h-9 w-9 place-items-center bg-amber font-display font-bold text-asphalt">HT</span><div><p className="text-sm font-medium">Hamilton Truck</p><button type="button" onClick={()=>void supabase.auth.signOut()} className="mt-1 text-[11px] text-white/40 hover:text-amber">Sign out</button></div></div></div>
     </aside>
-    <div className="min-w-0 flex-1"><header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-asphalt/10 bg-white px-4 lg:hidden"><button type="button" onClick={()=>setOpen(true)} className="border border-asphalt/15 px-3 py-2 text-xl" aria-label="Open Admin menu">☰</button><div className="text-right"><p className="font-display text-sm font-semibold">Admin / CEO</p><p className="font-mono text-[9px] tracking-widest text-steel">LEADERSHIP CONTROL</p></div></header>{children}</div>
+    <div className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"><header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-asphalt/10 bg-white px-4 lg:hidden"><button type="button" onClick={()=>setOpen(true)} className="border border-asphalt/15 px-3 py-2 text-xl" aria-label="Open Admin menu">☰</button><div className="text-right"><p className="font-display text-sm font-semibold">Admin / CEO</p><p className="font-mono text-[9px] tracking-widest text-steel">LEADERSHIP CONTROL</p></div></header>{children}</div>
+    <AdminMobileBottomNav />
   </div>;
 }
