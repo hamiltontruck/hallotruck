@@ -1,5 +1,9 @@
 # Hallo Truck — Web API (Supabase Edge Functions)
 
+Production operations documentation:
+
+- [Fleet Management Enterprise](docs/fleet-management-enterprise.md)
+
 ## Endpoints
 
 | Function | Method | Path | Purpose |

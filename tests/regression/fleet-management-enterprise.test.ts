@@ -11,6 +11,7 @@ const service = readFileSync(path.join(root, "src/services/fleet-maintenance.ser
 const admin = readFileSync(path.join(root, "src/pages/AdminFleetMaintenance.tsx"), "utf8");
 const partner = readFileSync(path.join(root, "src/components/partner/PartnerFleetPanel.tsx"), "utf8");
 const portal = readFileSync(path.join(root, "src/pages/PartnerPortal.tsx"), "utf8");
+const documentation = readFileSync(path.join(root, "docs/fleet-management-enterprise.md"), "utf8");
 
 const vehicle: FleetVehicle = {
   vehicle_id: "truck-1", partner_vehicle_id: null, partner_id: null,
@@ -112,4 +113,17 @@ test("Admin and Partner fleet UIs use secure services and mobile-safe cards", ()
   assert.match(partner, /canManage/);
   assert.match(portal, /"fleet"/);
   assert.match(portal, /canManageFleet/);
+});
+
+test("fleet runbook documents deployment order, role checks and non-destructive rollback", () => {
+  assert.match(documentation, /## Authorization matrix/);
+  assert.match(documentation, /## Deployment order/);
+  assert.match(documentation, /## Production smoke checklist/);
+  assert.match(documentation, /### CEO and Admin/);
+  assert.match(documentation, /### Partner Owner\/Admin/);
+  assert.match(documentation, /### Driver/);
+  assert.match(documentation, /320px, 360px, 390px, and 412px/);
+  assert.match(documentation, /## Rollback plan/);
+  assert.match(documentation, /Do not delete `fleet_audit_events`/);
+  assert.match(documentation, /Never use production fleet or financial history as disposable smoke-test data/);
 });
