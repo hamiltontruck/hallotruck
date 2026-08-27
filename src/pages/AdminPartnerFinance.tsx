@@ -1,32 +1,176 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { AdminPartnerSettlementWorkflow } from "../components/partner/AdminPartnerSettlementWorkflow";
+import { PartnerStatement } from "../components/partner/PartnerStatement";
+import {
+  addPartnerVehicle,
+  createCommissionRule,
+  loadPartnerFinance,
+  recordPartnerFreight,
+  type FinancialCorrection,
+  type PartnerFinanceProject,
+  type PartnerFleetVehicle,
+  type PartnerFreightEarning,
+  type PartnerSettlement,
+  type PartnerSettlementEvent,
+  type PartnerSettlementPayment,
+  type PartnerWalletSummary,
+} from "../services/partner-finance.service";
 import { supabase } from "../services/supabase.client";
 import { formatEtb } from "../utils/currency";
-import { addPartnerVehicle, createCommissionRule, createPartnerSettlement, loadPartnerFinance, markPartnerSettlementPaid, recordPartnerFreight, reversePaidPartnerSettlement, type FinancialCorrection, type PartnerWalletSummary, type PartnerFleetVehicle, type PartnerSettlement } from "../services/partner-finance.service";
 
-type Org={id:string;name:string;code:string;status:string};
-const zero:PartnerWalletSummary={gross_etb:0,hallo_commission_etb:0,partner_net_etb:0,pending_settlement_etb:0,paid_settlement_etb:0,payable_etb:0,fleet_total:0,fleet_available:0,hallo_freight_count:0};
-const n=(v:number|string)=>Number(v||0);
+type Org = { id: string; name: string; code: string; status: string };
+const zero: PartnerWalletSummary = { gross_etb:0,hallo_commission_etb:0,partner_net_etb:0,pending_settlement_etb:0,paid_settlement_etb:0,payable_etb:0,fleet_total:0,fleet_available:0,hallo_freight_count:0 };
+const numeric = (value: number | string) => Number(value || 0);
 
-export function AdminPartnerFinance(){
- const [orgs,setOrgs]=useState<Org[]>([]),[partnerId,setPartnerId]=useState(""),[summary,setSummary]=useState<PartnerWalletSummary>(zero),[fleet,setFleet]=useState<PartnerFleetVehicle[]>([]),[settlements,setSettlements]=useState<PartnerSettlement[]>([]),[corrections,setCorrections]=useState<FinancialCorrection[]>([]),[reversingId,setReversingId]=useState<string|null>(null),[loading,setLoading]=useState(true),[loadFailed,setLoadFailed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
- const load=useCallback(async(id?:string)=>{setLoading(true);setLoadFailed(false);setError("");try{const r=await supabase.from("partner_organizations").select("id,name,code,status").order("name");if(r.error)throw r.error;const next=(r.data??[]) as Org[];setOrgs(next);const chosen=id||partnerId||next[0]?.id||"";setPartnerId(chosen);if(chosen){const data=await loadPartnerFinance(chosen);setSummary(data.summary||zero);setFleet(data.fleet);setSettlements(data.settlements);setCorrections(data.corrections);}else{setSummary(zero);setFleet([]);setSettlements([]);setCorrections([]);}}catch(e){setLoadFailed(true);setError(e instanceof Error?e.message:"Partner finance could not be loaded.");}finally{setLoading(false);}},[partnerId]);
- useEffect(()=>{void load();},[]); // eslint-disable-line react-hooks/exhaustive-deps
- async function action(work:()=>Promise<void>,message:string){setBusy(true);setError("");setSuccess("");try{await work();setSuccess(message);await load(partnerId);return true;}catch(e){setError(e instanceof Error?e.message:"Action failed.");return false;}finally{setBusy(false);}}
- async function rule(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await action(()=>createCommissionRule(partnerId,String(f.get("type")) as "percentage"|"fixed",Number(f.get("value"))),"Commission rule activated.");}
- async function vehicle(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await action(()=>addPartnerVehicle(partnerId,String(f.get("plate")),String(f.get("vehicleType")),Number(f.get("capacity"))||null),"Fleet vehicle added.");e.currentTarget.reset();}
- async function freight(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await action(()=>recordPartnerFreight(partnerId,String(f.get("orderId")).trim(),String(f.get("vehicleId"))||null),"HALLO-generated freight accrued.");e.currentTarget.reset();}
- async function settlement(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await action(()=>createPartnerSettlement(partnerId,Number(f.get("amount")),String(f.get("provider")),String(f.get("reference")),String(f.get("note"))),"Settlement created.");e.currentTarget.reset();}
- async function reverseSettlement(e:FormEvent<HTMLFormElement>,settlementId:string){e.preventDefault();const f=new FormData(e.currentTarget);const succeeded=await action(()=>reversePaidPartnerSettlement(settlementId,String(f.get("reason"))),"Paid settlement reversal recorded.");if(succeeded)setReversingId(null);}
- return <main className="min-h-screen overflow-x-hidden bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10"><div className="mx-auto max-w-7xl space-y-5">
-  <section className="bg-asphalt p-6 text-white sm:p-8"><p className="font-mono text-[10px] tracking-[.22em] text-amber">PARTNER FINANCE CONTROL</p><div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><h1 className="font-display text-3xl font-bold sm:text-4xl">Partner wallet & fleet commission</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">Commission applies only to freight generated and assigned by HALLO. Manage 500+ partner trucks without charging the partner's own external freight.</p></div><select value={partnerId} onChange={e=>void load(e.target.value)} className="min-w-0 border border-white/20 bg-white px-3 py-3 text-sm text-asphalt"><option value="">Choose organization</option>{orgs.map(o=><option key={o.id} value={o.id}>{o.name} · {o.code}</option>)}</select></div></section>
-  {error&&<p className="border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}{success&&<p className="border border-emerald-600/30 bg-emerald-50 p-4 text-sm text-emerald-800">{success}</p>}
-  {loadFailed?<section className="border border-route/30 bg-white p-6"><p className="text-sm text-steel">No Partner finance totals are shown because a required source failed.</p><button type="button" onClick={()=>void load(partnerId)} className="mt-4 min-h-11 bg-asphalt px-5 py-3 text-sm font-semibold text-white">Retry Partner finance</button></section>:!partnerId?<p className="border border-asphalt/10 bg-white p-10 text-center text-steel">Create or select a Partner organization first.</p>:loading?<p className="border border-asphalt/10 bg-white p-10 text-center text-steel">Loading partner finance…</p>:<>
-   <section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Card label="Gross HALLO freight" value={formatEtb(n(summary.gross_etb))}/><Card label="HALLO share" value={formatEtb(n(summary.hallo_commission_etb))}/><Card label="Partner net" value={formatEtb(n(summary.partner_net_etb))}/><Card label="Payable" value={formatEtb(n(summary.payable_etb))} strong/><Card label="Pending settlement" value={formatEtb(n(summary.pending_settlement_etb))}/><Card label="Paid settlement" value={formatEtb(n(summary.paid_settlement_etb))}/><Card label="Fleet total" value={String(summary.fleet_total)} detail={`${summary.fleet_available} available`}/><Card label="HALLO loads" value={String(summary.hallo_freight_count)} detail="Commissionable only"/></section>
-   <section className="grid gap-5 xl:grid-cols-2"><Panel title="Commission rule"><form onSubmit={rule} className="grid gap-3 sm:grid-cols-3"><select name="type" className="border p-3"><option value="percentage">Percentage</option><option value="fixed">Fixed ETB</option></select><input name="value" required min="0" step="0.01" type="number" placeholder="1 or 500" className="border p-3"/><button disabled={busy} className="bg-asphalt p-3 font-semibold text-white">Activate rule</button></form></Panel><Panel title="Add fleet vehicle"><form onSubmit={vehicle} className="grid gap-3 sm:grid-cols-4"><input name="plate" required placeholder="Plate" className="border p-3"/><input name="vehicleType" required placeholder="Truck type" className="border p-3"/><input name="capacity" type="number" min="0" step="0.1" placeholder="Tons" className="border p-3"/><button disabled={busy} className="bg-asphalt p-3 font-semibold text-white">Add truck</button></form></Panel></section>
-   <section className="grid gap-5 xl:grid-cols-2"><Panel title="Accrue HALLO-generated freight"><form onSubmit={freight} className="space-y-3"><input name="orderId" required placeholder="Released order UUID" className="w-full border p-3"/><select name="vehicleId" className="w-full border p-3"><option value="">No partner truck selected</option>{fleet.map(v=><option key={v.id} value={v.id}>{v.plate_number} · {v.vehicle_type}</option>)}</select><button disabled={busy} className="w-full bg-asphalt p-3 font-semibold text-white">Record partner earning</button></form></Panel><Panel title="Create settlement"><form onSubmit={settlement} className="grid gap-3 sm:grid-cols-2"><input name="amount" required type="number" min="0.01" step="0.01" placeholder="Amount ETB" className="border p-3"/><input name="provider" placeholder="Bank / Telebirr" className="border p-3"/><input name="reference" placeholder="Transaction reference" className="border p-3"/><input name="note" placeholder="Note" className="border p-3"/><button disabled={busy} className="bg-asphalt p-3 font-semibold text-white sm:col-span-2">Create pending settlement</button></form></Panel></section>
-   <section className="border border-asphalt/10 bg-white"><div className="flex items-center justify-between p-4"><h2 className="font-display text-xl font-bold">Settlement queue</h2><span className="font-mono text-xs text-steel">{settlements.length}</span></div>{settlements.length===0?<p className="border-t p-8 text-center text-sm text-steel">No settlements yet.</p>:settlements.map(s=>{const reversed=corrections.some(c=>c.partner_settlement_id===s.id);return <div key={s.id} className="border-t p-4"><div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center"><div><p className="font-display text-xl font-bold">{formatEtb(n(s.amount_etb))}</p><p className="mt-1 break-all text-xs text-steel">{s.provider||"Provider pending"}{s.transaction_ref?` · ${s.transaction_ref}`:""}</p></div><div className="flex flex-wrap gap-2">{s.status==="pending"?<button disabled={busy} onClick={()=>void action(()=>markPartnerSettlementPaid(s.id),"Settlement marked paid.")} className="min-h-11 bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">Mark paid</button>:<span className={`w-fit px-3 py-2 text-[10px] font-semibold uppercase ${reversed?"bg-route/10 text-route":"bg-emerald-50 text-emerald-800"}`}>{reversed?"reversed":s.status}</span>}{s.status==="paid"&&!reversed&&<button disabled={busy} onClick={()=>setReversingId(reversingId===s.id?null:s.id)} className="min-h-11 bg-route px-4 py-3 text-xs font-semibold text-white">{reversingId===s.id?"Cancel":"Reverse paid settlement"}</button>}</div></div>{reversingId===s.id&&<form onSubmit={e=>void reverseSettlement(e,s.id)} className="mt-4 grid gap-3 border border-route/20 bg-route/5 p-4"><label className="text-xs font-semibold">Reversal reason<textarea name="reason" required minLength={5} maxLength={500} rows={3} className="mt-2 block w-full border border-asphalt/20 p-3 text-sm" placeholder="Required audit reason"/></label><p className="text-[11px] text-steel">The paid settlement row remains unchanged. Its immutable reversal restores the outstanding Partner balance.</p><button disabled={busy} className="min-h-11 bg-route p-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Recording reversal…":"Confirm settlement reversal"}</button></form>}</div>;})}</section>
-  </>}
- </div></main>;
+export function AdminPartnerFinance() {
+  const [organizations, setOrganizations] = useState<Org[]>([]);
+  const [partnerId, setPartnerId] = useState("");
+  const [summary, setSummary] = useState<PartnerWalletSummary>(zero);
+  const [fleet, setFleet] = useState<PartnerFleetVehicle[]>([]);
+  const [projects, setProjects] = useState<PartnerFinanceProject[]>([]);
+  const [earnings, setEarnings] = useState<PartnerFreightEarning[]>([]);
+  const [settlements, setSettlements] = useState<PartnerSettlement[]>([]);
+  const [settlementPayments, setSettlementPayments] = useState<PartnerSettlementPayment[]>([]);
+  const [settlementEvents, setSettlementEvents] = useState<PartnerSettlementEvent[]>([]);
+  const [corrections, setCorrections] = useState<FinancialCorrection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const load = useCallback(async (requestedId?: string) => {
+    setLoading(true);
+    setLoadFailed(false);
+    setError("");
+    try {
+      const organizationResult = await supabase.from("partner_organizations").select("id,name,code,status").order("name");
+      if (organizationResult.error) throw organizationResult.error;
+      const nextOrganizations = (organizationResult.data ?? []) as Org[];
+      setOrganizations(nextOrganizations);
+      const selected = requestedId || partnerId || nextOrganizations[0]?.id || "";
+      setPartnerId(selected);
+      if (!selected) {
+        setSummary(zero); setFleet([]); setProjects([]); setEarnings([]); setSettlements([]);
+        setSettlementPayments([]); setSettlementEvents([]); setCorrections([]);
+        return;
+      }
+      const data = await loadPartnerFinance(selected);
+      setSummary(data.summary ?? zero);
+      setFleet(data.fleet);
+      setProjects(data.projects);
+      setEarnings(data.earnings);
+      setSettlements(data.settlements);
+      setSettlementPayments(data.settlementPayments);
+      setSettlementEvents(data.settlementEvents);
+      setCorrections(data.corrections);
+    } catch (cause) {
+      setLoadFailed(true);
+      setError(cause instanceof Error ? cause.message : "Partner finance could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, [partnerId]);
+
+  useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function runAction(work: () => Promise<void>, message: string) {
+    setBusy(true); setError(""); setSuccess("");
+    try {
+      await work();
+      setSuccess(message);
+      await load(partnerId);
+      return true;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Action failed.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveRule(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const values = new FormData(event.currentTarget);
+    await runAction(
+      () => createCommissionRule(partnerId, String(values.get("type")) as "percentage" | "fixed", Number(values.get("value"))),
+      "Commission rule activated.",
+    );
+  }
+
+  async function addVehicle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    const succeeded = await runAction(
+      () => addPartnerVehicle(partnerId, String(values.get("plate")), String(values.get("vehicleType")), Number(values.get("capacity")) || null),
+      "Fleet vehicle added.",
+    );
+    if (succeeded) form.reset();
+  }
+
+  async function accrueFreight(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    const succeeded = await runAction(
+      () => recordPartnerFreight(
+        partnerId,
+        String(values.get("orderId")).trim(),
+        String(values.get("vehicleId")) || null,
+        String(values.get("projectId")) || null,
+      ),
+      "HALLO-generated freight accrued.",
+    );
+    if (succeeded) form.reset();
+  }
+
+  const organizationName = organizations.find((item) => item.id === partnerId)?.name ?? "Partner";
+
+  return <main className="min-h-screen overflow-x-hidden bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10">
+    <div className="mx-auto max-w-7xl space-y-5">
+      <section className="bg-asphalt p-6 text-white sm:p-8">
+        <p className="font-mono text-[10px] tracking-[.22em] text-amber">PARTNER FINANCE CONTROL</p>
+        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div><h1 className="font-display text-3xl font-bold sm:text-4xl">Partner wallet & settlement control</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">HALLO freight commission, approval-controlled partial settlements and immutable financial audit history.</p></div>
+          <select value={partnerId} onChange={(event)=>void load(event.target.value)} className="min-h-11 min-w-0 max-w-full border border-white/20 bg-white px-3 py-3 text-sm text-asphalt"><option value="">Choose organization</option>{organizations.map((organization)=><option key={organization.id} value={organization.id}>{organization.name} · {organization.code}</option>)}</select>
+        </div>
+      </section>
+
+      {error&&<p className="break-words border border-route/30 bg-route/5 p-4 text-sm text-route" role="alert">{error}</p>}
+      {success&&<p className="border border-emerald-600/30 bg-emerald-50 p-4 text-sm text-emerald-800" aria-live="polite">{success}</p>}
+
+      {loadFailed?<section className="border border-route/30 bg-white p-6"><p className="text-sm text-steel">No Partner finance totals are shown because a required source failed.</p><button type="button" onClick={()=>void load(partnerId)} className="mt-4 min-h-11 bg-asphalt px-5 py-3 text-sm font-semibold text-white">Retry Partner finance</button></section>:!partnerId?<p className="border border-asphalt/10 bg-white p-10 text-center text-steel">Create or select a Partner organization first.</p>:loading?<p className="border border-asphalt/10 bg-white p-10 text-center text-steel" aria-live="polite">Loading Partner finance…</p>:<>
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Card label="Gross HALLO freight" value={formatEtb(numeric(summary.gross_etb))}/><Card label="HALLO share" value={formatEtb(numeric(summary.hallo_commission_etb))}/><Card label="Partner net" value={formatEtb(numeric(summary.partner_net_etb))}/><Card label="Payable" value={formatEtb(numeric(summary.payable_etb))} strong/>
+          <Card label="Reserved / pending" value={formatEtb(numeric(summary.pending_settlement_etb))}/><Card label="Effective paid" value={formatEtb(numeric(summary.paid_settlement_etb))}/><Card label="Fleet total" value={String(summary.fleet_total)} detail={`${summary.fleet_available} available`}/><Card label="HALLO loads" value={String(summary.hallo_freight_count)} detail="Commissionable only"/>
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-2">
+          <Panel title="Commission rule"><form onSubmit={saveRule} className="grid gap-3 sm:grid-cols-3"><select name="type" className="min-h-11 min-w-0 border p-3"><option value="percentage">Percentage</option><option value="fixed">Fixed ETB</option></select><input name="value" required min="0" step="0.01" type="number" placeholder="1 or 500" className="min-h-11 min-w-0 border p-3"/><button disabled={busy} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Activate rule</button></form></Panel>
+          <Panel title="Add fleet vehicle"><form onSubmit={addVehicle} className="grid gap-3 sm:grid-cols-4"><input name="plate" required placeholder="Plate" className="min-h-11 min-w-0 border p-3"/><input name="vehicleType" required placeholder="Truck type" className="min-h-11 min-w-0 border p-3"/><input name="capacity" type="number" min="0" step="0.1" placeholder="Tons" className="min-h-11 min-w-0 border p-3"/><button disabled={busy} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Add truck</button></form></Panel>
+        </section>
+
+        <Panel title="Accrue HALLO-generated freight">
+          <form onSubmit={accrueFreight} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <input name="orderId" required placeholder="Released order UUID" className="min-h-11 min-w-0 border p-3"/>
+            <select name="projectId" className="min-h-11 min-w-0 border bg-white p-3"><option value="">No project</option>{projects.map((project)=><option key={project.id} value={project.id}>{project.name}</option>)}</select>
+            <select name="vehicleId" className="min-h-11 min-w-0 border bg-white p-3"><option value="">No Partner truck</option>{fleet.map((vehicle)=><option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} · {vehicle.vehicle_type}</option>)}</select>
+            <button disabled={busy} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Record earning</button>
+          </form>
+        </Panel>
+
+        <AdminPartnerSettlementWorkflow partnerId={partnerId} projects={projects} settlements={settlements} payments={settlementPayments} events={settlementEvents} corrections={corrections} busy={busy} runAction={runAction}/>
+        <PartnerStatement organizationName={organizationName} projects={projects} earnings={earnings} settlements={settlements} payments={settlementPayments} corrections={corrections}/>
+      </>}
+    </div>
+  </main>;
 }
-function Card({label,value,detail,strong}:{label:string;value:string;detail?:string;strong?:boolean}){return <div className={`min-w-0 border p-4 ${strong?"border-emerald-600 bg-emerald-50":"border-asphalt/10 bg-white"}`}><p className="font-mono text-[9px] uppercase tracking-wider text-steel">{label}</p><p className="mt-3 break-words font-display text-xl font-bold sm:text-2xl">{value}</p>{detail&&<p className="mt-2 text-[11px] text-steel">{detail}</p>}</div>}
-function Panel({title,children}:{title:string;children:React.ReactNode}){return <section className="border border-asphalt/10 bg-white p-5"><h2 className="mb-4 font-display text-xl font-bold">{title}</h2>{children}</section>}
+
+function Card({ label, value, detail, strong }: { label: string; value: string; detail?: string; strong?: boolean }) {
+  return <div className={`min-w-0 border p-4 ${strong?"border-emerald-600 bg-emerald-50":"border-asphalt/10 bg-white"}`}><p className="font-mono text-[9px] uppercase tracking-wider text-steel">{label}</p><p className="mt-3 break-words font-display text-xl font-bold sm:text-2xl">{value}</p>{detail&&<p className="mt-2 text-[11px] text-steel">{detail}</p>}</div>;
+}
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="border border-asphalt/10 bg-white p-5"><h2 className="mb-4 font-display text-xl font-bold">{title}</h2>{children}</section>;
+}

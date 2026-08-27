@@ -1,0 +1,37 @@
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .partner-statement,
+  .partner-statement * {
+    visibility: visible;
+  }
+
+  .partner-statement {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    border: 0 !important;
+    color: #111827 !important;
+  }
+
+  .partner-statement-actions,
+  .partner-statement-filters {
+    display: none !important;
+  }
+
+  .partner-statement-print-meta {
+    display: block !important;
+  }
+
+  .partner-statement-row {
+    break-inside: avoid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) auto !important;
+  }
+}
+
