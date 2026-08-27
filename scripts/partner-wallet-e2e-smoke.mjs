@@ -53,9 +53,10 @@ import { PartnerWallet } from ${JSON.stringify(path.join(root, "src", "pages", "
 const fixture = {
   partnerId: 'partner-fixture',
   name: 'Hamilton Group PLC Enterprise Logistics Partner',
-  summary: { gross_etb: 1250000, hallo_commission_etb: 25000, partner_net_etb: 1225000, pending_settlement_etb: 250000, paid_settlement_etb: 400000, payable_etb: 575000, fleet_total: 512, fleet_available: 387, hallo_freight_count: 48 },
+  summary: { gross_etb: 1200000, hallo_commission_etb: 24000, partner_net_etb: 1176000, pending_settlement_etb: 250000, paid_settlement_etb: 400000, payable_etb: 526000, fleet_total: 512, fleet_available: 387, hallo_freight_count: 48 },
   earnings: [{ id:'earning-1', partner_id:'partner-fixture', order_id:'00000000-0000-0000-0000-VERY-LONG-ORDER-REFERENCE-1234567890', vehicle_id:null, gross_etb:1250000, commission_type:'percentage', commission_value:2, hallo_commission_etb:25000, partner_net_etb:1225000, status:'accrued', accrued_at:${JSON.stringify(now)} }],
   settlements: [{ id:'settlement-1', partner_id:'partner-fixture', amount_etb:250000, status:'pending', provider:'Commercial Bank of Ethiopia Enterprise Transfer', transaction_ref:'CBE-ENTERPRISE-TRANSACTION-REFERENCE-12345678901234567890', note:null, paid_at:null, created_at:${JSON.stringify(now)} }],
+  corrections: [{ id:'correction-1', request_key:'request-1', correction_type:'partial_refund', source_payment_id:'payment-1', refund_payment_id:'refund-1', partner_earning_id:'earning-1', partner_settlement_id:null, order_id:'order-1', driver_id:null, partner_id:'partner-fixture', amount_etb:50000, driver_commission_reversal_etb:0, partner_gross_reversal_etb:50000, partner_commission_reversal_etb:1000, partner_net_reversal_etb:49000, reason:'Customer received a verified partial refund', actor_id:'admin-1', created_at:${JSON.stringify(now)} }],
 };
 createRoot(document.getElementById('root')).render(React.createElement(MemoryRouter, null, React.createElement(PartnerWallet, { fixture })));
 await new Promise((resolve) => setTimeout(resolve, 200));
@@ -75,7 +76,7 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-partner-wallet-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Partner net", "Payable balance", "HALLO-generated freight", "Settlements", "575,000"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Partner net", "Payable balance", "HALLO-generated freight", "Financial corrections", "original row preserved", "526,000"]) {
         if (!dom.includes(expected)) throw new Error(`Partner Wallet ${width}px smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }
