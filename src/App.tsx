@@ -56,8 +56,9 @@ import "./styles/role-navigation.css";
 
 function DriverShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
+  const showPaymentAction = !pathname.startsWith("/driver/payment/");
   const showOperationalAlerts = pathname === "/driver" || pathname === "/driver/jobs" || pathname === "/driver/trip";
-  return <div className="driver-mobile-flow min-h-screen bg-bone pb-24 md:pb-0"><OfflineBanner /><Header />{showOperationalAlerts && <DriverPaymentCollectionBanner />}{showOperationalAlerts && <DriverDocumentExpiryAlert />}{children}</div>;
+  return <div className="driver-mobile-flow min-h-screen bg-bone pb-24 md:pb-0"><OfflineBanner /><Header />{showPaymentAction && <DriverPaymentCollectionBanner />}{showOperationalAlerts && <DriverDocumentExpiryAlert />}{children}</div>;
 }
 function AdminWorkspace(){return <AdminToolShell><AdminCeoOverview /></AdminToolShell>}
 function AdminOperationsWorkspace(){return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
