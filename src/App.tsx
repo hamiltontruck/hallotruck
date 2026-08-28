@@ -36,6 +36,7 @@ import { PortalLanding } from "./pages/PortalLanding";
 import { CustomerLogin } from "./pages/CustomerLogin";
 import { CustomerPortal } from "./pages/CustomerPortal";
 import { CustomerMapHome } from "./pages/CustomerMapHome";
+import { CustomerLiveOrders } from "./pages/CustomerLiveOrders";
 import { CustomerTrackingPage } from "./pages/CustomerTrackingPage";
 import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
@@ -50,6 +51,8 @@ import "./styles/customer-header-map-polish.css";
 import "./styles/customer-map-home.css";
 import "./styles/customer-nearby-tracking.css";
 import "./styles/customer-nearby-home-bridge.css";
+import "./styles/customer-live-orders.css";
+import "./styles/customer-live-map-smart.css";
 import "./styles/driver-mobile-flow.css";
 import "./styles/partner-onboarding.css";
 import "./styles/role-navigation.css";
@@ -64,7 +67,8 @@ function AdminWorkspace(){return <AdminToolShell><AdminCeoOverview /></AdminTool
 function AdminOperationsWorkspace(){return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
 function CustomerWorkspace({ section }: { section: "home" | "profile" | "orders" | "track" | "payments" }) {
   if (section === "home") return <div className="customer-portal-mobile customer-view-home"><CustomerMapHome /></div>;
-  const defaultFilter = section === "track" ? "active" : section === "payments" ? "payment" : "all";
+  if (section === "track") return <div className="customer-portal-mobile customer-view-track"><CustomerBottomNav /><CustomerLiveOrders /></div>;
+  const defaultFilter = section === "payments" ? "payment" : "all";
   return <div className={`customer-portal-mobile customer-view-${section}`}><CustomerBottomNav /><CustomerPortal defaultFilter={defaultFilter} /></div>;
 }
 function RuntimeLocalization(){const {selectedLanguage}=useLanguage();const runtimeLanguage=selectedLanguage==="so"||selectedLanguage==="ti"?selectedLanguage:null;useRuntimePageTranslation(runtimeLanguage);useRuntimeAdminTranslation(runtimeLanguage);useRuntimeCustomerOperationalTranslation(selectedLanguage);return null;}
