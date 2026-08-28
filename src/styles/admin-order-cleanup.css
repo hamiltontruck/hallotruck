@@ -1,0 +1,8 @@
+/* The simplified Customer–Driver workflow records payment outcomes through the
+   Driver completion flow and Finance ledger. Keep the immutable payment
+   evidence/history visible, but remove the obsolete manual payment-entry form
+   from Manage Order. */
+
+form:has(> h3:first-child):has(input[name="provider"]):has(select[name="event"]) {
+  display: none;
+}

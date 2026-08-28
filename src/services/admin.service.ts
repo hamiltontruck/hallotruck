@@ -26,6 +26,9 @@ export interface AdminOrder {
   payment_status: string;
   driver_id: string | null;
   truck_id: string | null;
+  driver_name: string | null;
+  plate_number: string | null;
+  assignment_label: string;
   accepted_at: string | null;
   delivered_at: string | null;
   cancellation_reason: string | null;
@@ -96,12 +99,29 @@ export async function getDashboardData() {
   const error = ordersResult.error || trucksResult.error || customersResult.error || paymentsResult.error || driversResult.error || proofsResult.error;
   if (error) fail(error.message);
 
-  const orders = (ordersResult.data ?? []) as AdminOrder[];
   const trucks = (trucksResult.data ?? []) as Truck[];
   const customers = (customersResult.data ?? []) as Customer[];
   const payments = (paymentsResult.data ?? []) as Payment[];
   const drivers = (driversResult.data ?? []) as Driver[];
   const deliveryProofs = (proofsResult.data ?? []) as DeliveryProof[];
+  const orders = ((ordersResult.data ?? []) as Omit<AdminOrder, "driver_name" | "plate_number" | "assignment_label">[]).map((order) => {
+    const driver = drivers.find((item) => item.id === order.driver_id);
+    const truck = trucks.find((item) => item.id === order.truck_id);
+    const driverName = driver?.full_name?.trim() || driver?.phone?.trim() || null;
+    const plateNumber = truck?.plate_number?.trim() || null;
+    const assignmentLabel = driverName || plateNumber
+      ? `${driverName ?? "Driver profile unavailable"} · ${plateNumber ?? "Plate unavailable"}`
+      : "Driver and truck not assigned";
+    const cargoLabel = order.cargo_description?.trim() || order.vehicle_type;
+
+    return {
+      ...order,
+      driver_name: driverName,
+      plate_number: plateNumber,
+      assignment_label: assignmentLabel,
+      cargo_description: `${cargoLabel} · ${assignmentLabel}`,
+    };
+  });
   const releasedTotal = payments
     .filter((payment) => payment.event === "released")
     .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
@@ -191,7 +211,7 @@ export function printInvoice(order: AdminOrder, truck?: Truck, driver?: Driver, 
     ? `<div class="row credit"><b>Customer credit</b><span>ETB ${summary.customerCredit.toLocaleString()}</span></div>`
     : "";
 
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(order.tracking_id)} invoice</title><style>body{font:14px Arial;color:#1d222a;padding:24px;max-width:760px;margin:auto}h1{font-size:28px}.brand{color:#d68e25}.row{display:flex;gap:20px;justify-content:space-between;border-bottom:1px solid #ddd;padding:12px 0}.row span{text-align:right}.total{font-size:20px;font-weight:bold}.credit{font-size:18px;font-weight:bold;color:#256b4a;background:#eefbf4;padding-left:10px;padding-right:10px}.refund{color:#256b4a;background:#eefbf4;padding-left:10px;padding-right:10px}.escrow{color:#8a5f1b;background:#fff8e8;padding-left:10px;padding-right:10px}.pending{color:#9b6418}.muted{color:#68707c}button{width:100%;border:0;background:#1d222a;color:white;padding:15px;margin-top:24px;font-weight:bold}@media(max-width:480px){body{padding:18px}.row{display:block}.row span{display:block;text-align:left;margin-top:6px}}@media print{button{display:none}body{padding:0}}</style></head><body><h1>HALLO<span class="brand">TRUCK</span></h1><p class="muted">Smart Logistics invoice / receipt</p><div class="row"><b>Tracking</b><span>${safe(order.tracking_id)}</span></div><div class="row"><b>Customer</b><span>${safe(order.customer_name)} · ${safe(order.customer_phone)}</span></div><div class="row"><b>Route</b><span>${safe(order.pickup_address)} → ${safe(order.dropoff_address)}</span></div><div class="row"><b>Truck / driver</b><span>${safe(truck?.plate_number ?? "Unassigned")} · ${safe(driver?.full_name ?? "Unassigned")}</span></div><div class="row"><b>Status</b><span>${safe(order.status.replace("_"," "))}</span></div><div class="row total"><b>Invoice total</b><span>ETB ${summary.invoiceTotal.toLocaleString()}</span></div><div class="row"><b>Verified customer payment</b><span>ETB ${summary.verifiedPaid.toLocaleString()}</span></div>${heldRow}${releasedRow}${pendingRow}${refundRow}<div class="row total"><b>Balance to pay</b><span>ETB ${summary.balanceToPay.toLocaleString()}</span></div>${creditRow}<p class="muted">Held escrow is verified customer money awaiting release after delivery. Pending verification is submitted but not yet verified and does not reduce the verified balance.</p><p class="muted">Generated ${safe(new Date().toLocaleString())}</p><button type="button" onclick="window.print()">Print / Save as PDF</button></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(order.tracking_id)} invoice</title><style>body{font:14px Arial;color:#1d222a;padding:24px;max-width:760px;margin:auto}h1{font-size:28px}.brand{color:#d68e25}.row{display:flex;gap:20px;justify-content:space-between;border-bottom:1px solid #ddd;padding:12px 0}.row span{text-align:right}.total{font-size:20px;font-weight:bold}.credit{font-size:18px;font-weight:bold;color:#256b4a;background:#eefbf4;padding-left:10px;padding-right:10px}.refund{color:#256b4a;background:#eefbf4;padding-left:10px;padding-right:10px}.escrow{color:#8a5f1b;background:#fff8e8;padding-left:10px;padding-right:10px}.pending{color:#9b6418}.muted{color:#68707c}button{width:100%;border:0;background:#1d222a;color:white;padding:15px;margin-top:24px;font-weight:bold}@media(max-width:480px){body{padding:18px}.row{display:block}.row span{display:block;text-align:left;margin-top:6px}}@media print{button{display:none}body{padding:0}}</style></head><body><h1>HALLO<span class="brand">TRUCK</span></h1><p class="muted">Smart Logistics invoice / receipt</p><div class="row"><b>Tracking</b><span>${safe(order.tracking_id)}</span></div><div class="row"><b>Customer</b><span>${safe(order.customer_name)} · ${safe(order.customer_phone)}</span></div><div class="row"><b>Route</b><span>${safe(order.pickup_address)} → ${safe(order.dropoff_address)}</span></div><div class="row"><b>Truck / driver</b><span>${safe(truck?.plate_number ?? order.plate_number ?? "Unassigned")} · ${safe(driver?.full_name ?? order.driver_name ?? "Unassigned")}</span></div><div class="row"><b>Status</b><span>${safe(order.status.replace("_"," "))}</span></div><div class="row total"><b>Invoice total</b><span>ETB ${summary.invoiceTotal.toLocaleString()}</span></div><div class="row"><b>Verified customer payment</b><span>ETB ${summary.verifiedPaid.toLocaleString()}</span></div>${heldRow}${releasedRow}${pendingRow}${refundRow}<div class="row total"><b>Balance to pay</b><span>ETB ${summary.balanceToPay.toLocaleString()}</span></div>${creditRow}<p class="muted">Held escrow is verified customer money awaiting release after delivery. Pending verification is submitted but not yet verified and does not reduce the verified balance.</p><p class="muted">Generated ${safe(new Date().toLocaleString())}</p><button type="button" onclick="window.print()">Print / Save as PDF</button></body></html>`;
   const popup = window.open("about:blank", "_blank");
   if (!popup) fail("Allow pop-ups to generate the PDF.");
   popup.document.open();
