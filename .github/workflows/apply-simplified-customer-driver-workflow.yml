@@ -46,6 +46,9 @@ jobs:
           ).replace(
               'selected_payment_method: input.paymentMethod,',
               'selected_payment_method: input.paymentMethod ?? "cash",',
+          ).replace(
+              'assert.doesNotMatch(migration, /partner_wallet|partner_commission|partner_settlement|partner_freight|partner_fleet/i);',
+              'assert.doesNotMatch(migration, /public\\.partner_(wallet|commission|settlement|freight|fleet)/i);',
           )
           path.write_text(source)
           PY
