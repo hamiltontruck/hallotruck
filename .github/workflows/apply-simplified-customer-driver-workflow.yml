@@ -1,5 +1,4 @@
-# Final rerun after aligning legacy completion tests.
-name: Apply Simplified Customer Driver Workflow
+name: Apply simplified customer-driver workflow
 
 on:
   workflow_dispatch:
@@ -7,6 +6,7 @@ on:
     branches:
       - fix/driver-trip-history-earned-money
     paths:
+      - scripts/apply-simplified-customer-driver-workflow.mjs
       - .github/workflows/apply-simplified-customer-driver-workflow.yml
 
 permissions:
@@ -26,88 +26,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Restore applicator
-        shell: bash
-        run: |
-          cat .github/apply-simplified-workflow-b64/part-* > /tmp/apply-simplified-workflow.gz.b64
-          base64 --decode /tmp/apply-simplified-workflow.gz.b64 | gzip -d > /tmp/apply-simplified-workflow.mjs
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('/tmp/apply-simplified-workflow.mjs')
-          source = path.read_text()
-          source = source.replace(
-              "'\"payment_terms, cancellation_reason, cancellation_source, cancelled_at, created_at\"'",
-              "'payment_terms, cancellation_reason, cancellation_source, cancelled_at, created_at'",
-          ).replace(
-              "'\"payment_terms, selected_payment_method, cancellation_reason, cancellation_source, cancelled_at, created_at\"'",
-              "'payment_terms, selected_payment_method, cancellation_reason, cancellation_source, cancelled_at, created_at'",
-          ).replace(
-              'paymentMethod: "cash" | "bank_telebirr";',
-              'paymentMethod?: "cash" | "bank_telebirr";',
-          ).replace(
-              'selected_payment_method: input.paymentMethod,',
-              'selected_payment_method: input.paymentMethod ?? "cash",',
-          ).replace(
-              'assert.doesNotMatch(migration, /partner_wallet|partner_commission|partner_settlement|partner_freight|partner_fleet/i);',
-              'assert.doesNotMatch(migration, /public\\.partner_(wallet|commission|settlement|freight|fleet)/i);',
-          )
-          path.write_text(source)
-          PY
-          node --check /tmp/apply-simplified-workflow.mjs
-
       - name: Apply workflow changes
-        run: node /tmp/apply-simplified-workflow.mjs
-
-      - name: Align legacy trip-completion regression
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('tests/regression/trip-completion-workflow.test.ts')
-          source = path.read_text()
-          source = source.replace('  getDriverPostDeliveryRoute,\n', '')
-          source = source.replace(
-            '''test("POD completion sends every driver to the completed-trip payment page", () => {
-  assert.equal(getDriverPostDeliveryRoute("pay_driver_on_delivery", "order-1"), "/driver/payment/order-1");
-  assert.equal(getDriverPostDeliveryRoute("prepaid", "order-1"), "/driver/payment/order-1");
-  assert.match(activeTrip, /getDriverPostDeliveryRoute\\(order\\.payment_terms, order\\.id\\)/);
-});''',
-            '''test("Finish Trip records payment result atomically and opens Trip History", () => {
-  assert.match(activeTrip, /tripAmountEtb=\\{grossFare\\}/);
-  assert.match(activeTrip, /completionResult/);
-  assert.match(activeTrip, /navigate\\("\\/driver\\/earnings"/);
-  assert.doesNotMatch(activeTrip, /getDriverPostDeliveryRoute/);
-});''',
-          )
-          source = source.replace('["complete", "attention", "waiting", "waiting"]', '["complete", "attention", "current", "waiting"]', 1)
-          source = source.replace('["complete", "current", "waiting", "waiting"]', '["complete", "current", "current", "waiting"]', 1)
-          source = source.replace(
-            '''test("POD retry preserves the original proof and avoids duplicate uploads", () => {
-  assert.match(migration, /if v_status = 'delivered' and v_existing_proof then[\\s\\S]*return;/);
-  assert.match(migration, /delivery proof cleanup[\\s\\S]*not exists \\([\\s\\S]*recorded_proof\\.photo_path/);
-  assert.doesNotMatch(migration, /delete\\s+from\\s+public\\.(delivery_proofs|payments|driver_commission_charges|ratings)/i);
-  assert.match(deliveryService, /from\\("delivery_proofs"\\)[\\s\\S]*maybeSingle\\(\\)/);
-  assert.match(deliveryService, /recorded\\.data\\.photo_path !== photoPath/);
-});''',
-            '''test("atomic Finish Trip denies duplicate proof, payment and completion", () => {
-  const simplifiedMigration = readFileSync(path.join(root, "supabase/migrations/20260828173000_simplified_customer_driver_workflow.sql"), "utf8");
-  assert.match(simplifiedMigration, /This trip was already completed/);
-  assert.match(simplifiedMigration, /exists \\([\\s\\S]*driver_trip_payment_results/);
-  assert.match(simplifiedMigration, /exists \\([\\s\\S]*delivery_proofs/);
-  assert.match(deliveryService, /rpc\\("driver_finish_trip"/);
-  assert.doesNotMatch(simplifiedMigration, /delete\\s+from\\s+public\\.(delivery_proofs|payments|driver_commission_charges|ratings)/i);
-});''',
-          )
-          path.write_text(source)
-          PY
-
-      - name: Remove temporary applicator files
-        shell: bash
-        run: |
-          rm -rf .github/apply-simplified-workflow
-          rm -rf .github/apply-simplified-workflow-b64
-          rm -f .github/workflows/apply-simplified-customer-driver-workflow.yml
-          rm -f .github/regression-output.txt
+        run: node scripts/apply-simplified-customer-driver-workflow.mjs
 
       - name: Install
         run: npm ci
