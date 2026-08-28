@@ -89,7 +89,7 @@ createRoot(document.getElementById("root")).render(
 );
 setTimeout(() => {
   const normalizedText = (document.body.textContent ?? "").replace(/\\s/g, "");
-  document.documentElement.dataset.paymentAmount = String(normalizedText.includes("ETB75,700"));
+  document.documentElement.dataset.paymentAmount = String(normalizedText.includes("75,700ETB"));
   document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
   document.documentElement.dataset.fileInput = String(Boolean(document.querySelector('input[type="file"]')));
   document.documentElement.dataset.ready = "true";
