@@ -38,11 +38,17 @@ new_timer = '''setTimeout(() => {
   document.documentElement.dataset.noUpload = String(!initialText.includes("receipt") && !initialText.includes("screenshot"));
   document.documentElement.dataset.fileInput = String(Boolean(document.querySelector('input[name="receipt"], input[name="paymentEvidence"]')));
   document.documentElement.dataset.unpaidNotice = String(Boolean(unpaid));
-  document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
-  document.documentElement.dataset.ready = "true";
+  cash?.click();
+  setTimeout(() => {
+    const cashText = document.body.textContent ?? "";
+    document.documentElement.dataset.cashAmount = String(cashText.includes("Exact amount collected") && cashText.includes("ETB 30,000"));
+    document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
+    document.documentElement.dataset.ready = "true";
+  }, 150);
 }, 250);'''
 source = source[:start] + new_timer + source[end:]
 source = source.replace('const label = `Driver unpaid payment ${width}px smoke`;', 'const label = `Driver atomic Finish Trip ${width}px smoke`;')
+source = source.replace("'data-file-input=\"false\"', 'data-unpaid-notice=\"true\"',", "'data-file-input=\"false\"', 'data-unpaid-notice=\"true\"', 'data-cash-amount=\"true\"',")
 source = source.replace('"Payment not received", "No payment report was created.",\n      "Return to Jobs", "Review payment again",', '"Payment not received", "Exact amount collected",\n      "Optional payment note",')
 source = source.replace('Driver unpaid-payment browser smoke passed', 'Driver atomic Finish Trip browser smoke passed')
 source = source.replace('with the required form, no default choice, no upload input', 'with all three payment results, exact-cash input, no payment-evidence upload')
