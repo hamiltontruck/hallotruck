@@ -2,9 +2,9 @@ import { NavLink } from "react-router-dom";
 import { useLanguage, type HalloLanguage } from "../../i18n/LanguageProvider";
 
 const copy: Record<HalloLanguage, { dashboard: string; home: string; profile: string; orders: string; track: string; payments: string }> = {
-  en: { dashboard: "Customer dashboard", home: "Home", profile: "Profile", orders: "Orders", track: "Track", payments: "Payments" },
-  om: { dashboard: "Daashboordii customer", home: "Home", profile: "Profaayilii", orders: "Ajajoota", track: "Hordofi", payments: "Kaffaltii" },
-  am: { dashboard: "የደንበኛ ዳሽቦርድ", home: "መነሻ", profile: "መገለጫ", orders: "ትዕዛዞች", track: "ክትትል", payments: "ክፍያዎች" },
+  en: { dashboard: "Customer dashboard", home: "Home", profile: "Profile", orders: "Orders", track: "Live", payments: "Payments" },
+  om: { dashboard: "Daashboordii customer", home: "Home", profile: "Profaayilii", orders: "Ajajoota", track: "Live", payments: "Kaffaltii" },
+  am: { dashboard: "የደንበኛ ዳሽቦርድ", home: "መነሻ", profile: "መገለጫ", orders: "ትዕዛዞች", track: "ቀጥታ", payments: "ክፍያዎች" },
 };
 
 const links = [
