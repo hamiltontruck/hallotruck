@@ -25,6 +25,7 @@ try{
   ["tests/regression/simplified-customer-driver-workflow.test.ts",path.join(outputDirectory,"simplified-customer-driver-workflow.test.mjs")],
   ["tests/regression/driver-trip-history.test.ts",path.join(outputDirectory,"driver-trip-history.test.mjs")],
   ["tests/regression/customer-quote-restoration.test.ts",path.join(outputDirectory,"customer-quote-restoration.test.mjs")],
+  ["tests/regression/customer-cancel-unpaid-commission.test.ts",path.join(outputDirectory,"customer-cancel-unpaid-commission.test.mjs")],
  ];
  for(const [source,output] of suites){const bundled=run(esbuildBinary,[source,"--bundle","--platform=node","--format=esm","--target=node22",`--outfile=${output}`]);if(!bundled)process.exit(process.exitCode||1);}
  const passed=run(process.execPath,["--test",...suites.map(([,output])=>output)]);if(!passed)process.exit(process.exitCode||1);
