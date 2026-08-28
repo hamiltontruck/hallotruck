@@ -1,0 +1,61 @@
+/* Customer quote recovery: keep the complete truck, tonnage and cargo form visible and reachable. */
+
+.customer-map-home__load-grid textarea {
+  display: block;
+  width: 100%;
+  min-height: 4.8rem;
+  margin-top: 0.35rem;
+  resize: vertical;
+  border: 1px solid #d7d4cc;
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0.65rem;
+  color: #1d222a;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2rem;
+}
+
+.customer-map-home__load-grid > .sm\:col-span-2 {
+  grid-column: 1 / -1;
+}
+
+.customer-map-home__sheet.is-expanded {
+  scrollbar-gutter: stable;
+  scroll-padding-top: 4rem;
+  scroll-padding-bottom: 5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.customer-map-home__sheet-body {
+  min-width: 0;
+  padding-bottom: 0.4rem;
+}
+
+@media (max-width: 639px) {
+  .customer-map-home__sheet.is-expanded {
+    max-height: min(68dvh, 42rem);
+  }
+
+  .customer-map-home__sheet-body {
+    padding-bottom: 0.8rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .customer-map-home__load-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customer-map-home__load-grid > .sm\:col-span-2 {
+    grid-column: auto;
+  }
+
+  .customer-map-home__vehicles {
+    grid-auto-columns: minmax(8.2rem, 72vw);
+  }
+
+  .customer-map-home__vehicles button {
+    min-height: 5.4rem;
+  }
+}
