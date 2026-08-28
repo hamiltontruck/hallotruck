@@ -57,7 +57,8 @@ test("Confirm Order remains locked until route, truck, cargo, load and quote are
   assert.match(page, /disabled=\{busy \|\| !isFormReady\}/);
   assert.match(page, /data-ready=\{isFormReady\}/);
   assert.match(page, /cargoTons <= selectedCapacity/);
-  assert.match(page, /setCargoQuantity\(""\)/);
+  assert.match(page, /\[cargoQuantity, setCargoQuantity\] = useState\(""\)/);
+  assert.match(page, /const cleanCargoQuantity = cargoQuantity\.trim\(\)/);
 });
 
 test("Customer quote remains scrollable and single-column on narrow phones", () => {
