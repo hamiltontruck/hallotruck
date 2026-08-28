@@ -1,4 +1,4 @@
-# Atomic Finish Trip validation run.
+# Final atomic Finish Trip validation run.
 name: Apply simplified customer-driver workflow
 
 on:
@@ -10,6 +10,7 @@ on:
       - scripts/apply-simplified-customer-driver-workflow.mjs
       - .github/workflows/apply-simplified-customer-driver-workflow.yml
       - .github/apply-simplified-workflow/atomic.py
+      - .github/apply-simplified-workflow/final_assertions.py
 
 permissions:
   contents: write
@@ -54,7 +55,7 @@ jobs:
       - name: Align atomic completion and compatibility
         shell: bash
         run: |
-          if [ -f .github/apply-simplified-workflow/align.py ]; then python .github/apply-simplified-workflow/align.py; fi
+          python .github/apply-simplified-workflow/align.py
           python - <<'PY'
           from pathlib import Path
           import re
@@ -82,6 +83,7 @@ jobs:
           test.write_text(source)
           PY
           python .github/apply-simplified-workflow/atomic.py
+          python .github/apply-simplified-workflow/final_assertions.py
           rm -rf .github/apply-simplified-workflow .github/apply-simplified-workflow-b64 .github/regression-output.txt
 
       - name: Install
