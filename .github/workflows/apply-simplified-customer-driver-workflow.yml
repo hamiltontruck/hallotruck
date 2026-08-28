@@ -40,6 +40,12 @@ jobs:
           ).replace(
               "'\"payment_terms, selected_payment_method, cancellation_reason, cancellation_source, cancelled_at, created_at\"'",
               "'payment_terms, selected_payment_method, cancellation_reason, cancellation_source, cancelled_at, created_at'",
+          ).replace(
+              'paymentMethod: "cash" | "bank_telebirr";',
+              'paymentMethod?: "cash" | "bank_telebirr";',
+          ).replace(
+              'selected_payment_method: input.paymentMethod,',
+              'selected_payment_method: input.paymentMethod ?? "cash",',
           )
           path.write_text(source)
           PY
