@@ -149,10 +149,15 @@ export async function createCommissionRule(partnerId: string, commissionType: "p
 }
 
 export async function addPartnerVehicle(partnerId: string, plateNumber: string, vehicleType: string, capacityTons: number | null) {
-  const { data: session } = await supabase.auth.getSession();
-  const userId = session.session?.user.id;
-  if (!userId) throw new Error("Admin session expired.");
-  const { error } = await supabase.from("partner_fleet_vehicles").insert({ partner_id: partnerId, plate_number: plateNumber.trim().toUpperCase(), vehicle_type: vehicleType.trim(), capacity_tons: capacityTons, created_by: userId });
+  const { error } = await supabase.rpc("create_fleet_vehicle", {
+    p_partner_id: partnerId,
+    p_plate_number: plateNumber.trim().toUpperCase(),
+    p_vehicle_type: vehicleType.trim(),
+    p_capacity_tons: capacityTons,
+    p_ownership_type: "partner",
+    p_fuel_type: null,
+    p_branch_id: null,
+  });
   if (error) throw error;
 }
 

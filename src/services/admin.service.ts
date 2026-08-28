@@ -241,12 +241,14 @@ export async function createCustomer(input: { fullName: string; phone: string; e
 }
 
 export async function createTruck(input: { plateNumber: string; vehicleType: string; capacityTons?: number }) {
-  const { data: auth } = await supabase.auth.getUser();
-  const { error } = await supabase.from("trucks").insert({
-    plate_number: input.plateNumber,
-    vehicle_type: input.vehicleType,
-    capacity_tons: input.capacityTons || null,
-    created_by: auth.user?.id,
+  const { error } = await supabase.rpc("create_fleet_vehicle", {
+    p_partner_id: null,
+    p_plate_number: input.plateNumber.trim().toUpperCase(),
+    p_vehicle_type: input.vehicleType.trim(),
+    p_capacity_tons: input.capacityTons || null,
+    p_ownership_type: "company",
+    p_fuel_type: null,
+    p_branch_id: null,
   });
   if (error) fail(error.message);
 }
