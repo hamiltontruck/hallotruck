@@ -9,6 +9,7 @@ function source(relativePath: string) {
 
 const app = source("src/App.tsx");
 const customerNav = source("src/components/customer/CustomerBottomNav.tsx");
+const customerLiveOrders = source("src/pages/CustomerLiveOrders.tsx");
 const driverNav = source("src/components/driver/DriverBottomNav.tsx");
 const adminNav = source("src/components/admin/AdminMobileBottomNav.tsx");
 const navigationCss = source("src/styles/role-navigation.css");
@@ -19,7 +20,10 @@ test("customer mobile navigation exposes five real portal routes", () => {
     assert.match(customerNav, new RegExp(`to: "${route.replaceAll("/", "\\/")}"`));
     if (route !== "/customer") assert.match(app, new RegExp(`path="${route.replaceAll("/", "\\/")}"`));
   }
-  assert.match(app, /section === "track" \? "active" : section === "payments" \? "payment" : "all"/);
+  assert.match(app, /section === "track"\) return .*<CustomerLiveOrders \/>/);
+  assert.match(customerLiveOrders, /"quoted", "placed", "assigned", "accepted", "in_transit"/);
+  assert.match(customerLiveOrders, /Waiting for verified driver assignment/);
+  assert.match(customerLiveOrders, /\/customer\/tracking\/\$\{order\.id\}/);
 });
 
 test("driver mobile navigation keeps five role-safe destinations and exposes trip history", () => {
