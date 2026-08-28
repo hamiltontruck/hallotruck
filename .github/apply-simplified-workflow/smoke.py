@@ -53,3 +53,11 @@ source = source.replace('"Payment not received", "No payment report was created.
 source = source.replace('Driver unpaid-payment browser smoke passed', 'Driver atomic Finish Trip browser smoke passed')
 source = source.replace('with the required form, no default choice, no upload input', 'with all three payment results, exact-cash input, no payment-evidence upload')
 path.write_text(source)
+
+nav = Path("scripts/role-navigation-e2e-smoke.mjs")
+nav_source = nav.read_text()
+nav_source = nav_source.replace(
+    '["driver", "/driver/commission", ["Home", "Jobs", "Trip", "Wallet", "Profile"]],',
+    '["driver", "/driver/earnings", ["Home", "Jobs", "Trip", "History", "Profile"]],',
+)
+nav.write_text(nav_source)
