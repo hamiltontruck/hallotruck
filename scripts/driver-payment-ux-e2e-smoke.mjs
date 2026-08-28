@@ -83,49 +83,44 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
 import { LanguageProvider } from ${JSON.stringify(path.join(root, "src", "i18n", "LanguageProvider.tsx"))};
-import { DriverPaymentCollection } from ${JSON.stringify(path.join(root, "src", "pages", "DriverPaymentCollection.tsx"))};
-
-const fixture = {
-  order: {
-    id: "order-unpaid-1", tracking_id: "HT-2026-7E294A",
-    pickup_address: "Adama, Ethiopia", dropoff_address: "Adwa, Central Tigray, Ethiopia",
-    price_etb: 72350, status: "delivered", payment_terms: "pay_driver_on_delivery",
-    delivered_at: "2026-08-23T17:00:51.000Z",
-  },
-  status: null,
-  payments: [],
-};
+import { DriverDeliveryProofForm } from ${JSON.stringify(path.join(root, "src", "components", "driver", "DriverDeliveryProofForm.tsx"))};
 
 createRoot(document.getElementById("root")).render(
   React.createElement(LanguageProvider, null,
-    React.createElement(MemoryRouter, { initialEntries: ["/driver/payment/order-unpaid-1"] },
-      React.createElement(DriverPaymentCollection, { fixture })
+    React.createElement(MemoryRouter, null,
+      React.createElement(DriverDeliveryProofForm, {
+        orderId: "order-active-1",
+        tripAmountEtb: 30000,
+        onDelivered: () => undefined,
+      })
     )
   )
 );
 
 setTimeout(() => {
-  const cash = document.querySelector('input[value="cash"]');
-  const bank = document.querySelector('input[value="bank"]');
+  const cash = document.querySelector('input[value="cash_received"]');
+  const bank = document.querySelector('input[value="bank_telebirr"]');
+  const unpaid = document.querySelector('input[value="payment_not_received"]');
   const submit = document.querySelector('form button:not([type="button"])');
-  const unpaid = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("Payment not received / not confirmed"));
   const initialText = document.body.textContent ?? "";
   document.documentElement.dataset.initialCashSelected = String(Boolean(cash?.checked));
   document.documentElement.dataset.initialBankSelected = String(Boolean(bank?.checked));
   document.documentElement.dataset.initialSubmitDisabled = String(Boolean(submit?.disabled));
-  document.documentElement.dataset.finishTrip = String(initialText.includes("FINISH TRIP"));
-  document.documentElement.dataset.paymentMethod = String(initialText.includes("Payment method"));
-  document.documentElement.dataset.cashOption = String(initialText.includes("Cash"));
+  document.documentElement.dataset.finishTrip = String(initialText.includes("Finish Trip") || initialText.includes("Submit proof"));
+  document.documentElement.dataset.paymentMethod = String(initialText.includes("Payment result"));
+  document.documentElement.dataset.cashOption = String(initialText.includes("Cash received"));
   document.documentElement.dataset.bankOption = String(initialText.includes("Bank / Telebirr"));
-  document.documentElement.dataset.methodHelp = String(initialText.includes("Choose how the customer paid."));
-  document.documentElement.dataset.noUpload = String(initialText.includes("No receipt upload. No screenshot upload."));
-  document.documentElement.dataset.fileInput = String(Boolean(document.querySelector('input[type="file"]')));
-  unpaid?.click();
+  document.documentElement.dataset.methodHelp = String(initialText.includes("Choose one result before Finish Trip"));
+  document.documentElement.dataset.noUpload = String(!initialText.includes("receipt") && !initialText.includes("screenshot"));
+  document.documentElement.dataset.fileInput = String(Boolean(document.querySelector('input[name="receipt"], input[name="paymentEvidence"]')));
+  document.documentElement.dataset.unpaidNotice = String(Boolean(unpaid));
+  cash?.click();
   setTimeout(() => {
-    document.documentElement.dataset.unpaidNotice = String(document.body.textContent?.includes("Payment not received"));
+    const cashText = document.body.textContent ?? "";
+    document.documentElement.dataset.cashAmount = String(cashText.includes("Exact amount collected") && cashText.includes("ETB 30,000"));
     document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
     document.documentElement.dataset.ready = "true";
-  }, 250);
+  }, 150);
 }, 250);
 `;
 
@@ -155,20 +150,20 @@ try {
   const chrome = findChrome();
   for (const width of [320, 360, 390, 412]) {
     const dom = await render(chrome, { width, height: 915 });
-    const label = `Driver unpaid payment ${width}px smoke`;
+    const label = `Driver atomic Finish Trip ${width}px smoke`;
     assertContains(dom, [
       'data-ready="true"', 'data-initial-cash-selected="false"',
       'data-initial-bank-selected="false"', 'data-initial-submit-disabled="true"',
       'data-finish-trip="true"', 'data-payment-method="true"',
       'data-cash-option="true"', 'data-bank-option="true"',
       'data-method-help="true"', 'data-no-upload="true"',
-      'data-file-input="false"', 'data-unpaid-notice="true"',
+      'data-file-input="false"', 'data-unpaid-notice="true"', 'data-cash-amount="true"',
       'data-overflow="false"',
-      "Payment not received", "No payment report was created.",
-      "Return to Jobs", "Review payment again",
+      "Payment not received", "Exact amount collected",
+      "Optional payment note",
     ], label);
   }
-  console.log("Driver unpaid-payment browser smoke passed at 320px, 360px, 390px and 412px with the required form, no default choice, no upload input and no horizontal overflow.");
+  console.log("Driver atomic Finish Trip browser smoke passed at 320px, 360px, 390px and 412px with all three payment results, exact-cash input, no payment-evidence upload and no horizontal overflow.");
 } catch (error) {
   if (previewOutput.trim()) console.error(previewOutput.trim());
   throw error;

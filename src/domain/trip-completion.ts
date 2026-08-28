@@ -64,7 +64,7 @@ export function buildTripCompletionSteps(
       key: "commission",
       state: paymentComplete && summary.commission_charged_etb > 0
         ? "complete"
-        : paymentComplete ? "current" : "waiting",
+        : delivered ? "current" : "waiting",
     });
   }
 

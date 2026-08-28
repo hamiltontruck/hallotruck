@@ -1,6 +1,7 @@
 import { supabase } from "./supabase.client";
 
 export type DriverCollectionMethod = "cash" | "bank";
+export type DriverTripPaymentResult = "cash_received" | "bank_telebirr" | "payment_not_received";
 export type DriverCollectionEvent = "initiated" | "failed" | "held_escrow" | "released" | "refunded";
 
 export interface DriverCollectionOrder {
@@ -88,4 +89,19 @@ export async function submitDriverCollectedPayment(input: {
   });
   if (error) throw new Error(error.message);
   return String(data);
+}
+
+export async function recordDriverTripPaymentResult(input: {
+  orderId: string;
+  result: DriverTripPaymentResult;
+  amountCollected?: number;
+  note?: string;
+}): Promise<void> {
+  const { error } = await supabase.rpc("driver_record_trip_payment_result", {
+    p_order_id: input.orderId,
+    p_result_type: input.result,
+    p_amount_collected: input.amountCollected ?? null,
+    p_note: input.note?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
 }

@@ -35,6 +35,7 @@ export async function createCustomerCargoOrder(input: {
   cargoCategory?: CargoCategory;
   packagingType?: PackagingType;
   cargoNotes?: string;
+  paymentMethod?: "cash" | "bank_telebirr";
 }) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Customer session expired.");
@@ -86,6 +87,8 @@ export async function createCustomerCargoOrder(input: {
     cargo_notes: cargoNotes,
     cargo_description: cargoDescription,
     price_etb: priceEtb,
+    selected_payment_method: input.paymentMethod ?? "cash",
+    payment_terms: "pay_driver_on_delivery",
     status: "placed",
   }).select("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,status").single();
 

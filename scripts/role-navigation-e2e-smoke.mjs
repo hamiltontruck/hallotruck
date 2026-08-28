@@ -87,7 +87,7 @@ try {
   const chrome = findChrome();
   const cases = [
     ["customer", "/customer/payments", ["Home", "Orders", "Track", "Payments", "Profile"]],
-    ["driver", "/driver/commission", ["Home", "Jobs", "Trip", "Wallet", "Profile"]],
+    ["driver", "/driver/earnings", ["Home", "Jobs", "Trip", "History", "Profile"]],
     ["admin", "/admin/more", ["Overview", "Orders", "Fleet", "Finance", "More"]],
   ];
   for (const width of [320, 360, 390, 412]) {
