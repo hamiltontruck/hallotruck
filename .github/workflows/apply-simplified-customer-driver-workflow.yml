@@ -1,3 +1,4 @@
+# Final rerun after aligning legacy completion tests.
 name: Apply Simplified Customer Driver Workflow
 
 on:
@@ -64,10 +65,7 @@ jobs:
           from pathlib import Path
           path = Path('tests/regression/trip-completion-workflow.test.ts')
           source = path.read_text()
-          source = source.replace(
-            '  getDriverPostDeliveryRoute,\n',
-            '',
-          )
+          source = source.replace('  getDriverPostDeliveryRoute,\n', '')
           source = source.replace(
             '''test("POD completion sends every driver to the completed-trip payment page", () => {
   assert.equal(getDriverPostDeliveryRoute("pay_driver_on_delivery", "order-1"), "/driver/payment/order-1");
@@ -81,16 +79,8 @@ jobs:
   assert.doesNotMatch(activeTrip, /getDriverPostDeliveryRoute/);
 });''',
           )
-          source = source.replace(
-            '["complete", "attention", "waiting", "waiting"]',
-            '["complete", "attention", "current", "waiting"]',
-            1,
-          )
-          source = source.replace(
-            '["complete", "current", "waiting", "waiting"]',
-            '["complete", "current", "current", "waiting"]',
-            1,
-          )
+          source = source.replace('["complete", "attention", "waiting", "waiting"]', '["complete", "attention", "current", "waiting"]', 1)
+          source = source.replace('["complete", "current", "waiting", "waiting"]', '["complete", "current", "current", "waiting"]', 1)
           source = source.replace(
             '''test("POD retry preserves the original proof and avoids duplicate uploads", () => {
   assert.match(migration, /if v_status = 'delivered' and v_existing_proof then[\\s\\S]*return;/);
@@ -100,10 +90,7 @@ jobs:
   assert.match(deliveryService, /recorded\\.data\\.photo_path !== photoPath/);
 });''',
             '''test("atomic Finish Trip denies duplicate proof, payment and completion", () => {
-  const simplifiedMigration = readFileSync(path.join(
-    root,
-    "supabase/migrations/20260828173000_simplified_customer_driver_workflow.sql",
-  ), "utf8");
+  const simplifiedMigration = readFileSync(path.join(root, "supabase/migrations/20260828173000_simplified_customer_driver_workflow.sql"), "utf8");
   assert.match(simplifiedMigration, /This trip was already completed/);
   assert.match(simplifiedMigration, /exists \\([\\s\\S]*driver_trip_payment_results/);
   assert.match(simplifiedMigration, /exists \\([\\s\\S]*delivery_proofs/);
@@ -129,24 +116,7 @@ jobs:
         run: npm run lint
 
       - name: Regression tests
-        id: regression
-        shell: bash
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          npm run test:regression 2>&1 | tee /tmp/regression-output.txt
-
-      - name: Capture regression failure
-        if: steps.regression.outcome == 'failure'
-        shell: bash
-        run: |
-          cp /tmp/regression-output.txt .github/regression-output.txt
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .github/regression-output.txt
-          git commit -m "Capture remaining regression failure [skip ci]"
-          git push origin HEAD:fix/driver-trip-history-earned-money
-          exit 1
+        run: npm run test:regression
 
       - name: Build
         run: npm run build
