@@ -20,12 +20,19 @@
 - Duplicate positive or negative events for the same payment are rejected.
 - Delivery no longer auto-releases a confirmed payment.
 - Held Escrow no longer counts as Released when `orders.payment_status` is recomputed.
+- Immutable corrections are reconciled against their exact source payment. A fully corrected source cannot be confirmed or released.
+- A partially corrected source shows and releases only its remaining effective value; the 2% Driver commission accrues on that value exactly once.
+- Legacy refund rows that predate `financial_corrections` remain supported and are not double-subtracted.
 
 ## Migration
 
 `supabase/migrations/20260828120000_assigned_driver_payment_confirmation_gate.sql`
 
 The migration creates the immutable confirmation-event ledger, removes the delivery auto-release trigger, adds the explicit Admin/CEO release RPC, corrects canonical payment-status recomputation, and removes Driver-side receipt requirements for direct Bank/Telebirr collection reports.
+
+`supabase/migrations/20260828130612_reconcile_corrected_escrow_sources.sql`
+
+The reconciliation migration makes payment status, Driver confirmation, Admin/CEO release and commission accrual source-aware. Original payment and correction rows remain immutable. Finance displays original, corrected and releasable ETB values and hides the release action when no releasable balance remains.
 
 ## Validation
 
@@ -40,3 +47,5 @@ npm run test:e2e-smoke
 ```
 
 The assigned-driver browser smoke covers 320, 360, 390 and 412 pixel widths and asserts that no file input is rendered.
+
+Migration SQL is also executed against the live schema inside `BEGIN … ROLLBACK`; this validates function signatures, enum values, relations and grants without changing production financial history.

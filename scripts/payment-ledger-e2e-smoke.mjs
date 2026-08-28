@@ -107,6 +107,7 @@ const payments = Array.from({ length: 15 }, (_, index) => {
   if (number === 1) return { id, order_id: orderId, provider: "cbe", provider_ref: "LEGACY-" + "X".repeat(80), amount_etb: 65500, event: "released", receipt_path: null, rejection_reason: null, reviewed_by: "admin-1", reviewed_at: "2026-08-09T01:00:41.000Z", raw_payload: { legacy_completed: true }, created_at: "2026-08-09T01:00:41.000Z" };
   if (number === 2) return { id, order_id: orderId, provider: "telebirr", provider_ref: "TX-OVER-0002", amount_etb: 65500, event: "initiated", receipt_path: null, rejection_reason: null, reviewed_by: null, reviewed_at: null, raw_payload: null, created_at: "2026-08-24T10:00:00.000Z" };
   if (number === 3) return { id, order_id: orderId, provider: "cbe", provider_ref: "TX-UNDER-0003", amount_etb: 20000, event: "initiated", receipt_path: "customer/receipt-3.png", rejection_reason: null, reviewed_by: null, reviewed_at: null, raw_payload: null, created_at: "2026-08-24T09:00:00.000Z" };
+  if (number === 4) return { id, order_id: orderId, provider: "telebirr", provider_ref: "TX-CORRECTED-0004", amount_etb: 50000, event: "held_escrow", receipt_path: "customer/receipt-4.png", rejection_reason: null, reviewed_by: "admin-1", reviewed_at: "2026-08-24T08:30:00.000Z", raw_payload: null, created_at: "2026-08-24T08:30:00.000Z" };
   return { id, order_id: orderId, provider: number % 2 ? "cbe" : "telebirr", provider_ref: "TX-" + String(number).padStart(4, "0"), amount_etb: 50000, event: "released", receipt_path: "customer/receipt-" + number + ".png", rejection_reason: null, reviewed_by: "admin-1", reviewed_at: "2026-08-24T08:00:00.000Z", raw_payload: null, created_at: "2026-08-24T08:00:00.000Z" };
 });
 
@@ -130,6 +131,8 @@ const fixture = {
     { id: "audit-1", payment_id: "payment-01", action: "verified", actor_id: "12345678-aaaa-bbbb-cccc-123456789000", reason: null, created_at: "2026-08-09T01:02:00.000Z" },
     { id: "audit-2", payment_id: "payment-01", action: "resubmitted", actor_id: "12345678-aaaa-bbbb-cccc-123456789000", reason: "Historical receipt was reconciled during legacy migration.", created_at: "2026-08-09T01:01:00.000Z" },
   ],
+  confirmations: [{ id: "confirmation-4", order_id: "order-04", assigned_driver_id: "driver-1", payment_id: "payment-04", confirmation_type: "payment_confirmed", confirmed_amount_etb: 30000, provider: "telebirr", provider_ref: "TX-CORRECTED-0004", reason: null, confirmed_at: "2026-08-24T09:00:00.000Z", actor_id: "driver-1" }],
+  corrections: [{ id: "correction-4", source_payment_id: "payment-04", amount_etb: 20000, correction_type: "partial_refund", reason: "Verified partial customer refund", created_at: "2026-08-24T09:30:00.000Z" }],
 };
 
 createRoot(document.getElementById("root")).render(React.createElement(AdminPaymentReview, { fixture }));
@@ -195,6 +198,10 @@ try {
       "Receipt exempt · legacy completed",
       "Payment review audit",
       "Historical receipt was reconciled during legacy migration.",
+      "Immutable correction applied.",
+      "Corrected ETB 20,000",
+      "releasable ETB 30,000",
+      "Release ETB 30,000",
       "Showing 1–12 of 15",
       "1 / 2",
     ], label);
