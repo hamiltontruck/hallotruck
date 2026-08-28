@@ -63,6 +63,7 @@ jobs:
           rm -rf .github/apply-simplified-workflow
           rm -rf .github/apply-simplified-workflow-b64
           rm -f .github/workflows/apply-simplified-customer-driver-workflow.yml
+          rm -f .github/regression-output.txt
 
       - name: Install
         run: npm ci
@@ -71,7 +72,24 @@ jobs:
         run: npm run lint
 
       - name: Regression tests
-        run: npm run test:regression
+        id: regression
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run test:regression 2>&1 | tee /tmp/regression-output.txt
+
+      - name: Capture regression failure
+        if: steps.regression.outcome == 'failure'
+        shell: bash
+        run: |
+          cp /tmp/regression-output.txt .github/regression-output.txt
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/regression-output.txt
+          git commit -m "Capture remaining regression failure [skip ci]"
+          git push origin HEAD:fix/driver-trip-history-earned-money
+          exit 1
 
       - name: Build
         run: npm run build
