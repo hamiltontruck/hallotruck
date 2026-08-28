@@ -13,6 +13,7 @@ export interface CustomerOrder {
   payment_status: string;
   payment_provider: string | null;
   payment_ref: string | null;
+  payment_terms: string;
   cancellation_reason: string | null;
   cancellation_source: string | null;
   cancelled_at: string | null;
@@ -101,7 +102,7 @@ export async function getCustomerPortalData(): Promise<CustomerPortalData> {
   const [ordersResult, profile] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, tracking_id, pickup_address, dropoff_address, vehicle_type, distance_km, price_etb, status, payment_status, payment_provider, payment_ref, cancellation_reason, cancellation_source, cancelled_at, created_at")
+      .select("id, tracking_id, pickup_address, dropoff_address, vehicle_type, distance_km, price_etb, status, payment_status, payment_provider, payment_ref, payment_terms, cancellation_reason, cancellation_source, cancelled_at, created_at")
       .order("created_at", { ascending: false }),
     getCustomerProfileForSession(),
   ]);
