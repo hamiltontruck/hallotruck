@@ -3,6 +3,12 @@ import { getCustomerCopy } from "../../i18n/customerCopy";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { cancelCustomerOrder, type CustomerOrder } from "../../services/customer.service";
 
+const lockedCopy = {
+  en: "Cancellation is locked because a Driver has been assigned or the trip has started. Contact HALLOTRUCK support for an emergency review.",
+  om: "Driver erga ramadamee ykn trip erga jalqabee booda Customer order cancel gochuu hin danda'u. Haala hatattamaa irratti HALLOTRUCK support qunnami.",
+  am: "አሽከርካሪ ከተመደበ ወይም ጉዞው ከተጀመረ በኋላ ደንበኛው ትዕዛዙን መሰረዝ አይችልም። ለአስቸኳይ ግምገማ HALLOTRUCK supportን ያነጋግሩ።",
+} as const;
+
 export function CustomerCancelOrderModal({
   order,
   onClose,
@@ -18,11 +24,12 @@ export function CustomerCancelOrderModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const cleanReason = reason.trim();
+  const cancellationLocked = !["quoted", "placed"].includes(order.status);
   const reasonValid = cleanReason.length >= 5 && cleanReason.length <= 500;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!reasonValid || busy) return;
+    if (cancellationLocked || !reasonValid || busy) return;
 
     setBusy(true);
     setError("");
@@ -53,32 +60,39 @@ export function CustomerCancelOrderModal({
             <span>{order.dropoff_address}</span>
           </div>
 
-          <p className="customer-cancel-help">{c.cancelOrderHelp}</p>
-          {order.status === "in_transit" && <p className="customer-cancel-warning">{c.cancelInTransitWarning}</p>}
+          {cancellationLocked ? (
+            <p className="customer-cancel-warning" role="alert">{lockedCopy[language]}</p>
+          ) : (
+            <p className="customer-cancel-help">{c.cancelOrderHelp}</p>
+          )}
           {error && <p className="customer-cancel-error" role="alert">{error}</p>}
 
-          <label className="customer-cancel-reason">
-            <span>{c.cancelReason}</span>
-            <textarea
-              autoFocus
-              rows={5}
-              maxLength={500}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder={c.cancelReasonPlaceholder}
-              required
-            />
-            <small className={cleanReason.length > 0 && !reasonValid ? "has-error" : ""}>
-              {c.reasonLength} · {reason.length}/500
-            </small>
-          </label>
+          {!cancellationLocked && (
+            <label className="customer-cancel-reason">
+              <span>{c.cancelReason}</span>
+              <textarea
+                autoFocus
+                rows={5}
+                maxLength={500}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder={c.cancelReasonPlaceholder}
+                required
+              />
+              <small className={cleanReason.length > 0 && !reasonValid ? "has-error" : ""}>
+                {c.reasonLength} · {reason.length}/500
+              </small>
+            </label>
+          )}
         </div>
 
         <footer className="customer-cancel-sheet__footer">
           <button type="button" onClick={onClose} disabled={busy} className="customer-cancel-keep">{c.keepOrder}</button>
-          <button type="submit" disabled={busy || !reasonValid} className="customer-cancel-confirm">
-            {busy ? c.cancellingOrder : c.confirmCancelOrder}
-          </button>
+          {!cancellationLocked && (
+            <button type="submit" disabled={busy || !reasonValid} className="customer-cancel-confirm">
+              {busy ? c.cancellingOrder : c.confirmCancelOrder}
+            </button>
+          )}
         </footer>
       </form>
     </div>
