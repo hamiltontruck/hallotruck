@@ -13,6 +13,8 @@ import {
   getDriverPaymentSubmissionIssue,
   type DriverPaymentChoice,
 } from "../domain/driver-payment-collection";
+import { TripCompletionProgress } from "../components/trips/TripCompletionProgress";
+import type { TripCompletionSummary } from "../domain/trip-completion";
 
 const providers = [
   ["telebirr", "Telebirr"],
@@ -139,6 +141,7 @@ const copy = {
 export interface DriverPaymentCollectionFixture {
   order: DriverCollectionOrder;
   status?: DriverCollectionStatus | null;
+  completionSummary?: TripCompletionSummary;
 }
 
 export function DriverPaymentCollection({ fixture }: { fixture?: DriverPaymentCollectionFixture } = {}) {
@@ -229,6 +232,23 @@ export function DriverPaymentCollection({ fixture }: { fixture?: DriverPaymentCo
   const released = status?.payment_event === "released";
   const rejected = status?.payment_event === "failed";
   const submissionIssue = getDriverPaymentSubmissionIssue(method, Boolean(receipt));
+  const fixtureSummary: TripCompletionSummary | undefined = fixture?.completionSummary ?? (fixture ? {
+    order_id: order.id,
+    tracking_id: order.tracking_id,
+    order_status: order.status,
+    payment_terms: order.payment_terms,
+    invoice_total_etb: amount,
+    initiated_etb: pending ? amount : 0,
+    held_escrow_etb: 0,
+    released_etb: released ? amount : 0,
+    refunded_etb: 0,
+    verified_net_etb: released ? amount : 0,
+    balance_due_etb: released ? 0 : amount,
+    commission_charged_etb: released ? Math.round(amount * 0.02 * 100) / 100 : 0,
+    payment_state: released ? "released" : pending ? "awaiting_admin_review" : "payment_required",
+    delivery_proof_recorded: true,
+    rating_score: null,
+  } : undefined);
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-10 sm:py-16">
@@ -245,6 +265,8 @@ export function DriverPaymentCollection({ fixture }: { fixture?: DriverPaymentCo
           <div><p className="text-[10px] uppercase tracking-wide text-steel">{c.invoice}</p><p className="mt-1 font-display text-2xl font-bold">{formatEtb(amount)}</p></div>
         </div>
       </section>
+
+      <TripCompletionProgress orderId={order.id} audience="driver" initialSummary={fixtureSummary} />
 
       {error && <p className="mt-5 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
 
