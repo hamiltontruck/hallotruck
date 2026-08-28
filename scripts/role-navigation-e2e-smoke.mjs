@@ -86,7 +86,7 @@ try {
   await waitForServer(baseUrl);
   const chrome = findChrome();
   const cases = [
-    ["customer", "/customer/payments", ["Home", "Orders", "Track", "Payments", "Profile"]],
+    ["customer", "/customer/payments", ["Home", "Orders", "Live", "Payments", "Profile"]],
     ["driver", "/driver/earnings", ["Home", "Jobs", "Trip", "History", "Profile"]],
     ["admin", "/admin/more", ["Overview", "Orders", "Fleet", "Finance", "More"]],
   ];
