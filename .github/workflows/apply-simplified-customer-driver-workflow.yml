@@ -35,8 +35,10 @@ jobs:
           source = path.read_text()
           for token in [
               '${quote.toLocaleString()}',
-              '${cargoText.quoteUnavailable} ${quoteError}',
-              '${cargoText.pricing} ${cargoText.latestRate}',
+              '${cargoText.quoteUnavailable}',
+              '${quoteError}',
+              '${cargoText.pricing}',
+              '${cargoText.latestRate}',
               '${paymentMethod === "cash" ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white"}',
               '${paymentMethod === "bank_telebirr" ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white"}',
           ]:
@@ -50,7 +52,7 @@ jobs:
       - name: Align completion tests and compatibility
         shell: bash
         run: |
-          python .github/apply-simplified-workflow/align.py
+          if [ -f .github/apply-simplified-workflow/align.py ]; then python .github/apply-simplified-workflow/align.py; fi
           python - <<'PY'
           from pathlib import Path
           path = Path('src/services/customer-cargo.service.ts')
