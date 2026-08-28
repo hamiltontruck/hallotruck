@@ -6,6 +6,7 @@ on:
       - fix/driver-trip-history-earned-money
     paths:
       - .github/finalize-customer-driver-workflow/patch.py
+      - .github/finalize-customer-driver-workflow/fix-smoke.py
       - .github/workflows/finalize-customer-driver-workflow.yml
 
 permissions:
@@ -24,7 +25,9 @@ jobs:
           node-version: 22
           cache: npm
       - name: Apply final hardening
-        run: python .github/finalize-customer-driver-workflow/patch.py
+        run: |
+          python .github/finalize-customer-driver-workflow/patch.py
+          python .github/finalize-customer-driver-workflow/fix-smoke.py
       - name: Remove one-time files
         run: rm -rf .github/finalize-customer-driver-workflow .github/workflows/finalize-customer-driver-workflow.yml
       - name: Install
