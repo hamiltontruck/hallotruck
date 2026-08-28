@@ -47,6 +47,20 @@ jobs:
       - name: Apply workflow changes
         run: node scripts/apply-simplified-customer-driver-workflow.mjs
 
+      - name: Align completion tests and compatibility
+        shell: bash
+        run: |
+          python .github/apply-simplified-workflow/align.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/services/customer-cargo.service.ts')
+          source = path.read_text()
+          source = source.replace('paymentMethod: "cash" | "bank_telebirr";', 'paymentMethod?: "cash" | "bank_telebirr";')
+          source = source.replace('selected_payment_method: input.paymentMethod,', 'selected_payment_method: input.paymentMethod ?? "cash",')
+          path.write_text(source)
+          PY
+          rm -rf .github/apply-simplified-workflow .github/apply-simplified-workflow-b64 .github/regression-output.txt
+
       - name: Install
         run: npm ci
 
