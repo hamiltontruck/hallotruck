@@ -109,10 +109,16 @@ setTimeout(() => {
   const bank = document.querySelector('input[value="bank"]');
   const submit = document.querySelector('form button:not([type="button"])');
   const unpaid = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("Payment not received / not confirmed"));
+  const initialText = document.body.textContent ?? "";
   document.documentElement.dataset.initialCashSelected = String(Boolean(cash?.checked));
   document.documentElement.dataset.initialBankSelected = String(Boolean(bank?.checked));
   document.documentElement.dataset.initialSubmitDisabled = String(Boolean(submit?.disabled));
-  document.documentElement.dataset.methodHelp = String(document.body.textContent?.includes("Choose how the customer paid."));
+  document.documentElement.dataset.finishTrip = String(initialText.includes("FINISH TRIP"));
+  document.documentElement.dataset.paymentMethod = String(initialText.includes("Payment method"));
+  document.documentElement.dataset.cashOption = String(initialText.includes("Cash"));
+  document.documentElement.dataset.bankOption = String(initialText.includes("Bank / Telebirr"));
+  document.documentElement.dataset.methodHelp = String(initialText.includes("Choose how the customer paid."));
+  document.documentElement.dataset.noUpload = String(initialText.includes("No receipt upload. No screenshot upload."));
   document.documentElement.dataset.fileInput = String(Boolean(document.querySelector('input[type="file"]')));
   unpaid?.click();
   setTimeout(() => {
@@ -153,15 +159,16 @@ try {
     assertContains(dom, [
       'data-ready="true"', 'data-initial-cash-selected="false"',
       'data-initial-bank-selected="false"', 'data-initial-submit-disabled="true"',
-      'data-method-help="true"', 'data-file-input="false"',
-      'data-unpaid-notice="true"', 'data-overflow="false"',
-      "FINISH TRIP", "Payment method", "Cash", "Bank / Telebirr",
-      "No receipt upload. No screenshot upload.",
+      'data-finish-trip="true"', 'data-payment-method="true"',
+      'data-cash-option="true"', 'data-bank-option="true"',
+      'data-method-help="true"', 'data-no-upload="true"',
+      'data-file-input="false"', 'data-unpaid-notice="true"',
+      'data-overflow="false"',
       "Payment not received", "No payment report was created.",
       "Return to Jobs", "Review payment again",
     ], label);
   }
-  console.log("Driver unpaid-payment browser smoke passed at 320px, 360px, 390px and 412px with no default choice, no upload input and no horizontal overflow.");
+  console.log("Driver unpaid-payment browser smoke passed at 320px, 360px, 390px and 412px with the required form, no default choice, no upload input and no horizontal overflow.");
 } catch (error) {
   if (previewOutput.trim()) console.error(previewOutput.trim());
   throw error;
