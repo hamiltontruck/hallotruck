@@ -88,6 +88,27 @@ export interface PaymentCorrectionRow {
   created_at: string;
 }
 
+export interface TripReconciliationRow {
+  order_id: string;
+  tracking_id: string;
+  route: string;
+  customer_shipper: string;
+  assigned_driver: string;
+  trip_amount_etb: number | string;
+  payment_method: string;
+  cash_collected_etb: number | string;
+  bank_telebirr_received_etb: number | string;
+  hallo_commission_etb: number | string;
+  driver_gross_etb: number | string;
+  driver_net_etb: number | string;
+  deposit_consumed_etb: number | string;
+  remaining_available_deposit_etb: number | string;
+  commission_due_etb: number | string;
+  completed_at: string;
+  payment_status: string;
+  rating_status: string;
+}
+
 const PAGE_SIZE = 12;
 const QUERY_BATCH_SIZE = 100;
 
@@ -98,6 +119,7 @@ export interface AdminPaymentReviewFixture {
   audit: AuditRow[];
   confirmations?: DriverConfirmationEventRow[];
   corrections?: PaymentCorrectionRow[];
+  reconciliation?: TripReconciliationRow[];
 }
 
 function amount(value: number | string | null | undefined) {
@@ -137,6 +159,7 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
   const [audit, setAudit] = useState<AuditRow[]>(fixture?.audit ?? []);
   const [confirmations, setConfirmations] = useState<DriverConfirmationEventRow[]>(fixture?.confirmations ?? []);
   const [corrections, setCorrections] = useState<PaymentCorrectionRow[]>(fixture?.corrections ?? []);
+  const [reconciliation, setReconciliation] = useState<TripReconciliationRow[]>(fixture?.reconciliation ?? []);
   const [filter, setFilter] = useState<PaymentLedgerStatusFilter>("all");
   const [provider, setProvider] = useState("all");
   const [dateFilter, setDateFilter] = useState<PaymentLedgerDateFilter>("all");
@@ -156,6 +179,7 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
       setAudit(fixture.audit);
       setConfirmations(fixture.confirmations ?? []);
       setCorrections(fixture.corrections ?? []);
+      setReconciliation(fixture.reconciliation ?? []);
       setLoading(false);
       setError("");
       return;
@@ -198,6 +222,9 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
       setAudit(auditResults.flatMap((result) => (result.data ?? []) as AuditRow[]));
       setConfirmations(confirmationResults.flatMap((result) => (result.data ?? []) as DriverConfirmationEventRow[]));
       setCorrections(correctionResults.flatMap((result) => (result.data ?? []) as PaymentCorrectionRow[]));
+      const reconciliationResult = await supabase.rpc("admin_customer_driver_reconciliation");
+      if (reconciliationResult.error) throw reconciliationResult.error;
+      setReconciliation((reconciliationResult.data ?? []) as TripReconciliationRow[]);
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Payment ledger could not be loaded.");
@@ -213,6 +240,8 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
       .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => void load())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "driver_payment_confirmation_events" }, () => void load())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "financial_corrections" }, () => void load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "driver_trip_payment_results" }, () => void load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ratings" }, () => void load())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [fixture, load]);
@@ -354,6 +383,30 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
         <Summary label="Released" rows={totals.released} tone="good" amountFor={effectiveAmount} />
         <Summary label="Rejected / failed" rows={totals.rejected} tone="critical" />
       </div>
+
+
+      {reconciliation.length > 0 && <section className="mt-4 min-w-0 border border-asphalt/10 bg-white p-4 sm:p-5">
+        <div><p className="font-mono text-[10px] uppercase tracking-[.18em] text-emerald-700">CUSTOMER–DRIVER RECONCILIATION</p><h2 className="mt-1 font-display text-xl font-bold">Completed trip finance and rating report</h2><p className="mt-1 text-xs text-steel">Immutable completion results with cash, platform payment, commission, deposit and rating status.</p></div>
+        <div className="mt-4 grid gap-3">
+          {reconciliation.map((row) => <article key={row.order_id} className="min-w-0 border border-asphalt/10 bg-bone p-4">
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-3"><div className="min-w-0"><p className="break-all font-mono text-xs font-semibold">{row.tracking_id}</p><p className="mt-2 break-words text-sm font-semibold">{row.route}</p><p className="mt-1 text-xs text-steel">Customer / shipper: <strong className="text-asphalt">{row.customer_shipper}</strong> · Assigned Driver: <strong className="text-asphalt">{row.assigned_driver}</strong></p></div><span className="bg-white px-3 py-2 text-[10px] font-semibold uppercase text-steel">{row.payment_status.replace(/_/g, " ")}</span></div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3 lg:grid-cols-6">
+              <ReconciliationValue label="Trip amount" value={`ETB ${money(row.trip_amount_etb)}`} />
+              <ReconciliationValue label="Payment method" value={row.payment_method.replace(/_/g, " ")} />
+              <ReconciliationValue label="Cash collected" value={`ETB ${money(row.cash_collected_etb)}`} />
+              <ReconciliationValue label="HALLO Bank / Telebirr" value={`ETB ${money(row.bank_telebirr_received_etb)}`} />
+              <ReconciliationValue label="HALLO commission" value={`ETB ${money(row.hallo_commission_etb)}`} />
+              <ReconciliationValue label="Driver gross" value={`ETB ${money(row.driver_gross_etb)}`} />
+              <ReconciliationValue label="Driver net" value={`ETB ${money(row.driver_net_etb)}`} />
+              <ReconciliationValue label="Deposit consumed" value={`ETB ${money(row.deposit_consumed_etb)}`} />
+              <ReconciliationValue label="Available deposit" value={`ETB ${money(row.remaining_available_deposit_etb)}`} />
+              <ReconciliationValue label="Commission due" value={`ETB ${money(row.commission_due_etb)}`} />
+              <ReconciliationValue label="Completed" value={new Date(row.completed_at).toLocaleString()} />
+              <ReconciliationValue label="Rating" value={row.rating_status.replace(/_/g, " ")} />
+            </div>
+          </article>)}
+        </div>
+      </section>}
 
       <section className="mt-4 min-w-0 border border-asphalt/10 bg-white p-3 min-[360px]:p-4">
         <div className="grid min-w-0 gap-3 sm:grid-cols-2 md:grid-cols-4">
@@ -508,4 +561,9 @@ function CorrectionHistory({ entries }: { entries: PaymentCorrectionRow[] }) {
     <h3 className="text-[10px] font-semibold uppercase tracking-wide text-steel">Immutable correction history</h3>
     <ol className="mt-2 grid min-w-0 gap-2">{entries.map((entry) => <li key={entry.id} className="min-w-0 border-l-2 border-amber pl-3 text-[11px] text-steel [overflow-wrap:anywhere]"><strong className="capitalize text-asphalt">{entry.correction_type.replace(/_/g, " ")} · ETB {money(entry.amount_etb)}</strong> · {new Date(entry.created_at).toLocaleString()}<span className="mt-1 block text-asphalt">{entry.reason}</span></li>)}</ol>
   </section>;
+}
+
+
+function ReconciliationValue({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0"><span className="block text-[9px] font-semibold uppercase tracking-wide text-steel">{label}</span><strong className="mt-1 block break-words text-asphalt">{value}</strong></div>;
 }

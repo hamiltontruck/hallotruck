@@ -133,6 +133,7 @@ const fixture = {
   ],
   confirmations: [{ id: "confirmation-4", order_id: "order-04", assigned_driver_id: "driver-1", payment_id: "payment-04", confirmation_type: "payment_confirmed", confirmed_amount_etb: 30000, provider: "telebirr", provider_ref: "TX-CORRECTED-0004", reason: null, confirmed_at: "2026-08-24T09:00:00.000Z", actor_id: "driver-1" }],
   corrections: [{ id: "correction-4", source_payment_id: "payment-04", amount_etb: 20000, correction_type: "partial_refund", reason: "Verified partial customer refund", created_at: "2026-08-24T09:30:00.000Z" }],
+  reconciliation: [{ order_id: "order-01", tracking_id: "HT-2026-F44A0E", route: "Hirna → Dessie", customer_shipper: "Sofi Husse", assigned_driver: "Adil Abdu", trip_amount_etb: 30000, payment_method: "cash", cash_collected_etb: 30000, bank_telebirr_received_etb: 0, hallo_commission_etb: 600, driver_gross_etb: 30000, driver_net_etb: 29400, deposit_consumed_etb: 600, remaining_available_deposit_etb: 9400, commission_due_etb: 0, completed_at: "2026-08-28T12:00:00.000Z", payment_status: "released", rating_status: "not_rated" }],
 };
 
 createRoot(document.getElementById("root")).render(React.createElement(AdminPaymentReview, { fixture }));
@@ -186,9 +187,14 @@ try {
     const label = `Payment ledger ${width}px smoke`;
     assertContains(dom, [
       "data-ready=\"true\"",
-      "data-card-count=\"12\"",
+      "data-card-count=\"13\"",
       "data-overflow=\"false\"",
       "Payment ledger",
+      "Completed trip finance and rating report",
+      "Cash collected",
+      "HALLO commission",
+      "ETB 29,400",
+      "ETB 9,400",
       "HT-2026-F44A0E",
       "Invoice mismatch",
       "Overpayment ETB 15,500",
