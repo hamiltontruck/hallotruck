@@ -1,0 +1,53 @@
+name: Finalize customer-driver workflow
+
+on:
+  push:
+    branches:
+      - fix/driver-trip-history-earned-money
+    paths:
+      - .github/finalize-customer-driver-workflow/patch.py
+      - .github/workflows/finalize-customer-driver-workflow.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/driver-trip-history-earned-money
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply final hardening
+        run: python .github/finalize-customer-driver-workflow/patch.py
+      - name: Remove one-time files
+        run: rm -rf .github/finalize-customer-driver-workflow .github/workflows/finalize-customer-driver-workflow.yml
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Regression tests
+        run: npm run test:regression
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-anon-key
+      - name: Browser smoke tests
+        run: npm run test:e2e-smoke
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-anon-key
+      - name: Commit final validated implementation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m "Harden commission reconciliation and Admin reporting"
+          git push origin HEAD:fix/driver-trip-history-earned-money
