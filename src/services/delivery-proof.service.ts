@@ -24,6 +24,14 @@ export async function submitDeliveryProof(input: DeliveryProofInput) {
     fail("Delivery photo must be smaller than 8 MB.");
   }
 
+  const existing = await supabase
+    .from("delivery_proofs")
+    .select("photo_path,signature_path")
+    .eq("order_id", input.orderId)
+    .maybeSingle();
+  if (existing.error) fail(existing.error.message);
+  if (existing.data) return;
+
   const stamp = Date.now();
   const extension =
     input.photo.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
@@ -58,6 +66,17 @@ export async function submitDeliveryProof(input: DeliveryProofInput) {
       p_signature_path: signaturePath,
     });
     if (error) fail(error.message);
+
+    const recorded = await supabase
+      .from("delivery_proofs")
+      .select("photo_path,signature_path")
+      .eq("order_id", input.orderId)
+      .single();
+    if (!recorded.error && recorded.data
+      && (recorded.data.photo_path !== photoPath || recorded.data.signature_path !== signaturePath)) {
+      await supabase.storage.from("delivery-proofs").remove(uploaded);
+      uploaded.length = 0;
+    }
   } catch (error) {
     if (uploaded.length) {
       await supabase.storage.from("delivery-proofs").remove(uploaded);

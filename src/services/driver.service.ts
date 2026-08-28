@@ -379,6 +379,7 @@ export interface MyOrder {
   pickup_address: string;
   dropoff_address: string;
   price_etb: number;
+  payment_terms: string;
   cancellation_reason: string | null;
   cancelled_at: string | null;
 }
@@ -389,7 +390,7 @@ export async function getMyActiveOrders(): Promise<MyOrder[]> {
 
   const { data, error } = await supabase
     .from("orders")
-    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, cancellation_reason, cancelled_at")
+    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, payment_terms, cancellation_reason, cancelled_at")
     .eq("driver_id", auth.user.id)
     .in("status", ["accepted", "in_transit"])
     .order("accepted_at", { ascending: true });
@@ -404,7 +405,7 @@ export async function getMyAssignedOrder(orderId: string): Promise<MyOrder | nul
 
   const { data, error } = await supabase
     .from("orders")
-    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, cancellation_reason, cancelled_at")
+    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, payment_terms, cancellation_reason, cancelled_at")
     .eq("id", orderId)
     .eq("driver_id", auth.user.id)
     .maybeSingle();
@@ -420,7 +421,7 @@ export async function getMyLatestCancelledOrder(): Promise<MyOrder | null> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("orders")
-    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, cancellation_reason, cancelled_at")
+    .select("id, tracking_id, status, pickup_address, dropoff_address, price_etb, payment_terms, cancellation_reason, cancelled_at")
     .eq("driver_id", auth.user.id)
     .eq("status", "cancelled")
     .gte("cancelled_at", sevenDaysAgo)
