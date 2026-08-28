@@ -1,6 +1,7 @@
 import { supabase } from "./supabase.client";
 
 export type DriverPaymentEvent = "initiated" | "held_escrow" | "released";
+export type DriverPaymentConfirmationType = "payment_confirmed" | "payment_not_received" | null;
 
 export interface DriverPaymentStatus {
   payment_id: string;
@@ -8,10 +9,13 @@ export interface DriverPaymentStatus {
   provider_ref: string | null;
   amount_etb: number;
   payment_event: DriverPaymentEvent;
+  confirmation_type: DriverPaymentConfirmationType;
+  confirmation_reason: string | null;
   confirmed_at: string | null;
   released_at: string | null;
   order_status: string;
   can_confirm: boolean;
+  can_report_not_received: boolean;
 }
 
 export interface AssignedCustomerContact {
@@ -35,7 +39,19 @@ export async function confirmDriverPayment(paymentId: string): Promise<string> {
     p_payment_id: paymentId,
   });
   if (error) throw new Error(error.message);
-  return String(data ?? "confirmed_waiting_delivery");
+  return String(data ?? "confirmed_waiting_admin_release");
+}
+
+export async function reportDriverPaymentNotReceived(
+  paymentId: string,
+  reason: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("driver_report_payment_not_received", {
+    p_payment_id: paymentId,
+    p_reason: reason.trim(),
+  });
+  if (error) throw new Error(error.message);
+  return String(data ?? "payment_not_received");
 }
 
 export async function getAssignedCustomerContact(orderId: string): Promise<AssignedCustomerContact> {

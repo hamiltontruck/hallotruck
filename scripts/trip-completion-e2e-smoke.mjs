@@ -59,28 +59,37 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { LanguageProvider } from ${JSON.stringify(path.join(root, "src/i18n/LanguageProvider.tsx"))};
 import { TripCompletionProgress } from ${JSON.stringify(path.join(root, "src/components/trips/TripCompletionProgress.tsx"))};
+import { DriverPaymentConfirmation } from ${JSON.stringify(path.join(root, "src/components/driver/DriverPaymentConfirmation.tsx"))};
 
 const base = {
-  order_id: "order-1", tracking_id: "HT-2026-000001", order_status: "delivered",
-  payment_terms: "pay_driver_on_delivery", invoice_total_etb: 10000,
-  initiated_etb: 0, held_escrow_etb: 0, released_etb: 0, refunded_etb: 0,
-  verified_net_etb: 0, balance_due_etb: 10000, commission_charged_etb: 0,
-  payment_state: "payment_required", delivery_proof_recorded: true, rating_score: null,
+  order_id: "order-1", tracking_id: "HT-2026-FA5518", order_status: "delivered",
+  payment_terms: "prepaid", invoice_total_etb: 75700,
+  initiated_etb: 0, held_escrow_etb: 75700, released_etb: 0, refunded_etb: 0,
+  verified_net_etb: 0, balance_due_etb: 75700, commission_charged_etb: 0,
+  payment_state: "awaiting_driver_confirmation", delivery_proof_recorded: true, rating_score: null,
 };
-const released = { ...base, order_id: "order-2", released_etb: 10000,
-  verified_net_etb: 10000, balance_due_etb: 0, commission_charged_etb: 200,
-  payment_state: "released", rating_score: 5 };
+const released = { ...base, order_id: "order-2", released_etb: 75700,
+  held_escrow_etb: 0, verified_net_etb: 75700, balance_due_etb: 0,
+  commission_charged_etb: 1514, payment_state: "released", rating_score: 5 };
+const payment = {
+  payment_id: "payment-1", provider: "bank_of_abyssinia", provider_ref: "AV5689844_",
+  amount_etb: 75700, payment_event: "held_escrow", confirmation_type: null,
+  confirmation_reason: null, confirmed_at: null, released_at: null,
+  order_status: "delivered", can_confirm: true, can_report_not_received: true,
+};
 
 createRoot(document.getElementById("root")).render(
   React.createElement(LanguageProvider, null,
     React.createElement("main", { className: "mx-auto max-w-2xl px-3 py-4" },
       React.createElement(TripCompletionProgress, { orderId: base.order_id, audience: "driver", initialSummary: base }),
+      React.createElement(DriverPaymentConfirmation, { orderId: base.order_id, fixture: [payment] }),
       React.createElement(TripCompletionProgress, { orderId: released.order_id, audience: "customer", initialSummary: released })
     )
   )
 );
 setTimeout(() => {
   document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
+  document.documentElement.dataset.fileInput = String(Boolean(document.querySelector('input[type="file"]')));
   document.documentElement.dataset.ready = "true";
 }, 100);
 `;
@@ -97,12 +106,27 @@ try {
   await waitForServer(baseUrl);
   const chrome = findChrome();
   for (const width of [320, 360, 390, 412]) {
-    const dom = await render(chrome, { width, height: 915 });
-    for (const expected of ['data-ready="true"', 'data-overflow="false"', "Trip completion", "Action needed", "Commission", "ETB 200", "Complete"]) {
-      if (!dom.includes(expected)) throw new Error(`Trip completion ${width}px smoke is missing: ${expected}`);
+    const dom = await render(chrome, { width, height: 1200 });
+    for (const expected of [
+      'data-ready="true"',
+      'data-overflow="false"',
+      'data-file-input="false"',
+      "Trip completion",
+      "Payment confirmation",
+      "Customer payment amount",
+      "ETB 75,700",
+      "Bank / Telebirr",
+      "Bank of Abyssinia",
+      "AV5689844_",
+      "Payment confirmed",
+      "Payment not received / not confirmed",
+      "Commission",
+      "Complete",
+    ]) {
+      if (!dom.includes(expected)) throw new Error(`Assigned-driver payment ${width}px smoke is missing: ${expected}`);
     }
   }
-  console.log("Customer/Driver trip completion smoke passed at 320px, 360px, 390px and 412px without horizontal overflow.");
+  console.log("Assigned-driver payment confirmation smoke passed at 320px, 360px, 390px and 412px with no file input or horizontal overflow.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2_000))]);

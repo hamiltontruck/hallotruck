@@ -33,10 +33,8 @@ export interface CompletionStep {
   state: CompletionStepState;
 }
 
-export function getDriverPostDeliveryRoute(paymentTerms: string, orderId: string) {
-  return paymentTerms === "pay_driver_on_delivery"
-    ? `/driver/payment/${orderId}`
-    : "/driver/earnings";
+export function getDriverPostDeliveryRoute(_paymentTerms: string, orderId: string) {
+  return `/driver/payment/${orderId}`;
 }
 
 export function buildTripCompletionSteps(
