@@ -22,11 +22,14 @@ test("customer mobile navigation exposes five real portal routes", () => {
   assert.match(app, /section === "track" \? "active" : section === "payments" \? "payment" : "all"/);
 });
 
-test("driver mobile navigation keeps five role-safe destinations", () => {
-  for (const route of ["/driver", "/driver/jobs", "/driver/trip", "/driver/commission", "/driver/documents"]) {
+test("driver mobile navigation keeps five role-safe destinations and exposes trip history", () => {
+  for (const route of ["/driver", "/driver/jobs", "/driver/trip", "/driver/earnings", "/driver/documents"]) {
     assert.match(driverNav, new RegExp(`to: "${route.replaceAll("/", "\\/")}"`));
   }
+  assert.match(driverNav, /history: "History"/);
+  assert.match(driverNav, /history: "Seenaa"/);
   assert.match(app, /path="\/driver" element={<DriverGate><DriverShell><JobBoard/);
+  assert.match(app, /path="\/driver\/earnings" element={<DriverGate><DriverShell><Earnings/);
   assert.doesNotMatch(app, /path="\/driver" element={<Navigate to="\/driver\/jobs"/);
 });
 

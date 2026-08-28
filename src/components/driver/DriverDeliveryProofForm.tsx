@@ -87,9 +87,11 @@ const journeyCopy: Record<HalloLanguage, {
 
 export function DriverDeliveryProofForm({
   orderId,
+  tripAmountEtb,
   onDelivered,
 }: {
   orderId: string;
+  tripAmountEtb: number;
   onDelivered: () => void;
 }) {
   const { language } = useLanguage();
@@ -108,6 +110,9 @@ export function DriverDeliveryProofForm({
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [completionResult, setCompletionResult] = useState<"cash_received" | "bank_telebirr" | "payment_not_received" | "">("");
+  const [amountCollected, setAmountCollected] = useState("");
+  const [paymentNote, setPaymentNote] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -279,6 +284,10 @@ export function DriverDeliveryProofForm({
     if (cleanedRecipientName.length < 2) return setError(c.recipientNameError);
     if (!photo?.size) return setError(c.photoRequired);
     if (!signed || !canvas.current) return setError(c.signatureRequired);
+    if (!completionResult) return setError("Choose Cash received, Bank / Telebirr, or Payment not received.");
+    if (completionResult === "cash_received" && Math.abs(Number(amountCollected) - tripAmountEtb) > 0.005) {
+      return setError(`Enter the exact collected amount: ETB ${tripAmountEtb.toLocaleString()}.`);
+    }
 
     const signature = await new Promise<Blob | null>((resolve) => canvas.current?.toBlob(resolve, "image/png"));
     if (!signature) return setError(c.signatureSaveError);
@@ -291,6 +300,9 @@ export function DriverDeliveryProofForm({
         deliveryNote,
         photo,
         signature,
+        paymentResult: completionResult,
+        amountCollected: completionResult === "cash_received" ? Number(amountCollected) : undefined,
+        paymentNote,
       });
       onDelivered();
     } catch (err) {
@@ -428,10 +440,29 @@ export function DriverDeliveryProofForm({
           <p className="mt-1 text-[10px] text-steel">{c.signHelp}</p>
         </section>
 
-        <section className={`mt-4 rounded-2xl border p-4 ${completionReady ? "border-emerald-300 bg-emerald-50" : "border-amber/25 bg-amber/5"}`}>
-          <StepHeading number={4} label={journey.complete} done={completionReady} ready={journey.ready} waiting={journey.waiting} />
+        <section className="mt-4 rounded-2xl border border-asphalt/10 bg-white p-4">
+          <p className="text-sm font-semibold text-asphalt">Payment result</p>
+          <p className="mt-1 text-xs text-steel">Choose one result before Finish Trip. The customer does not confirm payment.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {([
+              ["cash_received", "Cash received"],
+              ["bank_telebirr", "Bank / Telebirr"],
+              ["payment_not_received", "Payment not received"],
+            ] as const).map(([value, label]) => (
+              <label key={value} className={`rounded-xl border p-3 text-xs font-semibold ${completionResult === value ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white text-asphalt"}`}>
+                <input type="radio" name="completionResult" value={value} checked={completionResult === value} onChange={() => setCompletionResult(value)} className="mr-2" />
+                {label}
+              </label>
+            ))}
+          </div>
+          {completionResult === "cash_received" && <label className="mt-4 block text-xs font-semibold text-asphalt">Exact amount collected<input value={amountCollected} onChange={(event) => setAmountCollected(event.target.value)} type="number" inputMode="decimal" min="0.01" step="0.01" className="mt-2 block w-full rounded-xl border border-asphalt/15 px-4 py-3 text-sm font-normal" /><span className="mt-2 block font-normal text-steel">Required amount: ETB {tripAmountEtb.toLocaleString()}</span></label>}
+          <label className="mt-4 block text-xs font-semibold text-asphalt">Optional payment note<textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} maxLength={500} rows={2} className="mt-2 block w-full rounded-xl border border-asphalt/15 px-4 py-3 text-sm font-normal" /></label>
+        </section>
+
+        <section className={`mt-4 rounded-2xl border p-4 ${completionReady && completionResult ? "border-emerald-300 bg-emerald-50" : "border-amber/25 bg-amber/5"}`}>
+          <StepHeading number={4} label={journey.complete} done={completionReady && Boolean(completionResult)} ready={journey.ready} waiting={journey.waiting} />
           <p className="mt-3 text-xs leading-5 text-steel">{completionReady ? c.help : c.required}</p>
-          <Button disabled={saving || !completionReady} className="mt-4 w-full">{saving ? c.uploading : c.submit}</Button>
+          <Button disabled={saving || !completionReady || !completionResult} className="mt-4 w-full">{saving ? c.uploading : c.submit}</Button>
         </section>
       </div>
 

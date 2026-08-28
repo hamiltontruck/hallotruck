@@ -15,6 +15,7 @@ const copy: Record<HalloLanguage, {
   loadError: string;
   saveError: string;
   star: string;
+  skip: string;
 }> = {
   en: {
     kicker: "DELIVERY FEEDBACK",
@@ -29,6 +30,7 @@ const copy: Record<HalloLanguage, {
     loadError: "Could not load your rating.",
     saveError: "Rating could not be saved.",
     star: "star",
+    skip: "Skip",
   },
   om: {
     kicker: "YAADA GEEJJIBAA",
@@ -43,6 +45,7 @@ const copy: Record<HalloLanguage, {
     loadError: "Madaallii kee fe'uun hin milkoofne.",
     saveError: "Madaalliin olkaa'amuu hin dandeenye.",
     star: "urjii",
+    skip: "Darbii",
   },
   am: {
     kicker: "የማድረስ አስተያየት",
@@ -57,6 +60,7 @@ const copy: Record<HalloLanguage, {
     loadError: "ግምገማዎን መጫን አልተቻለም።",
     saveError: "ግምገማውን ማስቀመጥ አልተቻለም።",
     star: "ኮከብ",
+    skip: "ዝለል",
   },
 };
 
@@ -121,7 +125,7 @@ export function CustomerRatingCard({ orderId, driverName }: { orderId: string; d
         {rating && <span className="shrink-0 rounded-full bg-emerald-700 px-3 py-2 text-[10px] font-semibold uppercase text-white">{t.saved}</span>}
       </div>
 
-      {loading ? <p className="mt-4 text-xs text-steel">…</p> : <form onSubmit={submit} className="mt-4 min-w-0">
+      {loading ? <p className="mt-4 text-xs text-steel">…</p> : rating ? <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><p className="font-semibold text-emerald-900">{t.saved}: {"★".repeat(rating.score)}</p>{rating.comment && <p className="mt-2 text-steel">{rating.comment}</p>}</div> : <form onSubmit={submit} className="mt-4 min-w-0">
         <div className="grid min-w-0 grid-cols-5 gap-1.5 sm:gap-2" role="radiogroup" aria-label={t.title}>
           {[1, 2, 3, 4, 5].map((value) => (
             <button
@@ -153,12 +157,7 @@ export function CustomerRatingCard({ orderId, driverName }: { orderId: string; d
         {error && <p className="mt-3 break-words text-xs text-route">{error}</p>}
         {saved && <p className="mt-3 text-xs font-semibold text-emerald-800">{t.saved}</p>}
 
-        <button
-          disabled={busy || score === 0}
-          className="mt-4 min-h-11 w-full rounded-xl bg-asphalt px-5 py-3 text-xs font-semibold text-white disabled:opacity-40 sm:w-auto"
-        >
-          {busy ? t.saving : rating ? t.update : t.save}
-        </button>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2"><button disabled={busy || score === 0} className="min-h-11 w-full rounded-xl bg-asphalt px-5 py-3 text-xs font-semibold text-white disabled:opacity-40">{busy ? t.saving : t.save}</button><button type="button" onClick={() => setScore(0)} className="min-h-11 w-full rounded-xl border border-asphalt/20 px-5 py-3 text-xs font-semibold text-asphalt">{t.skip}</button></div>
       </form>}
     </section>
   );

@@ -8,6 +8,11 @@ export interface DriverEarningsTrip {
   trackingId: string;
   pickup: string;
   dropoff: string;
+  vehicleType: string;
+  distanceKm: number;
+  cargoDescription: string | null;
+  paymentTerms: string;
+  acceptedAt: string | null;
   deliveredAt: string | null;
   invoiceEtb: number;
   releasedEtb: number;
@@ -19,10 +24,12 @@ export interface DriverEarningsTrip {
   remainingEtb: number;
   remainingDriverNetEtb: number;
   payoutStatus: DriverPayoutStatus;
+  paymentProvider: string | null;
   lastReleaseAt: string | null;
 }
 
 export interface DriverEarningsSummary {
+  completedTrips: number;
   releasedTrips: number;
   totalReleasedEtb: number;
   totalCommissionEtb: number;
@@ -31,6 +38,7 @@ export interface DriverEarningsSummary {
   pendingTrips: number;
   pendingBalanceEtb: number;
   pendingDriverBalanceEtb: number;
+  trips: DriverEarningsTrip[];
   released: DriverEarningsTrip[];
   pending: DriverEarningsTrip[];
 }
@@ -40,6 +48,11 @@ interface OrderRow {
   tracking_id: string;
   pickup_address: string;
   dropoff_address: string;
+  vehicle_type: string | null;
+  distance_km: number | string | null;
+  cargo_description: string | null;
+  payment_terms: string | null;
+  accepted_at: string | null;
   price_etb: number | string | null;
   delivered_at: string | null;
 }
@@ -63,7 +76,7 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
 
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
-    .select("id,tracking_id,pickup_address,dropoff_address,price_etb,delivered_at")
+    .select("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,cargo_description,payment_terms,accepted_at,price_etb,delivered_at")
     .eq("driver_id", auth.user.id)
     .eq("status", "delivered")
     .order("delivered_at", { ascending: false });
@@ -72,6 +85,7 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
   const orders = (orderData ?? []) as OrderRow[];
   if (!orders.length) {
     return {
+      completedTrips: 0,
       releasedTrips: 0,
       totalReleasedEtb: 0,
       totalCommissionEtb: 0,
@@ -80,6 +94,7 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
       pendingTrips: 0,
       pendingBalanceEtb: 0,
       pendingDriverBalanceEtb: 0,
+      trips: [],
       released: [],
       pending: [],
     };
@@ -126,8 +141,11 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
         ? "partial"
         : heldEtb > 0
           ? "held_escrow"
-          : "initiated";
+          : initiatedEtb > 0
+            ? "initiated"
+            : "unpaid";
     const lastRelease = rows.find((payment) => payment.event === "released");
+    const currentPayment = rows.find((payment) => payment.event !== "refunded") ?? null;
     const grossPaid = fullyReleased ? invoiceEtb : releasedToInvoice;
     const paidSplit = splitHalloCommission(grossPaid);
 
@@ -141,6 +159,11 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
       trackingId: order.tracking_id,
       pickup: order.pickup_address,
       dropoff: order.dropoff_address,
+      vehicleType: order.vehicle_type || "—",
+      distanceKm: amount(order.distance_km),
+      cargoDescription: order.cargo_description,
+      paymentTerms: order.payment_terms || "—",
+      acceptedAt: order.accepted_at,
       deliveredAt: order.delivered_at,
       invoiceEtb,
       releasedEtb: fullyReleased ? invoiceEtb : 0,
@@ -152,6 +175,7 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
       remainingEtb,
       remainingDriverNetEtb: verifiedPendingSplit.driverNetEtb,
       payoutStatus,
+      paymentProvider: currentPayment?.provider ?? null,
       lastReleaseAt: lastRelease?.created_at ?? null,
     };
   });
@@ -165,6 +189,7 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
   const totalSplit = splitHalloCommission(totalReleasedEtb);
 
   return {
+    completedTrips: trips.length,
     releasedTrips: released.length,
     totalReleasedEtb,
     totalCommissionEtb: totalSplit.commissionEtb,
@@ -173,6 +198,7 @@ export async function getDriverEarnings(): Promise<DriverEarningsSummary> {
     pendingTrips: pending.length,
     pendingBalanceEtb: pending.reduce((sum, trip) => sum + Math.min(trip.remainingEtb, trip.heldEtb), 0),
     pendingDriverBalanceEtb: pending.reduce((sum, trip) => sum + trip.remainingDriverNetEtb, 0),
+    trips,
     released,
     pending,
   };

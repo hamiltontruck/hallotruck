@@ -6,6 +6,9 @@ export interface DeliveryProofInput {
   deliveryNote: string;
   photo: File;
   signature: Blob;
+  paymentResult: "cash_received" | "bank_telebirr" | "payment_not_received";
+  amountCollected?: number;
+  paymentNote?: string;
 }
 
 function fail(message: string): never {
@@ -58,12 +61,15 @@ export async function submitDeliveryProof(input: DeliveryProofInput) {
     if (signatureUpload.error) fail(signatureUpload.error.message);
     uploaded.push(signaturePath);
 
-    const { error } = await supabase.rpc("submit_delivery_proof", {
+    const { error } = await supabase.rpc("driver_finish_trip", {
       p_order_id: input.orderId,
       p_recipient_name: recipientName,
       p_delivery_note: input.deliveryNote.trim() || null,
       p_photo_path: photoPath,
       p_signature_path: signaturePath,
+      p_result_type: input.paymentResult,
+      p_amount_collected: input.amountCollected ?? null,
+      p_payment_note: input.paymentNote?.trim() || null,
     });
     if (error) fail(error.message);
 

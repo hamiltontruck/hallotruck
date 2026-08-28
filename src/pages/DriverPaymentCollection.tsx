@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   getDriverCollectionOrder,
   getDriverCollectionStatus,
-  submitDriverCollectedPayment,
+  recordDriverTripPaymentResult,
   type DriverCollectionOrder,
   type DriverCollectionStatus,
 } from "../services/driver-payment-collection.service";
@@ -166,6 +166,7 @@ export function DriverPaymentCollection({ fixture }: { fixture?: DriverPaymentCo
   const [provider, setProvider] = useState("telebirr");
   const [providerRef, setProviderRef] = useState("");
   const [note, setNote] = useState("");
+  const [amountCollected, setAmountCollected] = useState("");
   const [loading, setLoading] = useState(!fixture);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -216,12 +217,10 @@ export function DriverPaymentCollection({ fixture }: { fixture?: DriverPaymentCo
     setSaving(true);
     setError("");
     try {
-      await submitDriverCollectedPayment({
+      await recordDriverTripPaymentResult({
         orderId: order.id,
-        method: selectedMethod,
-        provider,
-        providerRef,
-        amountEtb: Number(order.price_etb ?? 0),
+        result: selectedMethod === "cash" ? "cash_received" : "bank_telebirr",
+        amountCollected: selectedMethod === "cash" ? Number(amountCollected) : Number(order.price_etb ?? 0),
         note,
       });
       await load();
@@ -242,7 +241,7 @@ export function DriverPaymentCollection({ fixture }: { fixture?: DriverPaymentCo
   const hasExistingPayment = payments.length > 0;
   const rejected = status?.payment_event === "failed";
   const canReportDirectCollection = !hasExistingPayment && order.payment_terms === "pay_driver_on_delivery";
-  const submissionIssue = getDriverPaymentSubmissionIssue(method, providerRef);
+  const submissionIssue = getDriverPaymentSubmissionIssue(method, providerRef) || (method === "cash" && Number(amountCollected) !== amount ? "cash_amount" : null);
   const heldAmount = payments.filter((payment) => payment.payment_event === "held_escrow").reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
   const releasedAmount = payments.filter((payment) => payment.payment_event === "released").reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
   const initiatedAmount = payments.filter((payment) => payment.payment_event === "initiated").reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
@@ -331,11 +330,11 @@ export function DriverPaymentCollection({ fixture }: { fixture?: DriverPaymentCo
               <label className="mt-5 block text-sm">{c.note}<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} rows={3} placeholder={c.notePlaceholder} className="mt-2 block w-full border border-asphalt/20 p-3" /></label>
             </>
           ) : method === "cash" ? (
-            <div className="mt-5 border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">✓ {c.cash} — {formatEtb(amount)}</div>
+            <label className="mt-5 block text-sm">Exact amount collected<input required value={amountCollected} onChange={(event) => setAmountCollected(event.target.value)} type="number" inputMode="decimal" step="0.01" min="0.01" className="mt-2 block w-full border border-asphalt/20 p-3" /><span className="mt-2 block text-xs text-steel">Must equal {formatEtb(amount)}.</span></label>
           ) : null}
 
           <button disabled={saving || Boolean(submissionIssue)} className="mt-6 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-40">{saving ? c.submitting : c.submit}</button>
-          <button type="button" onClick={() => { setMethod(null); setProviderRef(""); setError(""); setShowUnpaidNotice(true); }} className="mt-3 w-full border border-route px-3 py-3 text-sm font-semibold text-route">{c.notPaid}</button>
+          <button type="button" onClick={async () => { if (!order || saving) return; setSaving(true); setError(""); try { await recordDriverTripPaymentResult({ orderId: order.id, result: "payment_not_received", note }); setMethod(null); setProviderRef(""); setShowUnpaidNotice(true); await load(); } catch (reportError) { setError(reportError instanceof Error ? reportError.message : c.invalid); } finally { setSaving(false); } }} className="mt-3 w-full border border-route px-3 py-3 text-sm font-semibold text-route">{c.notPaid}</button>
         </form>
       ) : !hasExistingPayment ? (
         <section className="mt-5 border border-asphalt/10 bg-white p-5 text-center">

@@ -9,7 +9,6 @@ import { CustomerDriverAssignmentCard } from "../components/customer/CustomerDri
 import { CustomerRatingCard } from "../components/customer/CustomerRatingCard";
 import { TripCompletionProgress } from "../components/trips/TripCompletionProgress";
 import { CustomerProfilePanel } from "../components/customer/CustomerProfilePanel";
-import { CustomerPaymentModal } from "../components/customer/CustomerPaymentModal";
 import { CustomerCancelOrderModal } from "../components/customer/CustomerCancelOrderModal";
 import { LanguageSwitcher, useLanguage } from "../i18n/LanguageProvider";
 import { getCustomerCopy } from "../i18n/customerCopy";
@@ -156,13 +155,13 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
   const [data, setData] = useState(emptyData);
   const [cargoMeta, setCargoMeta] = useState<Record<string, CargoMeta>>({});
   const [showOrder, setShowOrder] = useState(false);
-  const [paymentOrder, setPaymentOrder] = useState<CustomerOrder | null>(null);
   const [trackingOrder, setTrackingOrder] = useState<CustomerOrder | null>(null);
   const [cancelOrder, setCancelOrder] = useState<CustomerOrder | null>(null);
   const [routePoints, setRoutePoints] = useState<QuotePoints | null>(null);
   const [vehicle, setVehicle] = useState("Dry Cargo");
   const [cargoQuantity, setCargoQuantity] = useState("1");
   const [cargoUnit, setCargoUnit] = useState<CargoUnit>("ton");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_telebirr">("cash");
   const [orderFilter, setOrderFilter] = useState<OrderFilter>(defaultFilter);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(true);
@@ -244,11 +243,11 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
   }, [defaultFilter]);
 
   useEffect(() => {
-    if (!showOrder && !trackingOrder && !paymentOrder && !cancelOrder) return;
+    if (!showOrder && !trackingOrder && !cancelOrder) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previous; };
-  }, [cancelOrder, paymentOrder, showOrder, trackingOrder]);
+  }, [cancelOrder, showOrder, trackingOrder]);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -267,11 +266,13 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
         dropoff: routePoints.dropoff,
         cargoQuantity: cargoAmount,
         cargoUnit,
+        paymentMethod,
       });
       setShowOrder(false);
       setRoutePoints(null);
       setCargoQuantity("1");
       setCargoUnit("ton");
+      setPaymentMethod("cash");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : c.orderCreateError);
@@ -286,7 +287,6 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
   async function handleOrderCancelled(order: CustomerOrder) {
     setCancelOrder(null);
     if (trackingOrder?.id === order.id) setTrackingOrder(null);
-    if (paymentOrder?.id === order.id) setPaymentOrder(null);
     setExpandedOrders((current) => ({ ...current, [order.id]: true }));
     setNotice(c.cancelSuccess);
     await load();
@@ -341,7 +341,6 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
               const pending = paymentSummary.pendingVerification > 0;
               const trackable = ["accepted", "in_transit"].includes(order.status);
               const cancellable = cancellableStatuses.has(order.status);
-              const canSubmitPayment = order.status !== "cancelled";
               const remaining = paymentSummary.remainingToSubmit;
               const cargo = cargoMeta[order.id];
               const loadValue = cargo?.cargo_quantity && cargo.cargo_unit
@@ -360,7 +359,8 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
 
                 <div className="customer-order-card__actions mt-5 flex flex-wrap gap-3 border-t border-asphalt/10 pt-5">
                   {trackable && <button onClick={() => setTrackingOrder(order)} className="is-primary bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{c.liveTracking}</button>}
-                  {canSubmitPayment && (remaining > 0 ? <button onClick={() => setPaymentOrder(order)} className="is-payment bg-asphalt px-4 py-3 text-xs font-semibold text-white">{c.submitPayment} · ETB {remaining.toLocaleString()}</button> : <span className="customer-payment-state self-center bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{pending ? c.pendingVerification : c.paymentRecorded}</span>)}
+                  <span className="customer-payment-state self-center border border-asphalt/15 bg-bone px-4 py-3 text-xs font-semibold text-asphalt">{order.selected_payment_method === "bank_telebirr" ? "Bank / Telebirr" : "Cash"}</span>
+                  {remaining <= 0 && <span className="customer-payment-state self-center bg-emerald-700 px-4 py-3 text-xs font-semibold text-white">{pending ? c.pendingVerification : c.paymentRecorded}</span>}
                   <button onClick={() => printCustomerInvoice(order, orderPayments)} className="is-secondary border border-asphalt px-4 py-3 text-xs font-semibold">{c.invoice}</button>
                   <button type="button" onClick={() => toggleOrder(order.id, expanded)} className="is-details">{expanded ? ui.less : ui.details}</button>
                   {cancellable && <button type="button" onClick={() => { setNotice(""); setCancelOrder(order); }} className="is-cancel">{c.cancelOrder}</button>}
@@ -403,12 +403,11 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
           <div className="customer-order-steps" aria-label="Order steps"><span><b>1</b>{ui.route}</span><span><b>2</b>{ui.loadStep}</span><span><b>3</b>{ui.review}</span></div>
           <section className="customer-order-step"><div className="customer-order-step__heading"><span>1</span><div><h3>{ui.route}</h3><p>{ui.routeHelp}</p></div></div><CustomerQuoteMap onChange={updateRoute} vehicleType={vehicle} /></section>
           <section className="customer-order-step"><div className="customer-order-step__heading"><span>2</span><div><h3>{ui.loadStep}</h3><p>{ui.loadHelp}</p></div></div><div className="customer-load-grid"><label>{c.vehicleLabel}<select value={vehicle} onChange={(event) => setVehicle(event.target.value)}><option>Pickup</option><option>Van</option><option>Isuzu 5 Ton</option><option>Dry Cargo</option><option>Refrigerated</option><option>Truck 22 Ton</option><option>Truck 25 Ton</option><option>Truck 30 Ton</option><option>Trailer</option></select></label><div className="customer-distance-card"><p>{c.estimatedDistance}</p><strong>{distance ? `${distance} km` : c.findRoute}</strong></div><label>{cargoText.amount}<input value={cargoQuantity} onChange={(event) => setCargoQuantity(event.target.value)} type="number" inputMode="decimal" min="0.1" step="0.1" required /></label><label>{cargoText.unit}<select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{cargoText.ton}</option><option value="quintal">{cargoText.quintal}</option></select></label></div><div className={`customer-capacity-card ${cargoValidation ? "has-error" : ""}`}><div><p>{cargoText.equivalent}</p><strong>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined, { maximumFractionDigits: 3 })} ${cargoText.ton}` : "—"}</strong></div><div><p>{cargoText.capacity}</p><strong>{selectedCapacity ? `${selectedCapacity} ${cargoText.ton}` : "—"}</strong></div>{cargoValidation && <p className="customer-capacity-error">{cargoValidation}</p>}</div></section>
-          <section className="customer-order-step"><div className="customer-order-step__heading"><span>3</span><div><h3>{ui.review}</h3><p>{ui.reviewHelp}</p></div></div><div className="customer-quote-card"><p>{c.estimatedQuote}</p><strong>{quoteLoading ? "…" : quote ? `ETB ${quote.toLocaleString()}` : c.selectRoute}</strong><small>{quoteLoading ? cargoText.quoteLoading : quoteError ? `${cargoText.quoteUnavailable} ${quoteError}` : `${cargoText.pricing} ${cargoText.latestRate}`}</small></div></section>
+          <section className="customer-order-step"><div className="customer-order-step__heading"><span>3</span><div><h3>{ui.review}</h3><p>{ui.reviewHelp}</p></div></div><div className="customer-quote-card"><p>{c.estimatedQuote}</p><strong>{quoteLoading ? "…" : quote ? `ETB ${quote.toLocaleString()}` : c.selectRoute}</strong><small>{quoteLoading ? cargoText.quoteLoading : quoteError ? `${cargoText.quoteUnavailable} ${quoteError}` : `${cargoText.pricing} ${cargoText.latestRate}`}</small></div><fieldset className="mt-4"><legend className="text-sm font-semibold">Payment method</legend><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className={`border p-4 text-sm ${paymentMethod === "cash" ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white"}`}><input type="radio" name="paymentMethod" checked={paymentMethod === "cash"} onChange={() => setPaymentMethod("cash")} className="mr-2" />Cash</label><label className={`border p-4 text-sm ${paymentMethod === "bank_telebirr" ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white"}`}><input type="radio" name="paymentMethod" checked={paymentMethod === "bank_telebirr"} onChange={() => setPaymentMethod("bank_telebirr")} className="mr-2" />Bank / Telebirr</label></div><p className="mt-2 text-xs text-steel">No receipt or screenshot is required from the customer.</p></fieldset></section>
         </div>
         <footer className="customer-order-sheet__footer"><button disabled={busy || quoteLoading || !quoteBreakdown || !routePoints || Boolean(cargoValidation)}>{busy ? c.creating : quoteLoading ? cargoText.quoteLoading : c.confirmCreate}</button></footer>
       </form></div>}
 
-      {paymentOrder && <CustomerPaymentModal order={paymentOrder} maxAmount={remainingPayment(paymentOrder, data.payments)} onClose={() => setPaymentOrder(null)} onSubmitted={load} />}
       {cancelOrder && <CustomerCancelOrderModal order={cancelOrder} onClose={() => setCancelOrder(null)} onCancelled={() => handleOrderCancelled(cancelOrder)} />}
     </main>
   );

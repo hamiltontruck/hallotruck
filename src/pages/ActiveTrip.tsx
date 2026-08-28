@@ -19,7 +19,6 @@ import { DriverPaymentConfirmation } from "../components/driver/DriverPaymentCon
 import { DriverOrderCancellationNotice } from "../components/driver/DriverOrderCancellationNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { getDriverTripDocumentsCopy } from "../i18n/driverTripDocumentsCopy";
-import { getDriverPostDeliveryRoute } from "../domain/trip-completion";
 
 const AUTO_ADVANCE_METERS = 45;
 
@@ -352,9 +351,9 @@ export function ActiveTrip() {
       </div>
 
       {tripStarted ? (
-        <DriverDeliveryProofForm orderId={order.id} onDelivered={() => {
+        <DriverDeliveryProofForm orderId={order.id} tripAmountEtb={grossFare} onDelivered={() => {
           stopSharing();
-          navigate(getDriverPostDeliveryRoute(order.payment_terms, order.id));
+          navigate("/driver/earnings");
         }} />
       ) : (
         <div className="border border-line bg-white px-5 py-4 text-center">
