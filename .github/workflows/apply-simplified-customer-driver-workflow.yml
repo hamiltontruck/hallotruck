@@ -11,6 +11,7 @@ on:
       - .github/workflows/apply-simplified-customer-driver-workflow.yml
       - .github/apply-simplified-workflow/atomic.py
       - .github/apply-simplified-workflow/final_assertions.py
+      - .github/apply-simplified-workflow/smoke.py
 
 permissions:
   contents: write
@@ -84,6 +85,7 @@ jobs:
           PY
           python .github/apply-simplified-workflow/atomic.py
           python .github/apply-simplified-workflow/final_assertions.py
+          python .github/apply-simplified-workflow/smoke.py
           rm -rf .github/apply-simplified-workflow .github/apply-simplified-workflow-b64 .github/regression-output.txt
 
       - name: Install
