@@ -1,0 +1,74 @@
+name: Apply Simplified Customer Driver Workflow
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/driver-trip-history-earned-money
+    paths:
+      - .github/workflows/apply-simplified-customer-driver-workflow.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-validate-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/driver-trip-history-earned-money
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Restore applicator
+        shell: bash
+        run: |
+          cat .github/apply-simplified-workflow-b64/part-* > /tmp/apply-simplified-workflow.gz.b64
+          base64 --decode /tmp/apply-simplified-workflow.gz.b64 | gzip -d > /tmp/apply-simplified-workflow.mjs
+          node --check /tmp/apply-simplified-workflow.mjs
+
+      - name: Apply workflow changes
+        run: node /tmp/apply-simplified-workflow.mjs
+
+      - name: Remove temporary applicator files
+        shell: bash
+        run: |
+          rm -rf .github/apply-simplified-workflow
+          rm -rf .github/apply-simplified-workflow-b64
+          rm -f .github/workflows/apply-simplified-customer-driver-workflow.yml
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Regression tests
+        run: npm run test:regression
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-anon-key
+
+      - name: Browser smoke tests
+        run: npm run test:e2e-smoke
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-anon-key
+
+      - name: Commit validated implementation
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m "Implement simplified Customer-Driver completion workflow"
+          git push origin HEAD:fix/driver-trip-history-earned-money
