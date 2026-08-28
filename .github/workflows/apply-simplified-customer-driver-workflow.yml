@@ -56,11 +56,29 @@ jobs:
           if [ -f .github/apply-simplified-workflow/align.py ]; then python .github/apply-simplified-workflow/align.py; fi
           python - <<'PY'
           from pathlib import Path
-          path = Path('src/services/customer-cargo.service.ts')
-          source = path.read_text()
+          import re
+
+          cargo = Path('src/services/customer-cargo.service.ts')
+          source = cargo.read_text()
           source = source.replace('paymentMethod: "cash" | "bank_telebirr";', 'paymentMethod?: "cash" | "bank_telebirr";')
           source = source.replace('selected_payment_method: input.paymentMethod,', 'selected_payment_method: input.paymentMethod ?? "cash",')
-          path.write_text(source)
+          cargo.write_text(source)
+
+          driver = Path('src/pages/DriverPaymentCollection.tsx')
+          source = driver.read_text()
+          source = source.replace('  submitDriverCollectedPayment,\n', '')
+          source = re.sub(
+              r'\n\s*await submitDriverCollectedPayment\(\{.*?\n\s*\}\);\n\s*await recordDriverTripPaymentResult',
+              '\n      await recordDriverTripPaymentResult',
+              source,
+              count=1,
+              flags=re.S,
+          )
+          driver.write_text(source)
+
+          test = Path('tests/regression/simplified-customer-driver-workflow.test.ts')
+          source = test.read_text().replace('/Bank / Telebirr/', '/Bank \\/ Telebirr/')
+          test.write_text(source)
           PY
           rm -rf .github/apply-simplified-workflow .github/apply-simplified-workflow-b64 .github/regression-output.txt
 
