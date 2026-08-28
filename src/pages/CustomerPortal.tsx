@@ -7,6 +7,7 @@ import { CustomerQuoteMap, type QuotePoints } from "../components/navigation/Cus
 import { CustomerLiveTripMap } from "../components/tracking/CustomerLiveTripMap";
 import { CustomerDriverAssignmentCard } from "../components/customer/CustomerDriverAssignmentCard";
 import { CustomerRatingCard } from "../components/customer/CustomerRatingCard";
+import { TripCompletionProgress } from "../components/trips/TripCompletionProgress";
 import { CustomerProfilePanel } from "../components/customer/CustomerProfilePanel";
 import { CustomerPaymentModal } from "../components/customer/CustomerPaymentModal";
 import { CustomerCancelOrderModal } from "../components/customer/CustomerCancelOrderModal";
@@ -383,7 +384,7 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
                       privacy: c.privacy,
                     }}
                   />}
-                  {order.status === "delivered" && <span className="customer-delivery-complete">{c.deliveryComplete}</span>}
+                  {order.status === "delivered" && <><span className="customer-delivery-complete">{c.deliveryComplete}</span><TripCompletionProgress orderId={order.id} audience="customer" /></>}
                   {order.status === "cancelled" && order.cancellation_reason && <div className="customer-cancellation-record"><p>{c.cancelledReason}</p><strong>{order.cancellation_reason}</strong>{order.cancelled_at && <small>{c.cancelledAt}: {new Date(order.cancelled_at).toLocaleString()}</small>}</div>}
                   {orderPayments.length > 0 && <div className="customer-payment-history mt-4 border border-asphalt/10 bg-bone p-4"><p className="font-mono text-[10px] tracking-[.16em] text-steel">{c.paymentHistory}</p><div className="mt-3 grid gap-2">{orderPayments.map((payment) => <div key={payment.id} className="customer-payment-row flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 text-xs"><span><strong>{payment.provider.replace(/_/g, " ")}</strong> · ETB {Number(payment.amount_etb).toLocaleString()} · <span className="capitalize">{payment.event.replace(/_/g, " ")}</span></span>{payment.receipt_path && <button onClick={() => void openCustomerPaymentReceipt(payment.receipt_path!)} className="font-semibold text-emerald-800">{c.viewReceipt}</button>}</div>)}</div></div>}
                   {proof && <div className="customer-proof mt-5 flex flex-wrap items-center justify-between gap-3 bg-emerald-50 p-4 text-sm"><span>{c.deliveredTo} <strong>{proof.recipient_name}</strong></span><div className="flex gap-4"><button onClick={() => void openCustomerProof(proof.photo_path)} className="font-semibold text-emerald-800">{c.photo}</button><button onClick={() => void openCustomerProof(proof.signature_path)} className="font-semibold text-emerald-800">{c.signature}</button></div></div>}

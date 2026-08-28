@@ -234,8 +234,10 @@ export function filterPartnerStatement(
   rows: PartnerStatementRow[],
   filters: PartnerStatementFilters,
 ) {
-  const from = filters.from ? new Date(`${filters.from}T00:00:00`).getTime() : null;
-  const to = filters.to ? new Date(`${filters.to}T23:59:59.999`).getTime() : null;
+  // Statement timestamps are stored as UTC. Parsing an unqualified date in
+  // the browser's local zone can silently exclude rows around midnight.
+  const from = filters.from ? new Date(`${filters.from}T00:00:00.000Z`).getTime() : null;
+  const to = filters.to ? new Date(`${filters.to}T23:59:59.999Z`).getTime() : null;
   const freight = filters.freight.trim().toLowerCase();
 
   return rows.filter((row) => {
@@ -253,4 +255,3 @@ export function filterPartnerStatement(
     return true;
   });
 }
-

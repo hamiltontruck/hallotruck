@@ -37,13 +37,6 @@ export interface UnreportedDelivery {
   rejection_reason: string | null;
 }
 
-const allowedEvidenceTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/pdf",
-]);
-
 export async function getUnreportedDeliveries(): Promise<UnreportedDelivery[]> {
   const { data, error } = await supabase.rpc("driver_unreported_deliveries");
   if (error) throw new Error(error.message);
@@ -75,61 +68,24 @@ export async function submitDriverCollectedPayment(input: {
   provider: string;
   providerRef: string;
   amountEtb: number;
-  receipt?: File | null;
   note?: string;
 }): Promise<string> {
   if (!Number.isFinite(input.amountEtb) || input.amountEtb <= 0) {
     throw new Error("A valid invoice amount is required.");
   }
   if (input.method === "bank" && !input.providerRef.trim()) {
-    throw new Error("Transaction ID is required for bank or mobile payment.");
-  }
-  if (input.method === "bank" && !input.receipt) {
-    throw new Error("Payment evidence is required for bank or mobile payment.");
-  }
-  if (input.receipt && !allowedEvidenceTypes.has(input.receipt.type)) {
-    throw new Error("Payment evidence must be JPG, PNG, WebP or PDF.");
-  }
-  if (input.receipt && input.receipt.size > 10 * 1024 * 1024) {
-    throw new Error("Payment evidence must be 10 MB or smaller.");
+    throw new Error("Transaction ID is required for Bank / Telebirr payment.");
   }
 
-  const { data: auth, error: authError } = await supabase.auth.getUser();
-  if (authError || !auth.user) throw new Error("Driver sign-in required.");
-
-  let receiptPath: string | null = null;
-  if (input.method === "bank" && input.receipt) {
-    const fallbackExtension = input.receipt.type === "application/pdf" ? "pdf" : "jpg";
-    const extension = input.receipt.name
-      .split(".")
-      .pop()
-      ?.toLowerCase()
-      .replace(/[^a-z0-9]/g, "") || fallbackExtension;
-    receiptPath = `${auth.user.id}/${input.orderId}/driver-collection-${crypto.randomUUID()}.${extension}`;
-
-    const upload = await supabase.storage.from("payment-receipts").upload(receiptPath, input.receipt, {
-      contentType: input.receipt.type,
-      upsert: false,
-    });
-    if (upload.error) throw new Error(upload.error.message);
-  }
-
-  try {
-    const { data, error } = await supabase.rpc("driver_submit_collected_payment", {
-      p_order_id: input.orderId,
-      p_collection_method: input.method,
-      p_provider: input.method === "cash" ? "cash_to_driver" : input.provider,
-      p_provider_ref: input.method === "cash" ? null : input.providerRef.trim(),
-      p_amount_etb: input.amountEtb,
-      p_receipt_path: receiptPath,
-      p_note: input.method === "cash" ? null : input.note?.trim() || null,
-    });
-    if (error) throw new Error(error.message);
-    return String(data);
-  } catch (error) {
-    if (receiptPath) {
-      await supabase.storage.from("payment-receipts").remove([receiptPath]);
-    }
-    throw error;
-  }
+  const { data, error } = await supabase.rpc("driver_submit_collected_payment", {
+    p_order_id: input.orderId,
+    p_collection_method: input.method,
+    p_provider: input.method === "cash" ? "cash_to_driver" : input.provider,
+    p_provider_ref: input.method === "cash" ? null : input.providerRef.trim(),
+    p_amount_etb: input.amountEtb,
+    p_receipt_path: null,
+    p_note: input.method === "cash" ? null : input.note?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+  return String(data);
 }

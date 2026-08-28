@@ -40,27 +40,16 @@ async function waitForServer(url, timeoutMs = 30_000) {
 
 function dumpDom(chrome, url, profileDirectory, viewport) {
   const common = [
-    "--no-sandbox",
-    "--disable-gpu",
-    "--disable-dev-shm-usage",
-    "--disable-background-networking",
-    "--disable-default-apps",
-    "--no-first-run",
-    "--no-default-browser-check",
-    "--hide-scrollbars",
+    "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+    "--disable-background-networking", "--disable-default-apps", "--no-first-run",
+    "--no-default-browser-check", "--hide-scrollbars",
     `--window-size=${viewport.width},${viewport.height}`,
-    "--virtual-time-budget=8000",
-    `--user-data-dir=${profileDirectory}`,
-    "--dump-dom",
-    url,
+    "--virtual-time-budget=8000", `--user-data-dir=${profileDirectory}`,
+    "--dump-dom", url,
   ];
-
   for (const headlessFlag of ["--headless=new", "--headless"]) {
     const result = spawnSync(chrome, [headlessFlag, ...common], {
-      cwd: root,
-      encoding: "utf8",
-      maxBuffer: 20 * 1024 * 1024,
-      timeout: 30_000,
+      cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, timeout: 30_000,
     });
     if (!result.error && result.status === 0 && result.stdout) return result.stdout;
     if (result.error?.code === "ETIMEDOUT") throw new Error(`Chrome timed out while opening ${url}`);
@@ -98,16 +87,13 @@ import { DriverPaymentCollection } from ${JSON.stringify(path.join(root, "src", 
 
 const fixture = {
   order: {
-    id: "order-unpaid-1",
-    tracking_id: "HT-2026-7E294A",
-    pickup_address: "Adama, Ethiopia",
-    dropoff_address: "Adwa, Central Tigray, Ethiopia",
-    price_etb: 72350,
-    status: "delivered",
-    payment_terms: "pay_driver_on_delivery",
+    id: "order-unpaid-1", tracking_id: "HT-2026-7E294A",
+    pickup_address: "Adama, Ethiopia", dropoff_address: "Adwa, Central Tigray, Ethiopia",
+    price_etb: 72350, status: "delivered", payment_terms: "pay_driver_on_delivery",
     delivered_at: "2026-08-23T17:00:51.000Z",
   },
   status: null,
+  payments: [],
 };
 
 createRoot(document.getElementById("root")).render(
@@ -122,11 +108,18 @@ setTimeout(() => {
   const cash = document.querySelector('input[value="cash"]');
   const bank = document.querySelector('input[value="bank"]');
   const submit = document.querySelector('form button:not([type="button"])');
-  const unpaid = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("Customer has not paid"));
+  const unpaid = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("Payment not received / not confirmed"));
+  const initialText = document.body.textContent ?? "";
   document.documentElement.dataset.initialCashSelected = String(Boolean(cash?.checked));
   document.documentElement.dataset.initialBankSelected = String(Boolean(bank?.checked));
   document.documentElement.dataset.initialSubmitDisabled = String(Boolean(submit?.disabled));
-  document.documentElement.dataset.methodHelp = String(document.body.textContent?.includes("Choose a payment method only after receiving the full invoice."));
+  document.documentElement.dataset.finishTrip = String(initialText.includes("FINISH TRIP"));
+  document.documentElement.dataset.paymentMethod = String(initialText.includes("Payment method"));
+  document.documentElement.dataset.cashOption = String(initialText.includes("Cash"));
+  document.documentElement.dataset.bankOption = String(initialText.includes("Bank / Telebirr"));
+  document.documentElement.dataset.methodHelp = String(initialText.includes("Choose how the customer paid."));
+  document.documentElement.dataset.noUpload = String(initialText.includes("No receipt upload. No screenshot upload."));
+  document.documentElement.dataset.fileInput = String(Boolean(document.querySelector('input[type="file"]')));
   unpaid?.click();
   setTimeout(() => {
     document.documentElement.dataset.unpaidNotice = String(document.body.textContent?.includes("Payment not received"));
@@ -138,11 +131,7 @@ setTimeout(() => {
 
   await writeFile(entryFile, fixtureSource, "utf8");
   const bundled = spawnSync(esbuildBinary, [
-    entryFile,
-    "--bundle",
-    "--platform=browser",
-    "--format=esm",
-    "--target=chrome120",
+    entryFile, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120",
     `--outfile=${bundleFile}`,
     "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"",
     "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\"",
@@ -154,12 +143,9 @@ setTimeout(() => {
 }
 
 await prepareFixture();
-
 const preview = spawn(viteBinary, ["preview", "--host", host, "--port", String(port), "--strictPort"], {
-  cwd: root,
-  stdio: ["ignore", "pipe", "pipe"],
+  cwd: root, stdio: ["ignore", "pipe", "pipe"],
 });
-
 let previewOutput = "";
 preview.stdout.on("data", (chunk) => { previewOutput += chunk.toString(); });
 preview.stderr.on("data", (chunk) => { previewOutput += chunk.toString(); });
@@ -171,21 +157,18 @@ try {
     const dom = await render(chrome, { width, height: 915 });
     const label = `Driver unpaid payment ${width}px smoke`;
     assertContains(dom, [
-      'data-ready="true"',
-      'data-initial-cash-selected="false"',
-      'data-initial-bank-selected="false"',
-      'data-initial-submit-disabled="true"',
-      'data-method-help="true"',
-      'data-unpaid-notice="true"',
+      'data-ready="true"', 'data-initial-cash-selected="false"',
+      'data-initial-bank-selected="false"', 'data-initial-submit-disabled="true"',
+      'data-finish-trip="true"', 'data-payment-method="true"',
+      'data-cash-option="true"', 'data-bank-option="true"',
+      'data-method-help="true"', 'data-no-upload="true"',
+      'data-file-input="false"', 'data-unpaid-notice="true"',
       'data-overflow="false"',
-      "Payment not received",
-      "No payment was submitted.",
-      "This delivered order stays financially open",
-      "Confirm and return to Jobs",
-      "Customer has now paid",
+      "Payment not received", "No payment report was created.",
+      "Return to Jobs", "Review payment again",
     ], label);
   }
-  console.log("Driver unpaid-payment browser smoke passed at 320px, 360px, 390px and 412px with no default payment choice, clear confirmation and no horizontal overflow.");
+  console.log("Driver unpaid-payment browser smoke passed at 320px, 360px, 390px and 412px with the required form, no default choice, no upload input and no horizontal overflow.");
 } catch (error) {
   if (previewOutput.trim()) console.error(previewOutput.trim());
   throw error;
@@ -198,7 +181,6 @@ try {
   if (preview.exitCode === null) preview.kill("SIGKILL");
   await Promise.all([
     rm(testDirectory, { recursive: true, force: true }),
-    rm(bundleFile, { force: true }),
-    rm(htmlFile, { force: true }),
+    rm(bundleFile, { force: true }), rm(htmlFile, { force: true }),
   ]);
 }

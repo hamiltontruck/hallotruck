@@ -193,7 +193,7 @@ try {
       "Missing receipt",
       "Legacy completed",
       "Receipt exempt · legacy completed",
-      "Audit history",
+      "Payment review audit",
       "Historical receipt was reconciled during legacy migration.",
       "Showing 1–12 of 15",
       "1 / 2",
