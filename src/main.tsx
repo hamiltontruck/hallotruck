@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App";
 import "./index.css";
+import "./styles/customer-quote-restoration.css";
 
 Sentry.init({
   dsn: "https://39d0747775820c372496eb775ff63b29@o4511917722894336.ingest.us.sentry.io/4511917875068928",

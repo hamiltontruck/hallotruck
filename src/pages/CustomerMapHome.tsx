@@ -213,7 +213,7 @@ export function CustomerMapHome() {
   const [packagingType, setPackagingType] = useState<PackagingType>("loose_bulk");
   const [cargoNotes, setCargoNotes] = useState("");
   const [matchingOrder, setMatchingOrder] = useState<DispatchOrderSummary | null>(null);
-  const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
