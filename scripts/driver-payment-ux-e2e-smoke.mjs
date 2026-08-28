@@ -155,7 +155,7 @@ try {
       'data-initial-bank-selected="false"', 'data-initial-submit-disabled="true"',
       'data-method-help="true"', 'data-file-input="false"',
       'data-unpaid-notice="true"', 'data-overflow="false"',
-      "Finish Trip", "Payment method", "Cash", "Bank / Telebirr",
+      "FINISH TRIP", "Payment method", "Cash", "Bank / Telebirr",
       "No receipt upload. No screenshot upload.",
       "Payment not received", "No payment report was created.",
       "Return to Jobs", "Review payment again",
