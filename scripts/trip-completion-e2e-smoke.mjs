@@ -88,6 +88,8 @@ createRoot(document.getElementById("root")).render(
   )
 );
 setTimeout(() => {
+  const normalizedText = (document.body.textContent ?? "").replace(/\\s/g, "");
+  document.documentElement.dataset.paymentAmount = String(normalizedText.includes("ETB75,700"));
   document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
   document.documentElement.dataset.fileInput = String(Boolean(document.querySelector('input[type="file"]')));
   document.documentElement.dataset.ready = "true";
@@ -109,12 +111,12 @@ try {
     const dom = await render(chrome, { width, height: 1200 });
     for (const expected of [
       'data-ready="true"',
+      'data-payment-amount="true"',
       'data-overflow="false"',
       'data-file-input="false"',
       "Trip completion",
       "Payment confirmation",
       "Customer payment amount",
-      "ETB 75,700",
       "Bank / Telebirr",
       "Bank of Abyssinia",
       "AV5689844_",
@@ -126,7 +128,7 @@ try {
       if (!dom.includes(expected)) throw new Error(`Assigned-driver payment ${width}px smoke is missing: ${expected}`);
     }
   }
-  console.log("Assigned-driver payment confirmation smoke passed at 320px, 360px, 390px and 412px with no file input or horizontal overflow.");
+  console.log("Assigned-driver payment confirmation smoke passed at 320px, 360px, 390px and 412px with the expected amount, no file input and no horizontal overflow.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2_000))]);
