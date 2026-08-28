@@ -11,7 +11,7 @@ source = source.replace(
 });''',
 '''test("Finish Trip records payment result atomically and opens Trip History", () => {
   assert.match(activeTrip, /tripAmountEtb=\\{grossFare\\}/);
-  assert.match(activeTrip, /completionResult/);
+  assert.match(deliveryService, /rpc\\("driver_finish_trip"/);
   assert.match(activeTrip, /navigate\\("\\/driver\\/earnings"/);
   assert.doesNotMatch(activeTrip, /getDriverPostDeliveryRoute/);
 });''')
