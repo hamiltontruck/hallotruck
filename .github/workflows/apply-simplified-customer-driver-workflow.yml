@@ -30,6 +30,19 @@ jobs:
         run: |
           cat .github/apply-simplified-workflow-b64/part-* > /tmp/apply-simplified-workflow.gz.b64
           base64 --decode /tmp/apply-simplified-workflow.gz.b64 | gzip -d > /tmp/apply-simplified-workflow.mjs
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/apply-simplified-workflow.mjs')
+          source = path.read_text()
+          source = source.replace(
+              "'\"payment_terms, cancellation_reason, cancellation_source, cancelled_at, created_at\"'",
+              "'payment_terms, cancellation_reason, cancellation_source, cancelled_at, created_at'",
+          ).replace(
+              "'\"payment_terms, selected_payment_method, cancellation_reason, cancellation_source, cancelled_at, created_at\"'",
+              "'payment_terms, selected_payment_method, cancellation_reason, cancellation_source, cancelled_at, created_at'",
+          )
+          path.write_text(source)
+          PY
           node --check /tmp/apply-simplified-workflow.mjs
 
       - name: Apply workflow changes
