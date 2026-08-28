@@ -107,7 +107,7 @@ await writeFile(htmlFile, `<!doctype html>
       const body = document.querySelector('.customer-map-home__sheet-body');
       const submit = document.querySelector('.customer-map-home__confirm');
       const required = ['Isuzu 5 Ton','Truck 22 Ton','Truck 25 Ton','Truck 30 Ton','Gosa feʼumsaa','Akkaataa kuusaa / feʼumsaa','Tonii','Kuntaala','Gatii tilmaamaa'];
-      const text = document.body.innerText;
+      const text = document.body.textContent ?? '';
       const sheetRect = sheet.getBoundingClientRect();
       document.documentElement.dataset.fields = String(required.every((item) => text.includes(item)));
       document.documentElement.dataset.expanded = String(getComputedStyle(body).display !== 'none' && sheetRect.height > 220);
