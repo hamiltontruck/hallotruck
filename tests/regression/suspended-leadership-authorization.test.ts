@@ -47,7 +47,7 @@ test("all discovered JWT-only Admin RPCs execute through the shared guard", () =
   for (const functionName of hardenedAdminFunctions) {
     assert.match(
       migration,
-      new RegExp(`create function public\\.${functionName}\\b[\\s\\S]*?private\\.require_active_leadership\\('${functionName}'`),
+      new RegExp(`create function public\\.${functionName}\\b[\\s\\S]*?private\\.require_active_leadership\\(\\s*'${functionName}'`),
       `${functionName} must call the shared authorization guard`,
     );
     assert.match(
