@@ -1,0 +1,54 @@
+:root {
+  --hallo-portal-logo: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgMzYwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkhBTExPIFNtYXJ0IExvZ2lzdGljcyI+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iMzYwIiBmaWxsPSJ3aGl0ZSIvPgo8dGV4dCB4PSI1NSIgeT0iMTkwIiBmb250LWZhbWlseT0iQXJpYWwsSGVsdmV0aWNhLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTUwIiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjMEIzRTlCIj5IQUw8L3RleHQ+CjxwYXRoIGQ9Ik01OTAgNTVjLTY1IDAtMTE4IDUzLTExOCAxMTggMCA4OCAxMTggMTYyIDExOCAxNjJzMTE4LTc0IDExOC0xNjJjMC02NS01My0xMTgtMTE4LTExOHptMCA2OGE1MCA1MCAwIDEgMSAwIDEwMCA1MCA1MCAwIDAgMSAwLTEwMHoiIGZpbGw9IiNGRkIwMDAiLz4KPHBhdGggZD0iTTYwIDI0NWMxNzAtNzIgMzUwLTM0IDUwMC0yNCA5NiA3IDE1MS01IDE5Ni0zNS0yNCA2Mi0xMDUgNzgtMTk3IDcwLTE3NC0xNS0zMzEtNDYtNDk5IDE0eiIgZmlsbD0iIzBCM0U5QiIvPgo8dGV4dCB4PSIxOTUiIHk9IjMzMCIgZm9udC1mYW1pbHk9IkFyaWFsLEhlbHZldGljYSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjU4IiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSIjMEIzRTlCIj5TbWFydCBMb2dpc3RpY3M8L3RleHQ+Cjwvc3ZnPg==");
+}
+
+/* Admin login */
+main.bg-asphalt form::before {
+  content: "";
+  display: block;
+  width: min(230px, 72vw);
+  aspect-ratio: 20 / 9;
+  margin: 0 auto 1.5rem;
+  background: var(--hallo-portal-logo) center / contain no-repeat;
+}
+
+main.bg-asphalt form > span:first-child {
+  display: none;
+}
+
+/* Driver login */
+main.bg-bone.flex section > div.mb-8 > div:first-child::before {
+  content: "";
+  display: block;
+  width: min(230px, 68vw);
+  aspect-ratio: 20 / 9;
+  margin-bottom: 0.75rem;
+  background: var(--hallo-portal-logo) left center / contain no-repeat;
+}
+
+/* Customer login */
+main.bg-bone section form > div:first-child::before {
+  content: "";
+  display: block;
+  width: min(220px, 68vw);
+  aspect-ratio: 20 / 9;
+  margin: 0 auto 0.75rem;
+  background: var(--hallo-portal-logo) center / contain no-repeat;
+  flex-basis: 100%;
+}
+
+main.bg-bone > section.bg-emerald-800 > div:first-child::before {
+  content: "";
+  display: block;
+  width: 230px;
+  aspect-ratio: 20 / 9;
+  background: var(--hallo-portal-logo) left center / contain no-repeat;
+}
+
+@media (max-width: 420px) {
+  main.bg-asphalt form::before,
+  main.bg-bone.flex section > div.mb-8 > div:first-child::before,
+  main.bg-bone section form > div:first-child::before {
+    width: min(190px, 72vw);
+  }
+}
