@@ -119,7 +119,7 @@ export async function getDashboardData() {
       driver_name: driverName,
       plate_number: plateNumber,
       assignment_label: assignmentLabel,
-      cargo_description: `${cargoLabel} · ${assignmentLabel}`,
+      cargo_description: cargoLabel,
     };
   });
   const releasedTotal = payments

@@ -38,6 +38,7 @@ function render(chrome, width, profile) {
     "--disable-gpu",
     "--disable-dev-shm-usage",
     "--hide-scrollbars",
+    "--run-all-compositor-stages-before-draw",
     `--window-size=${width},915`,
     "--virtual-time-budget=2500",
     `--user-data-dir=${profile}`,
@@ -102,7 +103,7 @@ await writeFile(htmlFile, `<!doctype html>
     </section>
   </main>
   <script>
-    (async () => {
+    (() => {
       const sheet = document.querySelector('.customer-map-home__sheet');
       const body = document.querySelector('.customer-map-home__sheet-body');
       const submit = document.querySelector('.customer-map-home__confirm');
@@ -114,7 +115,6 @@ await writeFile(htmlFile, `<!doctype html>
       document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
       document.documentElement.dataset.scrollable = String(sheet.scrollHeight > sheet.clientHeight);
       sheet.scrollTop = sheet.scrollHeight;
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const submitRect = submit.getBoundingClientRect();
       const finalSheetRect = sheet.getBoundingClientRect();
       document.documentElement.dataset.submitReachable = String(submitRect.top >= finalSheetRect.top - 2 && submitRect.bottom <= finalSheetRect.bottom + 2);

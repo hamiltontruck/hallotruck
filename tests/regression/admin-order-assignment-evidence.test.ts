@@ -5,8 +5,6 @@ import path from "node:path";
 
 const service = await readFile(path.join(process.cwd(), "src/services/admin.service.ts"), "utf8");
 const page = await readFile(path.join(process.cwd(), "src/pages/SmartLogistics.tsx"), "utf8");
-const css = await readFile(path.join(process.cwd(), "src/styles/admin-order-cleanup.css"), "utf8");
-const main = await readFile(path.join(process.cwd(), "src/main.tsx"), "utf8");
 
 test("Admin orders expose assigned Driver and truck plate from database IDs", () => {
   assert.match(service, /driver_name: string \| null/);
@@ -14,14 +12,17 @@ test("Admin orders expose assigned Driver and truck plate from database IDs", ()
   assert.match(service, /drivers\.find\(\(item\) => item\.id === order\.driver_id\)/);
   assert.match(service, /trucks\.find\(\(item\) => item\.id === order\.truck_id\)/);
   assert.match(service, /assignment_label: assignmentLabel/);
-  assert.match(service, /cargo_description: `\$\{cargoLabel\} · \$\{assignmentLabel\}`/);
+  assert.match(service, /cargo_description: cargoLabel/);
+  assert.match(page, /Driver \/ plate: \{o\.assignment_label/);
+  assert.match(page, /Assigned vehicle/);
+  assert.match(page, /Plate \{assignedPlate\}/);
 });
 
-test("Manage Order hides only the obsolete manual payment-entry form", () => {
-  assert.match(css, /input\[name="provider"\]/);
-  assert.match(css, /select\[name="event"\]/);
-  assert.match(css, /display: none/);
-  assert.match(main, /admin-order-cleanup\.css/);
+test("Manage Order removes the obsolete manual payment-entry form at source", () => {
+  assert.doesNotMatch(page, /Payment & verification/);
+  assert.doesNotMatch(page, /<form onSubmit=\{pay\}/);
+  assert.doesNotMatch(page, /async function pay\(/);
+  assert.match(page, /Payment evidence/);
 });
 
 test("Payment evidence, immutable history and invoice PDF remain visible", () => {
