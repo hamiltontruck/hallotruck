@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   getPaymentLedgerIndicators,
   getPaymentLedgerPage,
@@ -147,12 +148,8 @@ function isCashCollection(payment: PaymentReviewRow) {
   return isDriverCollection(payment) && payment.raw_payload?.collection_method === "cash";
 }
 
-function initialHashQuery() {
-  if (typeof window === "undefined") return "";
-  return new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ?? "";
-}
-
 export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFixture } = {}) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [payments, setPayments] = useState<PaymentReviewRow[]>(fixture?.payments ?? []);
   const [orders, setOrders] = useState<ReviewOrderRow[]>(fixture?.orders ?? []);
   const [drivers, setDrivers] = useState<DriverRow[]>(fixture?.drivers ?? []);
@@ -160,10 +157,15 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
   const [confirmations, setConfirmations] = useState<DriverConfirmationEventRow[]>(fixture?.confirmations ?? []);
   const [corrections, setCorrections] = useState<PaymentCorrectionRow[]>(fixture?.corrections ?? []);
   const [reconciliation, setReconciliation] = useState<TripReconciliationRow[]>(fixture?.reconciliation ?? []);
-  const [filter, setFilter] = useState<PaymentLedgerStatusFilter>("all");
-  const [provider, setProvider] = useState("all");
-  const [dateFilter, setDateFilter] = useState<PaymentLedgerDateFilter>("all");
-  const [query, setQuery] = useState(initialHashQuery);
+  const requestedStatus = searchParams.get("status") ?? "all";
+  const requestedDate = searchParams.get("date") ?? "all";
+  const requestedQueue = searchParams.get("queue") ?? "all";
+  const allowedStatuses: PaymentLedgerStatusFilter[] = ["all", "pending", "escrow", "released", "rejected", "refunded"];
+  const allowedDates: PaymentLedgerDateFilter[] = ["all", "today", "7d", "30d"];
+  const filter: PaymentLedgerStatusFilter = allowedStatuses.includes(requestedStatus as PaymentLedgerStatusFilter) ? requestedStatus as PaymentLedgerStatusFilter : "all";
+  const provider = searchParams.get("provider") ?? "all";
+  const dateFilter: PaymentLedgerDateFilter = allowedDates.includes(requestedDate as PaymentLedgerDateFilter) ? requestedDate as PaymentLedgerDateFilter : "all";
+  const query = searchParams.get("q") ?? "";
   const [page, setPage] = useState(1);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busyPayment, setBusyPayment] = useState<string | null>(null);
@@ -189,7 +191,7 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
       const { data: paymentData, error: paymentError } = await supabase
         .from("payments")
         .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,rejection_reason,reviewed_by,reviewed_at,raw_payload,created_at")
-        .in("event", ["initiated", "failed", "held_escrow", "released"])
+        .in("event", ["initiated", "failed", "held_escrow", "released", "refunded"])
         .order("created_at", { ascending: false })
         .limit(1000);
       if (paymentError) throw paymentError;
@@ -285,7 +287,7 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
   const providerOptions = useMemo(() => [...new Set(payments.map((payment) => payment.provider.trim()).filter(Boolean))].sort(), [payments]);
   const totals = useMemo(() => ({
     pending: payments.filter((payment) => payment.event === "initiated"),
-    rejected: payments.filter((payment) => payment.event === "failed"),
+    rejected: payments.filter((payment) => payment.event === "failed" || payment.event === "refunded"),
     escrow: payments.filter((payment) => payment.event === "held_escrow" && effectiveAmount(payment) > 0),
     released: payments.filter((payment) => payment.event === "released" && effectiveAmount(payment) > 0),
   }), [effectiveAmount, payments]);
@@ -295,7 +297,13 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
     return payments.filter((payment) => {
       const order = ordersById.get(payment.order_id);
       const driver = order?.driver_id ? driversById.get(order.driver_id) : null;
-      return matchesPaymentLedgerStatus(payment.event, filter)
+      const matchesQueue = requestedQueue === "legacy"
+        ? isLegacyCompletedLedgerPayment(payment.event, payment.raw_payload?.legacy_completed)
+        : requestedQueue === "exceptions"
+          ? payment.event === "failed" || payment.event === "refunded"
+          : true;
+      return matchesQueue
+        && matchesPaymentLedgerStatus(payment.event, filter)
         && (provider === "all" || payment.provider.trim() === provider)
         && matchesPaymentLedgerDate(payment.created_at, dateFilter)
         && matchesPaymentLedgerSearch({
@@ -310,9 +318,9 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
           driverPhone: driver?.phone,
         }, normalized);
     });
-  }, [payments, ordersById, driversById, filter, provider, dateFilter, query]);
+  }, [payments, ordersById, driversById, filter, provider, dateFilter, query, requestedQueue]);
 
-  useEffect(() => { setPage(1); }, [filter, provider, dateFilter, query]);
+  useEffect(() => { setPage(1); }, [filter, provider, dateFilter, query, requestedQueue]);
   const pagination = getPaymentLedgerPage(filteredPayments.length, page, PAGE_SIZE);
   const visiblePayments = filteredPayments.slice(pagination.startIndex, pagination.endIndex);
 
@@ -367,6 +375,14 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
+  function updateFilter(name: "q" | "provider" | "date" | "status", value: string) {
+    const next = new URLSearchParams(searchParams);
+    if (!value || value === "all") next.delete(name);
+    else next.set(name, value);
+    if (name === "status") next.delete("queue");
+    setSearchParams(next, { replace: true });
+  }
+
   return <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f5f3ed] p-3 text-asphalt sm:p-7">
     <section className="mx-auto w-full min-w-0 max-w-6xl">
       <header className="min-w-0 border border-asphalt/10 bg-asphalt p-4 text-white min-[360px]:p-5 sm:p-8">
@@ -381,7 +397,7 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
         <Summary label="Pending review" rows={totals.pending} tone="warning" />
         <Summary label="Held in escrow" rows={totals.escrow} tone="warning" amountFor={effectiveAmount} />
         <Summary label="Released" rows={totals.released} tone="good" amountFor={effectiveAmount} />
-        <Summary label="Rejected / failed" rows={totals.rejected} tone="critical" />
+        <Summary label="Rejected / refunded" rows={totals.rejected} tone="critical" />
       </div>
 
 
@@ -409,12 +425,13 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
       </section>}
 
       <section className="mt-4 min-w-0 border border-asphalt/10 bg-white p-3 min-[360px]:p-4">
+        {requestedQueue !== "all" && <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2 border border-amber/35 bg-amber/10 p-3 text-xs"><strong>Control-center queue:</strong><span className="bg-white px-2 py-1 capitalize">{requestedQueue.replace(/-/g, " ")}</span><button type="button" onClick={() => { const next = new URLSearchParams(searchParams); next.delete("queue"); setSearchParams(next, { replace: true }); }} className="ml-auto font-semibold text-amber-dim">Clear queue</button></div>}
         <div className="grid min-w-0 gap-3 sm:grid-cols-2 md:grid-cols-4">
-          <label className="min-w-0 sm:col-span-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Search ledger</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tracking, customer, driver, phone, route, transaction…" className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 px-3 py-3 text-sm outline-none focus:border-amber" /></label>
-          <label className="min-w-0"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Provider</span><select value={provider} onChange={(event) => setProvider(event.target.value)} className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white px-3 py-3 text-sm"><option value="all">All providers</option>{providerOptions.map((item) => <option key={item} value={item}>{item.replace(/_/g, " ")}</option>)}</select></label>
-          <label className="min-w-0"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Date</span><select value={dateFilter} onChange={(event) => setDateFilter(event.target.value as PaymentLedgerDateFilter)} className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white px-3 py-3 text-sm"><option value="all">All dates</option><option value="today">Today</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
+          <label className="min-w-0 sm:col-span-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Search ledger</span><input type="search" value={query} onChange={(event) => updateFilter("q", event.target.value)} placeholder="Tracking, customer, driver, phone, route, transaction…" className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 px-3 py-3 text-sm outline-none focus:border-amber" /></label>
+          <label className="min-w-0"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Provider</span><select value={provider} onChange={(event) => updateFilter("provider", event.target.value)} className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white px-3 py-3 text-sm"><option value="all">All providers</option>{providerOptions.map((item) => <option key={item} value={item}>{item.replace(/_/g, " ")}</option>)}</select></label>
+          <label className="min-w-0"><span className="text-[10px] font-semibold uppercase tracking-wide text-steel">Date</span><select value={dateFilter} onChange={(event) => updateFilter("date", event.target.value)} className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white px-3 py-3 text-sm"><option value="all">All dates</option><option value="today">Today</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
         </div>
-        <div className="mt-4 flex min-w-0 flex-wrap gap-2" aria-label="Payment status filter">{(["all", "pending", "escrow", "released", "rejected"] as PaymentLedgerStatusFilter[]).map((item) => <button key={item} type="button" aria-pressed={filter === item} onClick={() => setFilter(item)} className={`min-w-[5.25rem] flex-1 whitespace-normal border px-3 py-2 text-xs font-semibold capitalize min-[412px]:flex-none ${filter === item ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white text-steel"}`}>{item}</button>)}</div>
+        <div className="mt-4 flex min-w-0 flex-wrap gap-2" aria-label="Payment status filter">{allowedStatuses.map((item) => <button key={item} type="button" aria-pressed={filter === item} onClick={() => updateFilter("status", item)} className={`min-w-[5.25rem] flex-1 whitespace-normal border px-3 py-2 text-xs font-semibold capitalize min-[412px]:flex-none ${filter === item ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white text-steel"}`}>{item}</button>)}</div>
       </section>
 
       {error && <p className="mt-4 border border-route/35 bg-route/5 p-4 text-sm text-route">{error}</p>}
@@ -517,8 +534,8 @@ function Summary({ label, rows, tone, amountFor = (row) => amount(row.amount_etb
 
 function StatusBadge({ event, legacy, driverCollected }: { event: PaymentLedgerEvent; legacy: boolean; driverCollected: boolean }) {
   if (legacy) return <span className="bg-emerald-50 px-2.5 py-1.5 text-[10px] font-semibold uppercase text-emerald-800">Legacy completed</span>;
-  const label = event === "initiated" ? "Pending review" : event === "failed" ? "Rejected" : event === "held_escrow" ? "Held escrow" : driverCollected ? "Released · driver" : "Released";
-  const cls = event === "failed" ? "bg-route/10 text-route" : event === "initiated" || event === "held_escrow" ? "bg-amber/15 text-amber-dim" : "bg-emerald-50 text-emerald-800";
+  const label = event === "initiated" ? "Pending review" : event === "failed" ? "Rejected" : event === "refunded" ? "Refunded" : event === "held_escrow" ? "Held escrow" : driverCollected ? "Released · driver" : "Released";
+  const cls = event === "failed" || event === "refunded" ? "bg-route/10 text-route" : event === "initiated" || event === "held_escrow" ? "bg-amber/15 text-amber-dim" : "bg-emerald-50 text-emerald-800";
   return <span className={`break-words px-2.5 py-1.5 text-[10px] font-semibold uppercase ${cls}`}>{label}</span>;
 }
 

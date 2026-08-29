@@ -98,6 +98,7 @@ async function prepareFixture() {
   const fixtureSource = `
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import { AdminPaymentReview } from ${JSON.stringify(path.join(root, "src", "pages", "AdminPaymentReview.tsx"))};
 
 const payments = Array.from({ length: 15 }, (_, index) => {
@@ -136,7 +137,7 @@ const fixture = {
   reconciliation: [{ order_id: "order-01", tracking_id: "HT-2026-F44A0E", route: "Hirna → Dessie", customer_shipper: "Sofi Husse", assigned_driver: "Adil Abdu", trip_amount_etb: 30000, payment_method: "cash", cash_collected_etb: 30000, bank_telebirr_received_etb: 0, hallo_commission_etb: 600, driver_gross_etb: 30000, driver_net_etb: 29400, deposit_consumed_etb: 600, remaining_available_deposit_etb: 9400, commission_due_etb: 0, completed_at: "2026-08-28T12:00:00.000Z", payment_status: "released", rating_status: "not_rated" }],
 };
 
-createRoot(document.getElementById("root")).render(React.createElement(AdminPaymentReview, { fixture }));
+createRoot(document.getElementById("root")).render(React.createElement(MemoryRouter, { initialEntries: ["/admin/payment-review"] }, React.createElement(AdminPaymentReview, { fixture })));
 
 setTimeout(() => {
   const details = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("View details"));

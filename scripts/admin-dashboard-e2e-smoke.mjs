@@ -117,6 +117,11 @@ await new Promise((resolve) => setTimeout(resolve, 300));
 document.documentElement.dataset.kpiLinks = String(
   Boolean(document.querySelector('a[href="/admin/operations?section=Orders"]'))
   && Boolean(document.querySelector('a[href="/admin/driver-finance-search"]'))
+  && Boolean(document.querySelector('a[href="/admin/operations?section=Orders&queue=delayed"]'))
+  && Boolean(document.querySelector('a[href="/admin/operations?section=Orders&queue=missing-evidence"]'))
+  && Boolean(document.querySelector('a[href="/admin/payment-review?status=pending"]'))
+  && Boolean(document.querySelector('a[href="/admin/payment-review?queue=legacy"]'))
+  && Boolean(document.querySelector('a[href="/admin/operations?action=create-order"]'))
 );
 document.documentElement.dataset.overflow = String(
   document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -148,6 +153,7 @@ try {
         'data-ready="true"', 'data-kpi-links="true"', 'data-overflow="false"',
         "Total Orders", "Unassigned Orders", "Legacy Completed", "Commission Receivable",
         "Available Driver Deposits", "ETB 99,594", "New Customers Today", "Quote pricing",
+        "COMMAND BAR", "Dispatch queue", "Partner control", "Live database control",
       ], `Admin dashboard ${width}px smoke`);
     } finally {
       await rm(profile, { recursive: true, force: true });

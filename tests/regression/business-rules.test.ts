@@ -18,6 +18,7 @@ import {
   canonicalPayments,
   isDelayedOrder,
   isLegacyCompletedPayment,
+  matchesAdminOrderControlQueue,
 } from "../../src/domain/admin-control-center";
 import {
   getPaymentLedgerIndicators,
@@ -297,6 +298,7 @@ test("payment ledger status and date filters use exact finance states", () => {
   assert.equal(matchesPaymentLedgerStatus("failed", "rejected"), true);
   assert.equal(matchesPaymentLedgerStatus("held_escrow", "escrow"), true);
   assert.equal(matchesPaymentLedgerStatus("released", "released"), true);
+  assert.equal(matchesPaymentLedgerStatus("refunded", "refunded"), true);
   assert.equal(matchesPaymentLedgerStatus("released", "pending"), false);
 
   const now = new Date("2026-08-25T12:00:00.000Z");
@@ -348,6 +350,44 @@ test("delayed active order is detected after 48 hours", () => {
     delivered_at: null,
     created_at: "2026-08-22T09:00:00.000Z",
   }, now), true);
+});
+
+test("Admin control-center drilldowns reproduce exception queue rules", () => {
+  const now = new Date("2026-08-25T12:00:00.000Z").getTime();
+  const base = {
+    id: "order-1",
+    tracking_id: "HT-CONTROL-1",
+    customer_name: "Customer",
+    pickup_address: "A",
+    dropoff_address: "B",
+    status: "in_transit",
+    payment_status: "released",
+    driver_id: "driver-1",
+    truck_id: "truck-1",
+    accepted_at: "2026-08-22T10:00:00.000Z",
+    delivered_at: null,
+    created_at: "2026-08-22T09:00:00.000Z",
+  };
+
+  assert.equal(matchesAdminOrderControlQueue(base, "delayed", new Set(), new Set(), now), true);
+  assert.equal(matchesAdminOrderControlQueue({ ...base, id: "unassigned", driver_id: null }, "unassigned", new Set(), new Set(), now), true);
+  assert.equal(matchesAdminOrderControlQueue({ ...base, id: "delivered", status: "delivered" }, "missing-evidence"), true);
+  assert.equal(matchesAdminOrderControlQueue({ ...base, id: "proved", status: "delivered" }, "missing-evidence", new Set(["proved"])), false);
+  assert.equal(matchesAdminOrderControlQueue({ ...base, id: "legacy", status: "delivered" }, "missing-evidence", new Set(), new Set(["legacy"])), false);
+});
+
+test("Admin command center exposes deep-linked controls and no obsolete Driver evidence instruction", () => {
+  const overview = readFileSync(path.join(process.cwd(), "src/pages/AdminCeoOverview.tsx"), "utf8");
+  const workspace = readFileSync(path.join(process.cwd(), "src/pages/AdminPaymentWorkspace.tsx"), "utf8");
+  const service = readFileSync(path.join(process.cwd(), "src/services/admin-control-center.service.ts"), "utf8");
+  assert.match(overview, /queue=delayed/);
+  assert.match(overview, /queue=missing-evidence/);
+  assert.match(overview, /status=pending/);
+  assert.match(overview, /action=create-order/);
+  assert.doesNotMatch(workspace, /attach evidence|ragaa itti maxxansuun|ku lifaaqaa caddayn/i);
+  assert.match(workspace, /No receipt or evidence upload is required/);
+  assert.match(service, /Driver finance unavailable/);
+  assert.match(overview, /partial finance data/);
 });
 
 test("legacy delivered order is excluded from missing evidence queue", () => {

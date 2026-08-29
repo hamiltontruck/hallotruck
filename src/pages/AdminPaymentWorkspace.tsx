@@ -44,7 +44,7 @@ const copy: Record<SupportedLanguage, Copy> = {
     driver: "Driver",
     unknownDriver: "Driver unavailable",
     awaiting: "Awaiting driver report",
-    instruction: "The driver must open the payment-report action, choose cash or bank, attach evidence and submit the full invoice. It will then enter Pending review below.",
+    instruction: "The driver opens the payment-report action, chooses Cash or Bank / Telebirr, confirms the payment outcome and submits the full invoice amount. No receipt or evidence upload is required. It will then enter Pending review below.",
     loadError: "Delivered orders awaiting payment reports could not be loaded.",
   },
   om: {
@@ -56,7 +56,7 @@ const copy: Record<SupportedLanguage, Copy> = {
     driver: "Driver",
     unknownDriver: "Driver hin argamne",
     awaiting: "Gabaasa driver eeggachaa jira",
-    instruction: "Driver payment-report action banaa, cash ykn bank filatee, ragaa itti maxxansuun invoice guutuu erguu qaba. Sana booda Pending review jalatti ni seena.",
+    instruction: "Driver payment-report action keessaa Cash ykn Bank / Telebirr filatee, kaffaltiin fudhatamuu isaa mirkaneessuun invoice guutuu erguu qaba. Ragaa olkaaʼuun hin barbaachisu. Sana booda Pending review jalatti ni seena.",
     loadError: "Order delivered kan gabaasa kaffaltii eeggatan feʼuun hin dandaʼamne.",
   },
   am: {
@@ -68,7 +68,7 @@ const copy: Record<SupportedLanguage, Copy> = {
     driver: "አሽከርካሪ",
     unknownDriver: "አሽከርካሪ አልተገኘም",
     awaiting: "የአሽከርካሪ ሪፖርት በመጠበቅ ላይ",
-    instruction: "አሽከርካሪው የክፍያ ሪፖርት እርምጃን ከፍቶ ጥሬ ገንዘብ ወይም ባንክ መርጦ ማስረጃ በማያያዝ ሙሉ ደረሰኙን መላክ አለበት። ከዚያ Pending review ውስጥ ይገባል።",
+    instruction: "አሽከርካሪው የክፍያ ሪፖርት እርምጃን ከፍቶ Cash ወይም Bank / Telebirr መርጦ፣ የክፍያውን ውጤት አረጋግጦ ሙሉ የክፍያ መጠኑን መላክ አለበት። ደረሰኝ ወይም ማስረጃ መጫን አያስፈልግም። ከዚያ Pending review ውስጥ ይገባል።",
     loadError: "የክፍያ ሪፖርት የሚጠብቁ የደረሱ ትዕዛዞችን መጫን አልተቻለም።",
   },
   so: {
@@ -80,7 +80,7 @@ const copy: Record<SupportedLanguage, Copy> = {
     driver: "Darawal",
     unknownDriver: "Darawal lama helin",
     awaiting: "Sugaya warbixinta darawalka",
-    instruction: "Darawalku waa inuu furaa warbixinta lacagta, doortaa cash ama bangi, ku lifaaqaa caddayn, dabadeedna diraa qaansheegta oo dhan. Markaas waxay geli doontaa Pending review.",
+    instruction: "Darawalku wuxuu furaa warbixinta lacagta, doortaa Cash ama Bank / Telebirr, xaqiijiyaa natiijada lacag-bixinta, dabadeedna diraa wadarta qaansheegta. Looma baahna inuu rasiid ama caddayn soo geliyo. Markaas waxay geli doontaa Pending review.",
     loadError: "Dalabyada la gaarsiiyey ee sugaya warbixinta lacagta lama soo gelin karin.",
   },
   ti: {
@@ -92,7 +92,7 @@ const copy: Record<SupportedLanguage, Copy> = {
     driver: "መራሕ መኪና",
     unknownDriver: "መራሕ መኪና ኣይተረኽበን",
     awaiting: "ጸብጻብ መራሕ መኪና ይጽበ ኣሎ",
-    instruction: "መራሕ መኪና ናይ ክፍሊት ጸብጻብ ክኸፍት፣ cash ወይ bank ክመርጽ፣ መረጋገጺ ከተሓሕዝን ምሉእ ኢንቮይስ ክልእኽን ኣለዎ። ድሕሪኡ ኣብ Pending review ይኣቱ።",
+    instruction: "መራሕ መኪና ናይ ክፍሊት ጸብጻብ ከፊቱ Cash ወይ Bank / Telebirr ክመርጽ፣ ውጽኢት ክፍሊት ከረጋግጽን ምሉእ መጠን ኢንቮይስ ክልእኽን ኣለዎ። ቅብሊት ወይ መረጋገጺ ምስቃል ኣየድልን። ድሕሪኡ ኣብ Pending review ይኣቱ።",
     loadError: "ጸብጻብ ክፍሊት ዝጽበዩ ዝተበጽሑ ትእዛዛት ምጽዓን ኣይተኻእለን።",
   },
 };
