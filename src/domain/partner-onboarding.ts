@@ -149,6 +149,13 @@ export function isDatabaseLeadershipRole(profileRole: string | null | undefined)
   return profileRole === "admin" || profileRole === "ceo";
 }
 
+export function canAccessAdminWorkspace(
+  profileRole: string | null | undefined,
+  accountStatus?: string | null,
+) {
+  return isDatabaseLeadershipRole(profileRole) && accountStatus !== "suspended";
+}
+
 export function getPartnerPromotionWarning(profile: Pick<PartnerProfileSummary, "full_name" | "profile_role">) {
   if (profile.profile_role === "partner") return "This account already has the Partner role. A membership will be added without changing its profile role.";
   if (profile.profile_role === "admin" || profile.profile_role === "ceo") return "Admin and CEO roles are protected and cannot be replaced.";

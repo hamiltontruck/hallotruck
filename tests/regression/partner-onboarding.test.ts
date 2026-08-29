@@ -157,7 +157,8 @@ test("Suspended organizations are excluded by existing Partner RLS helper polici
 });
 
 test("Admin and Partner gates use database-backed access instead of metadata", () => {
-  assert.match(adminGate, /from\("profiles"\)[\s\S]*select\("role"\)/i);
+  assert.match(adminGate, /from\("profiles"\)[\s\S]*select\("role,driver_status"\)/i);
+  assert.match(adminGate, /canAccessAdminWorkspace\(role, profile\?\.driver_status\)/i);
   assert.doesNotMatch(adminGate, /app_metadata|user_metadata/i);
   assert.match(partnerGate, /getPartnerLoginAccess/i);
   assert.match(partnerGate, /no active organization membership/i);

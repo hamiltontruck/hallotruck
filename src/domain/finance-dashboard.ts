@@ -99,9 +99,18 @@ export function rangeStart(range: FinanceRange, now = new Date()) {
   const start = new Date(now);
   if (range === "all") return null;
   if (range === "today") start.setHours(0, 0, 0, 0);
-  if (range === "7d") start.setDate(start.getDate() - 6);
-  if (range === "30d") start.setDate(start.getDate() - 29);
-  if (range === "90d") start.setDate(start.getDate() - 89);
+  if (range === "7d") {
+    start.setDate(start.getDate() - 6);
+    start.setHours(0, 0, 0, 0);
+  }
+  if (range === "30d") {
+    start.setDate(start.getDate() - 29);
+    start.setHours(0, 0, 0, 0);
+  }
+  if (range === "90d") {
+    start.setDate(start.getDate() - 89);
+    start.setHours(0, 0, 0, 0);
+  }
   return start;
 }
 
