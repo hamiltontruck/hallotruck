@@ -2,12 +2,20 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { canonicalCommissionAccrued, computeFinanceSummary, dailySeries, type FinanceDashboardData } from "../../src/domain/finance-dashboard";
+import { canAccessAdminWorkspace, isDatabaseLeadershipRole } from "../../src/domain/partner-onboarding";
+import { canonicalCommissionAccrued, computeFinanceSummary, dailySeries, rangeStart, type FinanceDashboardData } from "../../src/domain/finance-dashboard";
 
 const accessMigration = readFileSync(
   path.join(process.cwd(), "supabase", "migrations", "20260826221314_fix_finance_dashboard_access.sql"),
   "utf8",
 );
+const hardenedAccessMigration = readFileSync(
+  path.join(process.cwd(), "supabase", "migrations", "20260829170000_harden_finance_dashboard_v3_access.sql"),
+  "utf8",
+);
+const adminGate = readFileSync(path.join(process.cwd(), "src", "components", "auth", "AdminGate.tsx"), "utf8");
+const app = readFileSync(path.join(process.cwd(), "src", "App.tsx"), "utf8");
+const dashboard = readFileSync(path.join(process.cwd(), "src", "pages", "AdminFinanceDashboardV3.tsx"), "utf8");
 
 const now = new Date("2026-08-26T12:00:00Z");
 const data: FinanceDashboardData = {
@@ -68,6 +76,58 @@ test("daily series never creates negative amounts", () => {
   assert.ok(series.every((row) => row.revenue >= 0 && row.escrow >= 0 && row.commission >= 0));
 });
 
+test("finance date filters use exact local-day boundaries", () => {
+  const localNoon = new Date(2026, 7, 26, 12, 30, 0, 0);
+  assert.deepEqual(
+    [rangeStart("today", localNoon)?.getHours(), rangeStart("today", localNoon)?.getMinutes()],
+    [0, 0],
+  );
+  assert.deepEqual(
+    [rangeStart("7d", localNoon)?.getDate(), rangeStart("7d", localNoon)?.getHours(), rangeStart("7d", localNoon)?.getMinutes()],
+    [20, 0, 0],
+  );
+  assert.deepEqual(
+    [rangeStart("30d", localNoon)?.getHours(), rangeStart("90d", localNoon)?.getHours()],
+    [0, 0],
+  );
+});
+
+test("finance dashboard role decisions allow Admin and CEO only", () => {
+  assert.equal(isDatabaseLeadershipRole("admin"), true);
+  assert.equal(isDatabaseLeadershipRole("ceo"), true);
+  assert.equal(canAccessAdminWorkspace("admin", "active"), true);
+  assert.equal(canAccessAdminWorkspace("ceo", null), true);
+  assert.equal(canAccessAdminWorkspace("customer", "active"), false);
+  assert.equal(canAccessAdminWorkspace("driver", "approved"), false);
+  assert.equal(canAccessAdminWorkspace("partner", "active"), false);
+  assert.equal(canAccessAdminWorkspace(null, null), false);
+  assert.equal(canAccessAdminWorkspace("admin", "suspended"), false);
+});
+
+test("Finance route remains behind AdminGate for refresh and direct navigation", () => {
+  assert.match(app, /path="\/admin\/finance" element={<AdminGate><AdminToolShell><AdminFinanceDashboardV3 \/><\/AdminToolShell><\/AdminGate>}/);
+});
+
+test("AdminGate uses database profile role/status and handles failed lookup securely", () => {
+  assert.match(adminGate, /supabase\.auth\.getSession\(\)/i);
+  assert.match(adminGate, /onAuthStateChange/i);
+  assert.match(adminGate, /from\("profiles"\)[\s\S]*select\("role,driver_status"\)/i);
+  assert.match(adminGate, /canAccessAdminWorkspace\(role, profile\?\.driver_status\)/i);
+  assert.match(adminGate, /This account does not have CEO or Admin access/i);
+  assert.match(adminGate, /profileError \|\| !canAccessAdminWorkspace/i);
+  assert.doesNotMatch(adminGate, /app_metadata|user_metadata|localStorage|routeParams|email\.endsWith/i);
+});
+
+test("Finance source failures show source-specific error and retry without false zero KPIs", () => {
+  for (const source of ["payments", "orders", "profiles", "deposits", "commission charges", "commission payments", "driver confirmations", "financial corrections"]) {
+    assert.match(dashboard, new RegExp(`name: "${source}"`, "i"));
+  }
+  assert.match(dashboard, /source failed:/i);
+  assert.match(dashboard, /Retry finance data/i);
+  assert.match(dashboard, /No KPI values are shown because one or more finance sources failed/i);
+  assert.match(dashboard, /error \?[\s\S]*loading \?[\s\S]*<section className="mt-5 grid grid-cols-2 gap-3/i);
+});
+
 test("finance dashboard access follows database leadership roles without opening participant data", () => {
   const existingPolicies = [
     ["payments admin manage", "payments"],
@@ -94,4 +154,13 @@ test("finance dashboard access follows database leadership roles without opening
   assert.match(accessMigration, /revoke all on table public\.driver_payment_confirmations from anon/i);
   assert.doesNotMatch(accessMigration, /grant\s+select[\s\S]*\s+to\s+anon/i);
   assert.doesNotMatch(accessMigration, /auth\.jwt\(\)[\s\S]*app_metadata/i);
+});
+
+test("Finance dashboard database helper denies suspended users and avoids metadata trust", () => {
+  assert.match(hardenedAccessMigration, /create or replace function private\.is_admin_or_ceo\(\)/i);
+  assert.match(hardenedAccessMigration, /from public\.profiles profile[\s\S]*profile\.role::text in \('admin', 'ceo'\)/i);
+  assert.match(hardenedAccessMigration, /coalesce\(profile\.driver_status::text, 'active'\) <> 'suspended'/i);
+  assert.match(hardenedAccessMigration, /revoke all on function private\.is_admin_or_ceo\(\) from public, anon/i);
+  assert.match(hardenedAccessMigration, /grant execute on function private\.is_admin_or_ceo\(\) to authenticated/i);
+  assert.doesNotMatch(hardenedAccessMigration, /app_metadata|user_metadata|raw_user_meta_data|email/i);
 });
