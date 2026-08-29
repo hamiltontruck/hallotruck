@@ -35,7 +35,7 @@ export type PartnerFleetVehicle = {
   plate_number: string;
   vehicle_type: string;
   capacity_tons: number | string | null;
-  status: "available" | "assigned" | "maintenance" | "inactive";
+  status: "available" | "assigned" | "on_trip" | "maintenance" | "suspended" | "inactive" | string;
 };
 
 export type PartnerFreightEarning = {
@@ -123,8 +123,19 @@ export async function loadPartnerFinance(partnerId: string) {
     supabase.from("partner_settlement_events").select("*").eq("partner_id", partnerId).order("created_at", { ascending: false }).limit(1000),
     supabase.from("financial_corrections").select("*").eq("partner_id", partnerId).order("created_at", { ascending: false }).limit(500),
   ]);
-  const failure = [summary, rules, fleet, projects, earnings, settlements, settlementPayments, settlementEvents, corrections].find((result) => result.error)?.error;
-  if (failure) throw failure;
+  const sources = [
+    { name: "Partner wallet summary", result: summary },
+    { name: "Partner commission rules", result: rules },
+    { name: "Partner fleet vehicles", result: fleet },
+    { name: "Partner projects", result: projects },
+    { name: "Partner freight earnings", result: earnings },
+    { name: "Partner settlements", result: settlements },
+    { name: "Partner settlement payments", result: settlementPayments },
+    { name: "Partner settlement events", result: settlementEvents },
+    { name: "Partner financial corrections", result: corrections },
+  ];
+  const failure = sources.find((source) => source.result.error);
+  if (failure?.result.error) throw new Error(`${failure.name} failed: ${failure.result.error.message}`);
   return {
     summary: (summary.data?.[0] ?? null) as PartnerWalletSummary | null,
     rules: (rules.data ?? []) as PartnerCommissionRule[],
