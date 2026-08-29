@@ -15,6 +15,7 @@ try{
   ["tests/regression/partner-onboarding.test.ts",path.join(outputDirectory,"partner-onboarding.test.mjs")],
   ["tests/regression/finance-dashboard-v3.test.ts",path.join(outputDirectory,"finance-dashboard-v3.test.mjs")],
   ["tests/regression/financial-corrections.test.ts",path.join(outputDirectory,"financial-corrections.test.mjs")],
+  ["tests/regression/payment-reference-integrity.test.ts",path.join(outputDirectory,"payment-reference-integrity.test.mjs")],
   ["tests/regression/corrected-escrow-reconciliation.test.ts",path.join(outputDirectory,"corrected-escrow-reconciliation.test.mjs")],
   ["tests/regression/partner-wallet-commission.test.ts",path.join(outputDirectory,"partner-wallet-commission.test.mjs")],
   ["tests/regression/partner-settlement-enterprise.test.ts",path.join(outputDirectory,"partner-settlement-enterprise.test.mjs")],

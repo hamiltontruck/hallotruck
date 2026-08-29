@@ -14,6 +14,10 @@ import { AdminDriverCommission } from "./pages/AdminDriverCommission";
 import { AdminFleetMaintenance } from "./pages/AdminFleetMaintenance";
 import { AdminQuotePricing } from "./pages/AdminQuotePricing";
 import { AdminPaymentWorkspace } from "./pages/AdminPaymentWorkspace";
+import {
+  AdminPaymentReferenceConflictBanner,
+  AdminPaymentReferenceConflicts,
+} from "./pages/AdminPaymentReferenceConflicts";
 import { AdminFinanceDashboardV3 } from "./pages/AdminFinanceDashboardV3";
 import { AdminIntelligence } from "./pages/AdminIntelligence";
 import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
@@ -65,6 +69,7 @@ function DriverShell({ children }: { children: React.ReactNode }) {
 }
 function AdminWorkspace(){return <AdminToolShell><AdminCeoOverview /></AdminToolShell>}
 function AdminOperationsWorkspace(){return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
+function AdminPaymentReviewWorkspace(){return <><AdminPaymentReferenceConflictBanner /><AdminPaymentWorkspace /></>}
 function CustomerWorkspace({ section }: { section: "home" | "profile" | "orders" | "track" | "payments" }) {
   if (section === "home") return <div className="customer-portal-mobile customer-view-home"><CustomerMapHome /></div>;
   if (section === "track") return <div className="customer-portal-mobile customer-view-track"><CustomerBottomNav /><CustomerLiveOrders /></div>;
@@ -86,7 +91,8 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
 <Route path="/admin/fleet-maintenance" element={<AdminGate><AdminToolShell><div className="fleet-maintenance-mobile"><AdminFleetMaintenance /></div></AdminToolShell></AdminGate>} />
 <Route path="/admin/quote-pricing" element={<AdminGate><AdminToolShell><AdminQuotePricing /></AdminToolShell></AdminGate>} />
-<Route path="/admin/payment-review" element={<AdminGate><AdminToolShell><AdminPaymentWorkspace /></AdminToolShell></AdminGate>} />
+<Route path="/admin/payment-review" element={<AdminGate><AdminToolShell><AdminPaymentReviewWorkspace /></AdminToolShell></AdminGate>} />
+<Route path="/admin/payment-review/reference-conflicts" element={<AdminGate><AdminToolShell><AdminPaymentReferenceConflicts /></AdminToolShell></AdminGate>} />
 <Route path="/admin/manual-driver-documents" element={<AdminGate><AdminToolShell><AdminManualDriverDocuments /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partners" element={<AdminGate><AdminToolShell><AdminPartnerControl /></AdminToolShell></AdminGate>} />
 <Route path="/partner/login" element={<PartnerGate><PartnerPortal /></PartnerGate>} />
