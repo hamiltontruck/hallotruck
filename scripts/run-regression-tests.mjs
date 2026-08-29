@@ -21,6 +21,7 @@ try{
   ["tests/regression/partner-settlement-enterprise.test.ts",path.join(outputDirectory,"partner-settlement-enterprise.test.mjs")],
   ["tests/regression/fleet-management-enterprise.test.ts",path.join(outputDirectory,"fleet-management-enterprise.test.mjs")],
   ["tests/regression/role-navigation.test.ts",path.join(outputDirectory,"role-navigation.test.mjs")],
+  ["tests/regression/deployment-workflow.test.ts",path.join(outputDirectory,"deployment-workflow.test.mjs")],
   ["tests/regression/driver-payment-confirmation-navigation.test.ts",path.join(outputDirectory,"driver-payment-confirmation-navigation.test.mjs")],
   ["tests/regression/trip-completion-workflow.test.ts",path.join(outputDirectory,"trip-completion-workflow.test.mjs")],
   ["tests/regression/simplified-customer-driver-workflow.test.ts",path.join(outputDirectory,"simplified-customer-driver-workflow.test.mjs")],
