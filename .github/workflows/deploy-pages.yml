@@ -35,6 +35,10 @@ jobs:
       - name: Business regression tests
         run: npm run test:regression
 
+      - name: Block deploy when production migrations are behind
+        if: github.event_name != 'pull_request'
+        run: node scripts/verify-production-migration-parity.mjs
+
       - name: Build
         run: npm run build
         env:
