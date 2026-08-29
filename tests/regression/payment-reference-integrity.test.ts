@@ -77,7 +77,7 @@ test("Finance UI surfaces a mobile-safe reference conflict queue without false z
 });
 
 test("reference conflict routes remain behind AdminGate and visible from the Payment Ledger", () => {
-  assert.match(app, /function AdminPaymentReviewWorkspace\(\)\{return <><AdminPaymentReferenceConflictBanner \/><AdminPaymentWorkspace \/><\/><\/?>/);
+  assert.match(app, /function AdminPaymentReviewWorkspace\(\)\{return <><AdminPaymentReferenceConflictBanner \/><AdminPaymentWorkspace \/><\/>\}/);
   assert.match(app, /path="\/admin\/payment-review" element={<AdminGate><AdminToolShell><AdminPaymentReviewWorkspace \/><\/AdminToolShell><\/AdminGate>}/);
   assert.match(app, /path="\/admin\/payment-review\/reference-conflicts" element={<AdminGate><AdminToolShell><AdminPaymentReferenceConflicts \/><\/AdminToolShell><\/AdminGate>}/);
 });
