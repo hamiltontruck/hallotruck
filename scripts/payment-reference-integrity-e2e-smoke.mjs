@@ -13,6 +13,7 @@ const testDirectory = path.join(root, ".payment-reference-integrity-e2e");
 const entryFile = path.join(testDirectory, "entry.mjs");
 const bundleFile = path.join(root, "dist", "payment-reference-integrity-e2e.js");
 const htmlFile = path.join(root, "dist", "payment-reference-integrity-e2e.html");
+const expectedFingerprint = "09b69699244eadd22dda0939324a5316";
 
 function findChrome() {
   for (const candidate of [process.env.CHROME_BIN, "google-chrome", "google-chrome-stable", "chromium", "chromium-browser"].filter(Boolean)) {
@@ -133,7 +134,7 @@ try {
         "Refunded history",
         "Superseded history",
         "te******1234",
-        fingerprint,
+        expectedFingerprint,
       ]) {
         if (!dom.includes(expected)) throw new Error(`Payment reference integrity ${width}px smoke missing: ${expected}`);
       }
