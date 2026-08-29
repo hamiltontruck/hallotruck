@@ -54,6 +54,8 @@ const fixture = {
   partnerId: 'partner-fixture',
   name: 'Hamilton Group PLC Enterprise Logistics Partner',
   summary: { gross_etb: 1200000, hallo_commission_etb: 24000, partner_net_etb: 1176000, pending_settlement_etb: 150000, paid_settlement_etb: 100000, payable_etb: 926000, fleet_total: 512, fleet_available: 387, hallo_freight_count: 48 },
+  rules: [{ id:'rule-1', partner_id:'partner-fixture', commission_type:'percentage', commission_value:2, effective_from:'2026-08-01', effective_to:null, active:true }],
+  fleet: [{ id:'fleet-1', partner_id:'partner-fixture', plate_number:'3-A12345', vehicle_type:'Dry Cargo', capacity_tons:22, status:'available' }, { id:'fleet-2', partner_id:'partner-fixture', plate_number:'3-A54321', vehicle_type:'Flatbed', capacity_tons:30, status:'maintenance' }],
   projects: [{ id:'project-1', partner_id:'partner-fixture', name:'Enterprise Corridor Project', status:'active' }],
   earnings: [{ id:'earning-1', partner_id:'partner-fixture', project_id:'project-1', order_id:'00000000-0000-0000-0000-VERY-LONG-ORDER-REFERENCE-1234567890', vehicle_id:null, gross_etb:1250000, commission_type:'percentage', commission_value:2, hallo_commission_etb:25000, partner_net_etb:1225000, status:'accrued', accrued_at:${JSON.stringify(now)} }],
   settlements: [{ id:'settlement-1', partner_id:'partner-fixture', project_id:'project-1', settlement_reference:'HPS-2026-000001', request_key:'request-settlement-1', amount_etb:250000, status:'partially_paid', provider:'Commercial Bank of Ethiopia Enterprise Transfer', transaction_ref:'CBE-ENTERPRISE-TRANSACTION-REFERENCE-12345678901234567890', note:'First corridor payment', approval_notes:'Approved against verified freight statement', rejection_reason:null, reviewed_by:'admin-1', reviewed_at:${JSON.stringify(now)}, approved_by:'admin-1', approved_at:${JSON.stringify(now)}, rejected_by:null, rejected_at:null, paid_at:null, created_at:${JSON.stringify(now)} }],
@@ -79,7 +81,7 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-partner-wallet-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Partner net", "Payable balance", "HALLO-generated freight", "Financial corrections", "original row preserved", "PARTNER WALLET STATEMENT", "Print / PDF", "partially paid", "926,000"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Partner net", "Payable balance", "Commission rule", "Fleet health", "HALLO-generated freight", "Financial corrections", "original row preserved", "PARTNER WALLET STATEMENT", "Print / PDF", "partially paid", "926,000"]) {
         if (!dom.includes(expected)) throw new Error(`Partner Wallet ${width}px smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }

@@ -7,6 +7,9 @@ const summaryFix = readFileSync(path.join(process.cwd(), "supabase", "migrations
 const financeAuthorization = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260827030243_harden_finance_rpc_authorization.sql"), "utf8");
 const financeDashboard = readFileSync(path.join(process.cwd(), "src", "pages", "AdminFinanceDashboardV3.tsx"), "utf8");
 const partnerWallet = readFileSync(path.join(process.cwd(), "src", "pages", "PartnerWallet.tsx"), "utf8");
+const partnerFinanceService = readFileSync(path.join(process.cwd(), "src", "services", "partner-finance.service.ts"), "utf8");
+const walletFoundation = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260826_partner_wallet_fleet_commission.sql"), "utf8");
+const settlementWorkflow = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260827164956_partner_settlement_enterprise_workflow.sql"), "utf8");
 
 function commission(gross:number,type:"percentage"|"fixed",value:number){const hallo=type==="percentage"?Math.round(gross*value)/100:Math.min(value,gross);return{hallo,net:gross-hallo};}
 function wallet(net:number,pending:number,paid:number){return Math.max(net-pending-paid,0);}
@@ -38,6 +41,26 @@ test("Partner wallet summary qualifies immutable ledger columns and preserves au
     assert.match(summaryFix, new RegExp(`create or replace function public\\.${rpc}[\\s\\S]*?if not \\(select private\\.is_admin_or_ceo\\(\\)\\)`, "i"));
   }
   assert.doesNotMatch(summaryFix, /delete\s+from|update\s+public\.partner_freight_earnings/i);
+});
+
+test("Partner earnings are limited to released HALLO freight and never external automatic freight", () => {
+  assert.match(walletFoundation, /source text not null default 'hallo_generated' check\(source='hallo_generated'\)/i);
+  assert.match(walletFoundation, /Commission applies only to HALLO-generated freight explicitly accrued by Admin\/CEO/i);
+  assert.match(settlementWorkflow, /Order has no effective released payment/i);
+  assert.match(settlementWorkflow, /payment\.event = 'released'[\s\S]*payment\.event = 'refunded'/i);
+  assert.match(partnerFinanceService, /admin_record_partner_freight/i);
+  assert.doesNotMatch(`${walletFoundation}\n${settlementWorkflow}\n${partnerFinanceService}`, /external_partner_freight|external_freight|auto.*partner_freight/i);
+});
+
+test("Partner wallet dashboard exposes rule, fleet and source-health intelligence", () => {
+  assert.match(partnerFinanceService, /Partner wallet summary[\s\S]*failed/i);
+  assert.match(partnerFinanceService, /Partner commission rules[\s\S]*failed/i);
+  assert.match(partnerFinanceService, /Partner financial corrections[\s\S]*failed/i);
+  assert.match(partnerWallet, /Commission rule/i);
+  assert.match(partnerWallet, /Only released HALLO Logistics freight can accrue Partner earnings/i);
+  assert.match(partnerWallet, /Fleet health/i);
+  assert.match(partnerWallet, /assigned, on trip, maintenance, suspended or inactive/i);
+  assert.match(partnerWallet, /Settlement control/i);
 });
 
 test("Finance and Partner wallets never render zero KPIs after a required source failure", () => {
