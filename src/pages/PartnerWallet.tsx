@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { PartnerStatement } from "../components/partner/PartnerStatement";
 import { getPartnerSettlementProgress } from "../domain/partner-settlement";
 import { getCurrentPartnerMemberships } from "../services/partner.service";
-import { loadPartnerFinance, type FinancialCorrection, type PartnerFinanceProject, type PartnerWalletSummary, type PartnerFreightEarning, type PartnerSettlement, type PartnerSettlementEvent, type PartnerSettlementPayment } from "../services/partner-finance.service";
+import { loadPartnerFinance, type FinancialCorrection, type PartnerCommissionRule, type PartnerFinanceProject, type PartnerFleetVehicle, type PartnerWalletSummary, type PartnerFreightEarning, type PartnerSettlement, type PartnerSettlementEvent, type PartnerSettlementPayment } from "../services/partner-finance.service";
 import { supabase } from "../services/supabase.client";
 import { formatEtb } from "../utils/currency";
 
@@ -14,6 +14,8 @@ export type PartnerWalletFixture = {
   partnerId: string;
   name: string;
   summary: PartnerWalletSummary;
+  rules?: PartnerCommissionRule[];
+  fleet?: PartnerFleetVehicle[];
   earnings: PartnerFreightEarning[];
   settlements: PartnerSettlement[];
   projects?: PartnerFinanceProject[];
@@ -27,6 +29,8 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
   const [partnerId,setPartnerId]=useState(fixture?.partnerId ?? "");
   const [name,setName]=useState(fixture?.name ?? "Partner wallet");
   const [summary,setSummary]=useState<PartnerWalletSummary>(fixture?.summary ?? zero);
+  const [rules,setRules]=useState<PartnerCommissionRule[]>(fixture?.rules ?? []);
+  const [fleet,setFleet]=useState<PartnerFleetVehicle[]>(fixture?.fleet ?? []);
   const [earnings,setEarnings]=useState<PartnerFreightEarning[]>(fixture?.earnings ?? []);
   const [settlements,setSettlements]=useState<PartnerSettlement[]>(fixture?.settlements ?? []);
   const [projects,setProjects]=useState<PartnerFinanceProject[]>(fixture?.projects ?? []);
@@ -38,7 +42,7 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
 
   const load=useCallback(async()=>{
     if (fixture) {
-      setPartnerId(fixture.partnerId); setName(fixture.name); setSummary(fixture.summary); setEarnings(fixture.earnings); setSettlements(fixture.settlements); setProjects(fixture.projects??[]); setSettlementPayments(fixture.settlementPayments??[]); setSettlementEvents(fixture.settlementEvents??[]); setCorrections(fixture.corrections??[]); setError(""); setLoading(false);
+      setPartnerId(fixture.partnerId); setName(fixture.name); setSummary(fixture.summary); setRules(fixture.rules??[]); setFleet(fixture.fleet??[]); setEarnings(fixture.earnings); setSettlements(fixture.settlements); setProjects(fixture.projects??[]); setSettlementPayments(fixture.settlementPayments??[]); setSettlementEvents(fixture.settlementEvents??[]); setCorrections(fixture.corrections??[]); setError(""); setLoading(false);
       return;
     }
     setLoading(true); setError("");
@@ -50,7 +54,7 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
       if(!["owner","admin"].includes(membership.member_role)) throw new Error("Only Partner owners and admins may view finance.");
       setPartnerId(membership.partner_id); setName(membership.partner_organizations?.name||"Partner wallet");
       const data=await loadPartnerFinance(membership.partner_id);
-      setSummary(data.summary||zero); setEarnings(data.earnings); setSettlements(data.settlements); setProjects(data.projects); setSettlementPayments(data.settlementPayments); setSettlementEvents(data.settlementEvents); setCorrections(data.corrections);
+      setSummary(data.summary||zero); setRules(data.rules); setFleet(data.fleet); setEarnings(data.earnings); setSettlements(data.settlements); setProjects(data.projects); setSettlementPayments(data.settlementPayments); setSettlementEvents(data.settlementEvents); setCorrections(data.corrections);
     } catch(e){ setError(e instanceof Error?e.message:"Partner wallet could not be loaded."); }
     finally{ setLoading(false); }
   },[fixture,params,partnerId]);
@@ -78,6 +82,11 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
           <Card label="Gross freight" value={formatEtb(n(summary.gross_etb))}/><Card label="HALLO share" value={formatEtb(n(summary.hallo_commission_etb))}/><Card label="Partner net" value={formatEtb(n(summary.partner_net_etb))}/><Card label="Payable balance" value={formatEtb(n(summary.payable_etb))} strong/>
           <Card label="Pending settlements" value={formatEtb(n(summary.pending_settlement_etb))}/><Card label="Paid settlements" value={formatEtb(n(summary.paid_settlement_etb))}/><Card label="Fleet" value={`${summary.fleet_total} trucks`} detail={`${summary.fleet_available} available`}/><Card label="HALLO freight" value={String(summary.hallo_freight_count)} detail="Commissionable loads only"/>
         </div>
+        <section className="grid gap-3 lg:grid-cols-3">
+          <Insight title="Commission rule" value={activeRuleLabel(rules)} detail="Only released HALLO Logistics freight can accrue Partner earnings."/>
+          <Insight title="Fleet health" value={`${fleet.filter((item)=>item.status==="available").length}/${fleet.length} available`} detail={fleetStatusLabel(fleet)}/>
+          <Insight title="Settlement control" value={settlements.some((item)=>item.status==="partially_paid")?"Partial payments active":"Audit trail ready"} detail="Approvals, payments and reversals stay immutable."/>
+        </section>
         <section className="border border-asphalt/10 bg-white"><Header title="HALLO-generated freight" count={earnings.length}/>{earnings.length===0?<Empty text="No HALLO-generated freight has accrued yet."/>:earnings.map(row=>{const related=corrections.filter(c=>c.partner_earning_id===row.id);const reversedGross=related.reduce((sum,c)=>sum+n(c.partner_gross_reversal_etb),0);const reversedCommission=related.reduce((sum,c)=>sum+n(c.partner_commission_reversal_etb),0);const effectiveNet=Math.max(0,n(row.partner_net_etb)-(reversedGross-reversedCommission));const status=reversedGross>=n(row.gross_etb)?"reversed":reversedGross>0?"partially reversed":row.status;return <div key={row.id} className="grid gap-3 border-t border-asphalt/10 p-4 sm:grid-cols-[1fr_auto]"><div className="min-w-0"><p className="break-all font-mono text-xs">{row.order_id}</p><p className="mt-2 font-display text-xl font-bold">{formatEtb(effectiveNet)} net</p><p className="mt-1 text-xs text-steel">Original gross {formatEtb(n(row.gross_etb))} · HALLO {formatEtb(Math.max(0,n(row.hallo_commission_etb)-reversedCommission))} · {row.commission_type} {row.commission_value}</p>{reversedGross>0&&<p className="mt-2 text-xs font-semibold text-route">Corrected gross: −{formatEtb(reversedGross)} · original row preserved</p>}</div><span className={`h-fit w-fit px-3 py-2 text-[10px] font-semibold uppercase ${reversedGross>0?"bg-route/10 text-route":"bg-emerald-50 text-emerald-800"}`}>{status}</span></div>;})}</section>
         <section className="border border-asphalt/10 bg-white"><Header title="Settlements" count={settlements.length}/>{settlements.length===0?<Empty text="No Partner settlements recorded yet."/>:settlements.map(row=>{const progress=getPartnerSettlementProgress(row,settlementPayments,corrections);const project=projects.find(item=>item.id===row.project_id);const events=settlementEvents.filter(item=>item.settlement_id===row.id).slice(0,3);return <div key={row.id} className="grid min-w-0 gap-3 border-t border-asphalt/10 p-4 sm:grid-cols-[minmax(0,1fr)_auto]"><div className="min-w-0"><p className="break-all font-mono text-[11px] font-semibold">{row.settlement_reference}</p><p className="mt-2 font-display text-xl font-bold">{formatEtb(n(row.amount_etb))}</p><p className="mt-1 break-words text-xs text-steel">Paid {formatEtb(progress.effectivePaidEtb)} · Outstanding {formatEtb(progress.outstandingEtb)}{project?` · ${project.name}`:""}</p>{row.approval_notes&&<p className="mt-2 break-words text-xs text-emerald-800">Approval: {row.approval_notes}</p>}{row.rejection_reason&&<p className="mt-2 break-words text-xs text-route">Rejected: {row.rejection_reason}</p>}{progress.status==="reversed"&&<p className="mt-2 text-xs font-semibold text-route">Reversal recorded · original settlement preserved</p>}{events.length>0&&<ol className="mt-3 space-y-1 border-l-2 border-amber pl-3">{events.map(event=><li key={String(event.id)} className="break-words text-[10px] text-steel"><span className="font-semibold capitalize text-asphalt">{event.event_type.replaceAll("_"," ")}</span> · {new Date(event.created_at).toLocaleString()}</li>)}</ol>}</div><span className={`h-fit w-fit px-3 py-2 text-[10px] font-semibold uppercase ${progress.status==="rejected"||progress.status==="reversed"?"bg-route/10 text-route":progress.status==="paid"?"bg-emerald-50 text-emerald-800":"bg-amber/15 text-amber-dim"}`}>{progress.status.replaceAll("_"," ")}</span></div>;})}</section>
         <section className="border border-asphalt/10 bg-white"><Header title="Financial corrections" count={corrections.length}/>{corrections.length===0?<Empty text="No refunds or financial reversals recorded."/>:corrections.map(row=><div key={row.id} className="border-t border-asphalt/10 p-4"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><p className="font-display text-lg font-bold text-route">−{formatEtb(n(row.amount_etb))}</p><p className="mt-1 break-words text-xs font-semibold capitalize">{row.correction_type.replaceAll("_"," ")}</p><p className="mt-2 break-words text-xs text-steel">{row.reason}</p></div><time className="shrink-0 text-[10px] text-steel" dateTime={row.created_at}>{new Date(row.created_at).toLocaleString()}</time></div></div>)}</section>
@@ -87,5 +96,18 @@ export function PartnerWallet({ fixture }: { fixture?: PartnerWalletFixture }) {
   </main>;
 }
 function Card({label,value,detail,strong}:{label:string;value:string;detail?:string;strong?:boolean}){return <div className={`min-w-0 border p-4 ${strong?"border-emerald-600 bg-emerald-50":"border-asphalt/10 bg-white"}`}><p className="font-mono text-[9px] uppercase tracking-wider text-steel">{label}</p><p className="mt-3 break-words font-display text-xl font-bold sm:text-2xl">{value}</p>{detail&&<p className="mt-2 text-[11px] text-steel">{detail}</p>}</div>}
+function Insight({title,value,detail}:{title:string;value:string;detail:string}){return <article className="min-w-0 border border-asphalt/10 bg-white p-4"><p className="font-mono text-[9px] uppercase tracking-[.18em] text-steel">{title}</p><p className="mt-3 break-words font-display text-lg font-bold">{value}</p><p className="mt-2 text-xs leading-5 text-steel">{detail}</p></article>}
 function Header({title,count}:{title:string;count:number}){return <div className="flex items-center justify-between gap-3 p-4"><h2 className="font-display text-xl font-bold">{title}</h2><span className="font-mono text-xs text-steel">{count}</span></div>}
 function Empty({text}:{text:string}){return <p className="border-t border-asphalt/10 p-8 text-center text-sm text-steel">{text}</p>}
+function activeRuleLabel(rules: PartnerCommissionRule[]) {
+  const active = rules.find((rule) => rule.active) ?? rules[0];
+  if (!active) return "No active rule";
+  return active.commission_type === "percentage"
+    ? `${n(active.commission_value)}% HALLO share`
+    : `${formatEtb(n(active.commission_value))} fixed HALLO share`;
+}
+function fleetStatusLabel(fleet: PartnerFleetVehicle[]) {
+  if (fleet.length === 0) return "No Partner fleet vehicles are registered yet.";
+  const unavailable = fleet.filter((item) => item.status !== "available").length;
+  return unavailable === 0 ? "All registered Partner trucks are available." : `${unavailable} truck(s) assigned, on trip, maintenance, suspended or inactive.`;
+}
