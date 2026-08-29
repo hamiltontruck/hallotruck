@@ -31,3 +31,18 @@ test("Payment evidence, immutable history and invoice PDF remain visible", () =>
   assert.match(page, /Invoice \/ receipt PDF/);
   assert.match(page, /orderPayments\.map/);
 });
+
+test("Manage Order exposes Admin-only cancellation without hard deleting finance history", async () => {
+  const migration = await readFile(path.join(process.cwd(), "supabase/migrations/20260829162000_admin_cancel_order_control.sql"), "utf8");
+
+  assert.match(service, /adminCancelOrder/);
+  assert.match(service, /supabase\.rpc\("admin_cancel_order"/);
+  assert.match(page, /Cancel order/);
+  assert.match(page, /Payments stay in Finance for refund\/correction review/);
+  assert.match(migration, /create or replace function public\.admin_cancel_order/);
+  assert.match(migration, /private\.is_admin_or_ceo\(\)/);
+  assert.match(migration, /cancellation_source = 'admin'/);
+  assert.match(migration, /public\.customer_dispatch_requests/);
+  assert.match(migration, /public\.trucks truck[\s\S]*status = 'available'/);
+  assert.doesNotMatch(migration, /delete\s+from\s+public\.(orders|payments|driver_commission_charges|driver_payment_confirmations)/i);
+});
