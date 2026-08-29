@@ -152,6 +152,14 @@ export async function transitionOrder(orderId: string, status: "accepted" | "in_
   if (error) fail(error.message);
 }
 
+export async function adminCancelOrder(orderId: string, reason?: string) {
+  const { error } = await supabase.rpc("admin_cancel_order", {
+    p_order_id: orderId,
+    p_reason: reason?.trim() || "Cancelled by Admin from Manage Order.",
+  });
+  if (error) fail(error.message);
+}
+
 export async function recordPayment(input: { orderId:string; provider:string; providerRef?:string; amountEtb:number; event:"initiated"|"held_escrow"|"released" }) {
   const { error } = await supabase.rpc("admin_record_payment", { p_order_id:input.orderId, p_provider:input.provider, p_provider_ref:input.providerRef || null, p_amount_etb:input.amountEtb, p_event:input.event });
   if (error) fail(error.message);
