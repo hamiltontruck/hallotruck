@@ -279,6 +279,7 @@ stable
 security definer
 set search_path = ''
 as $function$
+#variable_conflict use_column
 begin
   perform private.require_active_leadership(
     'admin_payment_reference_conflicts'
@@ -320,7 +321,9 @@ begin
           normalized.id
       ) as canonical_rank
     from normalized
-    join grouped using (provider_key, reference_key)
+    join grouped
+      on grouped.provider_key = normalized.provider_key
+     and grouped.reference_key = normalized.reference_key
   ), canonical as (
     select
       ranked.provider_key,
@@ -350,12 +353,7 @@ begin
     ranked.event,
     ranked.created_at,
     case
-      when ranked.event = 'refunded'
-        and exists (
-          select 1
-          from public.financial_corrections correction
-          where correction.refund_payment_id = ranked.id
-        ) then 'refunded'
+      when ranked.event = 'refunded' then 'refunded'
       when ranked.event = 'failed' then 'superseded'
       when ranked.id = canonical.canonical_payment_id then 'canonical'
       else 'legacy_conflict'
@@ -364,8 +362,12 @@ begin
     grouped.order_count,
     grouped.active_count
   from ranked
-  join grouped using (provider_key, reference_key)
-  join canonical using (provider_key, reference_key)
+  join grouped
+    on grouped.provider_key = ranked.provider_key
+   and grouped.reference_key = ranked.reference_key
+  join canonical
+    on canonical.provider_key = ranked.provider_key
+   and canonical.reference_key = ranked.reference_key
   join public.orders trip_order on trip_order.id = ranked.order_id
   order by
     ranked.provider_key,
