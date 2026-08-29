@@ -15,6 +15,7 @@ import {
 
 type Props = { fixture?: FinanceDashboardData };
 type KpiKey = "released" | "escrow" | "pending" | "refunds" | "failed" | "commission" | "deposits" | "wallets";
+type FinanceSourceName = "payments" | "orders" | "profiles" | "deposits" | "commission charges" | "commission payments" | "driver confirmations" | "financial corrections";
 
 const emptyData: FinanceDashboardData = {
   payments: [], orders: [], profiles: [], deposits: [], commissionCharges: [], commissionPayments: [], confirmations: [], corrections: [],
@@ -56,8 +57,22 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
       supabase.from("driver_payment_confirmations").select("payment_id,order_id,driver_id,commission_etb,commission_reversed_at,commission_accrued_at").limit(5000),
       supabase.from("financial_corrections").select("id,source_payment_id,driver_commission_reversal_etb,amount_etb,correction_type,created_at").limit(5000),
     ]);
-    const failed = [payments, orders, profiles, deposits, charges, commissionPayments, confirmations, corrections].find((result) => result.error)?.error;
-    if (failed) { setError(failed.message); setLoading(false); return; }
+    const sources: { name: FinanceSourceName; error?: { message: string } | null }[] = [
+      { name: "payments", error: payments.error },
+      { name: "orders", error: orders.error },
+      { name: "profiles", error: profiles.error },
+      { name: "deposits", error: deposits.error },
+      { name: "commission charges", error: charges.error },
+      { name: "commission payments", error: commissionPayments.error },
+      { name: "driver confirmations", error: confirmations.error },
+      { name: "financial corrections", error: corrections.error },
+    ];
+    const failed = sources.find((source) => source.error);
+    if (failed?.error) {
+      setError(`${failed.name} source failed: ${failed.error.message}`);
+      setLoading(false);
+      return;
+    }
     setData({
       payments: (payments.data ?? []) as FinanceDashboardData["payments"],
       orders: (orders.data ?? []) as FinanceDashboardData["orders"],
