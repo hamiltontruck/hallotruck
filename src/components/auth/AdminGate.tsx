@@ -1,6 +1,6 @@
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { supabase } from "../../services/supabase.client";
-import { isDatabaseLeadershipRole } from "../../domain/partner-onboarding";
+import { canAccessAdminWorkspace } from "../../domain/partner-onboarding";
 
 export function AdminGate({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -20,12 +20,12 @@ export function AdminGate({ children }: { children: ReactNode }) {
       }
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role,driver_status")
         .eq("id", session.user.id)
         .maybeSingle();
       if (!current) return;
       const role = String(profile?.role ?? "");
-      const authorized = !profileError && isDatabaseLeadershipRole(role);
+      const authorized = !profileError && canAccessAdminWorkspace(role, profile?.driver_status);
       setAllowed(authorized);
       if (!authorized) setError(profileError?.message ?? "This account does not have CEO or Admin access.");
       else setError("");
@@ -41,9 +41,9 @@ export function AdminGate({ children }: { children: ReactNode }) {
     setLoading(true); setError("");
     const { data, error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (loginError) { setError(loginError.message); setLoading(false); return; }
-    const { data: profile, error: profileError } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+    const { data: profile, error: profileError } = await supabase.from("profiles").select("role,driver_status").eq("id", data.user.id).maybeSingle();
     const role = String(profile?.role ?? "");
-    if (profileError || !isDatabaseLeadershipRole(role)) {
+    if (profileError || !canAccessAdminWorkspace(role, profile?.driver_status)) {
       await supabase.auth.signOut();
       setError(profileError?.message ?? "This account does not have CEO or Admin access.");
       setLoading(false);
