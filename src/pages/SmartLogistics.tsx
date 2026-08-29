@@ -5,6 +5,7 @@ import { AdminLiveTripsPanel } from "../components/admin/AdminLiveTripsPanel";
 import { AdminCreateOrderModal } from "../components/admin/AdminCreateOrderModal";
 import { AdminMobileBottomNav } from "../components/admin/AdminMobileBottomNav";
 import { PaymentCorrectionForm } from "../components/admin/PaymentCorrectionForm";
+import { matchesAdminOrderControlQueue, sameLocalDay } from "../domain/admin-control-center";
 import { AdminOrder, Customer, DashboardMetrics, DeliveryProof, Driver, Payment, Truck, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, openDeliveryProof, openPaymentReceipt, printInvoice, submitDeliveryProof, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
 type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
@@ -39,6 +40,7 @@ export function SmartLogistics() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
   const requestedQuery = searchParams.get("q") ?? "";
+  const requestedAction = searchParams.get("action");
   const initialSection = nav.some(([label]) => label === requestedSection) ? requestedSection as string : "Overview";
   const [section, setSection] = useState(initialSection);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -83,6 +85,14 @@ export function SmartLogistics() {
 
   useEffect(() => { setSearchQuery(requestedQuery); }, [requestedQuery]);
 
+  useEffect(() => {
+    if (requestedAction !== "create-order") return;
+    setModal("order");
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+  }, [requestedAction, searchParams, setSearchParams]);
+
   return (
     <div className="min-h-screen bg-[#f5f3ed] text-asphalt font-body lg:flex">
       {menuOpen && <button aria-label="Close menu" className="fixed inset-0 bg-asphalt/40 z-30 lg:hidden" onClick={() => setMenuOpen(false)} />}
@@ -123,7 +133,7 @@ export function SmartLogistics() {
         </header>
         <div className="p-5 sm:p-8 max-w-[1500px] mx-auto">
           {error && <p className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5">{error}</p>}
-          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} onSearch={setSearchQuery} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
+          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} deliveryProofs={deliveryProofs} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} initialOrderQueue={searchParams.get("queue") ?? "all"} initialDateFilter={searchParams.get("date") ?? "all"} onSearch={setSearchQuery} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
         </div>
       </main>
       {modal === "order" ? <AdminCreateOrderModal onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} /> : modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
@@ -186,7 +196,7 @@ function includesQuery(values: Array<string | number | null | undefined>, query:
   return values.some((value) => String(value ?? "").toLowerCase().includes(query));
 }
 
-function ModulePage({ section, orders, customers, trucks, payments, drivers, searchQuery, initialOrderStatus, onSearch, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; searchQuery:string; initialOrderStatus:string; onSearch:(value:string)=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+function ModulePage({ section, orders, customers, trucks, payments, drivers, deliveryProofs, searchQuery, initialOrderStatus, initialOrderQueue, initialDateFilter, onSearch, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; deliveryProofs:DeliveryProof[]; searchQuery:string; initialOrderStatus:string; initialOrderQueue:string; initialDateFilter:string; onSearch:(value:string)=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
   const allowedOrderStatuses = ["all", "placed", "accepted", "in_transit", "delivered", "cancelled"];
   const [orderStatus,setOrderStatus]=useState(allowedOrderStatuses.includes(initialOrderStatus) ? initialOrderStatus : "all");
   useEffect(() => {
@@ -195,8 +205,11 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, sea
   const descriptions:Record<string,string> = {Orders:"Create, assign and monitor every customer order.","Live trips":"Track active vehicles and delivery progress in real time.","Fleet & drivers":"Manage trucks, drivers, availability and documents.",Customers:"View accounts, order history and customer value.",Finance:"Verify customer payments, link each payment to its order and driver, then release eligible payouts.",Reports:"Measure delivery performance and business growth."};
   const addKind = section === "Customers" ? "customer" : section === "Fleet & drivers" ? "truck" : "order";
   const query=searchQuery.trim().toLowerCase();
-  const filteredOrders=orders.filter((order)=>(orderStatus==="all"||order.status===orderStatus)&&includesQuery([order.tracking_id,order.customer_name,order.customer_phone,order.pickup_address,order.dropoff_address,order.vehicle_type,order.cargo_description,order.status],query));
-  const filteredCustomers=customers.filter((customer)=>includesQuery([customer.full_name,customer.phone,customer.email,customer.company_name,customer.is_credit_customer?"credit":"standard"],query));
+  const proofOrderIds = new Set(deliveryProofs.map((proof) => proof.order_id));
+  const legacyCompletedOrderIds = new Set(payments.filter((payment) => payment.event === "released" && payment.raw_payload?.legacy_completed === true).map((payment) => payment.order_id));
+  const matchesDate = (value: string) => initialDateFilter !== "today" || sameLocalDay(value);
+  const filteredOrders=orders.filter((order)=>(orderStatus==="all"||order.status===orderStatus)&&matchesAdminOrderControlQueue(order, initialOrderQueue, proofOrderIds, legacyCompletedOrderIds)&&matchesDate(order.status === "delivered" && order.delivered_at ? order.delivered_at : order.created_at)&&includesQuery([order.tracking_id,order.customer_name,order.customer_phone,order.pickup_address,order.dropoff_address,order.vehicle_type,order.cargo_description,order.status],query));
+  const filteredCustomers=customers.filter((customer)=>matchesDate(customer.created_at)&&includesQuery([customer.full_name,customer.phone,customer.email,customer.company_name,customer.is_credit_customer?"credit":"standard"],query));
   const filteredTrucks=trucks.filter((truck)=>includesQuery([truck.plate_number,truck.vehicle_type,truck.capacity_tons,truck.status],query));
   const filteredPayments=payments.filter((payment)=>{const order=orders.find((item)=>item.id===payment.order_id);const driver=drivers.find((item)=>item.id===order?.driver_id);return includesQuery([payment.provider,payment.provider_ref,payment.event,payment.amount_etb,order?.tracking_id,order?.customer_name,order?.customer_phone,driver?.full_name,driver?.phone],query);});
   const releasedGross=payments.filter((payment)=>payment.event==="released").reduce((sum,payment)=>sum+Number(payment.amount_etb||0),0);
@@ -217,8 +230,9 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, sea
     {!["Live trips","Reports"].includes(section)&&<label className="md:hidden mb-5 flex items-center gap-2 border border-asphalt/10 bg-white px-4 py-3 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label={`Search ${section}`} value={searchQuery} onChange={(event)=>onSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={`Search ${section.toLowerCase()}...`}/>{searchQuery&&<button type="button" onClick={()=>onSearch("")} className="text-xs font-semibold text-route">Clear</button>}</label>}
 
     {section === "Orders" && <>
+      {(initialOrderQueue !== "all" || initialDateFilter === "today") && <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2 border border-amber/35 bg-amber/10 p-3 text-xs"><strong>Control-center filter:</strong>{initialOrderQueue !== "all" && <span className="bg-white px-2 py-1 capitalize">{initialOrderQueue.replace(/-/g, " ")}</span>}{initialDateFilter === "today" && <span className="bg-white px-2 py-1">Today</span>}<Link to="/admin/operations?section=Orders" className="ml-auto font-semibold text-amber-dim">Clear filters</Link></div>}
       <div className="mb-4 flex flex-wrap gap-2">{["all","placed","accepted","in_transit","delivered","cancelled"].map((status)=><button key={status} onClick={()=>setOrderStatus(status)} className={`border px-3 py-2 text-[11px] font-semibold capitalize ${orderStatus===status?"border-asphalt bg-asphalt text-white":"border-asphalt/10 bg-white text-steel"}`}>{status==="all"?`All ${orders.length}`:`${status.replace("_"," ")} ${orders.filter((order)=>order.status===status).length}`}</button>)}</div>
-      <DataPanel title={searchQuery||orderStatus!=="all"?"Matching orders":"All orders"} empty="No matching orders.">{filteredOrders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>
+      <DataPanel title={searchQuery||orderStatus!=="all"||initialOrderQueue!=="all"||initialDateFilter!=="all"?"Matching orders":"All orders"} empty="No matching orders.">{filteredOrders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>
     </>}
     {section === "Customers" && <DataPanel title={searchQuery?"Matching customers":"Customers"} empty="No matching customers.">{filteredCustomers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
     {section === "Fleet & drivers" && <>

@@ -23,6 +23,23 @@ export function isDelayedOrder(order: ControlOrder, nowMs = Date.now()) {
   return Number.isFinite(startedAt) && nowMs - startedAt > 48 * 60 * 60 * 1000;
 }
 
+export type AdminOrderControlQueue = "all" | "delayed" | "unassigned" | "delayed-or-unassigned" | "missing-evidence";
+
+export function matchesAdminOrderControlQueue(
+  order: ControlOrder,
+  queue: string,
+  proofOrderIds: ReadonlySet<string> = new Set(),
+  legacyCompletedOrderIds: ReadonlySet<string> = new Set(),
+  nowMs = Date.now(),
+) {
+  const unassigned = !["delivered", "cancelled"].includes(order.status) && (!order.driver_id || !order.truck_id);
+  if (queue === "delayed") return isDelayedOrder(order, nowMs);
+  if (queue === "unassigned") return unassigned;
+  if (queue === "delayed-or-unassigned") return isDelayedOrder(order, nowMs) || unassigned;
+  if (queue === "missing-evidence") return order.status === "delivered" && !proofOrderIds.has(order.id) && !legacyCompletedOrderIds.has(order.id);
+  return true;
+}
+
 export function isLegacyCompletedPayment(payment: ControlPayment) {
   return payment.event === "released" && payment.raw_payload?.legacy_completed === true;
 }

@@ -1,6 +1,6 @@
-export type PaymentLedgerStatusFilter = "pending" | "rejected" | "escrow" | "released" | "all";
+export type PaymentLedgerStatusFilter = "pending" | "rejected" | "escrow" | "released" | "refunded" | "all";
 export type PaymentLedgerDateFilter = "all" | "today" | "7d" | "30d";
-export type PaymentLedgerEvent = "initiated" | "failed" | "held_escrow" | "released";
+export type PaymentLedgerEvent = "initiated" | "failed" | "held_escrow" | "released" | "refunded";
 
 export interface PaymentLedgerSearchRecord {
   provider: string;
@@ -55,6 +55,7 @@ export function matchesPaymentLedgerStatus(event: PaymentLedgerEvent, filter: Pa
   if (filter === "pending") return event === "initiated";
   if (filter === "rejected") return event === "failed";
   if (filter === "escrow") return event === "held_escrow";
+  if (filter === "refunded") return event === "refunded";
   return event === "released";
 }
 
