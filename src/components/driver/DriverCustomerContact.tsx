@@ -4,6 +4,7 @@ import {
   getAssignedCustomerContact,
   type AssignedCustomerContact,
 } from "../../services/driver-payment.service";
+import { telephoneHref } from "../../utils/phone";
 
 const copy: Record<HalloLanguage, {
   kicker: string;
@@ -53,13 +54,6 @@ const copy: Record<HalloLanguage, {
 
 type ContactState = "loading" | "ready" | "error";
 type ContactLoader = (orderId: string) => Promise<AssignedCustomerContact>;
-
-export function telephoneHref(value: string | null | undefined): string | null {
-  const trimmed = value?.trim() ?? "";
-  const digits = trimmed.replace(/\D/g, "");
-  if (digits.length < 7) return null;
-  return `tel:${trimmed.startsWith("+") ? "+" : ""}${digits}`;
-}
 
 export function DriverCustomerContact({
   orderId,
