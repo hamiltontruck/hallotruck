@@ -34,11 +34,46 @@ const SAFE_CUSTOM_PROPERTY_KEYS = new Set([
   "organization_type",
 ]);
 
-const BLOCKED_PROPERTY_KEY = /(address|authorization|cookie|credential|description|document|email|full.?name|name|note|password|phone|photo|provider.?ref|receipt|reference|secret|signature|token|transaction)/i;
+const BLOCKED_KEY_PARTS = new Set([
+  "address",
+  "authorization",
+  "cookie",
+  "credential",
+  "description",
+  "document",
+  "email",
+  "full_name",
+  "name",
+  "note",
+  "password",
+  "phone",
+  "photo",
+  "provider_ref",
+  "receipt",
+  "reference",
+  "secret",
+  "signature",
+  "token",
+  "transaction",
+]);
 const EMAIL_VALUE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_VALUE = /^\+?[\d\s().-]{8,20}$/;
 const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const OPAQUE_SEGMENT = /^[A-Za-z0-9_-]{24,}$/;
+
+function normalizedKeyParts(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+function isBlockedPropertyKey(key: string) {
+  const normalized = normalizedKeyParts(key).join("_");
+  if (BLOCKED_KEY_PARTS.has(normalized)) return true;
+  return [...BLOCKED_KEY_PARTS].some((part) => normalized.startsWith(`${part}_`) || normalized.endsWith(`_${part}`) || normalized.includes(`_${part}_`));
+}
 
 function safeString(value: string) {
   const normalized = value.trim();
@@ -56,7 +91,7 @@ function sanitizeNestedValue(value: unknown, depth = 0): unknown {
   if (typeof value === "object") {
     const clean: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
-      if (BLOCKED_PROPERTY_KEY.test(key)) continue;
+      if (isBlockedPropertyKey(key)) continue;
       const sanitized = sanitizeNestedValue(item, depth + 1);
       if (sanitized !== undefined) clean[key] = sanitized;
     }
@@ -94,7 +129,7 @@ export function normalizeAnalyticsRoute(input: string) {
 export function sanitizeAnalyticsProperties(properties: AnalyticsProperties) {
   const clean: Record<string, string | number | boolean> = {};
   for (const [key, value] of Object.entries(properties)) {
-    if (!SAFE_CUSTOM_PROPERTY_KEYS.has(key) || BLOCKED_PROPERTY_KEY.test(key)) continue;
+    if (!SAFE_CUSTOM_PROPERTY_KEYS.has(key) || isBlockedPropertyKey(key)) continue;
     if (typeof value === "boolean" || typeof value === "number") clean[key] = value;
     else if (typeof value === "string") clean[key] = safeString(value);
   }
