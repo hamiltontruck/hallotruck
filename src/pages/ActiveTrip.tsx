@@ -1,6 +1,11 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MyOrder } from "../services/driver.service";
+import {
+  getMyActiveOrders,
+  getMyAssignedOrder,
+  getMyLatestCancelledOrder,
+  type MyOrder,
+} from "../services/driver.service";
 import { formatEtb } from "../utils/currency";
 import { Button } from "../components/ui/Button";
 import { CargoPlate } from "../components/ui/CargoPlate";
@@ -127,6 +132,9 @@ export function ActiveTrip() {
 
   return (
     <DriverActiveTripOrderBoundary
+      loadActiveOrders={getMyActiveOrders}
+      loadLatestCancellation={getMyLatestCancelledOrder}
+      loadAssignedOrder={getMyAssignedOrder}
       isCancellationDismissed={isCancellationDismissed}
       renderCancelled={(cancelledOrder) => (
         <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-16">
