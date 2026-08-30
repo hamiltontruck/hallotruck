@@ -55,7 +55,7 @@ test("browser smoke verifies stale-contact removal, retry locking and mobile saf
   for (const width of [320, 360, 390, 412, 430, 768]) {
     assert.match(browserSmoke, new RegExp(`\\b${width}\\b`));
   }
-  assert.match(browserSmoke, /retryButton\.click\(\);\s*retryButton\.click\(\)/);
+  assert.match(browserSmoke, /retryButton\?\.click\(\);\s*retryButton\?\.click\(\)/);
   assert.match(browserSmoke, /data-stale-cleared="true"/);
   assert.match(browserSmoke, /data-retry-calls="true"/);
   assert.match(browserSmoke, /data-invalid-link="true"/);
