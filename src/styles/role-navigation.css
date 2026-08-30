@@ -149,6 +149,28 @@
   }
 }
 
+@media (max-width: 639px) and (max-height: 520px) {
+  .admin-mobile-bottom-nav,
+  .driver-bottom-nav,
+  .customer-dashboard-nav,
+  .customer-map-home .customer-dashboard-nav {
+    display: none !important;
+  }
+
+  .driver-mobile-flow,
+  .customer-view-home,
+  .customer-view-profile,
+  .customer-view-orders,
+  .customer-view-track,
+  .customer-view-payments {
+    padding-bottom: 0 !important;
+  }
+
+  .customer-map-home__sheet {
+    bottom: 0 !important;
+  }
+}
+
 @media (min-width: 640px) and (max-width: 899px) {
   .customer-dashboard-nav__title {
     display: none;
