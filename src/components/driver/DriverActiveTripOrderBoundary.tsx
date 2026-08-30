@@ -1,10 +1,6 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import {
-  getMyActiveOrders,
-  getMyAssignedOrder,
-  getMyLatestCancelledOrder,
-  MyOrder,
-} from "../../services/driver.service";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import type { MyOrder } from "../../services/driver.service";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { Button } from "../ui/Button";
 
@@ -52,10 +48,10 @@ interface DriverActiveTripOrderBoundaryProps {
   children: (state: DriverActiveTripOrderRenderState) => ReactNode;
   renderCancelled: (order: MyOrder) => ReactNode;
   renderEmpty: () => ReactNode;
+  loadActiveOrders: () => Promise<MyOrder[]>;
+  loadLatestCancellation: () => Promise<MyOrder | null>;
+  loadAssignedOrder: (orderId: string) => Promise<MyOrder | null>;
   isCancellationDismissed?: (order: MyOrder) => boolean;
-  loadActiveOrders?: () => Promise<MyOrder[]>;
-  loadLatestCancellation?: () => Promise<MyOrder | null>;
-  loadAssignedOrder?: (orderId: string) => Promise<MyOrder | null>;
   pollIntervalMs?: number;
 }
 
@@ -63,10 +59,10 @@ export function DriverActiveTripOrderBoundary({
   children,
   renderCancelled,
   renderEmpty,
+  loadActiveOrders,
+  loadLatestCancellation,
+  loadAssignedOrder,
   isCancellationDismissed = cancellationNeverDismissed,
-  loadActiveOrders = getMyActiveOrders,
-  loadLatestCancellation = getMyLatestCancelledOrder,
-  loadAssignedOrder = getMyAssignedOrder,
   pollIntervalMs = 5000,
 }: DriverActiveTripOrderBoundaryProps) {
   const { language } = useLanguage();
