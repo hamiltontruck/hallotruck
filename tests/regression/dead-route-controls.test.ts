@@ -60,3 +60,16 @@ test("audited dead-control fixes use router navigation", () => {
     assert.doesNotMatch(source, /href=(?:"|{\s*["`])#\//, `${filePath} must not hardcode hash routes`);
   }
 });
+
+test("driver compliance disabled actions explain approval and active-trip locks", () => {
+  const source = readFileSync(path.join(process.cwd(), "src/pages/AdminDriverCompliance.tsx"), "utf8");
+  const packageJson = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
+
+  assert.match(source, /driver-compliance-action-\$\{driver\.id\}/);
+  assert.match(source, /Cannot approve yet: \$\{onboardingStage\}\./);
+  assert.match(source, /Cannot remove while active trip \$\{activeTripLabel\}\./);
+  assert.match(source, /title=\{approvalDisabledReason \|\| "Approve verified driver"\}/);
+  assert.match(source, /title=\{removalDisabledReason \|\| "Remove driver after confirming no active trip"\}/);
+  assert.match(source, /aria-describedby=\{actionGuidanceId\}/);
+  assert.match(packageJson, /admin-driver-compliance-e2e-smoke\.mjs/);
+});

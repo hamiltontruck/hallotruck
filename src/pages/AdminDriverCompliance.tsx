@@ -69,6 +69,16 @@ type DriverVerificationHistoryRow = {
   archived_at: string;
 };
 
+type AdminDriverComplianceFixture = {
+  drivers: DriverRow[];
+  trucks: TruckRow[];
+  documents: DriverVerificationFile[];
+  history?: DriverVerificationHistoryRow[];
+  orders?: DriverOrderRow[];
+  payments?: PaymentRow[];
+  historyAvailable?: boolean;
+};
+
 const identityRequired = DRIVER_IDENTITY_DOCUMENT_KEYS;
 const vehicleRequired = DRIVER_VEHICLE_DOCUMENT_KEYS;
 
@@ -113,18 +123,18 @@ function statusBadge(status: string | null | undefined) {
   return "border-amber/30 bg-amber/10 text-amber-dim";
 }
 
-export function AdminDriverCompliance() {
-  const [drivers, setDrivers] = useState<DriverRow[]>([]);
-  const [trucks, setTrucks] = useState<TruckRow[]>([]);
-  const [documents, setDocuments] = useState<DriverVerificationFile[]>([]);
-  const [history, setHistory] = useState<DriverVerificationHistoryRow[]>([]);
-  const [orders, setOrders] = useState<DriverOrderRow[]>([]);
-  const [payments, setPayments] = useState<PaymentRow[]>([]);
-  const [historyAvailable, setHistoryAvailable] = useState(true);
+export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverComplianceFixture } = {}) {
+  const [drivers, setDrivers] = useState<DriverRow[]>(fixture?.drivers ?? []);
+  const [trucks, setTrucks] = useState<TruckRow[]>(fixture?.trucks ?? []);
+  const [documents, setDocuments] = useState<DriverVerificationFile[]>(fixture?.documents ?? []);
+  const [history, setHistory] = useState<DriverVerificationHistoryRow[]>(fixture?.history ?? []);
+  const [orders, setOrders] = useState<DriverOrderRow[]>(fixture?.orders ?? []);
+  const [payments, setPayments] = useState<PaymentRow[]>(fixture?.payments ?? []);
+  const [historyAvailable, setHistoryAvailable] = useState(fixture?.historyAvailable ?? true);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [expandedDriverId, setExpandedDriverId] = useState<string | null>(null);
   const [busy, setBusy] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!fixture);
   const [error, setError] = useState("");
 
   async function load() {
@@ -168,7 +178,21 @@ export function AdminDriverCompliance() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (fixture) {
+      setDrivers(fixture.drivers);
+      setTrucks(fixture.trucks);
+      setDocuments(fixture.documents);
+      setHistory(fixture.history ?? []);
+      setOrders(fixture.orders ?? []);
+      setPayments(fixture.payments ?? []);
+      setHistoryAvailable(fixture.historyAvailable ?? true);
+      setLoading(false);
+      setError("");
+      return;
+    }
+    void load();
+  }, [fixture]);
 
   const visibleDrivers = useMemo(
     () => filter === "all"
@@ -307,6 +331,27 @@ export function AdminDriverCompliance() {
           const split = splitHalloCommission(releasedGross);
           const expanded = expandedDriverId === driver.id;
           const activeTrip = driverOrders.find((order) => ["accepted", "in_transit"].includes(order.status));
+          const approvalVisible = driver.driver_status !== "approved" && driver.driver_status !== "suspended";
+          const actionBusy = busy === driver.id;
+          const activeTripLabel = activeTrip ? `${activeTrip.tracking_id} is ${activeTrip.status.replace("_", " ")}` : "";
+          const approvalDisabledReason = approvalVisible
+            ? actionBusy
+              ? "Saving driver action."
+              : !onboardingReady
+                ? `Cannot approve yet: ${onboardingStage}.`
+                : ""
+            : "";
+          const removalDisabledReason = driver.driver_status !== "suspended"
+            ? actionBusy
+              ? "Saving driver action."
+              : activeTrip
+                ? `Cannot remove while active trip ${activeTripLabel}.`
+                : ""
+            : "";
+          const restoreDisabledReason = driver.driver_status === "suspended" && actionBusy ? "Saving driver action." : "";
+          const actionGuidanceMessages = Array.from(new Set([approvalDisabledReason, removalDisabledReason, restoreDisabledReason].filter(Boolean)));
+          const actionGuidance = actionGuidanceMessages.join(" ") || "Driver actions are available when verification and trip locks allow them.";
+          const actionGuidanceId = `driver-compliance-action-${driver.id}`;
 
           return <article key={driver.id} className="border border-asphalt/10 bg-white">
             <div className="grid gap-5 border-b border-asphalt/10 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
@@ -318,8 +363,9 @@ export function AdminDriverCompliance() {
                 {activeTrip && <p className="mt-3 text-xs font-semibold text-amber-dim">Active trip: {activeTrip.tracking_id} · {activeTrip.status.replace("_", " ")}</p>}
               </div>
               <div className="flex min-w-52 flex-col gap-2">
-                <div className="bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">VERIFICATION PROGRESS</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity + verifiedVehicle} / {identityRequired.length + vehicleRequired.length}</p><p className="mt-1 text-[11px] font-semibold text-steel">{onboardingStage}</p>{driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <button disabled={busy === driver.id || !onboardingReady} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
-                {driver.driver_status === "suspended" ? <button disabled={busy === driver.id} onClick={() => void restoreDriver(driver)} className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-40">Restore driver</button> : <button disabled={busy === driver.id || Boolean(activeTrip)} onClick={() => void removeDriver(driver)} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route disabled:opacity-35">Remove driver</button>}
+                <div className="bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">VERIFICATION PROGRESS</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity + verifiedVehicle} / {identityRequired.length + vehicleRequired.length}</p><p className="mt-1 text-[11px] font-semibold text-steel">{onboardingStage}</p>{approvalVisible && <button type="button" disabled={Boolean(approvalDisabledReason)} title={approvalDisabledReason || "Approve verified driver"} aria-describedby={actionGuidanceId} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
+                {driver.driver_status === "suspended" ? <button type="button" disabled={Boolean(restoreDisabledReason)} title={restoreDisabledReason || "Restore driver to pending review"} aria-describedby={actionGuidanceId} onClick={() => void restoreDriver(driver)} className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-40">Restore driver</button> : <button type="button" disabled={Boolean(removalDisabledReason)} title={removalDisabledReason || "Remove driver after confirming no active trip"} aria-describedby={actionGuidanceId} onClick={() => void removeDriver(driver)} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route disabled:opacity-35">Remove driver</button>}
+                <p id={actionGuidanceId} className={`text-[11px] leading-5 ${actionGuidanceMessages.length ? "text-route" : "text-steel"}`}>{actionGuidance}</p>
               </div>
             </div>
 
