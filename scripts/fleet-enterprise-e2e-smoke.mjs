@@ -69,7 +69,7 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-fleet-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Fleet control center", "AVAILABILITY BOARD", "Expiry alerts", "Active trip:", "Partner vehicle", "Fleet activity"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Fleet control center", "AVAILABILITY BOARD", "Expiry alerts", "Active trip:", "Active trip locks status and driver changes until the trip closes.", "Partner vehicle", "Fleet activity"]) {
         if (!dom.includes(expected)) throw new Error(`Fleet ${width}px smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }
