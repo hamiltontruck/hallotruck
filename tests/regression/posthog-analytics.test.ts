@@ -6,7 +6,7 @@ import {
   normalizeAnalyticsRoute,
   sanitizeAnalyticsProperties,
   sanitizePostHogEvent,
-} from "../../src/services/analytics";
+} from "../../src/domain/analytics";
 
 function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
@@ -54,6 +54,20 @@ test("before-send privacy boundary removes sensitive nested values and unsafe ev
   assert.deepEqual(cleaned.properties, { role: "driver", nested: { outcome: "success" } });
 });
 
+test("before-send replaces raw URL values with normalized application routes", () => {
+  const cleaned = sanitizePostHogEvent({
+    event: "$pageview",
+    properties: {
+      $current_url: "https://example.com/#/driver/payment/private?phone=0911223344",
+      $pathname: "/private",
+      $referrer: "https://private.example.com",
+    },
+  }, "/driver/payment/:orderId", "https://example.com/hallotruck/#/driver/payment/:orderId") as { properties: Record<string, unknown> };
+  assert.equal(cleaned.properties.$current_url, "https://example.com/hallotruck/#/driver/payment/:orderId");
+  assert.equal(cleaned.properties.$pathname, "/driver/payment/:orderId");
+  assert.equal(cleaned.properties.$referrer, "");
+});
+
 test("production analytics configuration disables broad automatic collection", () => {
   const analytics = source("src/services/analytics.ts");
   const main = source("src/main.tsx");
@@ -62,7 +76,7 @@ test("production analytics configuration disables broad automatic collection", (
   assert.match(analytics, /capture_pageview: false/);
   assert.match(analytics, /disable_session_recording: true/);
   assert.match(analytics, /advanced_disable_flags: true/);
-  assert.match(analytics, /before_send: sanitizePostHogEvent/);
+  assert.match(analytics, /before_send: .*sanitizePostHogEvent/);
   assert.match(analytics, /VITE_POSTHOG_PROJECT_TOKEN/);
   assert.match(main, /initializeAnalytics/);
   assert.match(workflow, /VITE_POSTHOG_PROJECT_TOKEN/);
