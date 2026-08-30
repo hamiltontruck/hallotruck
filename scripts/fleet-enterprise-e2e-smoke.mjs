@@ -53,6 +53,21 @@ const fixture = { vehicles:[vehicle],summary:{total:1,available:0,assigned:0,on_
 function App(){return React.createElement("div",null,React.createElement(AdminFleetMaintenance,{fixture}),React.createElement("div",{className:"mx-auto max-w-6xl overflow-x-hidden bg-[#f5f3ed] p-3"},React.createElement(PartnerFleetPanel,{partnerId:"partner-1",canManage:true,fixture:{...fixture,branches:fixture.branches.map((branch)=>({...branch,partner_id:"partner-1"}))}})));}
 createRoot(document.getElementById("root")).render(React.createElement(App));
 await new Promise((resolve)=>setTimeout(resolve,300));
+globalThis.fetch=()=>new Promise(()=>{});
+const partnerPanel=document.querySelector('[data-testid="partner-fleet-panel"]');
+const registerButton=Array.from(partnerPanel.querySelectorAll("button")).find((button)=>button.textContent.includes("Register vehicle"));
+const registerForm=registerButton?.closest("form");
+if(!partnerPanel||!registerButton||!registerForm)throw new Error("Partner fleet registration fixture controls not found.");
+registerForm.querySelector('input[name="plate"]').value="ET-01-NEW-LOCK";
+registerForm.querySelector('input[name="vehicleType"]').value="Enterprise test truck";
+registerForm.requestSubmit(registerButton);
+await new Promise((resolve)=>setTimeout(resolve,150));
+const guidance=document.getElementById("partner-fleet-action-guidance");
+const fleetButtons=Array.from(partnerPanel.querySelectorAll("button")).filter((button)=>["Registering vehicle…","Create branch","Save profile","Save maintenance"].includes(button.textContent.trim()));
+document.documentElement.dataset.busyGuidance=String(guidance?.textContent.includes("Registering a Partner vehicle. Other fleet actions are temporarily locked until this update finishes."));
+document.documentElement.dataset.panelBusy=String(partnerPanel.getAttribute("aria-busy")==="true");
+document.documentElement.dataset.describedDisabled=String(fleetButtons.length===4&&fleetButtons.every((button)=>button.disabled&&button.getAttribute("aria-describedby")==="partner-fleet-action-guidance"&&button.getAttribute("title")?.includes("temporarily locked")));
+document.documentElement.dataset.actionLabel=String(registerButton.textContent.trim()==="Registering vehicle…");
 document.documentElement.dataset.overflow=String(document.documentElement.scrollWidth>document.documentElement.clientWidth||document.body.scrollWidth>document.body.clientWidth);
 document.documentElement.dataset.ready="true";
 `;
@@ -65,16 +80,16 @@ const preview = spawn(vite, ["preview", "--host", host, "--port", String(port), 
 try {
   await waitForServer();
   const chrome = chromeBinary();
-  for (const width of [320, 360, 390, 412]) {
+  for (const width of [320, 360, 390, 412, 430, 768]) {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-fleet-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Fleet control center", "AVAILABILITY BOARD", "Expiry alerts", "Active trip:", "Active trip locks status and driver changes until the trip closes.", "Partner vehicle", "Fleet activity"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', 'data-busy-guidance="true"', 'data-panel-busy="true"', 'data-described-disabled="true"', 'data-action-label="true"', "Fleet control center", "AVAILABILITY BOARD", "Expiry alerts", "Active trip:", "Active trip locks status and driver changes until the trip closes.", "Partner vehicle", "Fleet activity"]) {
         if (!dom.includes(expected)) throw new Error(`Fleet ${width}px smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }
   }
-  console.log("Fleet Enterprise browser smoke passed at 320px, 360px, 390px and 412px with no horizontal overflow.");
+  console.log("Fleet Enterprise browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with Partner fleet busy guidance, described disabled actions and no horizontal overflow.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2000))]);
