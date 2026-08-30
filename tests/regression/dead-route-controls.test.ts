@@ -87,7 +87,6 @@ test("payment review disabled actions explain verification and rejection locks",
   assert.match(packageJson, /payment-ledger-e2e-smoke\.mjs/);
 });
 
-
 test("Partner settlement busy actions explain the temporary workflow lock", () => {
   const source = readFileSync(path.join(process.cwd(), "src/components/partner/AdminPartnerSettlementWorkflow.tsx"), "utf8");
   const smoke = readFileSync(path.join(process.cwd(), "scripts/partner-settlement-e2e-smoke.mjs"), "utf8");
@@ -123,4 +122,29 @@ test("Admin create-order submit action explains every lock state", () => {
   assert.match(smoke, /data-described-disabled/);
   assert.match(smoke, /data-ready-enabled/);
   assert.match(packageJson, /admin-create-order-action-e2e-smoke\.mjs/);
+});
+
+test("Admin manage-order actions explain busy and resource locks", () => {
+  const action = readFileSync(path.join(process.cwd(), "src/components/admin/AdminManageOrderAction.tsx"), "utf8");
+  const operations = readFileSync(path.join(process.cwd(), "src/pages/SmartLogistics.tsx"), "utf8");
+  const smoke = readFileSync(path.join(process.cwd(), "scripts/admin-manage-order-action-e2e-smoke.mjs"), "utf8");
+  const packageJson = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
+
+  assert.match(action, /manage-order-busy-guidance-\$\{orderId\}/);
+  assert.match(action, /Starting transit\. Other order actions are temporarily locked until this update finishes\./);
+  assert.match(action, /Cancelling this order\. Other order actions are temporarily locked until this update finishes\./);
+  assert.match(action, /Deleting this order\. Other order actions are temporarily locked until this update finishes\./);
+  assert.match(action, /Assigning the truck and driver\. Other order actions are temporarily locked until this update finishes\./);
+  assert.match(action, /Uploading proof of delivery\. Other order actions are temporarily locked until this update finishes\./);
+  assert.match(action, /role="status"/);
+  assert.match(action, /aria-live="polite"/);
+  assert.match(action, /aria-describedby=\{resolvedDescription\}/);
+  assert.match(operations, /<AdminManageOrderActionStatus orderId=\{order\.id\} action=\{activeAction\}/);
+  assert.match(operations, /Assignment is locked because no available truck is eligible for this order\./);
+  assert.match(operations, /Assignment is locked because no driver profiles are available\./);
+  assert.match(operations, /aria-busy=\{saving\}/);
+  assert.match(operations, /activeAction === "delivery"/);
+  assert.match(smoke, /data-busy-descriptions/);
+  assert.match(smoke, /data-resource-lock/);
+  assert.match(packageJson, /admin-manage-order-action-e2e-smoke\.mjs/);
 });
