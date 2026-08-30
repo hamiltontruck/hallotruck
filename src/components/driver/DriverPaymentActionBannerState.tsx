@@ -121,9 +121,9 @@ export function DriverPaymentActionBannerState({
     };
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (queueIfBusy = false): Promise<void> => {
     if (busyRef.current) {
-      queuedRef.current = true;
+      if (queueIfBusy) queuedRef.current = true;
       return;
     }
 
@@ -134,8 +134,8 @@ export function DriverPaymentActionBannerState({
 
     try {
       const [confirmationResult, reportResult] = await Promise.allSettled([
-        loadConfirmations(),
-        loadReports(),
+        Promise.resolve().then(loadConfirmations),
+        Promise.resolve().then(loadReports),
       ]);
       if (!mountedRef.current || requestId !== requestIdRef.current) return;
 
@@ -164,18 +164,18 @@ export function DriverPaymentActionBannerState({
 
       if (mountedRef.current && queuedRef.current && requestId === requestIdRef.current) {
         queuedRef.current = false;
-        queueMicrotask(() => void load());
+        queueMicrotask(() => void load(false));
       }
     }
   }, [loadConfirmations, loadReports]);
 
   useEffect(() => {
-    void load();
+    void load(false);
   }, [load]);
 
   useEffect(() => {
     if (!subscribe) return undefined;
-    return subscribe(() => void load());
+    return subscribe(() => void load(true));
   }, [load, subscribe]);
 
   const visibleReports = useMemo(() => {
@@ -222,7 +222,7 @@ export function DriverPaymentActionBannerState({
           <p role="alert" className="min-w-0 break-words text-sm leading-6 text-route">{statusMessage}</p>
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={() => void load(false)}
             disabled={refreshing}
             className="min-h-12 w-full shrink-0 bg-asphalt px-5 py-3 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60 sm:w-auto"
           >
@@ -249,7 +249,7 @@ export function DriverPaymentActionBannerState({
             <p role="alert" className="min-w-0 break-words text-xs leading-5 text-route">{statusMessage}</p>
             <button
               type="button"
-              onClick={() => void load()}
+              onClick={() => void load(false)}
               disabled={refreshing}
               className="min-h-11 w-full shrink-0 border border-asphalt/20 px-4 py-2 text-sm font-semibold text-asphalt disabled:cursor-wait disabled:opacity-60 sm:w-auto"
             >
