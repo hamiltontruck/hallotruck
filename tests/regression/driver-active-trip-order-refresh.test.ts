@@ -39,10 +39,21 @@ test("Active Trip refresh keeps the last confirmed trip on transient failure and
 
 test("Active Trip page delegates lifecycle ownership and remounts order-specific GPS state", () => {
   assert.match(activeTrip, /<DriverActiveTripOrderBoundary/);
+  assert.match(activeTrip, /loadActiveOrders=\{getMyActiveOrders\}/);
+  assert.match(activeTrip, /loadLatestCancellation=\{getMyLatestCancelledOrder\}/);
+  assert.match(activeTrip, /loadAssignedOrder=\{getMyAssignedOrder\}/);
   assert.match(activeTrip, /<ActiveTripContent key=\{order\.id\}/);
   assert.match(activeTrip, /onOrderChange=\{onOrderChange\}/);
-  assert.doesNotMatch(activeTrip, /getMyActiveOrders|getMyAssignedOrder|getMyLatestCancelledOrder|setInterval/);
+  assert.doesNotMatch(activeTrip, /setInterval/);
   assert.match(service, /export async function getMyAssignedOrder/);
+});
+
+test("Active Trip order boundary does not evaluate production data services in deterministic fixtures", () => {
+  assert.match(boundary, /import type \{ MyOrder \} from "\.\.\/\.\.\/services\/driver\.service"/);
+  assert.doesNotMatch(boundary, /import \{[\s\S]*getMyActiveOrders|import \{[\s\S]*getMyAssignedOrder|import \{[\s\S]*getMyLatestCancelledOrder/);
+  assert.match(boundary, /loadActiveOrders: \(\) => Promise<MyOrder\[\]>/);
+  assert.match(boundary, /loadLatestCancellation: \(\) => Promise<MyOrder \| null>/);
+  assert.match(boundary, /loadAssignedOrder: \(orderId: string\) => Promise<MyOrder \| null>/);
   assert.doesNotMatch(boundary, /supabase\.|\.from\("orders"\)|\.rpc\(/);
 });
 
@@ -50,6 +61,8 @@ test("Active Trip order browser smoke covers retries, stale removal and mobile s
   for (const width of [320, 360, 390, 412, 430, 768]) {
     assert.match(browserSmoke, new RegExp(`\\b${width}\\b`));
   }
+  assert.match(browserSmoke, /data-fixture-boot="true"/);
+  assert.match(browserSmoke, /data-verify-started="true"/);
   assert.match(browserSmoke, /data-initial-retry-guard="true"/);
   assert.match(browserSmoke, /data-refresh-retry-guard="true"/);
   assert.match(browserSmoke, /data-refresh-recovered="true"/);
