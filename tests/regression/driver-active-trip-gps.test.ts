@@ -52,7 +52,7 @@ test("queued GPS does not mark the trip In Transit before server confirmation", 
 
 test("active-trip browser smoke covers duplicate start, offline queue, reconnect and mobile overflow", () => {
   assert.match(browserSmoke, /watchCalls/);
-  assert.match(browserSmoke, /sendResult = "queued"/);
+  assert.match(browserSmoke, /async sendOrQueuePing\(\)[\s\S]*return "queued"/);
   assert.match(browserSmoke, /window\.dispatchEvent\(new Event\("online"\)\)/);
   assert.match(browserSmoke, /data-watch-calls="1"/);
   assert.match(browserSmoke, /data-order-before-sync="accepted"/);
