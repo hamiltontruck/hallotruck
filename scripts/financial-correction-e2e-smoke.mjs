@@ -26,8 +26,23 @@ const fixtureSource=`
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { PaymentCorrectionForm } from ${JSON.stringify(path.join(root,"src","components","admin","PaymentCorrectionForm.tsx"))};
-createRoot(document.getElementById("root")).render(React.createElement("main",{className:"min-h-screen overflow-x-hidden bg-[#f5f3ed] p-3"},React.createElement(PaymentCorrectionForm,{paymentId:"payment-fixture",paymentAmountEtb:24500,onCancel:()=>{},onSubmitted:async()=>{}})));
+const pendingCorrection=()=>new Promise(()=>{});
+createRoot(document.getElementById("root")).render(React.createElement("main",{className:"min-h-screen overflow-x-hidden bg-[#f5f3ed] p-3"},React.createElement(PaymentCorrectionForm,{paymentId:"payment-fixture",paymentAmountEtb:24500,onCancel:()=>{},onSubmitted:async()=>{},submitCorrection:pendingCorrection})));
 await new Promise(resolve=>setTimeout(resolve,200));
+const form=document.querySelector("form");
+const reason=document.querySelector('textarea[name="correctionReason"]');
+if(form&&reason){reason.value="Duplicate payment correction";form.requestSubmit();}
+await new Promise(resolve=>setTimeout(resolve,250));
+const guidance=document.querySelector('[role="status"]');
+const cancelButton=document.querySelector('button[type="button"]');
+const submitButton=document.querySelector('button[type="submit"]');
+const fields=[...document.querySelectorAll("select,input,textarea")];
+const busyReason="Recording this immutable correction. Wait for the ledger update to finish before closing or changing the form.";
+document.documentElement.dataset.busyGuidance=String(Boolean(guidance&&guidance.textContent?.includes(busyReason)));
+document.documentElement.dataset.formBusy=String(form?.getAttribute("aria-busy")==="true"&&form?.getAttribute("aria-describedby")===guidance?.id);
+document.documentElement.dataset.fieldsDisabled=String(fields.length===3&&fields.every(field=>field.disabled&&field.getAttribute("aria-describedby")===guidance?.id));
+document.documentElement.dataset.describedDisabled=String(Boolean(cancelButton?.disabled&&submitButton?.disabled&&cancelButton.getAttribute("aria-describedby")===guidance?.id&&submitButton.getAttribute("aria-describedby")===guidance?.id&&cancelButton.title===busyReason&&submitButton.title===busyReason));
+document.documentElement.dataset.submitLabel=String(Boolean(submitButton?.textContent?.includes("Recording correction")));
 document.documentElement.dataset.overflow=String(document.documentElement.scrollWidth>document.documentElement.clientWidth||document.body.scrollWidth>document.body.clientWidth);
 document.documentElement.dataset.ready="true";
 `;
@@ -40,11 +55,11 @@ const preview=spawn(viteBinary,["preview","--host",host,"--port",String(port),"-
 try{
   await waitForServer(baseUrl);
   const chrome=findChrome();
-  for(const width of [320,360,390,412]){
+  for(const width of [320,360,390,412,430,768]){
     const profile=await mkdtemp(path.join(os.tmpdir(),"hallotruck-financial-correction-"));
-    try{const dom=render(chrome,width,profile);for(const expected of ['data-ready="true"','data-overflow="false"',"Correction type","Correction amount ETB","Required audit reason","Confirm immutable correction"]){if(!dom.includes(expected))throw new Error(`Financial correction ${width}px smoke missing: ${expected}`);}}finally{await rm(profile,{recursive:true,force:true});}
+    try{const dom=render(chrome,width,profile);for(const expected of ['data-ready="true"','data-overflow="false"','data-busy-guidance="true"','data-form-busy="true"','data-fields-disabled="true"','data-described-disabled="true"','data-submit-label="true"',"Recording this immutable correction","Correction type","Correction amount ETB","Required audit reason","Recording correction"]){if(!dom.includes(expected))throw new Error(`Financial correction ${width}px smoke missing: ${expected}`);}}finally{await rm(profile,{recursive:true,force:true});}
   }
-  console.log("Financial correction browser smoke passed at 320px, 360px, 390px and 412px with required audit fields and no horizontal overflow.");
+  console.log("Financial correction browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with visible busy guidance, described disabled controls, locked inputs and no horizontal overflow.");
 }finally{
   preview.kill("SIGTERM");
   await Promise.race([new Promise(resolve=>preview.once("exit",resolve)),new Promise(resolve=>setTimeout(resolve,2000))]);
