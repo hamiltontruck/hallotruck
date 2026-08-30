@@ -32,7 +32,7 @@ async function waitForServer(url, timeoutMs = 30_000) {
 }
 
 function render(chrome, width, profile) {
-  const args = ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars", `--window-size=${width},980`, "--virtual-time-budget=4000", `--user-data-dir=${profile}`, "--dump-dom", `${baseUrl}customer-profile-payments-e2e.html`];
+  const args = ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars", `--window-size=${width},1100`, "--virtual-time-budget=4000", `--user-data-dir=${profile}`, "--dump-dom", `${baseUrl}customer-profile-payments-e2e.html`];
   for (const flag of ["--headless=new", "--headless"]) {
     const result = spawnSync(chrome, [flag, ...args], { cwd: root, encoding: "utf8", maxBuffer: 15 * 1024 * 1024, timeout: 30_000 });
     if (!result.error && result.status === 0 && result.stdout) return result.stdout;
@@ -78,7 +78,11 @@ createRoot(document.getElementById("root")).render(
   React.createElement(LanguageProvider, null,
     React.createElement("main", { className: "min-h-screen bg-bone p-3" },
       React.createElement("div", { className: "customer-view-profile grid gap-4" },
-        React.createElement(CustomerProfilePanel, { profile, onSaved: async () => {} }),
+        React.createElement(CustomerProfilePanel, {
+          profile,
+          onSaved: async () => {},
+          saveProfile: () => new Promise(() => {}),
+        }),
         React.createElement(CustomerLocationControl),
       ),
       React.createElement("div", { className: "customer-view-payments mt-4" },
@@ -104,6 +108,23 @@ createRoot(document.getElementById("root")).render(
 );
 
 await new Promise((resolve) => setTimeout(resolve, 250));
+const editProfile = [...document.querySelectorAll("button")].find((button) => button.textContent?.includes("Edit profile"));
+editProfile?.click();
+await new Promise((resolve) => setTimeout(resolve, 75));
+const profileForm = document.querySelector(".customer-profile-form");
+profileForm?.requestSubmit();
+await new Promise((resolve) => setTimeout(resolve, 125));
+const profileCard = document.querySelector(".customer-profile-card");
+const profileGuidance = document.getElementById("customer-profile-save-guidance");
+const profileSave = profileForm?.querySelector(".customer-profile-save");
+const profileFields = [...(profileForm?.querySelectorAll("input, select, textarea") ?? [])];
+
+document.documentElement.dataset.profileBusyGuidance = String(profileGuidance?.textContent?.includes("Saving your customer profile. Editing and closing are temporarily locked until the update finishes."));
+document.documentElement.dataset.profilePanelBusy = String(profileCard?.getAttribute("aria-busy") === "true" && profileForm?.getAttribute("aria-busy") === "true");
+document.documentElement.dataset.profileEditLocked = String(Boolean(editProfile?.disabled && editProfile.getAttribute("aria-describedby") === "customer-profile-save-guidance" && editProfile.getAttribute("title")?.includes("Saving your customer profile")));
+document.documentElement.dataset.profileFieldsLocked = String(profileFields.length >= 6 && profileFields.every((field) => field.disabled));
+document.documentElement.dataset.profileSubmitLocked = String(Boolean(profileSave?.disabled && profileSave.getAttribute("aria-describedby") === "customer-profile-save-guidance" && profileSave.getAttribute("title")?.includes("Saving your customer profile")));
+
 const before = locationCalls;
 const share = [...document.querySelectorAll("button")].find((button) => button.textContent?.includes("Share current location"));
 share?.click();
@@ -135,12 +156,17 @@ const preview = spawn(viteBinary, ["preview", "--host", host, "--port", String(p
 try {
   await waitForServer(baseUrl);
   const chrome = findChrome();
-  for (const width of [320, 360, 390, 412]) {
+  for (const width of [320, 360, 390, 412, 430, 768]) {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-customer-profile-"));
     try {
       const dom = render(chrome, width, profile);
       for (const expected of [
         'data-ready="true"',
+        'data-profile-busy-guidance="true"',
+        'data-profile-panel-busy="true"',
+        'data-profile-edit-locked="true"',
+        'data-profile-fields-locked="true"',
+        'data-profile-submit-locked="true"',
         'data-location-before="0"',
         'data-location-after="1"',
         'data-location-stored="true"',
@@ -150,7 +176,7 @@ try {
         'data-visible-kpis="1"',
         'data-visible-filters="1"',
         'data-overflow="false"',
-        "Edit profile",
+        "Saving your customer profile",
         "Share location only when you choose",
       ]) {
         if (!dom.includes(expected)) throw new Error(`Customer profile/payments ${width}px smoke missing: ${expected}`);
@@ -159,7 +185,7 @@ try {
       await rm(profile, { recursive: true, force: true });
     }
   }
-  console.log("Customer profile and payment workspace browser smoke passed at 320px, 360px, 390px and 412px with explicit location consent and payment-only actions.");
+  console.log("Customer profile and payment workspace browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with profile-save guidance, locked conflicting controls, explicit location consent and payment-only actions.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2000))]);
