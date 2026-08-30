@@ -1,4 +1,4 @@
-import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { HashRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { CustomerBottomNav } from "./components/customer/CustomerBottomNav";
@@ -42,6 +42,7 @@ import { CustomerLogin } from "./pages/CustomerLogin";
 import { CustomerPortal } from "./pages/CustomerPortal";
 import { CustomerMapHome } from "./pages/CustomerMapHome";
 import { CustomerLiveOrders } from "./pages/CustomerLiveOrders";
+import { CustomerProfilePage } from "./pages/CustomerProfilePage";
 import { CustomerTrackingPage } from "./pages/CustomerTrackingPage";
 import { DriverGate } from "./components/auth/DriverGate";
 import { Login } from "./pages/Login";
@@ -62,6 +63,21 @@ import "./styles/driver-mobile-flow.css";
 import "./styles/partner-onboarding.css";
 import "./styles/role-navigation.css";
 
+const customerWorkspaceCopy = {
+  en: {
+    orders: { eyebrow: "ORDER CONTROL", title: "Your transport orders", description: "Review every quote and order, follow assignment progress, open invoices, and manage eligible cancellations.", action: "Plan new transport" },
+    payments: { eyebrow: "PAYMENT CONTROL", title: "Payments and verification", description: "Focus on amounts still due or waiting for verification, with invoice and payment evidence available per order.", action: "View all orders" },
+  },
+  om: {
+    orders: { eyebrow: "TO'ANNOO AJAJAA", title: "Ajajoota geejjibaa kee", description: "Quote fi ajaja hunda ilaali, assignment hordofi, invoice bani, cancellation hayyamame bulchi.", action: "Geejjiba haaraa karoorsi" },
+    payments: { eyebrow: "TO'ANNOO KAFFALTII", title: "Kaffaltii fi mirkaneessa", description: "Maallaqa hafe ykn mirkaneessa eegaa jiru irratti xiyyeeffadhu; invoice fi ragaa kaffaltii ajaja tokkoon tokkoon ilaali.", action: "Ajajoota hunda ilaali" },
+  },
+  am: {
+    orders: { eyebrow: "የትዕዛዝ መቆጣጠሪያ", title: "የመጓጓዣ ትዕዛዞችዎ", description: "ሁሉንም ዋጋና ትዕዛዝ ይመልከቱ፣ ምደባን ይከታተሉ፣ ደረሰኞችን ይክፈቱ እና የተፈቀዱ ስረዛዎችን ያስተዳድሩ።", action: "አዲስ መጓጓዣ ያቅዱ" },
+    payments: { eyebrow: "የክፍያ መቆጣጠሪያ", title: "ክፍያዎች እና ማረጋገጫ", description: "ያልተከፈለ ወይም ማረጋገጫ የሚጠብቅ መጠን ላይ ያተኩሩ፤ ደረሰኝና የክፍያ ማስረጃ በየትዕዛዙ ይመልከቱ።", action: "ሁሉንም ትዕዛዞች ይመልከቱ" },
+  },
+} as const;
+
 function DriverShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const showPaymentAction = !pathname.startsWith("/driver/payment/");
@@ -71,11 +87,22 @@ function DriverShell({ children }: { children: React.ReactNode }) {
 function AdminWorkspace(){return <AdminToolShell><AdminCeoOverview /></AdminToolShell>}
 function AdminOperationsWorkspace(){return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
 function AdminPaymentReviewWorkspace(){return <><AdminPaymentReferenceConflictBanner /><AdminPaymentWorkspace /></>}
+function CustomerSectionIntro({ section }: { section: "orders" | "payments" }) {
+  const { language } = useLanguage();
+  const text = customerWorkspaceCopy[language][section];
+  return <section className="customer-section-intro order-2 w-full bg-bone px-4 pt-7 sm:px-6 sm:pt-10">
+    <div className="mx-auto flex max-w-6xl min-w-0 flex-col gap-4 overflow-hidden bg-asphalt p-5 text-white sm:flex-row sm:items-end sm:justify-between sm:p-8">
+      <div className="min-w-0"><p className="font-mono text-[10px] tracking-[.2em] text-amber">{text.eyebrow}</p><h1 className="mt-3 break-words font-display text-3xl font-bold sm:text-4xl">{text.title}</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">{text.description}</p></div>
+      <Link to={section === "orders" ? "/customer" : "/customer/orders"} className="min-h-11 shrink-0 self-start border border-white/20 px-4 py-3 text-xs font-semibold sm:self-auto">{text.action}</Link>
+    </div>
+  </section>;
+}
 function CustomerWorkspace({ section }: { section: "home" | "profile" | "orders" | "track" | "payments" }) {
   if (section === "home") return <div className="customer-portal-mobile customer-view-home"><CustomerMapHome /></div>;
   if (section === "track") return <div className="customer-portal-mobile customer-view-track"><CustomerBottomNav /><CustomerLiveOrders /></div>;
+  if (section === "profile") return <div className="customer-portal-mobile customer-view-profile"><CustomerProfilePage /></div>;
   const defaultFilter = section === "payments" ? "payment" : "all";
-  return <div className={`customer-portal-mobile customer-view-${section}`}><CustomerBottomNav /><CustomerPortal defaultFilter={defaultFilter} /></div>;
+  return <div className={`customer-portal-mobile customer-view-${section}`}><CustomerBottomNav /><CustomerSectionIntro section={section} /><CustomerPortal defaultFilter={defaultFilter} /></div>;
 }
 function RuntimeLocalization(){const {selectedLanguage}=useLanguage();const runtimeLanguage=selectedLanguage==="so"||selectedLanguage==="ti"?selectedLanguage:null;useRuntimePageTranslation(runtimeLanguage);useRuntimeAdminTranslation(runtimeLanguage);useRuntimeCustomerOperationalTranslation(selectedLanguage);return null;}
 

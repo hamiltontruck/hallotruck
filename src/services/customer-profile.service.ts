@@ -1,4 +1,14 @@
+import type { CustomerProfile } from "./customer.service";
 import { supabase } from "./supabase.client";
+
+export async function getCustomerProfile(): Promise<CustomerProfile | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Customer session expired.");
+
+  const { data, error } = await supabase.rpc("customer_get_profile");
+  if (error) throw new Error(error.message);
+  return ((data?.[0] ?? null) as CustomerProfile | null);
+}
 
 export async function updateCustomerProfile(input: {
   fullName: string;
