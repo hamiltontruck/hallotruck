@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getMyActiveOrders,
   getMyAssignedOrder,
   getMyLatestCancelledOrder,
-  MyOrder,
+  type MyOrder,
 } from "../services/driver.service";
 import { formatEtb } from "../utils/currency";
 import { Button } from "../components/ui/Button";
@@ -16,6 +16,7 @@ import { DriverPaymentConfirmation } from "../components/driver/DriverPaymentCon
 import { DriverOrderCancellationNotice } from "../components/driver/DriverOrderCancellationNotice";
 import { DriverActiveTripGpsControl } from "../components/driver/DriverActiveTripGpsControl";
 import { DriverActiveTripRoute } from "../components/driver/DriverActiveTripRoute";
+import { DriverActiveTripOrderBoundary } from "../components/driver/DriverActiveTripOrderBoundary";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { getDriverTripDocumentsCopy } from "../i18n/driverTripDocumentsCopy";
 
@@ -40,81 +41,18 @@ const tripFinanceCopy = {
   },
 } as const;
 
-export function ActiveTrip() {
+interface ActiveTripContentProps {
+  order: MyOrder;
+  onOrderChange: (order: MyOrder) => void;
+}
+
+function ActiveTripContent({ order, onOrderChange }: ActiveTripContentProps) {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const c = getDriverTripDocumentsCopy(language).trip;
   const finance = tripFinanceCopy[language];
-  const [order, setOrder] = useState<MyOrder | null>(null);
-  const [cancelledOrder, setCancelledOrder] = useState<MyOrder | null>(null);
-  const [loading, setLoading] = useState(true);
   const [gpsSharing, setGpsSharing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [driverPosition, setDriverPosition] = useState<[number, number] | null>(null);
-
-  useEffect(() => {
-    Promise.all([getMyActiveOrders(), getMyLatestCancelledOrder()])
-      .then(([orders, latestCancellation]) => {
-        const activeOrder = orders[0] ?? null;
-        setOrder(activeOrder);
-        if (!activeOrder && latestCancellation) {
-          const dismissed = window.localStorage.getItem(`hallotruck-dismissed-cancellation-${latestCancellation.id}`) === "1";
-          setCancelledOrder(dismissed ? null : latestCancellation);
-        }
-      })
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : c.noTrip))
-      .finally(() => setLoading(false));
-  }, [c.noTrip]);
-
-  useEffect(() => {
-    if (!order) return;
-    let disposed = false;
-    const activeOrderId = order.id;
-    const activeOrderStatus = order.status;
-
-    async function refreshOrderStatus() {
-      try {
-        const current = await getMyAssignedOrder(activeOrderId);
-        if (disposed || !current) return;
-        if (current.status === "cancelled") {
-          setCancelledOrder(current);
-          setOrder(null);
-          setError(null);
-          return;
-        }
-        if (current.status !== activeOrderStatus) setOrder(current);
-      } catch (refreshError) {
-        if (!disposed) setError(refreshError instanceof Error ? refreshError.message : c.noTrip);
-      }
-    }
-
-    void refreshOrderStatus();
-    const interval = window.setInterval(() => void refreshOrderStatus(), 5000);
-    return () => {
-      disposed = true;
-      window.clearInterval(interval);
-    };
-  }, [order?.id, order?.status, c.noTrip]);
-
-  if (loading) return <div className="mx-auto max-w-2xl px-6 py-16 font-body text-steel">{c.loading}</div>;
-
-  if (cancelledOrder) {
-    return <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-16"><DriverOrderCancellationNotice order={cancelledOrder} onBrowseJobs={() => {
-      window.localStorage.setItem(`hallotruck-dismissed-cancellation-${cancelledOrder.id}`, "1");
-      navigate("/driver/jobs");
-    }} /></div>;
-  }
-
-  if (!order) {
-    return (
-      <div className="mx-auto max-w-2xl px-6 py-16 text-center">
-        {error && <p role="alert" className="mb-4 border border-route/40 bg-route/5 px-4 py-3 text-sm text-route">{error}</p>}
-        <p className="mb-4 font-body text-steel">{c.noTrip}</p>
-        <Button onClick={() => navigate("/driver/jobs")}>{c.browseJobs}</Button>
-      </div>
-    );
-  }
-
   const tripStarted = order.status === "in_transit";
   const statusLabel = order.status === "accepted" ? c.assigned : tripStarted ? c.onRoad : order.status;
   const grossFare = Number(order.price_etb ?? 0);
@@ -154,11 +92,9 @@ export function ActiveTrip() {
       <DriverCustomerContact orderId={order.id} />
       <DriverPaymentConfirmation orderId={order.id} />
 
-      {error && <p role="alert" className="mb-6 border border-route/40 bg-route/5 px-4 py-3 font-body text-sm text-route">{error}</p>}
-
       <DriverActiveTripGpsControl
         order={order}
-        onOrderChange={setOrder}
+        onOrderChange={onOrderChange}
         onPosition={setDriverPosition}
         onSharingChange={setGpsSharing}
       />
@@ -183,5 +119,41 @@ export function ActiveTrip() {
         </div>
       )}
     </div>
+  );
+}
+
+export function ActiveTrip() {
+  const navigate = useNavigate();
+  const { language } = useLanguage();
+  const c = getDriverTripDocumentsCopy(language).trip;
+  const isCancellationDismissed = useCallback((order: MyOrder) => (
+    window.localStorage.getItem(`hallotruck-dismissed-cancellation-${order.id}`) === "1"
+  ), []);
+
+  return (
+    <DriverActiveTripOrderBoundary
+      loadActiveOrders={getMyActiveOrders}
+      loadLatestCancellation={getMyLatestCancelledOrder}
+      loadAssignedOrder={getMyAssignedOrder}
+      isCancellationDismissed={isCancellationDismissed}
+      renderCancelled={(cancelledOrder) => (
+        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-16">
+          <DriverOrderCancellationNotice order={cancelledOrder} onBrowseJobs={() => {
+            window.localStorage.setItem(`hallotruck-dismissed-cancellation-${cancelledOrder.id}`, "1");
+            navigate("/driver/jobs");
+          }} />
+        </div>
+      )}
+      renderEmpty={() => (
+        <div className="text-center">
+          <p className="mb-4 font-body text-steel">{c.noTrip}</p>
+          <Button onClick={() => navigate("/driver/jobs")}>{c.browseJobs}</Button>
+        </div>
+      )}
+    >
+      {({ order, onOrderChange }) => (
+        <ActiveTripContent key={order.id} order={order} onOrderChange={onOrderChange} />
+      )}
+    </DriverActiveTripOrderBoundary>
   );
 }
