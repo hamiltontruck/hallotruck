@@ -46,3 +46,34 @@ test("Manage Order exposes Admin-only cancellation without hard deleting finance
   assert.match(migration, /public\.trucks truck[\s\S]*status = 'available'/);
   assert.doesNotMatch(migration, /delete\s+from\s+public\.(orders|payments|driver_commission_charges|driver_payment_confirmations)/i);
 });
+
+
+test("Manage Order permanently deletes only safe cancelled unassigned orders", async () => {
+  const migration = await readFile(path.join(process.cwd(), "supabase/migrations/20260830034000_admin_delete_cancelled_unassigned_order.sql"), "utf8");
+
+  assert.match(page, /supabase\.rpc\("admin_delete_cancelled_order"/);
+  assert.match(page, /canDeleteOrder=order\.status==="cancelled"&&!order\.driver_id&&!order\.truck_id/);
+  assert.match(page, /Delete order/);
+  assert.match(page, /Permanently delete order/);
+  assert.match(page, /This cannot be undone/);
+  assert.match(page, /database will reject this action if any payment, receipt, delivery, commission, settlement, rating or audit history exists/i);
+  assert.match(migration, /create or replace function public\.admin_delete_cancelled_order/);
+  assert.match(migration, /private\.require_active_leadership/);
+  assert.match(migration, /v_status <> 'cancelled'/);
+  assert.match(migration, /v_driver_id is not null or v_truck_id is not null/);
+  assert.match(migration, /v_accepted_at is not null or v_delivered_at is not null/);
+  assert.match(migration, /public\.payments/);
+  assert.match(migration, /private\.payment_reference_registry/);
+  assert.match(migration, /public\.payment_review_audit/);
+  assert.match(migration, /public\.financial_corrections/);
+  assert.match(migration, /public\.delivery_proofs/);
+  assert.match(migration, /public\.driver_commission_charges/);
+  assert.match(migration, /public\.driver_payment_confirmation_events/);
+  assert.match(migration, /public\.driver_trip_payment_results/);
+  assert.match(migration, /public\.partner_freight_earnings/);
+  assert.match(migration, /public\.ratings/);
+  assert.match(migration, /public\.notifications/);
+  assert.match(migration, /revoke delete, truncate, references, trigger[\s\S]*public\.orders/);
+  assert.match(migration, /delete from public\.orders/);
+  assert.doesNotMatch(migration, /delete\s+from\s+public\.(payments|payment_review_audit|financial_corrections|delivery_proofs|driver_commission_charges|driver_payment_confirmations|partner_freight_earnings|ratings)/i);
+});
