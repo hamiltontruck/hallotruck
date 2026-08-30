@@ -1,0 +1,45 @@
+name: Patch Partner fleet test executor
+
+on:
+  push:
+    branches:
+      - fix/partner-fleet-action-guidance
+    paths:
+      - .github/workflows/patch-partner-fleet-test-hook.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/partner-fleet-action-guidance
+      - name: Add deterministic action executor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("src/components/partner/PartnerFleetPanel.tsx")
+          source = path.read_text()
+          old = 'export function PartnerFleetPanel({ partnerId, canManage, fixture }: { partnerId: string; canManage: boolean; fixture?: FleetEnterpriseData }) {'
+          new = 'export function PartnerFleetPanel({ partnerId, canManage, fixture, executeAction = (action) => action() }: { partnerId: string; canManage: boolean; fixture?: FleetEnterpriseData; executeAction?: (action: () => Promise<unknown>) => Promise<unknown> }) {'
+          if old not in source:
+              raise SystemExit("PartnerFleetPanel signature not found")
+          source = source.replace(old, new, 1)
+          old = '    try { await action(); setNotice(success); await load(); }'
+          new = '    try { await executeAction(action); setNotice(success); await load(); }'
+          if old not in source:
+              raise SystemExit("Partner fleet action execution line not found")
+          source = source.replace(old, new, 1)
+          path.write_text(source)
+          Path(".github/workflows/patch-partner-fleet-test-hook.yml").unlink()
+          PY
+      - name: Commit focused patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/partner/PartnerFleetPanel.tsx .github/workflows/patch-partner-fleet-test-hook.yml
+          git commit -m "Add deterministic Partner fleet action executor"
+          git push origin HEAD:fix/partner-fleet-action-guidance
