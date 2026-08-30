@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
 
 export function CustomerGate({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const [state, setState] = useState<"loading" | "allowed" | "signed-out" | "wrong-role">("loading");
 
   useEffect(() => {
@@ -50,13 +51,13 @@ export function CustomerGate({ children }: { children: ReactNode }) {
         <button
           onClick={async () => {
             await supabase.auth.signOut();
-            window.location.hash = "#/customer/login";
+            navigate("/customer/login", { replace: true });
           }}
           className="mt-6 w-full bg-asphalt py-4 font-semibold text-white"
         >
           Switch to customer login
         </button>
-        <a href="#/" className="mt-5 block text-center text-xs text-steel">Choose another portal</a>
+        <Link to="/" className="mt-5 block text-center text-xs text-steel">Choose another portal</Link>
       </section>
     </main>
   );

@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   canChangeMembership,
   canPromoteToPartner,
@@ -291,7 +292,7 @@ export function AdminPartnerControl({ fixture = null }: { fixture?: AdminPartner
           <p className="font-mono text-[10px] tracking-[.22em] text-amber">PARTNER ONBOARDING CONTROL</p>
           <div className="mt-3 flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0"><h1 className="break-words font-display text-3xl font-bold sm:text-4xl">HALLO Logistics Partner network</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/55">Create verified organizations, promote existing accounts safely, protect ownership and make every Partner login decision auditable.</p></div>
-            <a href="#/partner/login" target="_blank" rel="noreferrer" className="w-fit border border-amber/60 px-4 py-3 text-xs font-semibold text-amber">Open Partner Login ↗</a>
+            <Link to="/partner/login" target="_blank" rel="noreferrer" className="w-fit border border-amber/60 px-4 py-3 text-xs font-semibold text-amber">Open Partner Login ↗</Link>
           </div>
         </header>
 
@@ -336,9 +337,9 @@ export function AdminPartnerControl({ fixture = null }: { fixture?: AdminPartner
               <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0"><p className="font-mono text-[10px] tracking-[.18em] text-amber-dim">ORGANIZATION DETAILS</p><h2 className="mt-2 break-words font-display text-2xl font-bold sm:text-3xl">{selectedOrganization.name}</h2><p className="mt-2 break-all font-mono text-xs text-steel">{selectedOrganization.code} · {selectedOrganization.id}</p><p className="mt-2 break-all text-xs text-steel">{selectedOrganization.contact_email ?? "No contact email"} · {selectedOrganization.contact_phone ?? "No contact phone"}</p></div>
                 <div className="flex min-w-0 flex-wrap gap-2">
-                  <a href="#/partner/login" target="_blank" rel="noreferrer" className="border border-asphalt/15 px-3 py-2 text-xs font-semibold">Open Partner Login ↗</a>
+                  <Link to="/partner/login" target="_blank" rel="noreferrer" className="border border-asphalt/15 px-3 py-2 text-xs font-semibold">Open Partner Login ↗</Link>
                   {selectedReadiness.loginReady
-                    ? <a href={`#/partner?organization=${selectedOrganization.id}`} target="_blank" rel="noreferrer" className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800">Open Partner Dashboard ↗</a>
+                    ? <Link to={`/partner?organization=${selectedOrganization.id}`} target="_blank" rel="noreferrer" className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800">Open Partner Dashboard ↗</Link>
                     : <button type="button" disabled title={selectedReadiness.reason} className="cursor-not-allowed border border-asphalt/10 px-3 py-2 text-xs font-semibold text-steel/45">Open Partner Dashboard · not ready</button>}
                   {selectedOrganization.status === "active" ? <button type="button" onClick={() => requestOrganizationStatus("suspended")} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route">Suspend</button> : <button type="button" onClick={() => requestOrganizationStatus("active")} className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800">Reactivate</button>}
                   {selectedOrganization.status !== "archived" && <button type="button" onClick={() => requestOrganizationStatus("archived")} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route">Archive</button>}

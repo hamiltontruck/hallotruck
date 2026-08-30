@@ -1,4 +1,5 @@
 import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
 import { canAccessAdminWorkspace } from "../../domain/partner-onboarding";
 
@@ -93,7 +94,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
         </>}
         <button disabled={loading} className="w-full bg-asphalt text-white py-4 mt-7 font-semibold hover:bg-line disabled:opacity-60">{loading ? "Please wait…" : resetMode ? "Send reset email" : "Open control center"}</button>
         <button type="button" onClick={() => { setResetMode((value) => !value); setResetSent(false); setError(""); }} className="block w-full text-center text-xs font-semibold text-amber-dim mt-5">{resetMode ? "Back to Admin login" : "Forgot password?"}</button>
-        {!resetMode && <a href="#/driver" className="block text-center text-xs text-amber-dim mt-5">Open driver portal instead</a>}
+        {!resetMode && <Link to="/driver" className="block text-center text-xs text-amber-dim mt-5">Open driver portal instead</Link>}
       </form>
     </section>
   </main>;

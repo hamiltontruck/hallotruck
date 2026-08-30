@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
 
 export function DriverGate({ children }: { children: ReactNode }) {
@@ -63,5 +63,5 @@ export function DriverGate({ children }: { children: ReactNode }) {
 
   if (role === "driver") return <>{children}</>;
 
-  return <main className="min-h-screen bg-bone grid place-items-center p-5"><section className="bg-white border border-line p-7 max-w-md w-full"><p className="font-display font-bold text-2xl">Driver account required</p><p className="font-body text-sm text-steel mt-3">An Admin/CEO session is active in this browser. Sign it out before opening the driver workspace.</p><button onClick={switchAccount} className="w-full bg-asphalt text-white py-4 mt-6 font-semibold">Switch to driver login</button><a href="#/" className="block text-center text-xs text-steel mt-5">Return to Admin</a></section></main>;
+  return <main className="min-h-screen bg-bone grid place-items-center p-5"><section className="bg-white border border-line p-7 max-w-md w-full"><p className="font-display font-bold text-2xl">Driver account required</p><p className="font-body text-sm text-steel mt-3">An Admin/CEO session is active in this browser. Sign it out before opening the driver workspace.</p><button onClick={switchAccount} className="w-full bg-asphalt text-white py-4 mt-6 font-semibold">Switch to driver login</button><Link to="/" className="block text-center text-xs text-steel mt-5">Return to Admin</Link></section></main>;
 }

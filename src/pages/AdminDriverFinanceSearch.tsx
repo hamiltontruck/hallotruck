@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { formatEtb } from "../utils/currency";
 import {
@@ -245,7 +246,7 @@ export function AdminDriverFinanceSearch() {
               <h1 className="font-display text-3xl font-bold sm:text-4xl">Search every order, customer and driver</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">See which driver accepted each order, review trips and released earnings, and manage commission deposits from ETB 5,000 to ETB 100,000.</p>
             </div>
-            <a href="#/admin" className="border border-white/20 px-4 py-3 text-sm font-semibold">← Operations</a>
+            <Link to="/admin" className="border border-white/20 px-4 py-3 text-sm font-semibold">← Operations</Link>
           </div>
         </section>
 

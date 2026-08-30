@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
 
 export function AdminDriverDocumentsShortcut() {
@@ -43,8 +44,8 @@ export function AdminDriverDocumentsShortcut() {
   }, []);
 
   return (
-    <a
-      href="#/admin/driver-compliance"
+    <Link
+      to="/admin/driver-compliance"
       className="fixed bottom-5 right-4 z-30 flex w-[calc(100%-2rem)] max-w-sm items-center gap-3 border border-amber/40 bg-asphalt px-4 py-3 text-white shadow-2xl transition hover:-translate-y-0.5 hover:border-amber sm:right-6 sm:w-auto sm:min-w-80"
       aria-label="Open driver operations and verification"
     >
@@ -60,6 +61,6 @@ export function AdminDriverDocumentsShortcut() {
         </span>
       </span>
       <span className="text-lg text-amber" aria-hidden="true">→</span>
-    </a>
+    </Link>
   );
 }
