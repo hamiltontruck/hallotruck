@@ -175,6 +175,8 @@ test("Partner fleet actions explain the shared workflow lock", () => {
   const source = readFileSync(path.join(process.cwd(), "src/components/partner/PartnerFleetPanel.tsx"), "utf8");
   const smoke = readFileSync(path.join(process.cwd(), "scripts/fleet-enterprise-e2e-smoke.mjs"), "utf8");
 
+  assert.match(source, /executeAction = \(action\) => action\(\)/);
+  assert.match(source, /await executeAction\(action\)/);
   assert.match(source, /if \(activeAction\) return;/);
   assert.match(source, /Registering a Partner vehicle\. Other fleet actions are temporarily locked until this update finishes\./);
   assert.match(source, /Creating a Partner fleet branch\. Other fleet actions are temporarily locked until this update finishes\./);
@@ -187,6 +189,7 @@ test("Partner fleet actions explain the shared workflow lock", () => {
   assert.match(source, /Creating branch…/);
   assert.match(source, /Saving profile…/);
   assert.match(source, /Saving maintenance…/);
+  assert.match(smoke, /executeAction:\(\)=>new Promise\(\(\)=>\{\}\)/);
   assert.match(smoke, /data-busy-guidance/);
   assert.match(smoke, /data-panel-busy/);
   assert.match(smoke, /data-described-disabled/);
