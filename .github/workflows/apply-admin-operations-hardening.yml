@@ -1,0 +1,58 @@
+name: Apply Admin Operations hardening
+
+on:
+  push:
+    branches:
+      - feat/admin-operations-filter-accessibility
+    paths:
+      - scripts/apply-admin-operations-hardening.mjs
+      - .github/workflows/apply-admin-operations-hardening.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/admin-operations-filter-accessibility
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply focused source patch
+        run: node scripts/apply-admin-operations-hardening.mjs
+
+      - name: Install
+        run: npm ci
+
+      - name: Validate lint, regression and build
+        run: |
+          npm run lint
+          npm run test:regression
+          npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
+          VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
+
+      - name: Remove temporary patch machinery
+        run: |
+          rm scripts/apply-admin-operations-hardening.mjs
+          rm .github/workflows/apply-admin-operations-hardening.yml
+
+      - name: Commit hardened Admin Operations
+        run: |
+          git config user.name "hamiltontruck"
+          git config user.email "hamiltoninternational8@gmail.com"
+          git add -A
+          git commit -m "Harden Admin Operations filters and accessibility"
+          git push origin HEAD:feat/admin-operations-filter-accessibility
