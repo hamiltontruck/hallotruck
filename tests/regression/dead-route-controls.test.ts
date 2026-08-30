@@ -222,4 +222,5 @@ test("Admin fleet actions explain shared workflow locks", () => {
   assert.match(smoke, /data-admin-fields-disabled/);
   assert.match(smoke, /data-admin-described-disabled/);
   assert.match(smoke, /data-admin-action-label/);
+  assert.match(smoke, /data-active-trip-guidance/);
 });

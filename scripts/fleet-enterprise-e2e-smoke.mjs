@@ -53,6 +53,8 @@ const fixture = { vehicles:[vehicle],summary:{total:1,available:0,assigned:0,on_
 function App(){return React.createElement("div",null,React.createElement(AdminFleetMaintenance,{fixture,executeAction:()=>new Promise(()=>{})}),React.createElement("div",{className:"mx-auto max-w-6xl overflow-x-hidden bg-[#f5f3ed] p-3"},React.createElement(PartnerFleetPanel,{partnerId:"partner-1",canManage:true,fixture:{...fixture,branches:fixture.branches.map((branch)=>({...branch,partner_id:"partner-1"}))},executeAction:()=>new Promise(()=>{})})));}
 createRoot(document.getElementById("root")).render(React.createElement(App));
 await new Promise((resolve)=>setTimeout(resolve,300));
+const activeTripGuidance=Array.from(document.querySelectorAll('[id^="fleet-action-guidance-"]')).some((node)=>node.textContent.includes("Active trip locks status and driver changes until the trip closes."));
+document.documentElement.dataset.activeTripGuidance=String(activeTripGuidance);
 const adminPage=document.querySelector('[data-testid="fleet-enterprise-page"]');
 const addVehicleButton=Array.from(adminPage?.querySelectorAll("button")??[]).find((button)=>button.textContent.trim()==="Add vehicle");
 if(!adminPage||!addVehicleButton)throw new Error("Admin fleet Add vehicle control not found.");
@@ -106,7 +108,7 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-fleet-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', 'data-admin-busy-guidance="true"', 'data-admin-page-busy="true"', 'data-admin-modal-busy="true"', 'data-admin-fields-disabled="true"', 'data-admin-described-disabled="true"', 'data-admin-action-label="true"', 'data-busy-guidance="true"', 'data-panel-busy="true"', 'data-described-disabled="true"', 'data-action-label="true"', "Fleet control center", "AVAILABILITY BOARD", "Expiry alerts", "Active trip:", "Active trip locks status and driver changes until the trip closes.", "Partner vehicle", "Fleet activity"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', 'data-admin-busy-guidance="true"', 'data-admin-page-busy="true"', 'data-admin-modal-busy="true"', 'data-admin-fields-disabled="true"', 'data-admin-described-disabled="true"', 'data-admin-action-label="true"', 'data-busy-guidance="true"', 'data-panel-busy="true"', 'data-described-disabled="true"', 'data-action-label="true"', "Fleet control center", "AVAILABILITY BOARD", "Expiry alerts", "Active trip:", 'data-active-trip-guidance="true"', "Partner vehicle", "Fleet activity"]) {
         if (!dom.includes(expected)) throw new Error(`Fleet ${width}px smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }
