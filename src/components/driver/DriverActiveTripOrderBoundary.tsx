@@ -9,6 +9,7 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 import { Button } from "../ui/Button";
 
 const ACTIVE_TRIP_STATUSES = new Set(["accepted", "in_transit"]);
+const cancellationNeverDismissed = () => false;
 
 type OrderStateError = "initial" | "refresh" | "not_assigned" | "inactive" | null;
 
@@ -25,7 +26,7 @@ const orderStateCopy = {
   om: {
     loading: "Trip hojii irra jiru feʼaa jira…",
     loadFailed: "Trip hojii irra jiru feʼuun hin dandaʼamne.",
-    refreshFailed: "Haalli trip haaromfamuu hin dandeenye. Trip dh terakhir mirkanaaʼe ammallee mulʼata.",
+    refreshFailed: "Haalli trip haaromfamuu hin dandeenye. Trip yeroo dhumaa mirkanaaʼe ammallee mulʼata.",
     notAssigned: "Trip kun account keetiif kana booda hin ramadamne.",
     inactive: "Trip kun kana booda hojii irra hin jiru.",
     retry: "Haala trip deebiʼii ilaali",
@@ -62,7 +63,7 @@ export function DriverActiveTripOrderBoundary({
   children,
   renderCancelled,
   renderEmpty,
-  isCancellationDismissed = () => false,
+  isCancellationDismissed = cancellationNeverDismissed,
   loadActiveOrders = getMyActiveOrders,
   loadLatestCancellation = getMyLatestCancelledOrder,
   loadAssignedOrder = getMyAssignedOrder,
