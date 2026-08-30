@@ -139,6 +139,7 @@ test("Admin manage-order actions explain busy and resource locks", () => {
   assert.match(action, /role="status"/);
   assert.match(action, /aria-live="polite"/);
   assert.match(action, /aria-describedby=\{resolvedDescription\}/);
+  assert.match(action, /activeAction === action \? busyLabel \|\| idleLabel : idleLabel/);
   assert.match(operations, /<AdminManageOrderActionStatus orderId=\{order\.id\} action=\{activeAction\}/);
   assert.match(operations, /Assignment is locked because no available truck is eligible for this order\./);
   assert.match(operations, /Assignment is locked because no driver profiles are available\./);
