@@ -143,7 +143,7 @@ test("Admin manage-order actions explain busy and resource locks", () => {
   assert.match(operations, /Assignment is locked because no available truck is eligible for this order\./);
   assert.match(operations, /Assignment is locked because no driver profiles are available\./);
   assert.match(operations, /aria-busy=\{saving\}/);
-  assert.match(operations, /activeAction === "delivery"/);
+  assert.match(operations, /activeAction\s*===\s*"delivery"/);
   assert.match(smoke, /data-busy-descriptions/);
   assert.match(smoke, /data-resource-lock/);
   assert.match(packageJson, /admin-manage-order-action-e2e-smoke\.mjs/);
