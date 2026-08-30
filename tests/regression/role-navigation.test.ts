@@ -30,14 +30,18 @@ test("customer mobile navigation exposes five real portal routes", () => {
   assert.match(customerLiveOrders, /\/customer\/tracking\/\$\{order\.id\}/);
 });
 
-test("driver primary navigation exposes home, jobs, trip, wallet and profile", () => {
-  for (const route of ["/driver", "/driver/jobs", "/driver/trip", "/driver/wallet", "/driver/documents"]) {
+test("driver primary navigation exposes canonical home, jobs, trip, wallet and profile routes", () => {
+  for (const route of ["/driver", "/driver/jobs", "/driver/trip", "/driver/wallet", "/driver/profile"]) {
     assert.match(driverNav, new RegExp(`to: "${route.replaceAll("/", "\\/")}"`));
     assert.match(driverHeader, new RegExp(`to: "${route.replaceAll("/", "\\/")}"`));
   }
+  assert.doesNotMatch(driverNav, /to: "\/driver\/documents"/);
+  assert.doesNotMatch(driverHeader, /to: "\/driver\/documents"/);
   assert.match(driverNav, /wallet: "Wallet"/);
   assert.match(driverNav, /profile: "Profaayilii"/);
   assert.match(app, /path="\/driver" element={<DriverGate><DriverShell><JobBoard/);
+  assert.match(app, /path="\/driver\/profile" element={<DriverGate><DriverShell><Documents/);
+  assert.match(app, /path="\/driver\/documents" element={<DriverGate><Navigate to="\/driver\/profile" replace \/><\/DriverGate>}/);
   assert.match(app, /path="\/driver\/wallet" element={<DriverGate><DriverShell><DriverWallet/);
   assert.match(app, /path="\/driver\/earnings" element={<DriverGate><DriverShell><Earnings/);
   assert.doesNotMatch(app, /path="\/driver" element={<Navigate to="\/driver\/jobs"/);
@@ -62,11 +66,13 @@ test("admin mobile navigation provides exact overview, orders, combined fleet, f
   assert.match(app, /function AdminWorkspace\(\)\{return <AdminToolShell><AdminCeoOverview/);
 });
 
-test("mobile role navigation protects narrow screens and device safe areas", () => {
+test("mobile role navigation protects narrow screens, safe areas and open keyboards", () => {
   assert.match(navigationCss, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
   assert.match(navigationCss, /env\(safe-area-inset-bottom\)/);
   assert.match(navigationCss, /@media \(max-width: 639px\)/);
   assert.match(navigationCss, /@media \(max-width: 340px\)/);
+  assert.match(navigationCss, /@media \(max-width: 639px\) and \(max-height: 520px\)/);
+  assert.match(navigationCss, /display: none !important/);
   assert.match(navigationCss, /overflow-wrap: anywhere/);
   assert.match(navigationCss, /min-width: 0 !important/);
 });
