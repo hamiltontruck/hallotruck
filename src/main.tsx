@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App";
+import { initializeAnalytics } from "./services/analytics";
 import "./index.css";
 import "./styles/customer-quote-restoration.css";
 import "./styles/admin-order-cleanup.css";
@@ -12,6 +13,8 @@ Sentry.init({
   enabled: import.meta.env.PROD,
   sendDefaultPii: false,
 });
+
+initializeAnalytics();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
