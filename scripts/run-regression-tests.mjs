@@ -27,6 +27,7 @@ try{
   ["tests/regression/customer-profile-payments-polish.test.ts",path.join(outputDirectory,"customer-profile-payments-polish.test.mjs")],
   ["tests/regression/driver-delivery-proof-action-locks.test.ts",path.join(outputDirectory,"driver-delivery-proof-action-locks.test.mjs")],
   ["tests/regression/driver-active-trip-gps.test.ts",path.join(outputDirectory,"driver-active-trip-gps.test.mjs")],
+  ["tests/regression/driver-active-trip-order-refresh.test.ts",path.join(outputDirectory,"driver-active-trip-order-refresh.test.mjs")],
   ["tests/regression/driver-customer-contact-retry.test.ts",path.join(outputDirectory,"driver-customer-contact-retry.test.mjs")],
   ["tests/regression/driver-payment-confirmation-action-locks.test.ts",path.join(outputDirectory,"driver-payment-confirmation-action-locks.test.mjs")],
   ["tests/regression/deployment-workflow.test.ts",path.join(outputDirectory,"deployment-workflow.test.mjs")],
