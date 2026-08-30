@@ -73,3 +73,16 @@ test("driver compliance disabled actions explain approval and active-trip locks"
   assert.match(source, /aria-describedby=\{actionGuidanceId\}/);
   assert.match(packageJson, /admin-driver-compliance-e2e-smoke\.mjs/);
 });
+
+test("payment review disabled actions explain verification and rejection locks", () => {
+  const source = readFileSync(path.join(process.cwd(), "src/pages/AdminPaymentReview.tsx"), "utf8");
+  const packageJson = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
+
+  assert.match(source, /payment-review-action-\$\{payment\.id\}/);
+  assert.match(source, /Verification is locked until receipt evidence is uploaded for this payment\./);
+  assert.match(source, /Enter at least 5 characters explaining why this payment is being rejected\./);
+  assert.match(source, /aria-describedby=\{reviewActionGuidanceId\}/);
+  assert.match(source, /title=\{approveDisabledReason \|\| \(cashCollection \? "Verify this cash collection" : "Verify this payment"\)\}/);
+  assert.match(source, /title=\{rejectDisabledReason \|\| "Reject this payment with the provided reason"\}/);
+  assert.match(packageJson, /payment-ledger-e2e-smoke\.mjs/);
+});

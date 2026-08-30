@@ -140,13 +140,21 @@ const fixture = {
 createRoot(document.getElementById("root")).render(React.createElement(MemoryRouter, { initialEntries: ["/admin/payment-review"] }, React.createElement(AdminPaymentReview, { fixture })));
 
 setTimeout(() => {
-  const details = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("View details"));
-  details?.click();
+  const legacyDetails = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("View details"));
+  legacyDetails?.click();
   setTimeout(() => {
-    document.documentElement.dataset.viewport = String(window.innerWidth);
-    document.documentElement.dataset.cardCount = String(document.querySelectorAll("article").length);
-    document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
-    document.documentElement.dataset.ready = "true";
+    const legacyText = document.body.textContent ?? "";
+    const pendingDetails = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("View details"));
+    pendingDetails?.click();
+    setTimeout(() => {
+      const reviewText = document.body.textContent ?? "";
+      document.documentElement.dataset.legacyAuditVisible = String(legacyText.includes("Payment review audit") && legacyText.includes("Historical receipt was reconciled during legacy migration."));
+      document.documentElement.dataset.reviewGuidanceVisible = String(reviewText.includes("Verification is locked until receipt evidence is uploaded for this payment.") && reviewText.includes("Enter at least 5 characters explaining why this payment is being rejected."));
+      document.documentElement.dataset.viewport = String(window.innerWidth);
+      document.documentElement.dataset.cardCount = String(document.querySelectorAll("article").length);
+      document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
+      document.documentElement.dataset.ready = "true";
+    }, 250);
   }, 250);
 }, 250);
 `;
@@ -189,6 +197,8 @@ try {
     assertContains(dom, [
       "data-ready=\"true\"",
       "data-card-count=\"13\"",
+      "data-legacy-audit-visible=\"true\"",
+      "data-review-guidance-visible=\"true\"",
       "data-overflow=\"false\"",
       "Payment ledger",
       "Completed trip finance and rating report",
@@ -203,8 +213,8 @@ try {
       "Missing receipt",
       "Legacy completed",
       "Receipt exempt · legacy completed",
-      "Payment review audit",
-      "Historical receipt was reconciled during legacy migration.",
+      "Verification is locked until receipt evidence is uploaded for this payment.",
+      "Enter at least 5 characters explaining why this payment is being rejected.",
       "Immutable correction applied.",
       "Corrected ETB 20,000",
       "releasable ETB 30,000",

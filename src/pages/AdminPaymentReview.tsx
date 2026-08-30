@@ -466,6 +466,21 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
           const negativeConfirmation = confirmationEntries.find((entry) => entry.confirmation_type === "payment_not_received");
           const canRelease = payment.event === "held_escrow" && order?.status === "delivered" && Boolean(positiveConfirmation) && releasableEtb > 0;
           const detailsId = `payment-details-${payment.id}`;
+          const reviewReason = reasons[payment.id]?.trim() ?? "";
+          const reviewActionGuidanceId = `payment-review-action-${payment.id}`;
+          const approveDisabledReason = busy
+            ? "Saving payment review."
+            : !canApprove
+              ? "Verification is locked until receipt evidence is uploaded for this payment."
+              : "";
+          const rejectDisabledReason = busy
+            ? "Saving payment review."
+            : reviewReason.length < 5
+              ? "Enter at least 5 characters explaining why this payment is being rejected."
+              : "";
+          const reviewActionGuidance = [approveDisabledReason, rejectDisabledReason]
+            .filter((message, index, messages) => message.length > 0 && messages.indexOf(message) === index)
+            .join(" ") || "Payment review actions are ready.";
           return <article key={payment.id} className="w-full min-w-0 max-w-full overflow-hidden border border-asphalt/10 bg-white">
             <div className="grid min-w-0 gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_auto]">
               <div className="min-w-0">
@@ -506,7 +521,7 @@ export function AdminPaymentReview({ fixture }: { fixture?: AdminPaymentReviewFi
               <ConfirmationHistory entries={confirmationEntries} />
               <CorrectionHistory entries={correctionEntries} />
               {legacy && <p className="mt-4 border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"><strong>Legacy completed:</strong> historical released payment; receipt warning is suppressed.</p>}
-              {payment.event === "initiated" && <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"><label className="min-w-0 text-xs font-semibold">Rejection reason<textarea value={reasons[payment.id] ?? ""} onChange={(event) => setReasons((current) => ({ ...current, [payment.id]: event.target.value }))} rows={3} maxLength={500} placeholder="Explain mismatch, unclear transaction, duplicate reference or fraud concern." className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white p-3 text-sm font-normal outline-none focus:border-route" /></label><div className="flex min-w-0 flex-col items-stretch gap-2 min-[360px]:flex-row min-[360px]:flex-wrap lg:items-end"><button type="button" disabled={busy || !canApprove} onClick={() => void review(payment.id, true)} className="w-full min-w-0 whitespace-normal bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40 min-[360px]:w-auto">{busy ? "Saving…" : cashCollection ? "Verify cash" : "Verify payment"}</button><button type="button" disabled={busy || (reasons[payment.id]?.trim().length ?? 0) < 5} onClick={() => void review(payment.id, false)} className="w-full min-w-0 whitespace-normal border border-route bg-white px-4 py-3 text-sm font-semibold text-route disabled:opacity-40 min-[360px]:w-auto">Reject</button></div></div>}
+              {payment.event === "initiated" && <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"><label className="min-w-0 text-xs font-semibold">Rejection reason<textarea aria-describedby={reviewActionGuidanceId} value={reasons[payment.id] ?? ""} onChange={(event) => setReasons((current) => ({ ...current, [payment.id]: event.target.value }))} rows={3} maxLength={500} placeholder="Explain mismatch, unclear transaction, duplicate reference or fraud concern." className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/15 bg-white p-3 text-sm font-normal outline-none focus:border-route" /><span id={reviewActionGuidanceId} className="mt-2 block text-xs font-normal text-steel [overflow-wrap:anywhere]">{reviewActionGuidance}</span></label><div className="flex min-w-0 flex-col items-stretch gap-2 min-[360px]:flex-row min-[360px]:flex-wrap lg:items-end"><button type="button" disabled={approveDisabledReason.length > 0} title={approveDisabledReason || (cashCollection ? "Verify this cash collection" : "Verify this payment")} aria-describedby={reviewActionGuidanceId} onClick={() => void review(payment.id, true)} className="w-full min-w-0 whitespace-normal bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40 min-[360px]:w-auto">{busy ? "Saving…" : cashCollection ? "Verify cash" : "Verify payment"}</button><button type="button" disabled={rejectDisabledReason.length > 0} title={rejectDisabledReason || "Reject this payment with the provided reason"} aria-describedby={reviewActionGuidanceId} onClick={() => void review(payment.id, false)} className="w-full min-w-0 whitespace-normal border border-route bg-white px-4 py-3 text-sm font-semibold text-route disabled:opacity-40 min-[360px]:w-auto">Reject</button></div></div>}
             </div>}
           </article>;
         })}
