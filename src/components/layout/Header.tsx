@@ -9,7 +9,7 @@ const primaryLinks = [
   { to: "/driver/jobs", key: "jobs" as const, end: true },
   { to: "/driver/trip", key: "trip" as const, end: true },
   { to: "/driver/wallet", key: "wallet" as const, end: true },
-  { to: "/driver/documents", key: "profile" as const, end: true },
+  { to: "/driver/profile", key: "profile" as const, end: true },
 ] as const;
 
 const primaryCopy = {
@@ -33,7 +33,7 @@ export function Header() {
         status: "Eeyyama eegaa",
         title: "Onboarding qofa",
         help: "Jobs, Trip, Wallet fi Profile Admin erga si mirkaneessee booda banamu.",
-        continue: "Documents itti fufi",
+        continue: "Profile fi documents itti fufi",
       }
     : language === "am"
       ? {
@@ -41,14 +41,14 @@ export function Header() {
           status: "ማረጋገጫ በመጠበቅ ላይ",
           title: "ለምዝገባ ብቻ",
           help: "Jobs፣ Trip፣ Wallet እና Profile አስተዳዳሪው ካረጋገጠዎት በኋላ ይከፈታሉ።",
-          continue: "ሰነዶችን ይቀጥሉ",
+          continue: "መገለጫና ሰነዶችን ይቀጥሉ",
         }
       : {
           workspace: "DRIVER ONBOARDING",
           status: "Pending approval",
           title: "Onboarding only",
           help: "Jobs, Trip, Wallet and Profile unlock only after Admin approval.",
-          continue: "Continue documents",
+          continue: "Continue profile and documents",
         };
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export function Header() {
   }
 
   function goHome() {
-    navigate(approved ? "/driver" : "/driver/documents");
+    navigate(approved ? "/driver" : "/driver/profile");
   }
 
   return <>
@@ -139,7 +139,7 @@ export function Header() {
               <p className="mt-1 text-xs leading-relaxed text-steel">{pendingCopy.help}</p>
               <button
                 type="button"
-                onClick={() => { setMenuOpen(false); navigate("/driver/documents"); }}
+                onClick={() => { setMenuOpen(false); navigate("/driver/profile"); }}
                 className="mt-3 w-full bg-asphalt px-3 py-3 text-sm font-semibold text-white"
               >
                 {pendingCopy.continue}

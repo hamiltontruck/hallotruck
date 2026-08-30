@@ -137,7 +137,8 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/driver" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
 <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
 <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
-<Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
+<Route path="/driver/profile" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
+<Route path="/driver/documents" element={<DriverGate><Navigate to="/driver/profile" replace /></DriverGate>} />
 <Route path="/driver/wallet" element={<DriverGate><DriverShell><DriverWallet /></DriverShell></DriverGate>} />
 <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
 <Route path="/driver/commission" element={<DriverGate><DriverShell><DriverCommission /></DriverShell></DriverGate>} />

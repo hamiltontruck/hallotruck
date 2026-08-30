@@ -12,7 +12,7 @@ const links = [
   { to: "/driver/jobs", key: "jobs" as const, icon: "▦", end: true },
   { to: "/driver/trip", key: "trip" as const, icon: "⌁", end: true },
   { to: "/driver/wallet", key: "wallet" as const, icon: "◫", end: true },
-  { to: "/driver/documents", key: "profile" as const, icon: "◎", end: true },
+  { to: "/driver/profile", key: "profile" as const, icon: "◎", end: true },
 ] as const;
 
 export function DriverBottomNav() {
