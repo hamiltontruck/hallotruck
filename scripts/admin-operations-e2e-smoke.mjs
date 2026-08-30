@@ -57,9 +57,15 @@ function render(chrome, width, profileDirectory, route) {
   throw new Error(`Chrome could not render Admin Operations at ${width}px.`);
 }
 
+function diagnostic(dom) {
+  const error = dom.match(/data-runtime-error="([^"]*)"/)?.[1] ?? "dataset unavailable";
+  const rootText = dom.match(/<div id="root">([\s\S]*?)<\/div>/)?.[1]?.slice(0, 600) ?? "root unavailable";
+  return `runtime=${error}; root=${rootText}`;
+}
+
 function assertContains(dom, values, label) {
   for (const value of values) {
-    if (!dom.includes(value)) throw new Error(`${label} is missing: ${value}`);
+    if (!dom.includes(value)) throw new Error(`${label} is missing: ${value}; ${diagnostic(dom)}`);
   }
 }
 
@@ -72,7 +78,33 @@ const fixtureSource = `
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
-import { SmartLogistics } from ${JSON.stringify(path.join(root, "src", "pages", "SmartLogistics.tsx"))};
+
+const runtimeErrors = [];
+const recordError = (value) => {
+  const message = value instanceof Error ? value.message : String(value || "Unknown browser error");
+  runtimeErrors.push(message);
+  document.documentElement.dataset.runtimeError = runtimeErrors.join(" | ");
+};
+window.addEventListener("error", (event) => recordError(event.error || event.message));
+window.addEventListener("unhandledrejection", (event) => recordError(event.reason));
+
+class FixtureErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error) {
+    recordError(error);
+  }
+  render() {
+    return this.state.error
+      ? React.createElement("pre", { id: "fixture-error" }, String(this.state.error.message || this.state.error))
+      : this.props.children;
+  }
+}
 
 const route = new URLSearchParams(window.location.search).get("route") || "/admin/operations";
 const now = new Date().toISOString();
@@ -99,11 +131,19 @@ const fixture = {
   deliveryProofs: [],
 };
 
-createRoot(document.getElementById("root")).render(
-  React.createElement(MemoryRouter, { initialEntries: [route] }, React.createElement(SmartLogistics, { fixture })),
-);
+try {
+  const { SmartLogistics } = await import(${JSON.stringify(path.join(root, "src", "pages", "SmartLogistics.tsx"))});
+  createRoot(document.getElementById("root")).render(
+    React.createElement(FixtureErrorBoundary, null,
+      React.createElement(MemoryRouter, { initialEntries: [route] }, React.createElement(SmartLogistics, { fixture })),
+    ),
+  );
+} catch (error) {
+  recordError(error);
+  document.getElementById("root").textContent = String(error?.stack || error);
+}
 
-await new Promise((resolve) => setTimeout(resolve, 300));
+await new Promise((resolve) => setTimeout(resolve, 500));
 const links = [...document.querySelectorAll("a")];
 const pressed = [...document.querySelectorAll('[aria-pressed="true"]')];
 const input = document.querySelector('input[aria-label="Search operations"], input[aria-label^="Search "]');
@@ -118,6 +158,7 @@ document.documentElement.dataset.overflow = String(
   document.documentElement.scrollWidth > document.documentElement.clientWidth
     || document.body.scrollWidth > document.body.clientWidth,
 );
+document.documentElement.dataset.runtimeError = runtimeErrors.join(" | ");
 document.documentElement.dataset.ready = "true";
 `;
 
@@ -148,7 +189,7 @@ try {
     try {
       const dom = render(chrome, width, profile, "/admin/operations");
       assertContains(dom, [
-        'data-ready="true"', 'data-kpis="true"', 'data-current="1"', 'data-overflow="false"',
+        'data-ready="true"', 'data-runtime-error=""', 'data-kpis="true"', 'data-current="1"', 'data-overflow="false"',
         "Total orders", "Available trucks", "Delivered orders", "Released revenue",
       ], `Admin Operations overview ${width}px`);
     } finally {
@@ -166,7 +207,7 @@ try {
     try {
       const dom = render(chrome, 390, profile, route);
       assertContains(dom, [
-        'data-ready="true"', `data-pressed="${pressedCount}"`, `data-search="${search}"`,
+        'data-ready="true"', 'data-runtime-error=""', `data-pressed="${pressedCount}"`, `data-search="${search}"`,
         'data-current="1"', 'data-overflow="false"', ...text,
       ], String(route));
     } finally {
