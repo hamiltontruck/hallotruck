@@ -73,6 +73,12 @@ import { DriverDeliveryProofForm } from ${JSON.stringify(path.join(root, "src", 
 
 localStorage.setItem("hallo_language", "en");
 Object.defineProperty(Element.prototype, "setPointerCapture", { configurable: true, value() {} });
+Object.defineProperty(HTMLCanvasElement.prototype, "toBlob", {
+  configurable: true,
+  value(callback, type) {
+    callback(new Blob(["signature"], { type: type ?? "image/png" }));
+  },
+});
 let submitCalls = 0;
 const pendingSubmit = () => {
   submitCalls += 1;
