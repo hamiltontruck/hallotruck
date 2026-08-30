@@ -13,6 +13,7 @@ const profilePanel = source("src/components/customer/CustomerProfilePanel.tsx");
 const locationControl = source("src/components/customer/CustomerLocationControl.tsx");
 const profileService = source("src/services/customer-profile.service.ts");
 const sectionsCss = source("src/styles/customer-portal-sections.css");
+const profilePaymentsSmoke = source("scripts/customer-profile-payments-e2e-smoke.mjs");
 
 test("customer profile route uses a dedicated account workspace without loading the order portal", () => {
   assert.match(app, /import \{ CustomerProfilePage \} from "\.\/pages\/CustomerProfilePage"/);
@@ -45,4 +46,25 @@ test("orders and payments expose different purpose-built customer actions", () =
   assert.match(sectionsCss, /customer-view-payments \.customer-order-card__actions \.is-cancel/);
   assert.match(sectionsCss, /customer-view-payments \.customer-kpis > :not\(:nth-child\(3\)\)/);
   assert.match(sectionsCss, /customer-view-orders \.customer-hero/);
+});
+
+test("customer profile save explains and locks the pending workflow", () => {
+  assert.match(profilePanel, /saveProfile = updateCustomerProfile/);
+  assert.match(profilePanel, /if \(saving\) return;/);
+  assert.match(profilePanel, /Saving your customer profile\. Editing and closing are temporarily locked until the update finishes\./);
+  assert.match(profilePanel, /Piroofaayila maamilaa kee olkaa'aa jira\./);
+  assert.match(profilePanel, /customer-profile-save-guidance/);
+  assert.match(profilePanel, /aria-busy=\{saving\}/);
+  assert.match(profilePanel, /aria-describedby=\{saving \? busyGuidanceId : undefined\}/);
+  assert.match(profilePanel, /role="status" aria-live="polite"/);
+  assert.match(profilePanel, /role="alert"/);
+  assert.match(profilePanel, /disabled=\{saving\}/);
+  assert.match(profilePanel, /title=\{saving \? busyMessage/);
+  assert.match(profilePaymentsSmoke, /saveProfile: \(\) => new Promise\(\(\) => \{\}\)/);
+  assert.match(profilePaymentsSmoke, /data-profile-busy-guidance/);
+  assert.match(profilePaymentsSmoke, /data-profile-panel-busy/);
+  assert.match(profilePaymentsSmoke, /data-profile-edit-locked/);
+  assert.match(profilePaymentsSmoke, /data-profile-fields-locked/);
+  assert.match(profilePaymentsSmoke, /data-profile-submit-locked/);
+  assert.match(profilePaymentsSmoke, /\[320, 360, 390, 412, 430, 768\]/);
 });
