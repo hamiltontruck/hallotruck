@@ -11,6 +11,11 @@
   display: none;
 }
 
+.customer-view-orders .customer-hero,
+.customer-view-payments .customer-hero {
+  display: none;
+}
+
 .customer-view-profile,
 .customer-view-orders,
 .customer-view-track,
@@ -41,12 +46,43 @@
   order: 1;
 }
 
+.customer-section-intro,
 .customer-view-profile .customer-content,
 .customer-view-orders .customer-content,
 .customer-view-track .customer-content,
 .customer-view-payments .customer-content {
   order: 2;
   width: 100%;
+}
+
+.customer-view-orders .customer-content,
+.customer-view-payments .customer-content {
+  padding-top: 1.25rem;
+}
+
+.customer-view-payments .customer-new-order,
+.customer-view-payments .customer-overview-heading > button,
+.customer-view-payments .customer-empty-state > button,
+.customer-view-payments .customer-order-filters button:not(.is-active),
+.customer-view-payments .customer-order-card__actions .is-primary,
+.customer-view-payments .customer-order-card__actions .is-cancel {
+  display: none;
+}
+
+.customer-view-payments .customer-kpis {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.customer-view-payments .customer-kpis > :not(:nth-child(3)) {
+  display: none;
+}
+
+.customer-view-payments .customer-order-filters {
+  justify-content: flex-start;
+}
+
+.customer-view-payments .customer-order-card__actions {
+  align-items: center;
 }
 
 .customer-dashboard-nav {
@@ -139,6 +175,15 @@
   .customer-dashboard-nav__item {
     padding-right: 0.35rem;
     padding-left: 0.35rem;
+  }
+
+  .customer-section-intro {
+    padding-bottom: 0.25rem;
+  }
+
+  .customer-view-payments .customer-content,
+  .customer-view-orders .customer-content {
+    padding-top: 0.75rem;
   }
 }
 
