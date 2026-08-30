@@ -86,3 +86,18 @@ test("payment review disabled actions explain verification and rejection locks",
   assert.match(source, /title=\{rejectDisabledReason \|\| "Reject this payment with the provided reason"\}/);
   assert.match(packageJson, /payment-ledger-e2e-smoke\.mjs/);
 });
+
+
+test("Partner settlement busy actions explain the temporary workflow lock", () => {
+  const source = readFileSync(path.join(process.cwd(), "src/components/partner/AdminPartnerSettlementWorkflow.tsx"), "utf8");
+  const smoke = readFileSync(path.join(process.cwd(), "scripts/partner-settlement-e2e-smoke.mjs"), "utf8");
+
+  assert.match(source, /partner-settlement-workflow-busy-guidance/);
+  assert.match(source, /Another settlement operation is in progress\. Wait for it to finish before starting a new settlement action\./);
+  assert.match(source, /role="status" aria-live="polite"/);
+  assert.match(source, /aria-describedby=\{busy \? settlementBusyGuidanceId : undefined\}/);
+  assert.match(source, /title=\{busy \? settlementBusyReason : undefined\}/);
+  assert.match(source, /aria-busy=\{busy\}/);
+  assert.match(smoke, /data-busy-guidance/);
+  assert.match(smoke, /data-described-disabled/);
+});

@@ -34,8 +34,9 @@ async function waitForServer(url, timeoutMs = 30000) {
   throw new Error("Preview server did not start in time.");
 }
 
-function render(chrome, width, profile) {
-  const args = ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars", `--window-size=${width},1100`, "--virtual-time-budget=3000", `--user-data-dir=${profile}`, "--dump-dom", `${baseUrl}partner-settlement-e2e.html`];
+function render(chrome, width, profile, query = "") {
+  const target = `${baseUrl}partner-settlement-e2e.html${query}`;
+  const args = ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars", `--window-size=${width},1100`, "--virtual-time-budget=3000", `--user-data-dir=${profile}`, "--dump-dom", target];
   for (const flag of ["--headless=new", "--headless"]) {
     const result = spawnSync(chrome, [flag, ...args], { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, timeout: 30000 });
     if (!result.error && result.status === 0 && result.stdout) return result.stdout;
@@ -53,6 +54,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { AdminPartnerSettlementWorkflow } from ${JSON.stringify(path.join(root, "src", "components", "partner", "AdminPartnerSettlementWorkflow.tsx"))};
 const now = ${JSON.stringify(now)};
+const isBusy = new URLSearchParams(window.location.search).get("busy") === "1";
 const base = { partner_id:'partner-fixture', project_id:'project-1', request_key:'request-fixture', amount_etb:250000, provider:null, transaction_ref:null, receipt_path:null, note:'Verified corridor freight', approval_notes:null, rejection_reason:null, reviewed_by:null, reviewed_at:null, approved_by:null, approved_at:null, rejected_by:null, rejected_at:null, paid_at:null, created_at:now };
 const settlements = [
   { ...base, id:'pending-1', settlement_reference:'HPS-2026-000001', status:'pending' },
@@ -66,9 +68,11 @@ const payments = [
   { id:'payment-2', request_key:'payment-request-2', settlement_id:'paid-1', partner_id:'partner-fixture', amount_etb:100000, payment_method:'mobile_money', provider:'Telebirr', transaction_ref:'TEL-PAID-001', paid_at:now, recorded_by:'admin-1', created_at:now },
 ];
 const events = settlements.map((settlement, index) => ({ id:index+1, settlement_id:settlement.id, partner_id:'partner-fixture', event_type:settlement.status==='partially_paid'?'partially_paid':settlement.status, from_status:null, to_status:settlement.status, amount_etb:settlement.amount_etb, reason:null, actor_id:'admin-1', metadata:{}, created_at:now }));
-createRoot(document.getElementById('root')).render(React.createElement('main', { className:'mx-auto min-w-0 max-w-6xl p-3 sm:p-6' }, React.createElement(AdminPartnerSettlementWorkflow, { partnerId:'partner-fixture', projects:[{ id:'project-1', partner_id:'partner-fixture', name:'Enterprise Corridor Project', status:'active' }], settlements, payments, events, corrections:[], busy:false, runAction:async()=>true })));
+createRoot(document.getElementById('root')).render(React.createElement('main', { className:'mx-auto min-w-0 max-w-6xl p-3 sm:p-6' }, React.createElement(AdminPartnerSettlementWorkflow, { partnerId:'partner-fixture', projects:[{ id:'project-1', partner_id:'partner-fixture', name:'Enterprise Corridor Project', status:'active' }], settlements, payments, events, corrections:[], busy:isBusy, runAction:async()=>true })));
 await new Promise((resolve) => setTimeout(resolve, 200));
 document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
+document.documentElement.dataset.busyGuidance = String(Boolean(document.getElementById('partner-settlement-workflow-busy-guidance')));
+document.documentElement.dataset.describedDisabled = String([...document.querySelectorAll('button:disabled')].every((button) => button.getAttribute('aria-describedby') === 'partner-settlement-workflow-busy-guidance'));
 document.documentElement.dataset.ready = 'true';
 `;
 await writeFile(entryFile, fixtureSource, "utf8");
@@ -84,14 +88,18 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-partner-settlement-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Create pending settlement", "Start review", "Approve", "Reject", "Record payment", "Reverse settlement", "partially paid", "Outstanding 150,000 ETB"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', 'data-busy-guidance="false"', "Create pending settlement", "Start review", "Approve", "Reject", "Record payment", "Reverse settlement", "partially paid", "Outstanding 150,000 ETB"]) {
         if (!dom.includes(expected)) throw new Error(`Partner settlement ${width}px smoke missing: ${expected}`);
+      }
+      const busyDom = render(chrome, width, profile, "?busy=1");
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', 'data-busy-guidance="true"', 'data-described-disabled="true"', "Another settlement operation is in progress. Wait for it to finish before starting a new settlement action."]) {
+        if (!busyDom.includes(expected)) throw new Error(`Busy Partner settlement ${width}px smoke missing: ${expected}`);
       }
     } finally {
       await rm(profile, { recursive: true, force: true });
     }
   }
-  console.log("Partner settlement browser smoke passed at 320px, 360px, 390px and 412px with no horizontal overflow.");
+  console.log("Partner settlement browser smoke passed at 320px, 360px, 390px and 412px with explained busy locks and no horizontal overflow.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2000))]);
