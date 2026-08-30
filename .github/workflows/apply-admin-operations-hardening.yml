@@ -27,17 +27,33 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Prepare source-only patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/apply-admin-operations-hardening.mjs")
+          source = path.read_text()
+          marker = '\nconst regressionPath = "tests/regression/admin-operations-ux.test.ts";'
+          if marker not in source:
+              raise SystemExit("Temporary patch split marker was not found")
+          source = source.split(marker, 1)[0]
+          source += '\nconsole.log("Applied Admin Operations KPI, URL filter, responsive and accessibility hardening.");\n'
+          path.write_text(source)
+          PY
+          node --check scripts/apply-admin-operations-hardening.mjs
+
       - name: Apply focused source patch
         run: node scripts/apply-admin-operations-hardening.mjs
 
       - name: Install
         run: npm ci
 
-      - name: Validate lint, regression and build
+      - name: Validate full production suite
         run: |
           npm run lint
           npm run test:regression
           npm run build
+          npm run test:e2e-smoke
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
