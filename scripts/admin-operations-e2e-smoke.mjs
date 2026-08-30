@@ -39,8 +39,10 @@ async function waitForServer(url, timeoutMs = 30_000) {
 function render(chrome, width, profileDirectory, route) {
   const target = `${baseUrl}admin-operations-e2e.html?route=${encodeURIComponent(route)}`;
   const args = [
-    "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars",
-    `--window-size=${width},915`, "--virtual-time-budget=4000",
+    "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+    "--disable-background-networking", "--disable-default-apps",
+    "--no-first-run", "--no-default-browser-check", "--hide-scrollbars",
+    `--window-size=${width},915`, "--virtual-time-budget=10000",
     `--user-data-dir=${profileDirectory}`, "--dump-dom", target,
   ];
   for (const flag of ["--headless=new", "--headless"]) {
@@ -91,8 +93,8 @@ const fixture = {
     { id: "payment-pending", order_id: "order-placed", provider: "cbe", provider_ref: "CBE-001", amount_etb: 50000, event: "initiated", receipt_path: null, raw_payload: null, created_at: now },
   ],
   drivers: [
-    { id: "driver-approved", full_name: "Adil Abdu", phone: "0911111111", email: "adil@example.com", driver_status: "approved" },
-    { id: "driver-pending", full_name: "Mebruk Ali", phone: "0922222222", email: "mebruk@example.com", driver_status: "pending" },
+    { id: "driver-approved", full_name: "Adil Abdu", phone: "0911111111", driver_status: "approved" },
+    { id: "driver-pending", full_name: "Mebruk Ali", phone: "0922222222", driver_status: "pending" },
   ],
   deliveryProofs: [],
 };
