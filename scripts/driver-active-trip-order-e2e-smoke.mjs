@@ -60,6 +60,14 @@ import { createRoot } from "react-dom/client";
 import { LanguageProvider } from ${JSON.stringify(path.join(root, "src/i18n/LanguageProvider.tsx"))};
 import { DriverActiveTripOrderBoundary } from ${JSON.stringify(path.join(root, "src/components/driver/DriverActiveTripOrderBoundary.tsx"))};
 
+document.documentElement.dataset.fixtureBoot = "true";
+window.addEventListener("error", (event) => {
+  document.documentElement.dataset.fixtureError = event.error instanceof Error ? event.error.message : event.message;
+});
+window.addEventListener("unhandledrejection", (event) => {
+  document.documentElement.dataset.fixtureError = event.reason instanceof Error ? event.reason.message : String(event.reason);
+});
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const orderA = {
   id: "order-a",
@@ -136,7 +144,7 @@ function Fixture() {
       pollIntervalMs: 350,
       renderCancelled: (order) => React.createElement("div", { "data-cancelled-order": order.id }, "Cancelled"),
       renderEmpty: () => React.createElement("div", { "data-empty-trip": "true", className: "text-center" }, "No active trip"),
-    }, ({ order, onOrderChange }) => React.createElement(TripView, { key: order.id, order, onOrderChange }))
+    }, ({ order }) => React.createElement(TripView, { key: order.id, order }))
   );
 }
 
@@ -145,6 +153,7 @@ createRoot(document.getElementById("root")).render(
 );
 
 async function verify() {
+  document.documentElement.dataset.verifyStarted = "true";
   await delay(70);
   const initialError = document.querySelector('[data-active-trip-order-error="initial"]');
   const initialRetry = initialError?.querySelector("button");
@@ -246,7 +255,11 @@ try {
   const chrome = findChrome();
   for (const width of [320, 360, 390, 412, 430, 768]) {
     const dom = await render(chrome, { width, height: 1200 });
+    const fixtureError = dom.match(/data-fixture-error="([^"]*)"/)?.[1];
+    if (fixtureError) throw new Error(`Driver Active Trip order ${width}px fixture error: ${fixtureError}`);
     for (const expected of [
+      'data-fixture-boot="true"',
+      'data-verify-started="true"',
       'data-ready="true"',
       'data-initial-error-ready="true"',
       'data-initial-retry-guard="true"',
@@ -259,7 +272,6 @@ try {
     ]) {
       if (!dom.includes(expected)) throw new Error(`Driver Active Trip order ${width}px smoke is missing: ${expected}`);
     }
-    if (dom.includes("data-fixture-error=")) throw new Error(`Driver Active Trip order ${width}px fixture reported an error.`);
   }
   console.log("Driver Active Trip order lifecycle browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with guarded initial/refresh retries, recovered status, stale assignment removal, new-order remounting and no horizontal overflow.");
 } finally {
