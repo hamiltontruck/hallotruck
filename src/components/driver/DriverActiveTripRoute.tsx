@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { TripMap } from "../navigation/TripMap";
 import {
   getNavigation,
   type NavigationRoute,
@@ -50,22 +49,18 @@ function distanceMeters(a: [number, number], b: [number, number]) {
   return 2 * earthRadiusM * Math.asin(Math.sqrt(h));
 }
 
-function defaultMapRenderer(route: NavigationRoute, driverPosition: [number, number] | null) {
-  return <TripMap routeGeometry={route.geometry} driverPosition={driverPosition} />;
-}
-
 export function DriverActiveTripRoute({
   orderId,
   driverPosition,
   gpsSharing,
+  renderMap,
   services = defaultServices,
-  renderMap = defaultMapRenderer,
 }: {
   orderId: string;
   driverPosition: [number, number] | null;
   gpsSharing: boolean;
+  renderMap: (route: NavigationRoute, driverPosition: [number, number] | null) => ReactNode;
   services?: RouteServices;
-  renderMap?: (route: NavigationRoute, driverPosition: [number, number] | null) => ReactNode;
 }) {
   const { language } = useLanguage();
   const c = getDriverTripDocumentsCopy(language).trip;
