@@ -195,3 +195,32 @@ test("Partner fleet actions explain the shared workflow lock", () => {
   assert.match(smoke, /data-described-disabled/);
   assert.match(smoke, /data-action-label/);
 });
+
+
+test("Admin fleet actions explain shared workflow locks", () => {
+  const source = readFileSync(path.join(process.cwd(), "src/pages/AdminFleetMaintenance.tsx"), "utf8");
+  const smoke = readFileSync(path.join(process.cwd(), "scripts/fleet-enterprise-e2e-smoke.mjs"), "utf8");
+
+  assert.match(source, /executeAction = \(action\) => action\(\)/);
+  assert.match(source, /if \(activeAction\) return;/);
+  assert.match(source, /id="admin-fleet-action-guidance" role="status" aria-live="polite"/);
+  assert.match(source, /Registering a fleet vehicle\. Other fleet actions are temporarily locked until this update finishes\./);
+  assert.match(source, /Creating a fleet branch\. Other fleet actions are temporarily locked until this update finishes\./);
+  assert.match(source, /Recording fleet maintenance\. Other fleet actions are temporarily locked until this update finishes\./);
+  assert.match(source, /Saving \$\{selected\.plate_number\} compliance profile\. Other fleet actions are temporarily locked until this update finishes\./);
+  assert.match(source, /Updating \$\{vehicle\.plate_number\} operational status\. Other fleet actions are temporarily locked until this update finishes\./);
+  assert.match(source, /Updating \$\{vehicle\.plate_number\} driver assignment\. Other fleet actions are temporarily locked until this update finishes\./);
+  assert.match(source, /Changing maintenance status to \$\{label\(nextStatus\)\}\. Other fleet actions are temporarily locked until this update finishes\./);
+  assert.match(source, /fieldset disabled=\{saving\}/);
+  assert.match(source, /id=\{guidanceId\} role="status" aria-live="polite"/);
+  assert.match(source, /Registering vehicle…/);
+  assert.match(source, /Updating status…/);
+  assert.match(source, /Updating driver…/);
+  assert.match(smoke, /data-admin-busy-guidance/);
+  assert.match(smoke, /data-admin-page-busy/);
+  assert.match(smoke, /data-admin-modal-busy/);
+  assert.match(smoke, /data-admin-fields-disabled/);
+  assert.match(smoke, /data-admin-described-disabled/);
+  assert.match(smoke, /data-admin-action-label/);
+  assert.match(smoke, /data-active-trip-guidance/);
+});

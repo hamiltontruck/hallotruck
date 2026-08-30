@@ -50,9 +50,34 @@ import { AdminFleetMaintenance } from ${JSON.stringify(path.join(root, "src/page
 import { PartnerFleetPanel } from ${JSON.stringify(path.join(root, "src/components/partner/PartnerFleetPanel.tsx"))};
 const vehicle = { vehicle_id:"truck-1",partner_vehicle_id:"partner-vehicle-1",partner_id:"partner-1",plate_number:"ET-01-VERY-LONG-PLATE-12345",vehicle_type:"Heavy duty refrigerated enterprise cargo vehicle",capacity_tons:32,status:"on_trip",ownership_type:"partner",fuel_type:"diesel",branch_id:"branch-1",branch_name:"Addis Ababa Enterprise Operations Branch",assigned_driver_id:"driver-1",assigned_driver_name:"Abiyu Nagash Enterprise Driver",active_trip_id:"trip-1",active_trip_reference:"HT-2026-ENTERPRISE-TRIP-REFERENCE-1234567890",active_trip_status:"in_transit",current_odometer_km:145789,insurance_expiry:"2026-09-01",license_expiry:"2026-12-01",roadworthiness_expiry:"2026-08-26",last_service_date:"2026-07-01",next_service_date:"2026-09-05",maintenance_status:"scheduled",health_status:"critical",dispatch_ready:false,gps_provider:"Future GPS Adapter",last_location_at:${JSON.stringify(now)},updated_at:${JSON.stringify(now)} };
 const fixture = { vehicles:[vehicle],summary:{total:1,available:0,assigned:0,on_trip:1,maintenance:0,suspended:0,inactive:0,expiry_alerts:2,service_alerts:1,dispatch_ready:0},records:[{id:"maintenance-1",truck_id:"truck-1",maintenance_type:"scheduled_service",status:"scheduled",service_date:"2026-09-05",odometer_km:145789,cost_etb:125000,vendor:"Enterprise Fleet Workshop",notes:"Complete scheduled service and roadworthiness renewal",next_service_date:"2026-12-05",next_service_odometer_km:160000,created_at:${JSON.stringify(now)},updated_at:${JSON.stringify(now)}}],branches:[{id:"branch-1",partner_id:null,name:"Addis Ababa Enterprise Operations Branch",code:"ADDIS-01",address:"Addis Ababa",active:true}],audit:[{id:1,entity_type:"truck",entity_id:"truck-1",truck_id:"truck-1",event_type:"status_changed",reason:"Assigned to verified enterprise trip",actor_id:"admin-1",source:"admin",created_at:${JSON.stringify(now)}}],drivers:[{id:"driver-1",full_name:"Abiyu Nagash Enterprise Driver",phone:"+251911000000"}] };
-function App(){return React.createElement("div",null,React.createElement(AdminFleetMaintenance,{fixture}),React.createElement("div",{className:"mx-auto max-w-6xl overflow-x-hidden bg-[#f5f3ed] p-3"},React.createElement(PartnerFleetPanel,{partnerId:"partner-1",canManage:true,fixture:{...fixture,branches:fixture.branches.map((branch)=>({...branch,partner_id:"partner-1"}))},executeAction:()=>new Promise(()=>{})})));}
+function App(){return React.createElement("div",null,React.createElement(AdminFleetMaintenance,{fixture,executeAction:()=>new Promise(()=>{})}),React.createElement("div",{className:"mx-auto max-w-6xl overflow-x-hidden bg-[#f5f3ed] p-3"},React.createElement(PartnerFleetPanel,{partnerId:"partner-1",canManage:true,fixture:{...fixture,branches:fixture.branches.map((branch)=>({...branch,partner_id:"partner-1"}))},executeAction:()=>new Promise(()=>{})})));}
 createRoot(document.getElementById("root")).render(React.createElement(App));
 await new Promise((resolve)=>setTimeout(resolve,300));
+const activeTripGuidance=Array.from(document.querySelectorAll('[id^="fleet-action-guidance-"]')).some((node)=>node.textContent.includes("Active trip locks status and driver changes until the trip closes."));
+document.documentElement.dataset.activeTripGuidance=String(activeTripGuidance);
+const adminPage=document.querySelector('[data-testid="fleet-enterprise-page"]');
+const addVehicleButton=Array.from(adminPage?.querySelectorAll("button")??[]).find((button)=>button.textContent.trim()==="Add vehicle");
+if(!adminPage||!addVehicleButton)throw new Error("Admin fleet Add vehicle control not found.");
+addVehicleButton.click();
+await new Promise((resolve)=>setTimeout(resolve,50));
+const adminDialog=document.querySelector('[role="dialog"][aria-label="Register fleet vehicle"]');
+const adminForm=adminDialog?.querySelector("form");
+const adminSubmit=Array.from(adminForm?.querySelectorAll("button")??[]).find((button)=>button.textContent.trim()==="Save");
+if(!adminDialog||!adminForm||!adminSubmit)throw new Error("Admin fleet registration modal not found.");
+adminForm.querySelector('input[name="plate"]').value="ET-01-ADMIN-LOCK";
+adminForm.querySelector('input[name="vehicleType"]').value="Admin enterprise test truck";
+adminForm.requestSubmit(adminSubmit);
+await new Promise((resolve)=>setTimeout(resolve,100));
+const adminGuidance=document.getElementById("admin-fleet-action-guidance");
+const adminModalGuidance=document.getElementById("admin-fleet-modal-action-guidance");
+const adminFields=Array.from(adminForm.querySelectorAll("input,select,textarea"));
+const adminModalButtons=Array.from(adminForm.querySelectorAll("button"));
+document.documentElement.dataset.adminBusyGuidance=String(adminGuidance?.textContent.includes("Registering a fleet vehicle. Other fleet actions are temporarily locked until this update finishes."));
+document.documentElement.dataset.adminPageBusy=String(adminPage.getAttribute("aria-busy")==="true");
+document.documentElement.dataset.adminModalBusy=String(adminForm.getAttribute("aria-busy")==="true"&&adminModalGuidance?.textContent.includes("Registering a fleet vehicle."));
+document.documentElement.dataset.adminFieldsDisabled=String(adminFields.length>0&&adminFields.every((field)=>field.matches(":disabled")));
+document.documentElement.dataset.adminDescribedDisabled=String(adminModalButtons.length===3&&adminModalButtons.every((button)=>button.matches(":disabled")&&button.getAttribute("aria-describedby")==="admin-fleet-modal-action-guidance"&&button.getAttribute("title")?.includes("temporarily locked")));
+document.documentElement.dataset.adminActionLabel=String(adminSubmit.textContent.trim()==="Registering vehicle…");
 const partnerPanel=document.querySelector('[data-testid="partner-fleet-panel"]');
 const registerButton=Array.from(partnerPanel.querySelectorAll("button")).find((button)=>button.textContent.includes("Register vehicle"));
 const registerForm=registerButton?.closest("form");
@@ -83,12 +108,12 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-fleet-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', 'data-busy-guidance="true"', 'data-panel-busy="true"', 'data-described-disabled="true"', 'data-action-label="true"', "Fleet control center", "AVAILABILITY BOARD", "Expiry alerts", "Active trip:", "Active trip locks status and driver changes until the trip closes.", "Partner vehicle", "Fleet activity"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', 'data-admin-busy-guidance="true"', 'data-admin-page-busy="true"', 'data-admin-modal-busy="true"', 'data-admin-fields-disabled="true"', 'data-admin-described-disabled="true"', 'data-admin-action-label="true"', 'data-busy-guidance="true"', 'data-panel-busy="true"', 'data-described-disabled="true"', 'data-action-label="true"', "Fleet control center", "AVAILABILITY BOARD", "Expiry alerts", "Active trip:", 'data-active-trip-guidance="true"', "Partner vehicle", "Fleet activity"]) {
         if (!dom.includes(expected)) throw new Error(`Fleet ${width}px smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }
   }
-  console.log("Fleet Enterprise browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with Partner fleet busy guidance, described disabled actions and no horizontal overflow.");
+  console.log("Fleet Enterprise browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with Admin and Partner fleet busy guidance, described disabled actions and no horizontal overflow.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve)=>preview.once("exit",resolve)),new Promise((resolve)=>setTimeout(resolve,2000))]);
