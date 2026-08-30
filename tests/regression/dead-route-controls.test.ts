@@ -149,3 +149,24 @@ test("Admin manage-order actions explain busy and resource locks", () => {
   assert.match(smoke, /data-resource-lock/);
   assert.match(packageJson, /admin-manage-order-action-e2e-smoke\.mjs/);
 });
+
+test("Payment correction busy state explains the immutable ledger lock", () => {
+  const source = readFileSync(path.join(process.cwd(), "src/components/admin/PaymentCorrectionForm.tsx"), "utf8");
+  const smoke = readFileSync(path.join(process.cwd(), "scripts/financial-correction-e2e-smoke.mjs"), "utf8");
+  const packageJson = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
+
+  assert.match(source, /payment-correction-busy-\$\{paymentId\}/);
+  assert.match(source, /Recording this immutable correction\. Wait for the ledger update to finish before closing or changing the form\./);
+  assert.match(source, /submitCorrection = reversePayment/);
+  assert.match(source, /if \(saving\) return;/);
+  assert.match(source, /aria-busy=\{saving\}/);
+  assert.match(source, /role="status" aria-live="polite"/);
+  assert.match(source, /aria-describedby=\{saving \? busyGuidanceId : undefined\}/);
+  assert.match(source, /title=\{saving \? correctionBusyReason/);
+  assert.match(smoke, /data-busy-guidance/);
+  assert.match(smoke, /data-form-busy/);
+  assert.match(smoke, /data-fields-disabled/);
+  assert.match(smoke, /data-described-disabled/);
+  assert.match(smoke, /data-submit-label/);
+  assert.match(packageJson, /financial-correction-e2e-smoke\.mjs/);
+});
