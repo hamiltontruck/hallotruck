@@ -11,5 +11,5 @@ test("Admin fleet smoke preserves active-trip guidance before the pending workfl
   assert.ok(activeTripCapture >= 0, "Fleet smoke must capture the active-trip lock guidance");
   assert.ok(adminPendingAction > activeTripCapture, "Active-trip guidance must be captured before starting the Admin pending action");
   assert.match(smoke, /dataset\.activeTripGuidance=String\(activeTripGuidance\)/);
-  assert.match(smoke, /data-active-trip-guidance=\\"true\\"/);
+  assert.match(smoke, /data-active-trip-guidance="true"/);
 });
