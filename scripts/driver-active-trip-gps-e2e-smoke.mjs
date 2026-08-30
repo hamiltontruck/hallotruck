@@ -43,7 +43,7 @@ function render(chrome, width, profile) {
     "--disable-dev-shm-usage",
     "--hide-scrollbars",
     `--window-size=${width},1100`,
-    "--virtual-time-budget=5000",
+    "--virtual-time-budget=7000",
     `--user-data-dir=${profile}`,
     "--dump-dom",
     `${baseUrl}driver-active-trip-gps-e2e.html`,
@@ -70,6 +70,7 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { LanguageProvider } from ${JSON.stringify(path.join(root, "src", "i18n", "LanguageProvider.tsx"))};
 import { DriverActiveTripGpsControl } from ${JSON.stringify(path.join(root, "src", "components", "driver", "DriverActiveTripGpsControl.tsx"))};
+import { DriverActiveTripRoute } from ${JSON.stringify(path.join(root, "src", "components", "driver", "DriverActiveTripRoute.tsx"))};
 
 localStorage.setItem("hallo_language", "en");
 let online = false;
@@ -78,7 +79,16 @@ let watchCalls = 0;
 let clearCalls = 0;
 let sendCalls = 0;
 let syncCalls = 0;
+let routeCalls = 0;
 let positionSuccess = null;
+let fixtureError = "";
+
+window.addEventListener("error", (event) => {
+  fixtureError ||= event.error?.message || event.message || "window error";
+});
+window.addEventListener("unhandledrejection", (event) => {
+  fixtureError ||= event.reason instanceof Error ? event.reason.message : String(event.reason || "unhandled rejection");
+});
 
 Object.defineProperty(navigator, "onLine", { configurable: true, get: () => online });
 Object.defineProperty(navigator, "geolocation", {
@@ -126,17 +136,45 @@ const services = {
   },
 };
 
+const routeServices = {
+  async getNavigation() {
+    routeCalls += 1;
+    if (routeCalls === 1) throw new Error("Route network unavailable");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    return {
+      geometry: {
+        type: "LineString",
+        coordinates: [[38.75, 9.03], [38.8, 9.08]],
+      },
+      distanceKm: 12,
+      durationMin: 20,
+      steps: [
+        { instruction: "Head north toward the corridor", distanceM: 500, durationSec: 60, location: [38.75, 9.03] },
+        { instruction: "Continue to the destination", distanceM: 11500, durationSec: 1140, location: [38.8, 9.08] },
+      ],
+    };
+  },
+};
+
 function Harness() {
   const [order, setOrder] = useState(initialOrder);
   const [sharing, setSharing] = useState(false);
+  const [position, setPosition] = useState(null);
   return React.createElement("main", { className: "min-h-screen bg-bone p-3" },
     React.createElement("p", { "data-sharing-value": String(sharing) }, order.status),
     React.createElement(DriverActiveTripGpsControl, {
       order,
       onOrderChange: setOrder,
-      onPosition: () => {},
+      onPosition: setPosition,
       onSharingChange: setSharing,
       services,
+    }),
+    React.createElement(DriverActiveTripRoute, {
+      orderId: order.id,
+      driverPosition: position,
+      gpsSharing: sharing,
+      services: routeServices,
+      renderMap: () => React.createElement("div", { className: "h-full", "data-route-map": "true" }),
     }),
   );
 }
@@ -145,43 +183,92 @@ createRoot(document.getElementById("root")).render(
   React.createElement(LanguageProvider, null, React.createElement(Harness)),
 );
 
-await new Promise((resolve) => setTimeout(resolve, 200));
-let panel = document.querySelector("[data-driver-gps-control]");
-const initialStartCount = document.querySelectorAll("[data-gps-start-action]").length;
-const start = document.querySelector("[data-gps-start-action]");
-if (!panel || !start) throw new Error("Driver GPS fixture did not render the start action.");
-start.click();
-start.click();
-await new Promise((resolve) => setTimeout(resolve, 50));
-const requestingBusy = panel.getAttribute("aria-busy") === "true";
-if (!positionSuccess) throw new Error("GPS watch callback was not registered.");
-positionSuccess({
-  coords: {
-    longitude: 38.75,
-    latitude: 9.03,
-    speed: 12,
-    heading: 90,
-  },
-});
-await new Promise((resolve) => setTimeout(resolve, 150));
-panel = document.querySelector("[data-driver-gps-control]");
-const orderBeforeSync = panel?.getAttribute("data-gps-order-status");
-const queuedGuidance = panel?.textContent?.includes("GPS update saved offline") ?? false;
-const retryVisible = Boolean(panel?.querySelector("[data-gps-retry-action]"));
-const statusSemantics = Boolean(panel?.querySelector('[role="status"][aria-live="polite"]'));
+let routeFixtureRendered = false;
+let routeErrorVisible = false;
+let routeRetryBusy = false;
+let routeLoaded = false;
+let routeErrorCleared = false;
+let gpsFixtureRendered = false;
+let requestingBusy = false;
+let orderBeforeSync = "missing";
+let queuedGuidance = false;
+let retryVisible = false;
+let statusSemantics = false;
+let orderAfterSync = "missing";
+let liveGuidance = false;
+let initialStartCount = 0;
 
-online = true;
-window.dispatchEvent(new Event("online"));
-await new Promise((resolve) => setTimeout(resolve, 250));
-panel = document.querySelector("[data-driver-gps-control]");
-const orderAfterSync = panel?.getAttribute("data-gps-order-status");
-const liveGuidance = panel?.textContent?.includes("Trip started") ?? false;
+try {
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  let routePanel = document.querySelector("[data-driver-route-control]");
+  const routeRetry = routePanel?.querySelector("[data-route-retry-action]");
+  routeFixtureRendered = Boolean(routePanel && routeRetry);
+  routeErrorVisible = routePanel?.textContent?.includes("Route network unavailable") ?? false;
+
+  if (routeRetry) {
+    routeRetry.click();
+    routeRetry.click();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    routePanel = document.querySelector("[data-driver-route-control]");
+    routeRetryBusy = routePanel?.getAttribute("aria-busy") === "true";
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    routePanel = document.querySelector("[data-driver-route-control]");
+    routeLoaded = Boolean(routePanel?.querySelector('[data-route-map="true"]')) && (routePanel?.textContent?.includes("Head north toward the corridor") ?? false);
+    routeErrorCleared = !(routePanel?.textContent?.includes("Route network unavailable") ?? false);
+  }
+
+  let panel = document.querySelector("[data-driver-gps-control]");
+  initialStartCount = document.querySelectorAll("[data-gps-start-action]").length;
+  const start = document.querySelector("[data-gps-start-action]");
+  gpsFixtureRendered = Boolean(panel && start);
+
+  if (panel && start) {
+    start.click();
+    start.click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    requestingBusy = panel.getAttribute("aria-busy") === "true";
+
+    if (positionSuccess) {
+      positionSuccess({
+        coords: {
+          longitude: 38.75,
+          latitude: 9.03,
+          speed: 12,
+          heading: 90,
+        },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      panel = document.querySelector("[data-driver-gps-control]");
+      orderBeforeSync = panel?.getAttribute("data-gps-order-status") || "missing";
+      queuedGuidance = panel?.textContent?.includes("GPS update saved offline") ?? false;
+      retryVisible = Boolean(panel?.querySelector("[data-gps-retry-action]"));
+      statusSemantics = Boolean(panel?.querySelector('[role="status"][aria-live="polite"]'));
+
+      online = true;
+      window.dispatchEvent(new Event("online"));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      panel = document.querySelector("[data-driver-gps-control]");
+      orderAfterSync = panel?.getAttribute("data-gps-order-status") || "missing";
+      liveGuidance = panel?.textContent?.includes("Trip started") ?? false;
+    }
+  }
+} catch (error) {
+  fixtureError ||= error instanceof Error ? error.message : String(error);
+}
 
 document.documentElement.dataset.ready = "true";
+document.documentElement.dataset.fixtureError = fixtureError || "none";
+document.documentElement.dataset.routeFixtureRendered = String(routeFixtureRendered);
+document.documentElement.dataset.gpsFixtureRendered = String(gpsFixtureRendered);
 document.documentElement.dataset.watchCalls = String(watchCalls);
 document.documentElement.dataset.sendCalls = String(sendCalls);
 document.documentElement.dataset.syncCalls = String(syncCalls);
 document.documentElement.dataset.clearCalls = String(clearCalls);
+document.documentElement.dataset.routeCalls = String(routeCalls);
+document.documentElement.dataset.routeErrorVisible = String(routeErrorVisible);
+document.documentElement.dataset.routeRetryBusy = String(routeRetryBusy);
+document.documentElement.dataset.routeLoaded = String(routeLoaded);
+document.documentElement.dataset.routeErrorCleared = String(routeErrorCleared);
 document.documentElement.dataset.onlyOneStart = String(initialStartCount === 1);
 document.documentElement.dataset.requestingBusy = String(requestingBusy);
 document.documentElement.dataset.orderBeforeSync = String(orderBeforeSync);
@@ -218,9 +305,17 @@ try {
       const dom = render(chrome, width, profile);
       for (const expected of [
         'data-ready="true"',
+        'data-fixture-error="none"',
+        'data-route-fixture-rendered="true"',
+        'data-gps-fixture-rendered="true"',
         'data-watch-calls="1"',
         'data-send-calls="1"',
         'data-sync-calls="1"',
+        'data-route-calls="2"',
+        'data-route-error-visible="true"',
+        'data-route-retry-busy="true"',
+        'data-route-loaded="true"',
+        'data-route-error-cleared="true"',
         'data-only-one-start="true"',
         'data-requesting-busy="true"',
         'data-order-before-sync="accepted"',
@@ -231,13 +326,17 @@ try {
         'data-live-guidance="true"',
         'data-overflow="false"',
       ]) {
-        if (!dom.includes(expected)) throw new Error(`Driver Active Trip GPS ${width}px smoke missing: ${expected}`);
+        if (!dom.includes(expected)) {
+          const fixtureErrorMatch = dom.match(/data-fixture-error="([^"]*)"/);
+          const fixtureErrorValue = fixtureErrorMatch?.[1] ?? "unavailable";
+          throw new Error(`Driver Active Trip GPS ${width}px smoke missing: ${expected}; fixture error: ${fixtureErrorValue}`);
+        }
       }
     } finally {
       await rm(profile, { recursive: true, force: true });
     }
   }
-  console.log("Driver Active Trip GPS browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with one guarded start action, honest offline queue state, reconnect sync, server-confirmed In Transit state and no horizontal overflow.");
+  console.log("Driver Active Trip GPS and route browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with one guarded GPS start, honest offline queue state, reconnect sync, one guarded route retry, recovered directions and no horizontal overflow.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([

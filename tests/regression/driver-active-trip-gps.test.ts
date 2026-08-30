@@ -9,6 +9,7 @@ function source(relativePath: string) {
 
 const activeTrip = source("src/pages/ActiveTrip.tsx");
 const gpsControl = source("src/components/driver/DriverActiveTripGpsControl.tsx");
+const routeControl = source("src/components/driver/DriverActiveTripRoute.tsx");
 const offlineService = source("src/services/offline.service.ts");
 const browserSmoke = source("scripts/driver-active-trip-gps-e2e-smoke.mjs");
 
@@ -50,10 +51,42 @@ test("queued GPS does not mark the trip In Transit before server confirmation", 
   assert.match(activeTrip, /pb-32/);
 });
 
-test("active-trip browser smoke covers duplicate start, offline queue, reconnect and mobile overflow", () => {
+test("Active Trip route failures expose one guarded retry workflow", () => {
+  assert.match(activeTrip, /<DriverActiveTripRoute/);
+  assert.doesNotMatch(activeTrip, /getNavigation\(/);
+  assert.match(routeControl, /data-driver-route-control/);
+  assert.match(routeControl, /data-route-retry-action/);
+  assert.match(routeControl, /aria-busy=\{routeLoading\}/);
+  assert.match(routeControl, /role="status"/);
+  assert.match(routeControl, /role="alert"/);
+  assert.match(routeControl, /if \(inFlightRequestIdRef\.current !== null\) return/);
+});
+
+test("Active Trip route state is testable without evaluating MapLibre", () => {
+  assert.doesNotMatch(routeControl, /navigation\/TripMap/);
+  assert.match(routeControl, /renderMap: \(route: NavigationRoute, driverPosition: \[number, number\] \| null\) => ReactNode/);
+  assert.match(activeTrip, /import \{ TripMap \} from "\.\.\/components\/navigation\/TripMap"/);
+  assert.match(activeTrip, /renderMap=\{\(route, position\) => \([\s\S]*<TripMap routeGeometry=\{route\.geometry\} driverPosition=\{position\}/);
+});
+
+test("Active Trip route ignores stale requests and preserves latest order ownership", () => {
+  assert.match(routeControl, /const requestId = \+\+requestIdRef\.current/);
+  assert.match(routeControl, /if \(requestIdRef\.current !== requestId\) return/);
+  assert.match(routeControl, /if \(inFlightRequestIdRef\.current === requestId\) inFlightRequestIdRef\.current = null/);
+  assert.match(routeControl, /return \(\) => \{\s+requestIdRef\.current \+= 1/);
+  assert.match(routeControl, /services\.getNavigation\(orderId\)/);
+  assert.match(routeControl, /setCurrentStepIndex\(0\)/);
+});
+
+test("active-trip browser smoke covers GPS recovery, route retry and mobile overflow", () => {
   assert.match(browserSmoke, /watchCalls/);
   assert.match(browserSmoke, /async sendOrQueuePing\(\)[\s\S]*return "queued"/);
   assert.match(browserSmoke, /window\.dispatchEvent\(new Event\("online"\)\)/);
+  assert.match(browserSmoke, /routeCalls/);
+  assert.match(browserSmoke, /Route network unavailable/);
+  assert.match(browserSmoke, /data-route-calls="2"/);
+  assert.match(browserSmoke, /data-route-retry-busy="true"/);
+  assert.match(browserSmoke, /data-route-loaded="true"/);
   assert.match(browserSmoke, /data-watch-calls="1"/);
   assert.match(browserSmoke, /data-order-before-sync="accepted"/);
   assert.match(browserSmoke, /data-order-after-sync="in_transit"/);
