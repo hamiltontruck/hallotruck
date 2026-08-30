@@ -68,11 +68,13 @@ createRoot(document.getElementById('root')).render(
 await new Promise((resolve) => setTimeout(resolve, 200));
 const nav = document.querySelector('nav');
 const items = nav ? [...nav.querySelectorAll('a')] : [];
+const navDisplay = nav ? getComputedStyle(nav).display : 'missing';
 document.documentElement.dataset.mode = mode;
 document.documentElement.dataset.items = String(items.length);
 document.documentElement.dataset.active = String(items.filter((item) => item.getAttribute('aria-current') === 'page' || item.classList.contains('is-active')).length);
 document.documentElement.dataset.bottom = nav ? getComputedStyle(nav).bottom : 'missing';
-document.documentElement.dataset.display = nav ? getComputedStyle(nav).display : 'missing';
+document.documentElement.dataset.display = navDisplay;
+document.documentElement.dataset.visible = String(navDisplay !== 'none' && navDisplay !== 'missing');
 document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
 document.documentElement.dataset.ready = 'true';
 `;
@@ -96,7 +98,7 @@ try {
       const profile = await mkdtemp(path.join(os.tmpdir(), `hallotruck-${mode}-nav-`));
       try {
         const dom = render(chrome, width, 915, profile, mode, route);
-        for (const expected of ['data-ready="true"', 'data-items="5"', 'data-active="1"', 'data-bottom="0px"', 'data-display="grid"', 'data-overflow="false"', ...labels]) {
+        for (const expected of ['data-ready="true"', 'data-items="5"', 'data-active="1"', 'data-bottom="0px"', 'data-visible="true"', 'data-overflow="false"', ...labels]) {
           if (!dom.includes(expected)) throw new Error(`${mode} navigation ${width}px smoke missing: ${expected}`);
         }
       } finally { await rm(profile, { recursive: true, force: true }); }
@@ -107,7 +109,7 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), `hallotruck-${mode}-keyboard-nav-`));
     try {
       const dom = render(chrome, 390, 480, profile, mode, route);
-      for (const expected of ['data-ready="true"', 'data-display="none"', 'data-overflow="false"']) {
+      for (const expected of ['data-ready="true"', 'data-display="none"', 'data-visible="false"', 'data-overflow="false"']) {
         if (!dom.includes(expected)) throw new Error(`${mode} keyboard-safe navigation smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }
