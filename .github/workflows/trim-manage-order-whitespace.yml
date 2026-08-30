@@ -1,0 +1,36 @@
+name: Trim manage-order source whitespace
+
+on:
+  push:
+    branches:
+      - fix/admin-manage-order-action-guidance
+
+permissions:
+  contents: write
+
+jobs:
+  trim:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/admin-manage-order-action-guidance
+          fetch-depth: 0
+      - name: Remove trailing whitespace and temporary workflow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/pages/SmartLogistics.tsx')
+          text = path.read_text(encoding='utf-8')
+          cleaned = '\n'.join(line.rstrip() for line in text.splitlines()) + '\n'
+          path.write_text(cleaned, encoding='utf-8')
+          Path('.github/workflows/trim-manage-order-whitespace.yml').unlink()
+          PY
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/SmartLogistics.tsx .github/workflows/trim-manage-order-whitespace.yml
+          git commit -m "Trim Admin manage-order source whitespace"
+          git push origin HEAD:fix/admin-manage-order-action-guidance
