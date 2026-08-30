@@ -66,17 +66,22 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Validate full production suite
+      - name: Validate lint, regression and production build
         run: |
           npm run lint
           npm run test:regression
           npm run build
-          npm run test:e2e-smoke
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
           VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
+
+      - name: Validate Admin Operations browser fixture
+        run: node scripts/admin-operations-e2e-smoke.mjs
+
+      - name: Validate full browser suite
+        run: npm run test:e2e-smoke
 
       - name: Remove temporary patch machinery
         run: |
