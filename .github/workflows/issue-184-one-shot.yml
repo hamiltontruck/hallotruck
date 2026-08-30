@@ -1,0 +1,90 @@
+name: Issue 184 One Shot
+on: push
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          page_path = Path('src/pages/SmartLogistics.tsx')
+          page = page_path.read_text()
+
+          old_state = '''  const [saving,setSaving]=useState(false); const [error,setError]=useState("");
+          const [cancelReason,setCancelReason]=useState("");
+          const availableTrucks=trucks.filter(t=>t.status==="available"||t.id===order.truck_id);
+          const orderPayments=payments.filter(p=>p.order_id===order.id);'''
+          new_state = '''  const [saving,setSaving]=useState(false); const [error,setError]=useState("");
+          const [cancelReason,setCancelReason]=useState("");
+          const [confirmDelete,setConfirmDelete]=useState(false);
+          const availableTrucks=trucks.filter(t=>t.status==="available"||t.id===order.truck_id);
+          const orderPayments=payments.filter(p=>p.order_id===order.id);
+          const canDeleteOrder=order.status==="cancelled"&&!order.driver_id&&!order.truck_id;'''
+          assert page.count(old_state) == 1
+          page = page.replace(old_state, new_state)
+
+          old_actions = '''  async function assign(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);await run(()=>assignOrder(order.id,String(form.get("truckId")),String(form.get("driverId"))));}
+          async function cancelOrder(){await run(()=>adminCancelOrder(order.id,cancelReason));}'''
+          new_actions = '''  async function assign(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);await run(()=>assignOrder(order.id,String(form.get("truckId")),String(form.get("driverId"))));}
+          async function cancelOrder(){await run(()=>adminCancelOrder(order.id,cancelReason));}
+          async function deleteOrder(){await run(async()=>{const {error:deleteError}=await supabase.rpc("admin_delete_cancelled_order",{p_order_id:order.id});if(deleteError)throw new Error(deleteError.message);});}'''
+          assert page.count(old_actions) == 1
+          page = page.replace(old_actions, new_actions)
+
+          old_cancelled = '''{order.status==="cancelled"&&<div className="mt-4 border border-red-200 bg-red-50 p-4 text-sm text-red-900"><p className="font-semibold">Cancelled by {order.cancellation_source ?? "customer"}</p><p className="mt-2 whitespace-pre-wrap">{order.cancellation_reason ?? "No cancellation reason recorded."}</p>{order.cancelled_at&&<p className="mt-2 text-xs text-red-700">{new Date(order.cancelled_at).toLocaleString()}</p>}<p className="mt-3 text-xs text-steel">Payments are not refunded automatically. Review them in Finance.</p></div>}'''
+          new_cancelled = '''{order.status==="cancelled"&&<div className="mt-4 border border-red-200 bg-red-50 p-4 text-sm text-red-900"><p className="font-semibold">Cancelled by {order.cancellation_source ?? "customer"}</p><p className="mt-2 whitespace-pre-wrap">{order.cancellation_reason ?? "No cancellation reason recorded."}</p>{order.cancelled_at&&<p className="mt-2 text-xs text-red-700">{new Date(order.cancelled_at).toLocaleString()}</p>}<p className="mt-3 text-xs text-steel">Payments are not refunded automatically. Review them in Finance.</p>{canDeleteOrder&&<div className="mt-4 border-t border-red-200 pt-4"><p className="text-xs leading-5 text-red-900">Permanent deletion is available only for cancelled, unassigned orders. The database will reject this action if any payment, receipt, delivery, commission, settlement, rating or audit history exists.</p>{!confirmDelete?<button type="button" disabled={saving} onClick={()=>setConfirmDelete(true)} className="mt-3 w-full border border-route bg-white px-4 py-3 text-sm font-semibold text-route disabled:opacity-40 sm:w-auto">Delete order</button>:<div className="mt-3 border border-route bg-white p-3"><p className="font-semibold text-route">Permanently delete {order.tracking_id}?</p><p className="mt-1 text-xs text-red-900">This cannot be undone.</p><div className="mt-3 flex flex-col gap-2 sm:flex-row"><button type="button" disabled={saving} onClick={()=>setConfirmDelete(false)} className="border border-asphalt/20 px-4 py-3 text-sm font-semibold text-asphalt disabled:opacity-40">Keep order</button><button type="button" disabled={saving} onClick={deleteOrder} className="bg-route px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{saving?"Deleting…":"Permanently delete order"}</button></div></div>}</div>}</div>}'''
+          assert page.count(old_cancelled) == 1
+          page = page.replace(old_cancelled, new_cancelled)
+          page_path.write_text(page)
+
+          test_path = Path('tests/regression/admin-order-assignment-evidence.test.ts')
+          tests = test_path.read_text()
+          tests += '''
+
+          test("Manage Order permanently deletes only safe cancelled unassigned orders", async () => {
+            const migration = await readFile(path.join(process.cwd(), "supabase/migrations/20260830034000_admin_delete_cancelled_unassigned_order.sql"), "utf8");
+
+            assert.match(page, /supabase\\.rpc\\("admin_delete_cancelled_order"/);
+            assert.match(page, /canDeleteOrder=order\\.status==="cancelled"&&!order\\.driver_id&&!order\\.truck_id/);
+            assert.match(page, /Delete order/);
+            assert.match(page, /Permanently delete order/);
+            assert.match(page, /This cannot be undone/);
+            assert.match(page, /database will reject this action if any payment, receipt, delivery, commission, settlement, rating or audit history exists/i);
+            assert.match(migration, /create or replace function public\\.admin_delete_cancelled_order/);
+            assert.match(migration, /private\\.require_active_leadership/);
+            assert.match(migration, /v_status <> 'cancelled'/);
+            assert.match(migration, /v_driver_id is not null or v_truck_id is not null/);
+            assert.match(migration, /v_accepted_at is not null or v_delivered_at is not null/);
+            assert.match(migration, /public\\.payments/);
+            assert.match(migration, /private\\.payment_reference_registry/);
+            assert.match(migration, /public\\.payment_review_audit/);
+            assert.match(migration, /public\\.financial_corrections/);
+            assert.match(migration, /public\\.delivery_proofs/);
+            assert.match(migration, /public\\.driver_commission_charges/);
+            assert.match(migration, /public\\.driver_payment_confirmation_events/);
+            assert.match(migration, /public\\.driver_trip_payment_results/);
+            assert.match(migration, /public\\.partner_freight_earnings/);
+            assert.match(migration, /public\\.ratings/);
+            assert.match(migration, /public\\.notifications/);
+            assert.match(migration, /revoke delete, truncate, references, trigger[\\s\\S]*public\\.orders/);
+            assert.match(migration, /delete from public\\.orders/);
+            assert.doesNotMatch(migration, /delete\\s+from\\s+public\\.(payments|payment_review_audit|financial_corrections|delivery_proofs|driver_commission_charges|driver_payment_confirmations|partner_freight_earnings|ratings)/i);
+          });
+          '''
+          test_path.write_text(tests)
+          PY
+      - name: Commit and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/issue-184-one-shot.yml
+          git add src/pages/SmartLogistics.tsx tests/regression/admin-order-assignment-evidence.test.ts
+          git commit -m "feat: add guarded cancelled order deletion UI"
+          git push
