@@ -65,6 +65,7 @@ export function DriverCustomerContact({
   const { language } = useLanguage();
   const t = copy[language];
   const [contact, setContact] = useState<AssignedCustomerContact | null>(null);
+  const [contactOrderId, setContactOrderId] = useState<string | null>(null);
   const [state, setState] = useState<ContactState>("loading");
   const requestIdRef = useRef(0);
   const loadingRef = useRef(false);
@@ -75,16 +76,19 @@ export function DriverCustomerContact({
     const requestId = ++requestIdRef.current;
     loadingRef.current = true;
     setContact(null);
+    setContactOrderId(orderId);
     setState("loading");
 
     try {
       const row = await loadContact(orderId);
       if (requestId !== requestIdRef.current) return;
       setContact(row);
+      setContactOrderId(orderId);
       setState("ready");
     } catch {
       if (requestId !== requestIdRef.current) return;
       setContact(null);
+      setContactOrderId(orderId);
       setState("error");
     } finally {
       if (requestId === requestIdRef.current) loadingRef.current = false;
@@ -102,8 +106,10 @@ export function DriverCustomerContact({
     };
   }, [load]);
 
-  const customerName = contact?.customer_name.trim() || t.customerFallback;
-  const customerPhone = contact?.customer_phone?.trim() || "";
+  const visibleState: ContactState = contactOrderId === orderId ? state : "loading";
+  const visibleContact = contactOrderId === orderId ? contact : null;
+  const customerName = visibleContact?.customer_name?.trim() || t.customerFallback;
+  const customerPhone = visibleContact?.customer_phone?.trim() || "";
   const callHref = telephoneHref(customerPhone);
   const titleId = `driver-customer-contact-${orderId}`;
   const statusId = `${titleId}-status`;
@@ -112,21 +118,21 @@ export function DriverCustomerContact({
     <section
       className="mb-6 rounded-2xl border border-asphalt/10 bg-white p-4 sm:p-5"
       aria-labelledby={titleId}
-      aria-busy={state === "loading"}
-      data-contact-state={state}
+      aria-busy={visibleState === "loading"}
+      data-contact-state={visibleState}
     >
       <p className="font-mono text-[9px] tracking-[.18em] text-amber-dim">{t.kicker}</p>
       <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           <h2 id={titleId} className="font-display text-lg font-bold text-asphalt">{t.title}</h2>
 
-          {state === "loading" && (
+          {visibleState === "loading" && (
             <p id={statusId} role="status" aria-live="polite" className="mt-3 text-sm text-steel">
               {t.loading}
             </p>
           )}
 
-          {state === "error" && (
+          {visibleState === "error" && (
             <div className="mt-3">
               <p id={statusId} role="alert" className="text-sm leading-6 text-route">
                 {t.loadFailed}
@@ -141,7 +147,7 @@ export function DriverCustomerContact({
             </div>
           )}
 
-          {state === "ready" && (
+          {visibleState === "ready" && (
             <div id={statusId} role="status" aria-live="polite" className="mt-3">
               <p className="break-words text-sm font-semibold text-asphalt">{customerName}</p>
               <p className="mt-1 break-all text-sm text-steel">
@@ -153,7 +159,7 @@ export function DriverCustomerContact({
           <p className="mt-3 text-[11px] leading-5 text-steel">{t.privacy}</p>
         </div>
 
-        {state === "ready" && callHref && (
+        {visibleState === "ready" && callHref && (
           <a
             href={callHref}
             aria-label={`${t.call}: ${customerName}`}
