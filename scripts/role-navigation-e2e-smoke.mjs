@@ -31,14 +31,14 @@ async function waitForServer(url, timeoutMs = 30000) {
   throw new Error("Preview server did not start in time.");
 }
 
-function render(chrome, width, profile, mode, route) {
+function render(chrome, width, height, profile, mode, route) {
   const target = `${baseUrl}role-navigation-e2e.html?mode=${mode}&route=${encodeURIComponent(route)}`;
-  const args = ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars", `--window-size=${width},915`, "--virtual-time-budget=3000", `--user-data-dir=${profile}`, "--dump-dom", target];
+  const args = ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars", `--window-size=${width},${height}`, "--virtual-time-budget=3000", `--user-data-dir=${profile}`, "--dump-dom", target];
   for (const flag of ["--headless=new", "--headless"]) {
     const result = spawnSync(chrome, [flag, ...args], { cwd: root, encoding: "utf8", maxBuffer: 15 * 1024 * 1024, timeout: 30000 });
     if (!result.error && result.status === 0 && result.stdout) return result.stdout;
   }
-  throw new Error(`Chrome could not render ${mode} navigation at ${width}px.`);
+  throw new Error(`Chrome could not render ${mode} navigation at ${width}x${height}px.`);
 }
 
 await mkdir(testDirectory, { recursive: true });
@@ -72,6 +72,7 @@ document.documentElement.dataset.mode = mode;
 document.documentElement.dataset.items = String(items.length);
 document.documentElement.dataset.active = String(items.filter((item) => item.getAttribute('aria-current') === 'page' || item.classList.contains('is-active')).length);
 document.documentElement.dataset.bottom = nav ? getComputedStyle(nav).bottom : 'missing';
+document.documentElement.dataset.display = nav ? getComputedStyle(nav).display : 'missing';
 document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
 document.documentElement.dataset.ready = 'true';
 `;
@@ -87,21 +88,32 @@ try {
   const chrome = findChrome();
   const cases = [
     ["customer", "/customer/track", ["Home", "Orders", "Track", "Payments", "Profile"]],
-    ["driver", "/driver/wallet", ["Home", "Jobs", "Trip", "Wallet", "Profile"]],
+    ["driver", "/driver/profile", ["Home", "Jobs", "Trip", "Wallet", "Profile"]],
     ["admin", "/admin/operations?section=Fleet%20%26%20drivers", ["Overview", "Orders", "Fleet", "Finance", "More"]],
   ];
   for (const width of [320, 360, 390, 412]) {
     for (const [mode, route, labels] of cases) {
       const profile = await mkdtemp(path.join(os.tmpdir(), `hallotruck-${mode}-nav-`));
       try {
-        const dom = render(chrome, width, profile, mode, route);
-        for (const expected of ['data-ready="true"', 'data-items="5"', 'data-active="1"', 'data-bottom="0px"', 'data-overflow="false"', ...labels]) {
+        const dom = render(chrome, width, 915, profile, mode, route);
+        for (const expected of ['data-ready="true"', 'data-items="5"', 'data-active="1"', 'data-bottom="0px"', 'data-display="grid"', 'data-overflow="false"', ...labels]) {
           if (!dom.includes(expected)) throw new Error(`${mode} navigation ${width}px smoke missing: ${expected}`);
         }
       } finally { await rm(profile, { recursive: true, force: true }); }
     }
   }
-  console.log("Role navigation browser smoke passed at 320px, 360px, 390px and 412px with five active, fixed and overflow-safe workflow actions per portal.");
+
+  for (const [mode, route] of cases) {
+    const profile = await mkdtemp(path.join(os.tmpdir(), `hallotruck-${mode}-keyboard-nav-`));
+    try {
+      const dom = render(chrome, 390, 480, profile, mode, route);
+      for (const expected of ['data-ready="true"', 'data-display="none"', 'data-overflow="false"']) {
+        if (!dom.includes(expected)) throw new Error(`${mode} keyboard-safe navigation smoke missing: ${expected}`);
+      }
+    } finally { await rm(profile, { recursive: true, force: true }); }
+  }
+
+  console.log("Role navigation browser smoke passed at 320px, 360px, 390px and 412px, with canonical Driver Profile routing and keyboard-safe fixed navigation.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2000))]);
