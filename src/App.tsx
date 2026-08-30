@@ -30,6 +30,7 @@ import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
 import { Earnings } from "./pages/Earnings";
+import { DriverWallet } from "./pages/DriverWallet";
 import { DriverCommission } from "./pages/DriverCommission";
 import { DriverPaymentCollection } from "./pages/DriverPaymentCollection";
 import { AdminGate } from "./components/auth/AdminGate";
@@ -110,6 +111,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/driver/jobs" element={<DriverGate><DriverShell><JobBoard /></DriverShell></DriverGate>} />
 <Route path="/driver/trip" element={<DriverGate><DriverShell><ActiveTrip /></DriverShell></DriverGate>} />
 <Route path="/driver/documents" element={<DriverGate><DriverShell><Documents /></DriverShell></DriverGate>} />
+<Route path="/driver/wallet" element={<DriverGate><DriverShell><DriverWallet /></DriverShell></DriverGate>} />
 <Route path="/driver/earnings" element={<DriverGate><DriverShell><Earnings /></DriverShell></DriverGate>} />
 <Route path="/driver/commission" element={<DriverGate><DriverShell><DriverCommission /></DriverShell></DriverGate>} />
 <Route path="/driver/payment/:orderId" element={<DriverGate><DriverShell><DriverPaymentCollection /></DriverShell></DriverGate>} />

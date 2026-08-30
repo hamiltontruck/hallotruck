@@ -86,9 +86,9 @@ try {
   await waitForServer(baseUrl);
   const chrome = findChrome();
   const cases = [
-    ["customer", "/customer/payments", ["Home", "Orders", "Live", "Payments", "Profile"]],
-    ["driver", "/driver/earnings", ["Home", "Jobs", "Trip", "History", "Profile"]],
-    ["admin", "/admin/more", ["Overview", "Orders", "Fleet", "Finance", "More"]],
+    ["customer", "/customer/track", ["Home", "Orders", "Track", "Payments", "Profile"]],
+    ["driver", "/driver/wallet", ["Home", "Jobs", "Trip", "Wallet", "Profile"]],
+    ["admin", "/admin/operations?section=Fleet%20%26%20drivers", ["Overview", "Orders", "Fleet", "Finance", "More"]],
   ];
   for (const width of [320, 360, 390, 412]) {
     for (const [mode, route, labels] of cases) {
@@ -101,7 +101,7 @@ try {
       } finally { await rm(profile, { recursive: true, force: true }); }
     }
   }
-  console.log("Role navigation browser smoke passed at 320px, 360px, 390px and 412px with five active, fixed and overflow-safe actions per portal.");
+  console.log("Role navigation browser smoke passed at 320px, 360px, 390px and 412px with five active, fixed and overflow-safe workflow actions per portal.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2000))]);
