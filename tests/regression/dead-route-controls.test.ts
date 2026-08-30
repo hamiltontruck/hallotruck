@@ -101,3 +101,26 @@ test("Partner settlement busy actions explain the temporary workflow lock", () =
   assert.match(smoke, /data-busy-guidance/);
   assert.match(smoke, /data-described-disabled/);
 });
+
+test("Admin create-order submit action explains every lock state", () => {
+  const action = readFileSync(path.join(process.cwd(), "src/components/admin/AdminCreateOrderAction.tsx"), "utf8");
+  const modal = readFileSync(path.join(process.cwd(), "src/components/admin/AdminCreateOrderModal.tsx"), "utf8");
+  const smoke = readFileSync(path.join(process.cwd(), "scripts/admin-create-order-action-e2e-smoke.mjs"), "utf8");
+  const packageJson = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
+
+  assert.match(action, /admin-create-order-action-guidance-/);
+  assert.match(action, /Select pickup and drop-off places and wait for the road distance\./);
+  assert.match(action, /Select a vehicle type\./);
+  assert.match(action, /Waiting for the latest server price\./);
+  assert.match(action, /Latest server price is unavailable:/);
+  assert.match(action, /Creating this order\. Wait for the save to finish\./);
+  assert.match(action, /was already created\. Close this form before starting another order\./);
+  assert.match(action, /aria-describedby=\{guidanceId\}/);
+  assert.match(action, /title=\{disabledReason \|\| "Create order with the latest server price"\}/);
+  assert.match(modal, /<AdminCreateOrderAction/);
+  assert.match(modal, /aria-busy=\{saving\}/);
+  assert.match(modal, /role="alert"/);
+  assert.match(smoke, /data-described-disabled/);
+  assert.match(smoke, /data-ready-enabled/);
+  assert.match(packageJson, /admin-create-order-action-e2e-smoke\.mjs/);
+});
