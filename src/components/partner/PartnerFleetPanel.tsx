@@ -22,7 +22,7 @@ const optionalNumber = (form: FormData, name: string) => { const value = field(f
 const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const showDate = (value: string | null) => value ? new Date(`${value}T00:00:00`).toLocaleDateString() : "Not recorded";
 
-export function PartnerFleetPanel({ partnerId, canManage, fixture }: { partnerId: string; canManage: boolean; fixture?: FleetEnterpriseData }) {
+export function PartnerFleetPanel({ partnerId, canManage, fixture, executeAction = (action) => action() }: { partnerId: string; canManage: boolean; fixture?: FleetEnterpriseData; executeAction?: (action: () => Promise<unknown>) => Promise<unknown> }) {
   const [data, setData] = useState<FleetEnterpriseData>(empty);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ export function PartnerFleetPanel({ partnerId, canManage, fixture }: { partnerId
   async function run(actionKey: string, message: string, action: () => Promise<unknown>, success: string) {
     if (activeAction) return;
     setActiveAction({ key: actionKey, message }); setError(""); setNotice("");
-    try { await action(); setNotice(success); await load(); }
+    try { await executeAction(action); setNotice(success); await load(); }
     catch (actionError) { setError(actionError instanceof Error ? actionError.message : "Fleet action could not be completed."); }
     finally { setActiveAction(null); }
   }
