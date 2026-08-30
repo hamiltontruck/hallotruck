@@ -76,7 +76,9 @@ function installSnippetStub(apiHost: string) {
       document.head.appendChild(script);
     }
     const name = typeof instanceName === "string" && instanceName ? instanceName : "posthog";
-    const target = name === "posthog" ? root : ((root[name] = []) as PostHogStub);
+    const namedQueue = [] as unknown as PostHogStub;
+    const target = name === "posthog" ? root : namedQueue;
+    if (name !== "posthog") root[name] = namedQueue;
     target.people = target.people ?? [];
     for (const method of SDK_METHODS) addQueuedMethod(target, method);
     root._i?.push([token, config, instanceName]);
