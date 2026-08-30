@@ -109,6 +109,12 @@ test("Admin and Partner fleet UIs use secure services and mobile-safe cards", ()
   assert.match(admin, /overflow-x-hidden/);
   assert.match(admin, /Expiry alerts/);
   assert.match(admin, /Active trip:/);
+  assert.match(admin, /fleet-action-guidance/);
+  assert.match(admin, /Enter an audit reason with at least 3 characters/);
+  assert.match(admin, /Active trip locks status and driver changes/);
+  assert.match(admin, /title=\{statusDisabledReason \|\| "Apply audited status change"\}/);
+  assert.match(admin, /title=\{driverDisabledReason \|\| "Apply audited driver assignment"\}/);
+  assert.match(admin, /aria-describedby=\{guidanceId\}/);
   assert.match(partner, /data-testid="partner-fleet-panel"/);
   assert.match(partner, /canManage/);
   assert.match(portal, /"fleet"/);
