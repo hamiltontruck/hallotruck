@@ -71,10 +71,15 @@ test("Active Trip route ignores stale requests and preserves latest order owners
   assert.match(routeControl, /setCurrentStepIndex\(0\)/);
 });
 
-test("active-trip browser smoke covers duplicate start, offline queue, reconnect and mobile overflow", () => {
+test("active-trip browser smoke covers GPS recovery, route retry and mobile overflow", () => {
   assert.match(browserSmoke, /watchCalls/);
   assert.match(browserSmoke, /async sendOrQueuePing\(\)[\s\S]*return "queued"/);
   assert.match(browserSmoke, /window\.dispatchEvent\(new Event\("online"\)\)/);
+  assert.match(browserSmoke, /routeCalls/);
+  assert.match(browserSmoke, /Route network unavailable/);
+  assert.match(browserSmoke, /data-route-calls="2"/);
+  assert.match(browserSmoke, /data-route-retry-busy="true"/);
+  assert.match(browserSmoke, /data-route-loaded="true"/);
   assert.match(browserSmoke, /data-watch-calls="1"/);
   assert.match(browserSmoke, /data-order-before-sync="accepted"/);
   assert.match(browserSmoke, /data-order-after-sync="in_transit"/);
