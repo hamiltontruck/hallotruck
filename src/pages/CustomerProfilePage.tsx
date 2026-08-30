@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { CustomerBottomNav } from "../components/customer/CustomerBottomNav";
 import { CustomerLocationControl } from "../components/customer/CustomerLocationControl";
 import { CustomerProfilePanel } from "../components/customer/CustomerProfilePanel";
 import { LanguageSwitcher, useLanguage, type HalloLanguage } from "../i18n/LanguageProvider";
@@ -61,7 +62,7 @@ const copy: Record<HalloLanguage, {
     refreshing: "በማደስ ላይ…",
     account: "ደህንነቱ የተጠበቀ የመለያ ክፍለ ጊዜ",
     accountHelp: "የመገለጫ ለውጦች የገባውን የደንበኛ ማንነት ይጠቀማሉ። መሣሪያውን ለሌላ ሰው ከመስጠትዎ በፊት ይውጡ።",
-    signOut: "በደህንነት ውጣ",
+    signOut: "በደህነት ውጣ",
   },
 };
 
@@ -93,7 +94,7 @@ export function CustomerProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-bone text-asphalt">
+    <main className="min-h-screen bg-bone pb-[calc(4.15rem+env(safe-area-inset-bottom))] text-asphalt sm:pb-0">
       <header className="border-b border-asphalt/10 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-5 sm:px-6">
           <div className="min-w-0">
@@ -103,6 +104,8 @@ export function CustomerProfilePage() {
           <LanguageSwitcher />
         </div>
       </header>
+
+      <CustomerBottomNav />
 
       <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
         <section className="mb-6 overflow-hidden bg-asphalt p-5 text-white sm:p-8">
