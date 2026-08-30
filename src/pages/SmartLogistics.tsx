@@ -36,7 +36,19 @@ const nav = [
 
 const emptyMetrics: DashboardMetrics = { totalOrders: 0, activeOrders: 0, deliveredOrders: 0, availableTrucks: 0, totalCustomers: 0, revenueEtb: 0 };
 
-export function SmartLogistics() {
+export type SmartLogisticsFixture = {
+  metrics: DashboardMetrics;
+  orders: AdminOrder[];
+  customers: Customer[];
+  trucks: Truck[];
+  payments: Payment[];
+  drivers: Driver[];
+  deliveryProofs: DeliveryProof[];
+};
+
+type OperationsFilterName = "status" | "queue" | "date" | "fleet_status" | "driver_status" | "payment_status";
+
+export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFixture | null } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
   const requestedQuery = searchParams.get("q") ?? "";
@@ -45,42 +57,74 @@ export function SmartLogistics() {
   const [section, setSection] = useState(initialSection);
   const [menuOpen, setMenuOpen] = useState(false);
   const [modal, setModal] = useState<"order" | "customer" | "truck" | null>(null);
-  const [metrics, setMetrics] = useState(emptyMetrics);
-  const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [trucks, setTrucks] = useState<Truck[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [deliveryProofs, setDeliveryProofs] = useState<DeliveryProof[]>([]);
+  const [metrics, setMetrics] = useState(fixture?.metrics ?? emptyMetrics);
+  const [orders, setOrders] = useState<AdminOrder[]>(fixture?.orders ?? []);
+  const [customers, setCustomers] = useState<Customer[]>(fixture?.customers ?? []);
+  const [trucks, setTrucks] = useState<Truck[]>(fixture?.trucks ?? []);
+  const [payments, setPayments] = useState<Payment[]>(fixture?.payments ?? []);
+  const [drivers, setDrivers] = useState<Driver[]>(fixture?.drivers ?? []);
+  const [deliveryProofs, setDeliveryProofs] = useState<DeliveryProof[]>(fixture?.deliveryProofs ?? []);
   const [managedOrder, setManagedOrder] = useState<AdminOrder | null>(null);
   const [searchQuery, setSearchQuery] = useState(requestedQuery);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!fixture);
   const [error, setError] = useState("");
 
   const select = (label: string) => {
     setSection(label);
     setMenuOpen(false);
-    const next = new URLSearchParams();
-    if (label !== "Overview") next.set("section", label);
+    const next = new URLSearchParams(searchParams);
+    if (label === "Overview") next.delete("section");
+    else next.set("section", label);
+    for (const key of ["status", "queue", "date", "fleet_status", "driver_status", "payment_status"]) next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
+
+  const updateSearch = (value: string) => {
+    setSearchQuery(value);
+    const next = new URLSearchParams(searchParams);
+    if (value.trim()) next.set("q", value);
+    else next.delete("q");
+    if (section === "Overview" && value.trim()) {
+      setSection("Orders");
+      next.set("section", "Orders");
+    }
+    setSearchParams(next, { replace: true });
+  };
+
+  const updateFilter = (name: OperationsFilterName, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (!value || value === "all") next.delete(name);
+    else next.set(name, value);
+    setSearchParams(next, { replace: true });
+  };
+
+  const clearModuleFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    for (const key of ["status", "queue", "date", "fleet_status", "driver_status", "payment_status"]) next.delete(key);
     setSearchParams(next, { replace: true });
   };
 
   const load = useCallback(async () => {
+    if (fixture) {
+      setMetrics(fixture.metrics); setOrders(fixture.orders); setCustomers(fixture.customers); setTrucks(fixture.trucks); setPayments(fixture.payments); setDrivers(fixture.drivers); setDeliveryProofs(fixture.deliveryProofs); setError(""); setLoading(false);
+      return;
+    }
     try {
       const data = await getDashboardData();
       setMetrics(data.metrics); setOrders(data.orders); setCustomers(data.customers); setTrucks(data.trucks); setPayments(data.payments); setDrivers(data.drivers); setDeliveryProofs(data.deliveryProofs); setError("");
     } catch (err) { setError(err instanceof Error ? err.message : "Could not load dashboard data."); }
     finally { setLoading(false); }
-  }, []);
+  }, [fixture]);
 
   useEffect(() => {
-    load();
+    void load();
+    if (fixture) return;
     const channel = subscribeToAdminData(load);
-    return () => { supabase.removeChannel(channel); };
-  }, [load]);
+    return () => { void supabase.removeChannel(channel); };
+  }, [fixture, load]);
 
   useEffect(() => {
-    if (requestedSection && nav.some(([label]) => label === requestedSection)) setSection(requestedSection);
+    setSection(requestedSection && nav.some(([label]) => label === requestedSection) ? requestedSection : "Overview");
   }, [requestedSection]);
 
   useEffect(() => { setSearchQuery(requestedQuery); }, [requestedQuery]);
@@ -96,18 +140,18 @@ export function SmartLogistics() {
   return (
     <div className="min-h-screen bg-[#f5f3ed] text-asphalt font-body lg:flex">
       {menuOpen && <button aria-label="Close menu" className="fixed inset-0 bg-asphalt/40 z-30 lg:hidden" onClick={() => setMenuOpen(false)} />}
-      <aside className={`fixed lg:sticky top-0 left-0 z-40 h-screen w-[280px] bg-asphalt text-white flex flex-col transition-transform duration-300 ${menuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+      <aside id="admin-operations-menu" className={`fixed lg:sticky top-0 left-0 z-40 h-screen w-[280px] bg-asphalt text-white flex flex-col transition-transform duration-300 ${menuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <div className="px-7 h-24 flex items-center justify-between border-b border-white/10">
-          <button onClick={() => select("Overview")} className="text-left">
+          <button type="button" aria-label="Open operations overview" onClick={() => select("Overview")} className="text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber">
             <div className="font-display font-bold text-xl tracking-tight">HALLO<span className="text-amber">TRUCK</span></div>
             <div className="font-mono text-[9px] tracking-[.28em] text-white/45 mt-1">SMART LOGISTICS</div>
           </button>
-          <button className="lg:hidden text-white/60" onClick={() => setMenuOpen(false)}><Icon name="close" /></button>
+          <button type="button" aria-label="Close operations menu" className="lg:hidden text-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber" onClick={() => setMenuOpen(false)}><Icon name="close" /></button>
         </div>
-        <nav className="px-4 py-7 space-y-1 flex-1">
+        <nav className="px-4 py-7 space-y-1 flex-1" aria-label="Admin operations workspace">
           <p className="font-mono text-[10px] tracking-[.2em] text-white/35 px-3 mb-4">WORKSPACE</p>
           {nav.map(([label, icon]) => (
-            <button key={label} onClick={() => select(label)} className={`w-full flex items-center gap-3 px-3 py-3 text-sm transition ${section === label ? "bg-amber text-asphalt font-semibold" : "text-white/60 hover:text-white hover:bg-white/5"}`}>
+            <button key={label} type="button" aria-current={section === label ? "page" : undefined} onClick={() => select(label)} className={`w-full flex items-center gap-3 px-3 py-3 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber ${section === label ? "bg-amber text-asphalt font-semibold" : "text-white/60 hover:text-white hover:bg-white/5"}`}>
               <Icon name={icon} className="w-[18px] h-[18px]" />{label}
             </button>
           ))}
@@ -115,7 +159,7 @@ export function SmartLogistics() {
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-2 pt-5 pb-1">
             <div className="w-9 h-9 bg-amber text-asphalt font-display font-bold flex items-center justify-center">HT</div>
-            <div className="min-w-0"><p className="text-sm font-medium">Hamilton Truck</p><button onClick={() => supabase.auth.signOut()} className="text-[11px] text-white/40 hover:text-amber">Sign out</button></div>
+            <div className="min-w-0"><p className="text-sm font-medium">Hamilton Truck</p><button type="button" onClick={() => supabase.auth.signOut()} className="text-[11px] text-white/40 hover:text-amber focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber">Sign out</button></div>
           </div>
         </div>
       </aside>
@@ -123,17 +167,17 @@ export function SmartLogistics() {
       <main className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
         <header className="h-20 bg-white border-b border-asphalt/10 px-3 sm:px-8 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
-            <button className="lg:hidden border border-asphalt/15 p-2" onClick={() => setMenuOpen(true)}><Icon name="menu" /></button>
+            <button type="button" aria-label="Open operations menu" aria-expanded={menuOpen} aria-controls="admin-operations-menu" className="lg:hidden border border-asphalt/15 p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber" onClick={() => setMenuOpen(true)}><Icon name="menu" /></button>
             <div className="hidden sm:block min-w-0"><p className="font-display font-semibold text-lg truncate">{section}</p><p className="hidden md:block text-xs text-steel mt-0.5">Live operations</p></div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <label className="hidden md:flex items-center gap-2 bg-[#f5f3ed] px-3 py-2.5 w-64 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label="Search operations" value={searchQuery} onChange={(event)=>{const value=event.target.value;setSearchQuery(value);if(section==="Overview"&&value.trim())select("Orders");}} className="bg-transparent outline-none text-sm w-full" placeholder="Tracking, customer, truck..." /></label>
-            <button onClick={() => setModal("order")} className="bg-asphalt text-white font-semibold text-xs sm:text-sm px-3 sm:px-5 py-3 hover:bg-line whitespace-nowrap"><span className="sm:hidden">+ Order</span><span className="hidden sm:inline">+ New order</span></button>
+            <label className="hidden md:flex items-center gap-2 bg-[#f5f3ed] px-3 py-2.5 w-64 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label="Search operations" value={searchQuery} onChange={(event)=>updateSearch(event.target.value)} className="bg-transparent outline-none text-sm w-full" placeholder="Tracking, customer, truck..." /></label>
+            <button type="button" onClick={() => setModal("order")} className="bg-asphalt text-white font-semibold text-xs sm:text-sm px-3 sm:px-5 py-3 hover:bg-line whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"><span className="sm:hidden">+ Order</span><span className="hidden sm:inline">+ New order</span></button>
           </div>
         </header>
-        <div className="p-5 sm:p-8 max-w-[1500px] mx-auto">
-          {error && <p className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5">{error}</p>}
-          {loading ? <div className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} deliveryProofs={deliveryProofs} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} initialOrderQueue={searchParams.get("queue") ?? "all"} initialDateFilter={searchParams.get("date") ?? "all"} onSearch={setSearchQuery} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
+        <div className="p-3 min-[360px]:p-5 sm:p-8 max-w-[1500px] mx-auto">
+          {error && <p role="alert" className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5 break-words">{error}</p>}
+          {loading ? <div role="status" aria-live="polite" className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} deliveryProofs={deliveryProofs} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} initialOrderQueue={searchParams.get("queue") ?? "all"} initialDateFilter={searchParams.get("date") ?? "all"} initialFleetStatus={searchParams.get("fleet_status") ?? "all"} initialDriverStatus={searchParams.get("driver_status") ?? "all"} initialPaymentStatus={searchParams.get("payment_status") ?? "all"} onSearch={updateSearch} onFilter={updateFilter} onClearFilters={clearModuleFilters} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
         </div>
       </main>
       {modal === "order" ? <AdminCreateOrderModal onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} /> : modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
@@ -152,10 +196,10 @@ function Overview({ onOpen, metrics, orders, trucks }: { onOpen: (name: string) 
       <div className="relative max-w-2xl"><span className="font-mono text-[10px] tracking-[.2em] text-amber">OPERATIONS CONTROL</span><h1 className="font-display font-bold text-3xl sm:text-4xl mt-3">Move smarter. Deliver better.</h1><p className="text-white/55 mt-3 text-sm sm:text-base leading-relaxed">Your logistics network at a glance — orders, live vehicles, delivery performance and revenue in one place.</p></div>
     </section>
     <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5 mb-7">
-      <Kpi label="Total orders" value={String(metrics.totalOrders)} delta={`${metrics.activeOrders} active`} icon="box" />
-      <Kpi label="Available trucks" value={String(metrics.availableTrucks)} delta={`${trucks.length} fleet`} icon="truck" />
-      <Kpi label="Delivered orders" value={String(metrics.deliveredOrders)} delta="Live" icon="clock" />
-      <Kpi label="Released revenue" value={`ETB ${compactMoney(metrics.revenueEtb)}`} delta="Live" icon="wallet" />
+      <Kpi label="Total orders" value={String(metrics.totalOrders)} delta={`${metrics.activeOrders} active`} icon="box" to="/admin/operations?section=Orders" />
+      <Kpi label="Available trucks" value={String(metrics.availableTrucks)} delta={`${trucks.length} fleet`} icon="truck" to="/admin/operations?section=Fleet%20%26%20drivers&fleet_status=available" />
+      <Kpi label="Delivered orders" value={String(metrics.deliveredOrders)} delta="Live" icon="clock" to="/admin/operations?section=Orders&status=delivered" />
+      <Kpi label="Released revenue" value={`ETB ${compactMoney(metrics.revenueEtb)}`} delta="Live" icon="wallet" to="/admin/operations?section=Finance&payment_status=released" />
     </section>
     <section className="grid xl:grid-cols-[1.55fr_1fr] gap-5 mb-7">
       <div className="bg-white border border-asphalt/10">
@@ -178,17 +222,17 @@ function Overview({ onOpen, metrics, orders, trucks }: { onOpen: (name: string) 
   </>;
 }
 
-function Kpi({ label, value, delta, icon }: { label:string; value:string; delta:string; icon:IconName }) {
-  return <div className="bg-white border border-asphalt/10 p-4 sm:p-5"><div className="flex justify-between items-start"><span className="w-9 h-9 bg-[#f5f3ed] text-steel flex items-center justify-center"><Icon name={icon} className="w-[18px] h-[18px]" /></span><span className="font-mono text-[10px] text-emerald-700">{delta}</span></div><p className="font-display font-bold text-xl sm:text-2xl mt-5 break-words">{value}</p><p className="text-xs text-steel mt-1">{label}</p></div>;
+function Kpi({ label, value, delta, icon, to }: { label:string; value:string; delta:string; icon:IconName; to:string }) {
+  return <Link to={to} aria-label={`${label}: ${value}. Open filtered records.`} className="group block min-w-0 border border-asphalt/10 bg-white p-4 transition hover:-translate-y-0.5 hover:border-amber hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber sm:p-5"><div className="flex justify-between items-start gap-3"><span className="w-9 h-9 shrink-0 bg-[#f5f3ed] text-steel flex items-center justify-center group-hover:text-amber-dim"><Icon name={icon} className="w-[18px] h-[18px]" /></span><span className="font-mono text-[10px] text-emerald-700 text-right">{delta}</span></div><p className="font-display font-bold text-xl sm:text-2xl mt-5 break-words">{value}</p><p className="text-xs text-steel mt-1 break-words">{label}</p><p className="mt-3 text-[10px] font-semibold text-amber-dim">Open records →</p></Link>;
 }
 
 function SectionHead({ title, action, onClick }: { title:string; action:string; onClick:()=>void }) {
-  return <div className="p-5 sm:px-6 border-b border-asphalt/10 flex items-center justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><button onClick={onClick} className="text-xs font-semibold text-amber-dim flex items-center gap-1">{action}<Icon name="arrow" className="w-3.5 h-3.5"/></button></div>;
+  return <div className="p-5 sm:px-6 border-b border-asphalt/10 flex items-center justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><button type="button" onClick={onClick} className="text-xs font-semibold text-amber-dim flex items-center gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber">{action}<Icon name="arrow" className="w-3.5 h-3.5"/></button></div>;
 }
 
 function OrderRow({ order:o, onManage }: { order: AdminOrder; onManage?: (order:AdminOrder)=>void }) {
   const color = o.status === "cancelled" ? "bg-red-100 text-red-800" : o.status === "delivered" ? "bg-emerald-100 text-emerald-800" : o.status === "in_transit" ? "bg-amber/20 text-amber-dim" : o.status === "accepted" ? "bg-sky-100 text-sky-800" : "bg-asphalt/5 text-steel";
-  return <div className="p-4 sm:px-6 grid grid-cols-[1fr_auto] sm:grid-cols-[100px_1fr_auto_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="text-sm font-medium flex items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p><p className="text-[11px] font-semibold text-asphalt mt-1">Driver / plate: {o.assignment_label || "Driver and truck not assigned"}</p></div><span className="hidden sm:block font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 capitalize ${color}`}>{o.status.replace("_", " ")}</span>{onManage&&<button onClick={()=>onManage(o)} className="text-xs font-semibold text-amber-dim">Manage</button>}</div>;
+  return <div className="min-w-0 p-4 sm:px-6 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[100px_minmax(0,1fr)_auto_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="min-w-0 break-words text-sm font-medium flex flex-wrap items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p><p className="text-[11px] font-semibold text-asphalt mt-1">Driver / plate: {o.assignment_label || "Driver and truck not assigned"}</p></div><span className="hidden sm:block font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 capitalize ${color}`}>{o.status.replace("_", " ")}</span>{onManage&&<button onClick={()=>onManage(o)} className="text-xs font-semibold text-amber-dim">Manage</button>}</div>;
 }
 
 function includesQuery(values: Array<string | number | null | undefined>, query: string) {
@@ -196,12 +240,15 @@ function includesQuery(values: Array<string | number | null | undefined>, query:
   return values.some((value) => String(value ?? "").toLowerCase().includes(query));
 }
 
-function ModulePage({ section, orders, customers, trucks, payments, drivers, deliveryProofs, searchQuery, initialOrderStatus, initialOrderQueue, initialDateFilter, onSearch, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; deliveryProofs:DeliveryProof[]; searchQuery:string; initialOrderStatus:string; initialOrderQueue:string; initialDateFilter:string; onSearch:(value:string)=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+function ModulePage({ section, orders, customers, trucks, payments, drivers, deliveryProofs, searchQuery, initialOrderStatus, initialOrderQueue, initialDateFilter, initialFleetStatus, initialDriverStatus, initialPaymentStatus, onSearch, onFilter, onClearFilters, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; deliveryProofs:DeliveryProof[]; searchQuery:string; initialOrderStatus:string; initialOrderQueue:string; initialDateFilter:string; initialFleetStatus:string; initialDriverStatus:string; initialPaymentStatus:string; onSearch:(value:string)=>void; onFilter:(name:OperationsFilterName,value:string)=>void; onClearFilters:()=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
   const allowedOrderStatuses = ["all", "placed", "accepted", "in_transit", "delivered", "cancelled"];
-  const [orderStatus,setOrderStatus]=useState(allowedOrderStatuses.includes(initialOrderStatus) ? initialOrderStatus : "all");
-  useEffect(() => {
-    setOrderStatus(allowedOrderStatuses.includes(initialOrderStatus) ? initialOrderStatus : "all");
-  }, [initialOrderStatus]);
+  const allowedFleetStatuses = ["all", "available", "assigned", "on_trip", "maintenance", "suspended", "inactive"];
+  const allowedDriverStatuses = ["all", "approved", "pending", "rejected", "suspended", "active", "available"];
+  const allowedPaymentStatuses = ["all", "initiated", "held_escrow", "released", "refunded", "failed"];
+  const orderStatus = allowedOrderStatuses.includes(initialOrderStatus) ? initialOrderStatus : "all";
+  const fleetStatus = allowedFleetStatuses.includes(initialFleetStatus) ? initialFleetStatus : "all";
+  const driverStatus = allowedDriverStatuses.includes(initialDriverStatus) ? initialDriverStatus : "all";
+  const paymentStatus = allowedPaymentStatuses.includes(initialPaymentStatus) ? initialPaymentStatus : "all";
   const descriptions:Record<string,string> = {Orders:"Create, assign and monitor every customer order.","Live trips":"Track active vehicles and delivery progress in real time.","Fleet & drivers":"Manage trucks, drivers, availability and documents.",Customers:"View accounts, order history and customer value.",Finance:"Verify customer payments, link each payment to its order and driver, then release eligible payouts.",Reports:"Measure delivery performance and business growth."};
   const addKind = section === "Customers" ? "customer" : section === "Fleet & drivers" ? "truck" : "order";
   const query=searchQuery.trim().toLowerCase();
@@ -210,8 +257,9 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
   const matchesDate = (value: string) => initialDateFilter !== "today" || sameLocalDay(value);
   const filteredOrders=orders.filter((order)=>(orderStatus==="all"||order.status===orderStatus)&&matchesAdminOrderControlQueue(order, initialOrderQueue, proofOrderIds, legacyCompletedOrderIds)&&matchesDate(order.status === "delivered" && order.delivered_at ? order.delivered_at : order.created_at)&&includesQuery([order.tracking_id,order.customer_name,order.customer_phone,order.pickup_address,order.dropoff_address,order.vehicle_type,order.cargo_description,order.status],query));
   const filteredCustomers=customers.filter((customer)=>matchesDate(customer.created_at)&&includesQuery([customer.full_name,customer.phone,customer.email,customer.company_name,customer.is_credit_customer?"credit":"standard"],query));
-  const filteredTrucks=trucks.filter((truck)=>includesQuery([truck.plate_number,truck.vehicle_type,truck.capacity_tons,truck.status],query));
-  const filteredPayments=payments.filter((payment)=>{const order=orders.find((item)=>item.id===payment.order_id);const driver=drivers.find((item)=>item.id===order?.driver_id);return includesQuery([payment.provider,payment.provider_ref,payment.event,payment.amount_etb,order?.tracking_id,order?.customer_name,order?.customer_phone,driver?.full_name,driver?.phone],query);});
+  const filteredTrucks=trucks.filter((truck)=>(fleetStatus==="all"||truck.status===fleetStatus)&&includesQuery([truck.plate_number,truck.vehicle_type,truck.capacity_tons,truck.status],query));
+  const filteredDrivers=drivers.filter((driver)=>(driverStatus==="all"||driver.driver_status===driverStatus)&&includesQuery([driver.full_name,driver.phone,driver.driver_status],query));
+  const filteredPayments=payments.filter((payment)=>{const order=orders.find((item)=>item.id===payment.order_id);const driver=drivers.find((item)=>item.id===order?.driver_id);return (paymentStatus==="all"||payment.event===paymentStatus)&&includesQuery([payment.provider,payment.provider_ref,payment.event,payment.amount_etb,order?.tracking_id,order?.customer_name,order?.customer_phone,driver?.full_name,driver?.phone],query);});
   const releasedGross=payments.filter((payment)=>payment.event==="released").reduce((sum,payment)=>sum+Number(payment.amount_etb||0),0);
   const refunded=payments.filter((payment)=>payment.event==="refunded").reduce((sum,payment)=>sum+Number(payment.amount_etb||0),0);
   const releasedNet=Math.max(0,releasedGross-refunded);
@@ -227,21 +275,25 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
   return <div>
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div>{["Orders","Customers","Fleet & drivers"].includes(section) && <button onClick={() => onAdd(addKind)} className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button>}</div>
 
-    {!["Live trips","Reports"].includes(section)&&<label className="md:hidden mb-5 flex items-center gap-2 border border-asphalt/10 bg-white px-4 py-3 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label={`Search ${section}`} value={searchQuery} onChange={(event)=>onSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={`Search ${section.toLowerCase()}...`}/>{searchQuery&&<button type="button" onClick={()=>onSearch("")} className="text-xs font-semibold text-route">Clear</button>}</label>}
+    {!["Live trips","Reports"].includes(section)&&<label className="md:hidden mb-5 flex items-center gap-2 border border-asphalt/10 bg-white px-4 py-3 text-steel"><Icon name="search" className="w-4 h-4"/><input aria-label={`Search ${section}`} value={searchQuery} onChange={(event)=>onSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={`Search ${section.toLowerCase()}...`}/>{searchQuery&&<button type="button" aria-label={`Clear ${section} search`} onClick={()=>onSearch("")} className="text-xs font-semibold text-route focus-visible:outline focus-visible:outline-2 focus-visible:outline-route">Clear</button>}</label>}
 
     {section === "Orders" && <>
       {(initialOrderQueue !== "all" || initialDateFilter === "today") && <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2 border border-amber/35 bg-amber/10 p-3 text-xs"><strong>Control-center filter:</strong>{initialOrderQueue !== "all" && <span className="bg-white px-2 py-1 capitalize">{initialOrderQueue.replace(/-/g, " ")}</span>}{initialDateFilter === "today" && <span className="bg-white px-2 py-1">Today</span>}<Link to="/admin/operations?section=Orders" className="ml-auto font-semibold text-amber-dim">Clear filters</Link></div>}
-      <div className="mb-4 flex flex-wrap gap-2">{["all","placed","accepted","in_transit","delivered","cancelled"].map((status)=><button key={status} onClick={()=>setOrderStatus(status)} className={`border px-3 py-2 text-[11px] font-semibold capitalize ${orderStatus===status?"border-asphalt bg-asphalt text-white":"border-asphalt/10 bg-white text-steel"}`}>{status==="all"?`All ${orders.length}`:`${status.replace("_"," ")} ${orders.filter((order)=>order.status===status).length}`}</button>)}</div>
+      <FilterButtons label="Order status" values={allowedOrderStatuses} selected={orderStatus} count={(status)=>status==="all"?orders.length:orders.filter((order)=>order.status===status).length} onChange={(status)=>onFilter("status",status)} />
       <DataPanel title={searchQuery||orderStatus!=="all"||initialOrderQueue!=="all"||initialDateFilter!=="all"?"Matching orders":"All orders"} empty="No matching orders.">{filteredOrders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>
     </>}
     {section === "Customers" && <DataPanel title={searchQuery?"Matching customers":"Customers"} empty="No matching customers.">{filteredCustomers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
     {section === "Fleet & drivers" && <>
-      <a href="#/admin/driver-compliance" className="mb-5 flex flex-col gap-3 border border-amber/30 bg-asphalt p-5 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber">DRIVER CONTROL & COMPLIANCE</p><p className="mt-2 font-display text-xl font-semibold">Documents, trip history and driver lifecycle</p><p className="mt-1 text-xs text-white/50">{drivers.length} drivers · {approvedDrivers} approved · private verification records stay in the existing Admin control.</p></div><span className="shrink-0 text-sm font-semibold text-amber">Open driver control →</span></a>
-      <DataPanel title={searchQuery?"Matching fleet":"Registered fleet"} empty="No matching trucks.">{filteredTrucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel>
+      <Link to="/admin/driver-compliance" className="mb-5 flex flex-col gap-3 border border-amber/30 bg-asphalt p-5 text-white transition hover:border-amber focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber sm:flex-row sm:items-center sm:justify-between"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber">DRIVER CONTROL & COMPLIANCE</p><p className="mt-2 font-display text-xl font-semibold">Documents, trip history and driver lifecycle</p><p className="mt-1 text-xs text-white/50">{drivers.length} drivers · {approvedDrivers} approved · private verification records stay in the existing Admin control.</p></div><span className="shrink-0 text-sm font-semibold text-amber">Open driver control →</span></Link>
+      <div className="mb-5 grid gap-3 xl:grid-cols-2"><FilterButtons label="Fleet status" values={allowedFleetStatuses} selected={fleetStatus} count={(status)=>status==="all"?trucks.length:trucks.filter((truck)=>truck.status===status).length} onChange={(status)=>onFilter("fleet_status",status)} /><FilterButtons label="Driver status" values={allowedDriverStatuses} selected={driverStatus} count={(status)=>status==="all"?drivers.length:drivers.filter((driver)=>driver.driver_status===status).length} onChange={(status)=>onFilter("driver_status",status)} /></div>
+      {(fleetStatus!=="all"||driverStatus!=="all")&&<button type="button" onClick={onClearFilters} className="mb-4 text-xs font-semibold text-route underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-route">Clear Fleet & Driver filters</button>}
+      <div className="grid min-w-0 gap-5 xl:grid-cols-2"><DataPanel title={searchQuery||fleetStatus!=="all"?"Matching fleet":"Registered fleet"} empty="No matching trucks.">{filteredTrucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel><DataPanel title={searchQuery||driverStatus!=="all"?"Matching drivers":"Registered drivers"} empty="No matching drivers.">{filteredDrivers.map(d=><SimpleRow key={d.id} title={d.full_name||"Driver"} subtitle={d.phone||"No phone recorded"} badge={d.driver_status||"pending"} />)}</DataPanel></div>
     </>}
     {section === "Finance" && <>
       <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4"><FinanceSummaryCard label="Released customer funds" value={releasedNet}/><FinanceSummaryCard label="Held in escrow" value={heldTotal}/><FinanceSummaryCard label="Needs verification" value={initiatedTotal}/><FinanceSummaryCard label="Payment records" value={payments.length} money={false}/></div>
-      <DataPanel title={searchQuery?"Matching payments":"Payment ledger"} empty="No matching payments.">{filteredPayments.map(p=><FinancePaymentRow key={p.id} payment={p} order={orders.find(o=>o.id===p.order_id)} driver={drivers.find(d=>d.id===orders.find(o=>o.id===p.order_id)?.driver_id)} allPayments={payments} onManage={onManage} onReload={onReload} />)}</DataPanel>
+      <FilterButtons label="Payment status" values={allowedPaymentStatuses} selected={paymentStatus} count={(status)=>status==="all"?payments.length:payments.filter((payment)=>payment.event===status).length} onChange={(status)=>onFilter("payment_status",status)} />
+      {paymentStatus!=="all"&&<button type="button" onClick={onClearFilters} className="mb-4 text-xs font-semibold text-route underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-route">Clear Finance filters</button>}
+      <DataPanel title={searchQuery||paymentStatus!=="all"?"Matching payments":"Payment ledger"} empty="No matching payments.">{filteredPayments.map(p=><FinancePaymentRow key={p.id} payment={p} order={orders.find(o=>o.id===p.order_id)} driver={drivers.find(d=>d.id===orders.find(o=>o.id===p.order_id)?.driver_id)} allPayments={payments} onManage={onManage} onReload={onReload} />)}</DataPanel>
     </>}
     {section === "Live trips" && <AdminLiveTripsPanel orders={orders} trucks={trucks} drivers={drivers} onManage={onManage} />}
     {section === "Reports" && <>
@@ -252,8 +304,9 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
   </div>;
 }
 
-function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="bg-white border border-asphalt/10"><div className="p-5 sm:px-6 border-b border-asphalt/10 flex justify-between"><h2 className="font-display font-semibold text-lg">{title}</h2><span className="font-mono text-xs text-steel">{count} {count===1?"record":"records"}</span></div>{count ? children : <Empty label={empty}/>}</div>; }
-function SimpleRow({ title, subtitle, badge }: { title:string; subtitle:string; badge:string }) { return <div className="p-4 sm:px-6 border-b border-asphalt/10 last:border-0 flex items-center justify-between gap-4"><div><p className="font-semibold text-sm">{title}</p><p className="text-xs text-steel mt-1">{subtitle}</p></div><span className="text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{badge.replace("_"," ")}</span></div>; }
+function FilterButtons({label,values,selected,count,onChange}:{label:string;values:string[];selected:string;count:(value:string)=>number;onChange:(value:string)=>void}){return <fieldset className="mb-4 min-w-0 border border-asphalt/10 bg-white p-3 min-[360px]:p-4"><legend className="px-1 text-[10px] font-semibold uppercase tracking-wide text-steel">{label}</legend><div className="flex min-w-0 flex-wrap gap-2" aria-label={label}>{values.map((value)=><button key={value} type="button" aria-pressed={selected===value} onClick={()=>onChange(value)} className={`min-h-11 min-w-[5rem] flex-1 border px-3 py-2 text-[11px] font-semibold capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber min-[430px]:flex-none ${selected===value?"border-asphalt bg-asphalt text-white":"border-asphalt/10 bg-white text-steel"}`}>{value==="all"?`All ${count(value)}`:`${value.replace(/_/g," ")} ${count(value)}`}</button>)}</div></fieldset>}
+function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="min-w-0 overflow-hidden bg-white border border-asphalt/10"><div className="p-4 min-[360px]:p-5 sm:px-6 border-b border-asphalt/10 flex flex-wrap items-center justify-between gap-2"><h2 className="min-w-0 break-words font-display font-semibold text-lg">{title}</h2><span className="shrink-0 font-mono text-xs text-steel">{count} {count===1?"record":"records"}</span></div>{count ? children : <Empty label={empty}/>}</div>; }
+function SimpleRow({ title, subtitle, badge }: { title:string; subtitle:string; badge:string }) { return <div className="min-w-0 p-4 sm:px-6 border-b border-asphalt/10 last:border-0 flex flex-col items-start justify-between gap-3 min-[430px]:flex-row min-[430px]:items-center"><div className="min-w-0"><p className="break-words font-semibold text-sm">{title}</p><p className="mt-1 break-words text-xs leading-5 text-steel">{subtitle}</p></div><span className="shrink-0 text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{badge.replace(/_/g," ")}</span></div>; }
 function FinanceSummaryCard({label,value,money=true}:{label:string;value:number;money?:boolean}){return <div className="border border-asphalt/10 bg-white p-4 sm:p-5"><p className="font-mono text-[10px] uppercase tracking-wide text-steel">{label}</p><p className="mt-3 font-display text-xl font-bold text-asphalt">{money?`ETB ${compactMoney(value)}`:value.toLocaleString()}</p></div>}
 function HealthRow({label,value}:{label:string;value:number}){return <div className="bg-[#f5f3ed] p-4"><p className="text-xs text-steel">{label}</p><p className="mt-2 font-display text-2xl font-bold">{value}</p></div>}
 
