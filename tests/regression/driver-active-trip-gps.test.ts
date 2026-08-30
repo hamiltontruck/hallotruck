@@ -62,6 +62,13 @@ test("Active Trip route failures expose one guarded retry workflow", () => {
   assert.match(routeControl, /if \(inFlightRequestIdRef\.current !== null\) return/);
 });
 
+test("Active Trip route state is testable without evaluating MapLibre", () => {
+  assert.doesNotMatch(routeControl, /navigation\/TripMap/);
+  assert.match(routeControl, /renderMap: \(route: NavigationRoute, driverPosition: \[number, number\] \| null\) => ReactNode/);
+  assert.match(activeTrip, /import \{ TripMap \} from "\.\.\/components\/navigation\/TripMap"/);
+  assert.match(activeTrip, /renderMap=\{\(route, position\) => \([\s\S]*<TripMap routeGeometry=\{route\.geometry\} driverPosition=\{position\}/);
+});
+
 test("Active Trip route ignores stale requests and preserves latest order ownership", () => {
   assert.match(routeControl, /const requestId = \+\+requestIdRef\.current/);
   assert.match(routeControl, /if \(requestIdRef\.current !== requestId\) return/);
