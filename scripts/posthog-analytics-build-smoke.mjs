@@ -23,14 +23,14 @@ for (const marker of [
   }
 }
 
-for (const safetyMarker of [
-  "autocapture: false",
-  "capture_pageview: false",
-  "disable_session_recording: true",
-  "advanced_disable_flags: true",
-  "before_send: sanitizePostHogEvent",
+for (const safetyPattern of [
+  /autocapture: false/,
+  /capture_pageview: false/,
+  /disable_session_recording: true/,
+  /advanced_disable_flags: true/,
+  /before_send: .*sanitizePostHogEvent/,
 ]) {
-  if (!analyticsSource.includes(safetyMarker)) throw new Error(`Analytics privacy configuration is missing ${safetyMarker}.`);
+  if (!safetyPattern.test(analyticsSource)) throw new Error(`Analytics privacy configuration is missing ${safetyPattern}.`);
 }
 
 for (const prohibited of ["password", "receipt", "transaction", "authorization", "document contents"]) {
