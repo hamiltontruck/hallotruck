@@ -4,31 +4,35 @@ import { supabase } from "../../services/supabase.client";
 import { LanguageSwitcher, useLanguage } from "../../i18n/LanguageProvider";
 import { DriverBottomNav } from "../driver/DriverBottomNav";
 
-const desktopLinks = [
-  { to: "/driver/jobs", label: "driver.nav.jobs", icon: "▦" },
-  { to: "/driver/trip", label: "driver.nav.trip", icon: "⌁" },
-  { to: "/driver/documents", label: "driver.nav.docs", icon: "▤" },
-  { to: "/driver/earnings", label: "driver.nav.earnings", icon: "◫" },
-  { to: "/driver/commission", label: "commission", icon: "%" },
-];
+const primaryLinks = [
+  { to: "/driver", key: "home" as const, end: true },
+  { to: "/driver/jobs", key: "jobs" as const, end: true },
+  { to: "/driver/trip", key: "trip" as const, end: true },
+  { to: "/driver/wallet", key: "wallet" as const, end: true },
+  { to: "/driver/documents", key: "profile" as const, end: true },
+] as const;
+
+const primaryCopy = {
+  en: { home: "Home", jobs: "Jobs", trip: "Trip", wallet: "Wallet", profile: "Profile" },
+  om: { home: "Home", jobs: "Hojii", trip: "Imala", wallet: "Wallet", profile: "Profaayilii" },
+  am: { home: "መነሻ", jobs: "ስራዎች", trip: "ጉዞ", wallet: "ዋሌት", profile: "መገለጫ" },
+} as const;
 
 export function Header() {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  const labels = primaryCopy[language];
   const [menuOpen, setMenuOpen] = useState(false);
   const [driverName, setDriverName] = useState("Driver");
   const [driverStatus, setDriverStatus] = useState<string | null>(null);
 
   const approved = driverStatus === "approved";
-  const navLabel = (label: string) => label === "commission"
-    ? language === "om" ? "Komishinii" : language === "am" ? "ኮሚሽን" : "Commission"
-    : t(label);
   const pendingCopy = language === "om"
     ? {
         workspace: "GALMEESSA DRIVER",
         status: "Eeyyama eegaa",
         title: "Onboarding qofa",
-        help: "Jobs, Trip, Earnings fi Commission Admin erga si mirkaneessee booda banamu.",
+        help: "Jobs, Trip, Wallet fi Profile Admin erga si mirkaneessee booda banamu.",
         continue: "Documents itti fufi",
       }
     : language === "am"
@@ -36,14 +40,14 @@ export function Header() {
           workspace: "የአሽከርካሪ ምዝገባ",
           status: "ማረጋገጫ በመጠበቅ ላይ",
           title: "ለምዝገባ ብቻ",
-          help: "Jobs፣ Trip፣ Earnings እና Commission አስተዳዳሪው ካረጋገጠዎት በኋላ ይከፈታሉ።",
+          help: "Jobs፣ Trip፣ Wallet እና Profile አስተዳዳሪው ካረጋገጠዎት በኋላ ይከፈታሉ።",
           continue: "ሰነዶችን ይቀጥሉ",
         }
       : {
           workspace: "DRIVER ONBOARDING",
           status: "Pending approval",
           title: "Onboarding only",
-          help: "Jobs, Trip, Earnings and Commission unlock only after Admin approval.",
+          help: "Jobs, Trip, Wallet and Profile unlock only after Admin approval.",
           continue: "Continue documents",
         };
 
@@ -94,8 +98,17 @@ export function Header() {
           </div>
         </button>
         {approved && (
-          <nav className="hidden md:flex items-center gap-6">
-            {desktopLinks.map(link => <NavLink key={link.to} to={link.to} className={({isActive})=>`text-sm ${isActive?"text-amber font-semibold":"text-white/55 hover:text-white"}`}>{navLabel(link.label)}</NavLink>)}
+          <nav className="hidden md:flex items-center gap-6" aria-label="Driver desktop navigation">
+            {primaryLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) => `text-sm ${isActive ? "text-amber font-semibold" : "text-white/55 hover:text-white"}`}
+              >
+                {labels[link.key]}
+              </NavLink>
+            ))}
           </nav>
         )}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -106,20 +119,20 @@ export function Header() {
               ● {approved ? t("common.online") : pendingCopy.status}
             </p>
           </div>
-          <button onClick={()=>setMenuOpen(v=>!v)} className="w-11 h-11 border border-white/15 grid place-items-center" aria-label="Open driver menu"><span className="text-xl">{menuOpen?"×":"☰"}</span></button>
+          <button onClick={() => setMenuOpen((value) => !value)} className="w-11 h-11 border border-white/15 grid place-items-center" aria-label="Open driver menu"><span className="text-xl">{menuOpen ? "×" : "☰"}</span></button>
         </div>
       </div>
       {menuOpen && (
-        <div className="absolute right-4 top-[72px] w-72 bg-white text-asphalt shadow-xl border border-asphalt/10 p-3">
+        <div className="absolute right-4 top-[72px] w-72 max-w-[calc(100vw-2rem)] bg-white text-asphalt shadow-xl border border-asphalt/10 p-3">
           <div className="flex items-center justify-between gap-3 px-3 py-2">
-            <div>
-              <p className="text-xs text-steel">{t("driver.menu.signedIn")} <b className="text-asphalt">{driverName}</b></p>
+            <div className="min-w-0">
+              <p className="truncate text-xs text-steel">{t("driver.menu.signedIn")} <b className="text-asphalt">{driverName}</b></p>
               {!approved && <p className="mt-1 text-[10px] font-semibold text-amber-dim">{pendingCopy.status}</p>}
             </div>
             <LanguageSwitcher />
           </div>
-          {approved ? desktopLinks.map(link => (
-            <NavLink key={link.to} to={link.to} onClick={()=>setMenuOpen(false)} className="block px-3 py-3 text-sm hover:bg-[#f5f3ed]">{navLabel(link.label)}</NavLink>
+          {approved ? primaryLinks.map((link) => (
+            <NavLink key={link.to} to={link.to} end={link.end} onClick={() => setMenuOpen(false)} className="block px-3 py-3 text-sm hover:bg-[#f5f3ed]">{labels[link.key]}</NavLink>
           )) : (
             <div className="mx-2 my-2 border border-amber/35 bg-amber/10 p-3">
               <p className="text-sm font-semibold">{pendingCopy.title}</p>
@@ -136,7 +149,7 @@ export function Header() {
           <button onClick={logout} className="w-full text-left px-3 py-3 text-sm text-route border-t border-asphalt/10 mt-2">{t("common.signOut")}</button>
         </div>
       )}
-      <div className="h-1 bg-route-dash"/>
+      <div className="h-1 bg-route-dash" />
     </header>
     {approved && <DriverBottomNav />}
   </>;
