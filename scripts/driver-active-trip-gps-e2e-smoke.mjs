@@ -70,6 +70,7 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { LanguageProvider } from ${JSON.stringify(path.join(root, "src", "i18n", "LanguageProvider.tsx"))};
 import { DriverActiveTripGpsControl } from ${JSON.stringify(path.join(root, "src", "components", "driver", "DriverActiveTripGpsControl.tsx"))};
+import { DriverActiveTripRoute } from ${JSON.stringify(path.join(root, "src", "components", "driver", "DriverActiveTripRoute.tsx"))};
 
 localStorage.setItem("hallo_language", "en");
 let online = false;
@@ -78,6 +79,7 @@ let watchCalls = 0;
 let clearCalls = 0;
 let sendCalls = 0;
 let syncCalls = 0;
+let routeCalls = 0;
 let positionSuccess = null;
 
 Object.defineProperty(navigator, "onLine", { configurable: true, get: () => online });
@@ -126,17 +128,45 @@ const services = {
   },
 };
 
+const routeServices = {
+  async getNavigation() {
+    routeCalls += 1;
+    if (routeCalls === 1) throw new Error("Route network unavailable");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    return {
+      geometry: {
+        type: "LineString",
+        coordinates: [[38.75, 9.03], [38.8, 9.08]],
+      },
+      distanceKm: 12,
+      durationMin: 20,
+      steps: [
+        { instruction: "Head north toward the corridor", distanceM: 500, durationSec: 60, location: [38.75, 9.03] },
+        { instruction: "Continue to the destination", distanceM: 11500, durationSec: 1140, location: [38.8, 9.08] },
+      ],
+    };
+  },
+};
+
 function Harness() {
   const [order, setOrder] = useState(initialOrder);
   const [sharing, setSharing] = useState(false);
+  const [position, setPosition] = useState(null);
   return React.createElement("main", { className: "min-h-screen bg-bone p-3" },
     React.createElement("p", { "data-sharing-value": String(sharing) }, order.status),
     React.createElement(DriverActiveTripGpsControl, {
       order,
       onOrderChange: setOrder,
-      onPosition: () => {},
+      onPosition: setPosition,
       onSharingChange: setSharing,
       services,
+    }),
+    React.createElement(DriverActiveTripRoute, {
+      orderId: order.id,
+      driverPosition: position,
+      gpsSharing: sharing,
+      services: routeServices,
+      renderMap: () => React.createElement("div", { className: "h-full", "data-route-map": "true" }),
     }),
   );
 }
@@ -146,6 +176,20 @@ createRoot(document.getElementById("root")).render(
 );
 
 await new Promise((resolve) => setTimeout(resolve, 200));
+let routePanel = document.querySelector("[data-driver-route-control]");
+const routeRetry = routePanel?.querySelector("[data-route-retry-action]");
+const routeErrorVisible = routePanel?.textContent?.includes("Route network unavailable") ?? false;
+if (!routePanel || !routeRetry) throw new Error("Driver route fixture did not render the retry action.");
+routeRetry.click();
+routeRetry.click();
+await new Promise((resolve) => setTimeout(resolve, 25));
+routePanel = document.querySelector("[data-driver-route-control]");
+const routeRetryBusy = routePanel?.getAttribute("aria-busy") === "true";
+await new Promise((resolve) => setTimeout(resolve, 150));
+routePanel = document.querySelector("[data-driver-route-control]");
+const routeLoaded = Boolean(routePanel?.querySelector('[data-route-map="true"]')) && (routePanel?.textContent?.includes("Head north toward the corridor") ?? false);
+const routeErrorCleared = !(routePanel?.textContent?.includes("Route network unavailable") ?? false);
+
 let panel = document.querySelector("[data-driver-gps-control]");
 const initialStartCount = document.querySelectorAll("[data-gps-start-action]").length;
 const start = document.querySelector("[data-gps-start-action]");
@@ -182,6 +226,11 @@ document.documentElement.dataset.watchCalls = String(watchCalls);
 document.documentElement.dataset.sendCalls = String(sendCalls);
 document.documentElement.dataset.syncCalls = String(syncCalls);
 document.documentElement.dataset.clearCalls = String(clearCalls);
+document.documentElement.dataset.routeCalls = String(routeCalls);
+document.documentElement.dataset.routeErrorVisible = String(routeErrorVisible);
+document.documentElement.dataset.routeRetryBusy = String(routeRetryBusy);
+document.documentElement.dataset.routeLoaded = String(routeLoaded);
+document.documentElement.dataset.routeErrorCleared = String(routeErrorCleared);
 document.documentElement.dataset.onlyOneStart = String(initialStartCount === 1);
 document.documentElement.dataset.requestingBusy = String(requestingBusy);
 document.documentElement.dataset.orderBeforeSync = String(orderBeforeSync);
@@ -221,6 +270,11 @@ try {
         'data-watch-calls="1"',
         'data-send-calls="1"',
         'data-sync-calls="1"',
+        'data-route-calls="2"',
+        'data-route-error-visible="true"',
+        'data-route-retry-busy="true"',
+        'data-route-loaded="true"',
+        'data-route-error-cleared="true"',
         'data-only-one-start="true"',
         'data-requesting-busy="true"',
         'data-order-before-sync="accepted"',
@@ -237,7 +291,7 @@ try {
       await rm(profile, { recursive: true, force: true });
     }
   }
-  console.log("Driver Active Trip GPS browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with one guarded start action, honest offline queue state, reconnect sync, server-confirmed In Transit state and no horizontal overflow.");
+  console.log("Driver Active Trip GPS and route browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with one guarded GPS start, honest offline queue state, reconnect sync, one guarded route retry, recovered directions and no horizontal overflow.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([
