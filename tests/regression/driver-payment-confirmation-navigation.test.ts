@@ -9,6 +9,10 @@ const banner = readFileSync(
   path.join(root, "src/components/driver/DriverPaymentCollectionBanner.tsx"),
   "utf8",
 );
+const bannerState = readFileSync(
+  path.join(root, "src/components/driver/DriverPaymentActionBannerState.tsx"),
+  "utf8",
+);
 
 test("Driver workspace surfaces held-escrow confirmation from every primary page", () => {
   assert.match(app, /const showPaymentAction = !pathname\.startsWith\("\/driver\/payment\/"\)/);
@@ -23,12 +27,14 @@ test("pending payment banner discovers assigned delivered orders awaiting confir
   assert.match(banner, /row\.payment_event === "held_escrow"/);
   assert.match(banner, /row\.confirmation_type !== "payment_confirmed"/);
   assert.match(banner, /row\.can_confirm \|\| row\.can_report_not_received/);
+  assert.match(banner, /loadConfirmations=\{getPendingDriverConfirmations\}/);
+  assert.match(banner, /loadReports=\{getUnreportedDeliveries\}/);
 });
 
 test("pending confirmation takes priority and opens the completed-trip payment route", () => {
-  assert.match(banner, /const confirmation = confirmations\[0\]/);
-  assert.match(banner, /const orderId = confirmation\?\.order_id \?\? report!\.order_id/);
-  assert.match(banner, /to=\{`\/driver\/payment\/\$\{orderId\}`\}/);
-  assert.match(banner, /Kaffaltii mirkaneessi/);
-  assert.match(banner, /data-driver-payment-action-banner/);
+  assert.match(bannerState, /const confirmation = snapshot\.confirmations\[0\]/);
+  assert.match(bannerState, /const orderId = confirmation\?\.order_id \?\? report\?\.order_id/);
+  assert.match(bannerState, /to=\{`\/driver\/payment\/\$\{orderId\}`\}/);
+  assert.match(bannerState, /Kaffaltii mirkaneessi/);
+  assert.match(bannerState, /data-driver-payment-action-banner/);
 });

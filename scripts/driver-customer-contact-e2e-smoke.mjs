@@ -38,7 +38,7 @@ async function render(chrome, viewport) {
       "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
       "--disable-background-networking", "--hide-scrollbars",
       `--window-size=${viewport.width},${viewport.height}`,
-      "--virtual-time-budget=5000", `--user-data-dir=${profile}`, "--dump-dom",
+      "--virtual-time-budget=7000", `--user-data-dir=${profile}`, "--dump-dom",
       `${baseUrl}driver-customer-contact-e2e.html`,
     ], { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, timeout: 30_000 });
     if (result.error || result.status !== 0) throw result.error ?? new Error(result.stderr);
@@ -61,6 +61,15 @@ import { LanguageProvider } from ${JSON.stringify(path.join(root, "src/i18n/Lang
 import { DriverCustomerContact } from ${JSON.stringify(path.join(root, "src/components/driver/DriverCustomerContact.tsx"))};
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function waitUntil(predicate, timeoutMs = 800) {
+  const deadline = performance.now() + timeoutMs;
+  while (performance.now() < deadline) {
+    if (predicate()) return true;
+    await delay(10);
+  }
+  return Boolean(predicate());
+}
+
 let orderTwoAttempts = 0;
 let resolveOrderTwoRetry;
 
@@ -103,18 +112,23 @@ function Fixture() {
   );
 }
 
+document.documentElement.dataset.fixtureBooted = "true";
 createRoot(document.getElementById("root")).render(
   React.createElement(LanguageProvider, null, React.createElement(Fixture))
 );
 
 async function verify() {
-  await delay(80);
+  await waitUntil(() => Boolean(
+    document.querySelector('#primary a[href="tel:+251911111111"]')
+    && (document.querySelector("#primary")?.textContent ?? "").includes("Alice First Customer")
+    && document.querySelector('#invalid section[data-contact-state="ready"]')
+  ));
   const initialLink = document.querySelector('#primary a[href="tel:+251911111111"]');
   const initialText = document.querySelector("#primary")?.textContent ?? "";
   const initialReady = Boolean(initialLink && initialText.includes("Alice First Customer"));
 
   document.querySelector("[data-switch-order]")?.click();
-  await delay(10);
+  await waitUntil(() => Boolean(document.querySelector('#primary section[data-contact-state="loading"]')));
   const loadingSection = document.querySelector('#primary section[data-contact-state="loading"]');
   const loadingText = document.querySelector("#primary")?.textContent ?? "";
   const staleCleared = Boolean(
@@ -124,14 +138,14 @@ async function verify() {
     && !loadingText.includes("+251 911 111 111")
   );
 
-  await delay(90);
+  await waitUntil(() => Boolean(document.querySelector('#primary section[data-contact-state="error"]')));
   const errorSection = document.querySelector('#primary section[data-contact-state="error"]');
   const retryButton = errorSection?.querySelector("button");
   const errorRetry = Boolean(errorSection && retryButton && errorSection.querySelector('[role="alert"]') && !errorSection.querySelector('a[href^="tel:"]'));
 
   retryButton?.click();
   retryButton?.click();
-  await delay(10);
+  await waitUntil(() => orderTwoAttempts === 2 && Boolean(document.querySelector('#primary section[data-contact-state="loading"]')));
   const retryLoading = document.querySelector('#primary section[data-contact-state="loading"]');
   const retryCalls = orderTwoAttempts === 2;
   const retryLocked = Boolean(retryLoading?.getAttribute("aria-busy") === "true" && !document.querySelector("#primary button") && !document.querySelector('#primary a[href^="tel:"]'));
@@ -140,7 +154,10 @@ async function verify() {
     customer_name: "Bob Current Customer",
     customer_phone: "+251 922 222 222",
   });
-  await delay(40);
+  await waitUntil(() => Boolean(
+    document.querySelector('#primary a[href="tel:+251922222222"]')
+    && (document.querySelector("#primary")?.textContent ?? "").includes("Bob Current Customer")
+  ));
   const finalLink = document.querySelector('#primary a[href="tel:+251922222222"]');
   const finalText = document.querySelector("#primary")?.textContent ?? "";
   const finalReady = Boolean(
@@ -165,7 +182,19 @@ async function verify() {
   document.documentElement.dataset.ready = "true";
 }
 
-void verify();
+window.addEventListener("error", (event) => {
+  document.documentElement.dataset.fixtureError = event.error?.message || event.message || "runtime error";
+  document.documentElement.dataset.ready = "true";
+});
+window.addEventListener("unhandledrejection", (event) => {
+  document.documentElement.dataset.fixtureError = event.reason?.message || String(event.reason);
+  document.documentElement.dataset.ready = "true";
+});
+
+void verify().catch((error) => {
+  document.documentElement.dataset.fixtureError = error instanceof Error ? error.message : String(error);
+  document.documentElement.dataset.ready = "true";
+});
 `;
 
   const entry = path.join(testDirectory, "entry.mjs");
@@ -197,6 +226,7 @@ try {
   for (const width of [320, 360, 390, 412, 430, 768]) {
     const dom = await render(chrome, { width, height: 1200 });
     for (const expected of [
+      'data-fixture-booted="true"',
       'data-ready="true"',
       'data-initial-ready="true"',
       'data-stale-cleared="true"',
@@ -209,8 +239,9 @@ try {
     ]) {
       if (!dom.includes(expected)) throw new Error(`Driver customer contact ${width}px smoke is missing: ${expected}`);
     }
+    if (dom.includes("data-fixture-error=")) throw new Error(`Driver customer contact ${width}px fixture reported an error.`);
   }
-  console.log("Driver customer contact browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with stale-contact removal, one guarded retry, valid-phone-only calling and no horizontal overflow.");
+  console.log("Driver customer contact browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with deterministic readiness, stale-contact removal, one guarded retry, valid-phone-only calling and no horizontal overflow.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2_000))]);
