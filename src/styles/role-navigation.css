@@ -28,8 +28,11 @@
   font-size: 0.58rem;
   font-weight: 750;
   line-height: 0.75rem;
+  overflow-wrap: anywhere;
   text-align: center;
   text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .admin-mobile-bottom-nav__item.is-active,
@@ -100,7 +103,10 @@
     padding: 0.45rem 0.12rem !important;
     font-size: 0.56rem !important;
     line-height: 0.72rem;
+    overflow-wrap: anywhere;
     white-space: normal;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .customer-dashboard-nav__item.is-active {
@@ -111,6 +117,7 @@
     font-size: 1.05rem;
   }
 
+  .customer-view-home,
   .customer-view-profile,
   .customer-view-orders,
   .customer-view-track,
@@ -121,6 +128,24 @@
   .customer-map-home__sheet {
     bottom: calc(4.15rem + env(safe-area-inset-bottom)) !important;
     padding-bottom: 0.8rem !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .admin-mobile-bottom-nav__item,
+  .driver-bottom-nav__item,
+  .customer-dashboard-nav__item,
+  .customer-map-home .customer-dashboard-nav__item {
+    padding-right: 0.05rem !important;
+    padding-left: 0.05rem !important;
+    font-size: 0.52rem !important;
+    letter-spacing: -0.01em;
+  }
+
+  .admin-mobile-bottom-nav__icon,
+  .driver-bottom-nav__icon,
+  .customer-dashboard-nav__icon {
+    font-size: 0.95rem;
   }
 }
 
