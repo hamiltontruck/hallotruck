@@ -43,7 +43,7 @@ function render(chrome, width, profile) {
     "--disable-dev-shm-usage",
     "--hide-scrollbars",
     `--window-size=${width},1100`,
-    "--virtual-time-budget=5000",
+    "--virtual-time-budget=7000",
     `--user-data-dir=${profile}`,
     "--dump-dom",
     `${baseUrl}driver-active-trip-gps-e2e.html`,
@@ -81,6 +81,14 @@ let sendCalls = 0;
 let syncCalls = 0;
 let routeCalls = 0;
 let positionSuccess = null;
+let fixtureError = "";
+
+window.addEventListener("error", (event) => {
+  fixtureError ||= event.error?.message || event.message || "window error";
+});
+window.addEventListener("unhandledrejection", (event) => {
+  fixtureError ||= event.reason instanceof Error ? event.reason.message : String(event.reason || "unhandled rejection");
+});
 
 Object.defineProperty(navigator, "onLine", { configurable: true, get: () => online });
 Object.defineProperty(navigator, "geolocation", {
@@ -175,53 +183,83 @@ createRoot(document.getElementById("root")).render(
   React.createElement(LanguageProvider, null, React.createElement(Harness)),
 );
 
-await new Promise((resolve) => setTimeout(resolve, 200));
-let routePanel = document.querySelector("[data-driver-route-control]");
-const routeRetry = routePanel?.querySelector("[data-route-retry-action]");
-const routeErrorVisible = routePanel?.textContent?.includes("Route network unavailable") ?? false;
-if (!routePanel || !routeRetry) throw new Error("Driver route fixture did not render the retry action.");
-routeRetry.click();
-routeRetry.click();
-await new Promise((resolve) => setTimeout(resolve, 25));
-routePanel = document.querySelector("[data-driver-route-control]");
-const routeRetryBusy = routePanel?.getAttribute("aria-busy") === "true";
-await new Promise((resolve) => setTimeout(resolve, 150));
-routePanel = document.querySelector("[data-driver-route-control]");
-const routeLoaded = Boolean(routePanel?.querySelector('[data-route-map="true"]')) && (routePanel?.textContent?.includes("Head north toward the corridor") ?? false);
-const routeErrorCleared = !(routePanel?.textContent?.includes("Route network unavailable") ?? false);
+let routeFixtureRendered = false;
+let routeErrorVisible = false;
+let routeRetryBusy = false;
+let routeLoaded = false;
+let routeErrorCleared = false;
+let gpsFixtureRendered = false;
+let requestingBusy = false;
+let orderBeforeSync = "missing";
+let queuedGuidance = false;
+let retryVisible = false;
+let statusSemantics = false;
+let orderAfterSync = "missing";
+let liveGuidance = false;
+let initialStartCount = 0;
 
-let panel = document.querySelector("[data-driver-gps-control]");
-const initialStartCount = document.querySelectorAll("[data-gps-start-action]").length;
-const start = document.querySelector("[data-gps-start-action]");
-if (!panel || !start) throw new Error("Driver GPS fixture did not render the start action.");
-start.click();
-start.click();
-await new Promise((resolve) => setTimeout(resolve, 50));
-const requestingBusy = panel.getAttribute("aria-busy") === "true";
-if (!positionSuccess) throw new Error("GPS watch callback was not registered.");
-positionSuccess({
-  coords: {
-    longitude: 38.75,
-    latitude: 9.03,
-    speed: 12,
-    heading: 90,
-  },
-});
-await new Promise((resolve) => setTimeout(resolve, 150));
-panel = document.querySelector("[data-driver-gps-control]");
-const orderBeforeSync = panel?.getAttribute("data-gps-order-status");
-const queuedGuidance = panel?.textContent?.includes("GPS update saved offline") ?? false;
-const retryVisible = Boolean(panel?.querySelector("[data-gps-retry-action]"));
-const statusSemantics = Boolean(panel?.querySelector('[role="status"][aria-live="polite"]'));
+try {
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  let routePanel = document.querySelector("[data-driver-route-control]");
+  const routeRetry = routePanel?.querySelector("[data-route-retry-action]");
+  routeFixtureRendered = Boolean(routePanel && routeRetry);
+  routeErrorVisible = routePanel?.textContent?.includes("Route network unavailable") ?? false;
 
-online = true;
-window.dispatchEvent(new Event("online"));
-await new Promise((resolve) => setTimeout(resolve, 250));
-panel = document.querySelector("[data-driver-gps-control]");
-const orderAfterSync = panel?.getAttribute("data-gps-order-status");
-const liveGuidance = panel?.textContent?.includes("Trip started") ?? false;
+  if (routeRetry) {
+    routeRetry.click();
+    routeRetry.click();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    routePanel = document.querySelector("[data-driver-route-control]");
+    routeRetryBusy = routePanel?.getAttribute("aria-busy") === "true";
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    routePanel = document.querySelector("[data-driver-route-control]");
+    routeLoaded = Boolean(routePanel?.querySelector('[data-route-map="true"]')) && (routePanel?.textContent?.includes("Head north toward the corridor") ?? false);
+    routeErrorCleared = !(routePanel?.textContent?.includes("Route network unavailable") ?? false);
+  }
+
+  let panel = document.querySelector("[data-driver-gps-control]");
+  initialStartCount = document.querySelectorAll("[data-gps-start-action]").length;
+  const start = document.querySelector("[data-gps-start-action]");
+  gpsFixtureRendered = Boolean(panel && start);
+
+  if (panel && start) {
+    start.click();
+    start.click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    requestingBusy = panel.getAttribute("aria-busy") === "true";
+
+    if (positionSuccess) {
+      positionSuccess({
+        coords: {
+          longitude: 38.75,
+          latitude: 9.03,
+          speed: 12,
+          heading: 90,
+        },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      panel = document.querySelector("[data-driver-gps-control]");
+      orderBeforeSync = panel?.getAttribute("data-gps-order-status") || "missing";
+      queuedGuidance = panel?.textContent?.includes("GPS update saved offline") ?? false;
+      retryVisible = Boolean(panel?.querySelector("[data-gps-retry-action]"));
+      statusSemantics = Boolean(panel?.querySelector('[role="status"][aria-live="polite"]'));
+
+      online = true;
+      window.dispatchEvent(new Event("online"));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      panel = document.querySelector("[data-driver-gps-control]");
+      orderAfterSync = panel?.getAttribute("data-gps-order-status") || "missing";
+      liveGuidance = panel?.textContent?.includes("Trip started") ?? false;
+    }
+  }
+} catch (error) {
+  fixtureError ||= error instanceof Error ? error.message : String(error);
+}
 
 document.documentElement.dataset.ready = "true";
+document.documentElement.dataset.fixtureError = fixtureError || "none";
+document.documentElement.dataset.routeFixtureRendered = String(routeFixtureRendered);
+document.documentElement.dataset.gpsFixtureRendered = String(gpsFixtureRendered);
 document.documentElement.dataset.watchCalls = String(watchCalls);
 document.documentElement.dataset.sendCalls = String(sendCalls);
 document.documentElement.dataset.syncCalls = String(syncCalls);
@@ -267,6 +305,9 @@ try {
       const dom = render(chrome, width, profile);
       for (const expected of [
         'data-ready="true"',
+        'data-fixture-error="none"',
+        'data-route-fixture-rendered="true"',
+        'data-gps-fixture-rendered="true"',
         'data-watch-calls="1"',
         'data-send-calls="1"',
         'data-sync-calls="1"',
@@ -285,7 +326,11 @@ try {
         'data-live-guidance="true"',
         'data-overflow="false"',
       ]) {
-        if (!dom.includes(expected)) throw new Error(`Driver Active Trip GPS ${width}px smoke missing: ${expected}`);
+        if (!dom.includes(expected)) {
+          const fixtureErrorMatch = dom.match(/data-fixture-error="([^"]*)"/);
+          const fixtureErrorValue = fixtureErrorMatch?.[1] ?? "unavailable";
+          throw new Error(`Driver Active Trip GPS ${width}px smoke missing: ${expected}; fixture error: ${fixtureErrorValue}`);
+        }
       }
     } finally {
       await rm(profile, { recursive: true, force: true });
