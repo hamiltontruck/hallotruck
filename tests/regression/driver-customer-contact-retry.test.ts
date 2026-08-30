@@ -11,19 +11,21 @@ const activeTrip = readFileSync(path.join(root, "src/pages/ActiveTrip.tsx"), "ut
 const browserSmoke = readFileSync(path.join(root, "scripts/driver-customer-contact-e2e-smoke.mjs"), "utf8");
 const packageJson = readFileSync(path.join(root, "package.json"), "utf8");
 
-test("Driver customer contact clears stale order data before every request", () => {
+test("Driver customer contact clears and hides stale order data before every request", () => {
   assert.match(component, /const requestIdRef = useRef\(0\)/);
   assert.match(component, /const loadingRef = useRef\(false\)/);
-  assert.match(component, /setContact\(null\);\s*setState\("loading"\)/);
+  assert.match(component, /setContact\(null\);\s*setContactOrderId\(orderId\);\s*setState\("loading"\)/);
   assert.match(component, /requestId !== requestIdRef\.current/);
+  assert.match(component, /const visibleState: ContactState = contactOrderId === orderId \? state : "loading"/);
+  assert.match(component, /const visibleContact = contactOrderId === orderId \? contact : null/);
   assert.match(component, /return \(\) => \{\s*requestIdRef\.current \+= 1;\s*loadingRef\.current = false/);
 });
 
 test("Driver customer contact exposes one guarded retry workflow", () => {
   assert.match(component, /if \(loadingRef\.current\) return/);
   assert.match(component, /onClick=\{\(\) => void load\(\)\}/);
-  assert.match(component, /data-contact-state=\{state\}/);
-  assert.match(component, /aria-busy=\{state === "loading"\}/);
+  assert.match(component, /data-contact-state=\{visibleState\}/);
+  assert.match(component, /aria-busy=\{visibleState === "loading"\}/);
   assert.match(component, /role="status"/);
   assert.match(component, /role="alert"/);
   assert.match(component, /Retry contact/);
@@ -38,7 +40,7 @@ test("Driver call links accept valid phones and reject misleading values", () =>
   assert.equal(telephoneHref("123"), null);
   assert.equal(telephoneHref(null), null);
   assert.match(component, /from "\.\.\/\.\.\/utils\/phone"/);
-  assert.match(component, /state === "ready" && callHref/);
+  assert.match(component, /visibleState === "ready" && callHref/);
   assert.doesNotMatch(component, /href=\{phoneHref\(contact\.customer_phone\)\}/);
 });
 
