@@ -166,8 +166,16 @@ await writeFile(entryFile, fixtureSource, "utf8");
 const bundled = spawnSync(esbuildBinary, [
   entryFile, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120",
   `--outfile=${bundleFile}`,
-  "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"",
-  "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\"",
+  `--define:import.meta.env=${JSON.stringify({
+  VITE_SUPABASE_URL: "https://example.supabase.co",
+  VITE_SUPABASE_ANON_KEY: "ci-anon-key",
+  VITE_SUPABASE_FUNCTIONS_URL: "https://example.supabase.co/functions/v1",
+  VITE_MAPTILER_KEY: "ci-map-key",
+  DEV: false,
+  PROD: true,
+  MODE: "test",
+  BASE_URL: "/hallotruck/",
+})}`,
 ], { cwd: root, encoding: "utf8" });
 if (bundled.status !== 0) throw new Error(bundled.stderr || "Admin Operations fixture bundle failed.");
 await writeFile(
