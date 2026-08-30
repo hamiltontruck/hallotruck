@@ -9,6 +9,7 @@ import {
 import { formatEtb } from "../utils/currency";
 import { Button } from "../components/ui/Button";
 import { CargoPlate } from "../components/ui/CargoPlate";
+import { TripMap } from "../components/navigation/TripMap";
 import { DriverDeliveryProofForm } from "../components/driver/DriverDeliveryProofForm";
 import { DriverCustomerContact } from "../components/driver/DriverCustomerContact";
 import { DriverPaymentConfirmation } from "../components/driver/DriverPaymentConfirmation";
@@ -166,6 +167,9 @@ export function ActiveTrip() {
         orderId={order.id}
         driverPosition={driverPosition}
         gpsSharing={gpsSharing}
+        renderMap={(route, position) => (
+          <TripMap routeGeometry={route.geometry} driverPosition={position} />
+        )}
       />
 
       {tripStarted ? (
