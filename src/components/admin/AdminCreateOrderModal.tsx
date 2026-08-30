@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CustomerQuoteMap, QuotePoints } from "../navigation/CustomerQuoteMap";
+import { AdminCreateOrderAction } from "./AdminCreateOrderAction";
 import { createAdminSmartOrder } from "../../services/admin-order.service";
 import {
   cargoToTons,
@@ -195,7 +196,7 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-asphalt/70 p-3 sm:p-4">
-      <form onSubmit={submit} className="max-h-[94vh] w-full max-w-3xl overflow-y-auto bg-white p-5 sm:p-8">
+      <form aria-busy={saving} onSubmit={submit} className="max-h-[94vh] w-full max-w-3xl overflow-y-auto bg-white p-5 sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="font-mono text-[10px] tracking-[.2em] text-amber-dim">SMART ORDER</p>
@@ -205,7 +206,7 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
           <button type="button" onClick={onClose} aria-label="Close" className="text-3xl leading-none text-steel">×</button>
         </div>
 
-        {error && <p className="mt-4 border border-route/30 bg-route/10 p-3 text-sm text-route">{error}</p>}
+        {error && <p role="alert" className="mt-4 border border-route/30 bg-route/10 p-3 text-sm text-route">{error}</p>}
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <Field name="customerName" label="Customer name" />
@@ -338,9 +339,17 @@ export function AdminCreateOrderModal({ onClose, onSaved }: { onClose: () => voi
         </div>
 
         <p className={`mt-3 text-[11px] ${quoteError ? "text-route" : "text-steel"}`}>{quoteError ? `Latest price unavailable: ${quoteError}` : "Final freight uses the latest admin-managed Supabase pricing rule. HALLO's 2% share is included inside that amount, not added on top."}</p>
-        <button disabled={saving || quoteLoading || !quoteBreakdown || Boolean(createdTrackingId) || !route || !vehicleType || Boolean(cargoValidation)} className="mt-6 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-40">
-          {createdTrackingId ? `Order ${createdTrackingId} created` : saving ? "Creating order…" : quoteLoading ? "Getting latest price…" : quote != null ? `Create order · ETB ${quote.toLocaleString()}` : "Create order"}
-        </button>
+        <AdminCreateOrderAction
+          createdTrackingId={createdTrackingId}
+          saving={saving}
+          quoteLoading={quoteLoading}
+          routeReady={Boolean(route)}
+          vehicleReady={Boolean(vehicleType)}
+          cargoValidation={cargoValidation}
+          quoteAvailable={Boolean(quoteBreakdown)}
+          quoteError={quoteError}
+          quoteEtb={quote}
+        />
       </form>
     </div>
   );
