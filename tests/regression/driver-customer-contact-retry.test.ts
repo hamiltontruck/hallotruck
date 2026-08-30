@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { telephoneHref } from "../../src/components/driver/DriverCustomerContact";
+import { telephoneHref } from "../../src/utils/phone";
 
 const root = process.cwd();
 const component = readFileSync(path.join(root, "src/components/driver/DriverCustomerContact.tsx"), "utf8");
@@ -37,6 +37,7 @@ test("Driver call links accept valid phones and reject misleading values", () =>
   assert.equal(telephoneHref("N/A"), null);
   assert.equal(telephoneHref("123"), null);
   assert.equal(telephoneHref(null), null);
+  assert.match(component, /from "\.\.\/\.\.\/utils\/phone"/);
   assert.match(component, /state === "ready" && callHref/);
   assert.doesNotMatch(component, /href=\{phoneHref\(contact\.customer_phone\)\}/);
 });
