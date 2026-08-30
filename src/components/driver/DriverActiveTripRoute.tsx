@@ -75,12 +75,12 @@ export function DriverActiveTripRoute({
   const [routeLoading, setRouteLoading] = useState(true);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const requestIdRef = useRef(0);
-  const requestInFlightRef = useRef(false);
+  const inFlightRequestIdRef = useRef<number | null>(null);
 
   const loadRoute = useCallback(async () => {
-    if (requestInFlightRef.current) return;
-    requestInFlightRef.current = true;
+    if (inFlightRequestIdRef.current !== null) return;
     const requestId = ++requestIdRef.current;
+    inFlightRequestIdRef.current = requestId;
     setRouteLoading(true);
     setRouteError(null);
 
@@ -94,7 +94,7 @@ export function DriverActiveTripRoute({
       setRouteError(navigationError instanceof Error ? navigationError.message : c.routeLoadError);
     } finally {
       if (requestIdRef.current === requestId) setRouteLoading(false);
-      requestInFlightRef.current = false;
+      if (inFlightRequestIdRef.current === requestId) inFlightRequestIdRef.current = null;
     }
   }, [c.routeLoadError, orderId, services]);
 
@@ -102,10 +102,11 @@ export function DriverActiveTripRoute({
     setRoute(null);
     setRouteError(null);
     setCurrentStepIndex(0);
+    inFlightRequestIdRef.current = null;
     void loadRoute();
     return () => {
       requestIdRef.current += 1;
-      requestInFlightRef.current = false;
+      inFlightRequestIdRef.current = null;
     };
   }, [loadRoute]);
 
