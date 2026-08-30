@@ -29,12 +29,14 @@ test("payment action source failures preserve the last confirmed source instead 
   assert.doesNotMatch(state, /reportResult\.status === "fulfilled" \? reportResult\.value : \[\]/);
 });
 
-test("rapid Retry and realtime refreshes use one active request plus one queued refresh", () => {
-  assert.match(state, /if \(busyRef\.current\) \{\s*queuedRef\.current = true;\s*return;/);
+test("rapid Retry is ignored while realtime changes queue one follow-up refresh", () => {
+  assert.match(state, /async \(queueIfBusy = false\): Promise<void>/);
+  assert.match(state, /if \(busyRef\.current\) \{\s*if \(queueIfBusy\) queuedRef\.current = true;\s*return;/);
   assert.match(state, /const requestId = \+\+requestIdRef\.current/);
   assert.match(state, /requestId !== requestIdRef\.current/);
-  assert.match(state, /queueMicrotask\(\(\) => void load\(\)\)/);
-  assert.match(state, /subscribe\(\(\) => void load\(\)\)/);
+  assert.match(state, /queueMicrotask\(\(\) => void load\(false\)\)/);
+  assert.match(state, /subscribe\(\(\) => void load\(true\)\)/);
+  assert.match(state, /onClick=\{\(\) => void load\(false\)\}/);
 });
 
 test("payment action failures are visible, localized and retryable", () => {
