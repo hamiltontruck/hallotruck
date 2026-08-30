@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import type { DriverVerificationFile } from "../services/driver.service";
 import { formatEtb } from "../utils/currency";
@@ -249,7 +250,7 @@ export function AdminDriverCompliance() {
             <h1 className="font-display text-3xl font-bold sm:text-4xl">Driver operations & verification</h1>
             <p className="mt-2 max-w-2xl text-sm text-white/55">Review private documents, full trip history, driver lifecycle and HALLO Smart commission from one audit-safe workspace.</p>
           </div>
-          <a href="#/admin" className="border border-white/20 px-4 py-3 text-sm font-semibold">← Operations</a>
+          <Link to="/admin" className="border border-white/20 px-4 py-3 text-sm font-semibold">← Operations</Link>
         </div>
       </section>
 

@@ -90,8 +90,8 @@ createRoot(document.getElementById("root")).render(
 await new Promise((resolve) => setTimeout(resolve, 400));
 document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
 document.documentElement.dataset.actions = String(
-  Boolean(document.querySelector('a[href="#/partner/login"]'))
-  && Boolean(document.querySelector('a[href^="#/partner?organization="]'))
+  Boolean(document.querySelector('a[href="/partner/login"]'))
+  && Boolean(document.querySelector('a[href^="/partner?organization="]'))
   && Array.from(document.querySelectorAll("button")).some((button) => button.textContent.includes("Open Organization Details"))
   && Array.from(document.querySelectorAll("button")).some((button) => button.textContent.includes("Suspend"))
 );
