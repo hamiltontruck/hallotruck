@@ -3,7 +3,7 @@ import {
   vehicleDocumentKeys,
   type DriverVerificationRecord,
   type VerificationDocumentKey,
-} from "./driver-profile.model";
+} from "./driver-profile.model.js";
 
 export const MAX_VERIFICATION_FILE_BYTES = 10 * 1024 * 1024;
 
