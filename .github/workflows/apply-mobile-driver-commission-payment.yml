@@ -27,6 +27,16 @@ jobs:
           cache: npm
           cache-dependency-path: apps/mobile-app/package-lock.json
 
+      - name: Repair generated README escaping
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/apply-mobile-driver-commission-payment.mjs")
+          source = path.read_text()
+          source = source.replace("\\\\`", "\\`")
+          path.write_text(source)
+          PY
+
       - name: Integrate commission payment UI
         run: node scripts/apply-mobile-driver-commission-payment.mjs
 
