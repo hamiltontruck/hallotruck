@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit --pretty false"
+    "typecheck": "tsc --noEmit --pretty false",
+    "test": "node -e \"require('fs').rmSync('.test-dist',{recursive:true,force:true})\" && tsc -p tsconfig.policy.json && node --test tests/access-policy.test.mjs",
+    "test:ci": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
     "@vitejs/plugin-react": "^6.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
