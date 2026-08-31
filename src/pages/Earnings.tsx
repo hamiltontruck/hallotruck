@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
 import {
-  DriverEarningsSummary,
   DriverEarningsTrip,
   DriverPayoutStatus,
   getDriverEarnings,
@@ -9,6 +7,7 @@ import { formatEtb } from "../utils/currency";
 import { CargoPlate } from "../components/ui/CargoPlate";
 import { DriverRatingSummary } from "../components/driver/DriverRatingSummary";
 import { DriverPaymentConfirmation } from "../components/driver/DriverPaymentConfirmation";
+import { DriverEarningsLoadBoundary } from "../components/driver/DriverEarningsLoadBoundary";
 import { useDriverText } from "../i18n/driverTranslations";
 import { useLanguage } from "../i18n/LanguageProvider";
 
@@ -157,23 +156,6 @@ export function Earnings() {
   const dt = useDriverText();
   const { language } = useLanguage();
   const h = historyCopy[language];
-  const [data, setData] = useState<DriverEarningsSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setData(await getDriverEarnings());
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : dt("earn.error"));
-    } finally {
-      setLoading(false);
-    }
-  }, [dt]);
-
-  useEffect(() => { void load(); }, [load]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-16">
@@ -183,41 +165,40 @@ export function Earnings() {
         <p className="mt-2 max-w-2xl font-body text-sm text-steel">{dt("earn.desc")}</p>
       </div>
 
-      {error && <div className="mb-6 border border-route/40 bg-route/5 p-4"><p className="font-body text-sm text-route">{error}</p><button type="button" onClick={() => void load()} className="mt-3 bg-asphalt px-4 py-3 text-xs font-semibold text-white">{dt("jobs.refresh")}</button></div>}
-      {loading && !data && <p className="font-body text-sm text-steel">{dt("jobs.loading")}</p>}
-
       <DriverRatingSummary />
 
-      {data && (
-        <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-            <SummaryCard label={h.completed} value={String(data.completedTrips)} />
-            <SummaryCard label={dt("earn.releasedTrips")} value={String(data.releasedTrips)} />
-            <SummaryCard label={dt("earn.gross")} value={formatEtb(data.totalReleasedEtb)} />
-            <SummaryCard label={dt("earn.commission")} value={formatEtb(data.totalCommissionEtb)} accent="commission" />
-            <SummaryCard label={dt("earn.net")} value={formatEtb(data.totalDriverNetEtb)} accent="net" />
-            <SummaryCard label={dt("earn.netPending")} value={formatEtb(data.pendingDriverBalanceEtb)} />
-          </div>
-
-          <section className="mt-8">
-            <div className="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <p className="font-mono text-[10px] uppercase tracking-[.16em] text-emerald">{dt("earn.ledger")}</p>
-                <h2 className="mt-1 font-display text-xl font-bold text-asphalt">{h.history}</h2>
-                <p className="mt-1 font-body text-xs text-steel">{h.historyHelp}</p>
-              </div>
-              <span className="font-mono text-xs text-steel">{data.trips.length} {dt("earn.trips")}</span>
+      <DriverEarningsLoadBoundary language={language} loadEarnings={getDriverEarnings}>
+        {(data, onPaymentChanged) => (
+          <>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+              <SummaryCard label={h.completed} value={String(data.completedTrips)} />
+              <SummaryCard label={dt("earn.releasedTrips")} value={String(data.releasedTrips)} />
+              <SummaryCard label={dt("earn.gross")} value={formatEtb(data.totalReleasedEtb)} />
+              <SummaryCard label={dt("earn.commission")} value={formatEtb(data.totalCommissionEtb)} accent="commission" />
+              <SummaryCard label={dt("earn.net")} value={formatEtb(data.totalDriverNetEtb)} accent="net" />
+              <SummaryCard label={dt("earn.netPending")} value={formatEtb(data.pendingDriverBalanceEtb)} />
             </div>
-            {data.trips.length ? (
-              <div className="space-y-4">
-                {data.trips.map((trip) => <TripHistoryCard key={trip.id} trip={trip} onPaymentChanged={() => void load()} />)}
+
+            <section className="mt-8">
+              <div className="mb-4 flex items-end justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[.16em] text-emerald">{dt("earn.ledger")}</p>
+                  <h2 className="mt-1 font-display text-xl font-bold text-asphalt">{h.history}</h2>
+                  <p className="mt-1 font-body text-xs text-steel">{h.historyHelp}</p>
+                </div>
+                <span className="font-mono text-xs text-steel">{data.trips.length} {dt("earn.trips")}</span>
               </div>
-            ) : (
-              <div className="border border-line bg-white p-6 font-body text-sm text-steel">{h.noHistory}</div>
-            )}
-          </section>
-        </>
-      )}
+              {data.trips.length ? (
+                <div className="space-y-4">
+                  {data.trips.map((trip) => <TripHistoryCard key={trip.id} trip={trip} onPaymentChanged={onPaymentChanged} />)}
+                </div>
+              ) : (
+                <div className="border border-line bg-white p-6 font-body text-sm text-steel">{h.noHistory}</div>
+              )}
+            </section>
+          </>
+        )}
+      </DriverEarningsLoadBoundary>
 
       <div className="mt-8 border border-line bg-white p-4">
         <p className="mb-2 font-mono text-[10px] uppercase tracking-[.16em] text-steel">{dt("earn.how")}</p>
