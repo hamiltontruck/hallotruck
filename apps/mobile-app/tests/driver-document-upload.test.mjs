@@ -108,6 +108,7 @@ test("service keeps storage and database mutation self-scoped", () => {
   assert.match(serviceSource, /auth\.getSession\(\)/);
   assert.match(serviceSource, /user\.id !== expectedUserId/);
   assert.match(serviceSource, /\.eq\("driver_id", user\.id\)/);
+  assert.match(serviceSource, /\.eq\("file_path", existing\.file_path\)/);
   assert.match(serviceSource, /upsert: false/);
   assert.match(serviceSource, /status: "pending"/);
   assert.match(serviceSource, /reconcileSavedPath/);
