@@ -4,7 +4,7 @@ This directory is an isolated Tailwind CSS v4 workspace for the HALLO Logistics 
 
 ## Scope
 
-- Driver home, database-backed available jobs, active-trip summary, wallet, and profile shell.
+- Driver home, database-backed available jobs, active-trip summary, wallet, and production profile/compliance status.
 - Customer home, shipment booking, live order map, payments, and profile shell.
 - HALO blue-and-gold mobile design tokens.
 - Full-height mobile map experience with safe-area-aware navigation.
@@ -38,7 +38,7 @@ The Driver Jobs workspace is database-backed:
 - preserves server enforcement for driver approval, truck ownership/type/capacity, document validity, active-trip exclusion and commission settlement;
 - refreshes periodically and reacts to changes on the signed-in driver's orders.
 
-Driver Active Trip reads the assigned order, route geometry and navigation instructions from production services. GPS remains offline-safe and shows `in_transit` only after server confirmation. An In Transit Driver can now capture the delivery photo, receiver name and signature, report the customer-selected payment outcome, and complete the order through the existing atomic `driver_finish_trip` RPC. Driver Wallet now reads the signed-in Driver's financial summary, commission position and completed-trip payment results from existing self-scoped production sources. Customer booking, Customer payments and Customer live tracking remain separate integration slices.
+Driver Active Trip reads the assigned order, route geometry and navigation instructions from production services. GPS remains offline-safe and shows `in_transit` only after server confirmation. An In Transit Driver can now capture the delivery photo, receiver name and signature, report the customer-selected payment outcome, and complete the order through the existing atomic `driver_finish_trip` RPC. Driver Wallet now reads the signed-in Driver's financial summary, commission position and completed-trip payment results from existing self-scoped production sources. Driver Profile now reads the signed-in Driver's account, assigned trucks and identity/vehicle verification status from existing RLS-protected tables. Customer booking, Customer payments and Customer live tracking remain separate integration slices.
 
 ## Design constraints
 
@@ -101,3 +101,15 @@ Driver Active Trip reads the assigned order, route geometry and navigation instr
 - Shows recent pending, approved and rejected submissions, including the Admin/CEO rejection reason.
 - Prevents overlapping form submissions and refreshes wallet totals after successful submission or realtime review changes.
 - Does not approve payments, alter commission charges, modify deposits, create payouts or mutate ledger history.
+
+
+## Driver Profile boundary
+
+- Reads only the signed-in Driver's `profiles` row and requires the database role to remain Driver.
+- Reads only trucks whose `driver_id` matches the authenticated Driver under existing Trucks RLS.
+- Reads only the Driver's own `driver_verification_files` rows under existing verification RLS.
+- Shows database Driver status, rating, preferred vehicle, assigned truck details and 5 identity plus 7 vehicle checklist items.
+- Treats missing, pending, rejected, verified and expired documents as different states; expired evidence never counts as verified.
+- Loads profile, truck and document sources independently and preserves each last confirmed snapshot during transient failures.
+- Refreshes periodically and on Driver-filtered realtime changes while coalescing overlapping refreshes.
+- Is read-only: it does not upload, replace, delete or approve verification evidence and does not change truck assignment.
