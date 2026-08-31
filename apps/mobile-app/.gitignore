@@ -8,3 +8,4 @@ dist/
 .test-dist-commission/
 .test-dist-profile/
 *.local
+.test-dist-document-upload/
