@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DriverDocumentPreviewSheet } from "./DriverDocumentPreviewSheet";
 import { DriverDocumentUploadSheet } from "./DriverDocumentUploadSheet";
 import {
+  documentExpirySummary,
+  documentExpiryWarning,
   documentHealth,
   documentProgress,
   formatCapacityTons,
@@ -79,18 +82,33 @@ function SourceError({ message, onRetry }: { message: string; onRetry: () => voi
 function DocumentRow({
   documentKey,
   record,
+  onPreview,
   onUpload,
   uploadDisabled = false,
 }: {
   documentKey: VerificationDocumentKey;
   record: DriverVerificationRecord | undefined;
+  onPreview: () => void;
   onUpload: () => void;
   uploadDisabled?: boolean;
 }) {
   const health = documentHealth(record);
   const copy = healthCopy[health];
+  const expiry = documentExpiryWarning(record);
+  const expiryMessage = expiry.level === "expired"
+    ? "Yeroon isaa darbeera — document haaraa galchi."
+    : expiry.level === "critical"
+      ? expiry.daysRemaining === 0
+        ? "Har'a xumurama."
+        : `Guyyaa ${expiry.daysRemaining} keessatti xumurama.`
+      : expiry.level === "soon"
+        ? `Guyyaa ${expiry.daysRemaining} keessatti xumurama.`
+        : null;
+  const expiryClass = expiry.level === "expired" || expiry.level === "critical"
+    ? "border-red-100 bg-red-50 text-red-700"
+    : "border-amber-100 bg-amber-50 text-amber-800";
   return <article className="border-t border-halo-line px-4 py-3 first:border-t-0">
-    <div className="flex items-start gap-3"><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ${copy.className}`}>{health === "verified" ? "✓" : health === "rejected" || health === "expired" ? "!" : "•"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-extrabold leading-5 text-halo-navy">{documentLabels[documentKey]}</p><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${copy.className}`}>{copy.label}</span></div>{record?.expiryDate && <p className="mt-1 text-[10px] text-halo-muted">Expiry: {formatDate(record.expiryDate)}</p>}{record?.rejectionReason && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold leading-4 text-red-700">Sababa: {record.rejectionReason}</p>}{!record && <p className="mt-1 text-[10px] text-halo-muted">Document kana mobile profile irratti hin argamne.</p>}<button type="button" onClick={onUpload} disabled={uploadDisabled} className="mt-3 min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{record ? "Jijjiiri" : "Galchi"}</button></div></div>
+    <div className="flex items-start gap-3"><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ${copy.className}`}>{health === "verified" ? "✓" : health === "rejected" || health === "expired" ? "!" : "•"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-extrabold leading-5 text-halo-navy">{documentLabels[documentKey]}</p><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${copy.className}`}>{copy.label}</span></div>{record?.expiryDate && <p className="mt-1 text-[10px] text-halo-muted">Expiry: {formatDate(record.expiryDate)}</p>}{expiryMessage && <p className={`mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-4 ${expiryClass}`}>{expiryMessage}</p>}{record?.rejectionReason && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold leading-4 text-red-700">Sababa: {record.rejectionReason}</p>}{!record && <p className="mt-1 text-[10px] text-halo-muted">Document kana mobile profile irratti hin argamne.</p>}<div className="mt-3 flex flex-wrap gap-2">{record && <button type="button" onClick={onPreview} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">Ilaali</button>}<button type="button" onClick={onUpload} disabled={uploadDisabled} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{record ? "Jijjiiri" : "Galchi"}</button></div></div></div>
   </article>;
 }
 
@@ -118,6 +136,7 @@ export function DriverProfileView({ userId, fallbackName }: { userId: string; fa
   const [loading, setLoading] = useState(true);
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [uploadTarget, setUploadTarget] = useState<{ documentKey: VerificationDocumentKey; truckId: string | null; record: DriverVerificationRecord | undefined } | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<{ documentKey: VerificationDocumentKey; record: DriverVerificationRecord } | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -205,6 +224,8 @@ export function DriverProfileView({ userId, fallbackName }: { userId: string; fa
     () => selectedTruck ? documentProgress(vehicleDocumentKeys, documents, selectedTruck.id) : { verified: 0, submitted: 0, total: vehicleDocumentKeys.length },
     [documents, selectedTruck],
   );
+  const expirySummary = useMemo(() => documentExpirySummary(documents), [documents]);
+  const expiryWarningCount = expirySummary.expired + expirySummary.critical + expirySummary.soon;
   const profileStatus = profile ? statusCopy(profile.driverStatus) : null;
   const initials = (profile?.fullName || fallbackName).trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toUpperCase()).join("") || "D";
 
@@ -224,19 +245,22 @@ export function DriverProfileView({ userId, fallbackName }: { userId: string; fa
 
     <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2"><ProgressCard title="Driver documents" {...identityProgress} /><ProgressCard title="Vehicle documents" {...vehicleProgress} /></div>
 
+    {expiryWarningCount > 0 && <section data-driver-document-expiry-warning className="rounded-[22px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-lg font-black text-amber-700">!</span><div className="min-w-0"><p className="text-sm font-black text-amber-900">Document expiry attention</p><p className="mt-1 text-xs leading-5 text-amber-800">Expired: {expirySummary.expired} · 7 days keessatti: {expirySummary.critical} · 30 days keessatti: {expirySummary.soon}</p><p className="mt-2 text-[10px] leading-4 text-amber-700">Expired evidence verified count keessatti hin lakkaa'amu. Xumuramuu dura replacement galchi.</p></div></div></section>}
+
     <section className="space-y-3"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Fleet</p><h2 className="mt-1 text-xl font-black text-halo-navy">Konkolaataa kee</h2></div><span className="text-xs font-bold text-halo-muted">{trucks.length} total</span></div>{trucksError && <SourceError message={trucksError} onRetry={() => void refresh()} />}{trucksConfirmed && trucks.length === 0 ? <div className="rounded-[22px] border border-dashed border-halo-line bg-white p-5 text-center"><p className="text-sm font-black text-halo-navy">Konkolaataan assign hin taane</p><p className="mt-2 text-xs leading-5 text-halo-muted">Admin/CEO irraa vehicle assignment ykn onboarding completion barbaachisa.</p></div> : <div className="flex snap-x gap-3 overflow-x-auto pb-2">{trucks.map((truck) => <TruckCard key={truck.id} truck={truck} selected={selectedTruck?.id === truck.id} onSelect={() => setSelectedTruckId(truck.id)} />)}</div>}</section>
 
     <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Identity checklist</p><h2 className="mt-1 text-lg font-black text-halo-navy">Driver documents</h2></div>{documentsError && <div className="px-4 pb-4"><SourceError message={documentsError} onRetry={() => void refresh()} /></div>}{identityDocumentKeys.map((key) => {
   const record = documents.find((item) => item.documentKey === key && item.truckId === null);
-  return <DocumentRow key={key} documentKey={key} record={record} onUpload={() => { setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: null, record }); }} />;
+  return <DocumentRow key={key} documentKey={key} record={record} onPreview={() => { if (record) setPreviewTarget({ documentKey: key, record }); }} onUpload={() => { setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: null, record }); }} />;
 })}</section>
 
     <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Vehicle checklist</p><h2 className="mt-1 text-lg font-black text-halo-navy">{selectedTruck ? selectedTruck.plateNumber : "Konkolaataa hin filatamne"}</h2><p className="mt-1 text-[10px] text-halo-muted">Vehicle tokko filachuun document status isaa ilaali.</p></div>{vehicleDocumentKeys.map((key) => {
   const record = selectedTruck ? documents.find((item) => item.documentKey === key && item.truckId === selectedTruck.id) : undefined;
-  return <DocumentRow key={key} documentKey={key} record={record} uploadDisabled={!selectedTruck} onUpload={() => { if (!selectedTruck) return; setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: selectedTruck.id, record }); }} />;
+  return <DocumentRow key={key} documentKey={key} record={record} uploadDisabled={!selectedTruck} onPreview={() => { if (record) setPreviewTarget({ documentKey: key, record }); }} onUpload={() => { if (!selectedTruck) return; setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: selectedTruck.id, record }); }} />;
 })}</section>
 
     <div className="rounded-2xl bg-halo-gold-soft p-4 text-xs leading-5 text-halo-gold-dark"><strong>Document upload/replacement:</strong> File haaraan Pending ta'ee Admin/CEO review eeggata. Verified document jijjiiruun verification duraanii hin dhaalu.</div>
+    {previewTarget && <DriverDocumentPreviewSheet expectedUserId={userId} record={previewTarget.record} documentLabel={documentLabels[previewTarget.documentKey]} onClose={() => setPreviewTarget(null)} />}
     {uploadTarget && <DriverDocumentUploadSheet userId={userId} documentKey={uploadTarget.documentKey} documentLabel={documentLabels[uploadTarget.documentKey]} truckId={uploadTarget.truckId} currentRecord={uploadTarget.record} onClose={() => setUploadTarget(null)} onUploaded={async (message) => { setUploadNotice(message); setUploadTarget(null); await refresh(); }} />}
   </div>;
 }
