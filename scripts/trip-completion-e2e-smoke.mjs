@@ -134,13 +134,30 @@ function buttonByText(root, value) {
   return [...root.querySelectorAll("button")].find((button) => (button.textContent ?? "").trim() === value);
 }
 
+async function waitForValue(read, errorMessage, timeoutMs = 2_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const value = read();
+    if (value) return value;
+    await delay(25);
+  }
+  throw new Error(errorMessage);
+}
+
 async function runFixture() {
   try {
-    await delay(80);
-    const confirmCase = document.getElementById("confirm-case");
-    const reportCase = document.getElementById("report-case");
-    const confirmButton = buttonByText(confirmCase, "Payment confirmed");
-    if (!confirmButton) throw new Error("Confirm action was not rendered");
+    const confirmCase = await waitForValue(
+      () => document.getElementById("confirm-case"),
+      "Confirm case was not rendered",
+    );
+    const reportCase = await waitForValue(
+      () => document.getElementById("report-case"),
+      "Payment-not-received case was not rendered",
+    );
+    const confirmButton = await waitForValue(
+      () => buttonByText(confirmCase, "Payment confirmed"),
+      "Confirm action was not rendered",
+    );
     confirmButton.click();
     confirmButton.click();
     await delay(30);
@@ -151,20 +168,24 @@ async function runFixture() {
     document.documentElement.dataset.paymentBusy = String(confirmControl?.getAttribute("aria-busy") === "true");
     await delay(300);
 
-    const openReport = buttonByText(reportCase, "Payment not received / not confirmed");
-    if (!openReport) throw new Error("Payment-not-received action was not rendered");
+    const openReport = await waitForValue(
+      () => buttonByText(reportCase, "Payment not received / not confirmed"),
+      "Payment-not-received action was not rendered",
+    );
     openReport.click();
-    await delay(30);
-    const textarea = reportCase.querySelector("textarea");
-    if (!textarea) throw new Error("Payment-not-received reason field was not rendered");
+    const textarea = await waitForValue(
+      () => reportCase.querySelector("textarea"),
+      "Payment-not-received reason field was not rendered",
+    );
     const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
     valueSetter?.call(textarea, "Transfer not visible in the assigned driver account.");
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     textarea.dispatchEvent(new Event("change", { bubbles: true }));
-    await delay(30);
 
-    const saveReport = buttonByText(reportCase, "Save payment-not-received status");
-    if (!saveReport) throw new Error("Payment-not-received save action was not rendered");
+    const saveReport = await waitForValue(
+      () => buttonByText(reportCase, "Save payment-not-received status"),
+      "Payment-not-received save action was not rendered",
+    );
     saveReport.click();
     saveReport.click();
     await delay(30);
