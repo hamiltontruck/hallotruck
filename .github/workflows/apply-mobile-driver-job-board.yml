@@ -59,8 +59,15 @@ jobs:
           if old_deps not in text:
               raise SystemExit("Mobile workspace memo dependency list was not found")
           text = text.replace(old_deps, new_deps, 1)
-
           path.write_text(text)
+
+          component_path = Path("apps/mobile-app/src/driver/DriverJobsBoard.tsx")
+          component = component_path.read_text()
+          old_unsubscribe = "let unsubscribe = () => undefined;"
+          new_unsubscribe = "let unsubscribe: () => void = () => {};"
+          if old_unsubscribe not in component:
+              raise SystemExit("Driver jobs unsubscribe declaration was not found")
+          component_path.write_text(component.replace(old_unsubscribe, new_unsubscribe, 1))
           PY
 
       - name: Install mobile dependencies
