@@ -95,4 +95,9 @@ Driver Active Trip reads the assigned order, route geometry and navigation instr
 - Loads financial, commission and trip-history sources independently so one failure does not blank the others.
 - Preserves the last confirmed values during transient refresh failures and rejects stale refresh responses.
 - Refreshes on Driver-filtered realtime changes and coalesces overlapping refresh events.
-- Remains read-only; commission payment upload and payout requests are separate future slices.
+- Allows the approved signed-in Driver to submit a commission payment through the existing `submit_driver_commission_payment` RPC.
+- Uploads JPG, PNG, WebP or PDF receipts up to 10 MB to the private `driver-commission-receipts` bucket under the Driver's own ID.
+- Subtracts already-pending submissions from the client-side payable amount while leaving the server RPC authoritative.
+- Shows recent pending, approved and rejected submissions, including the Admin/CEO rejection reason.
+- Prevents overlapping form submissions and refreshes wallet totals after successful submission or realtime review changes.
+- Does not approve payments, alter commission charges, modify deposits, create payouts or mutate ledger history.

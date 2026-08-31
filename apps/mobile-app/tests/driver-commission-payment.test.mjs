@@ -66,7 +66,7 @@ test("requires a supported non-empty receipt no larger than 10 MB", () => {
 });
 
 test("builds an owner-scoped receipt path and strips unsafe filename characters", () => {
-  assert.equal(safeDriverCommissionReceiptName("../../My CBE Receipt (Final).PDF"), "my-cbe-receipt-final-.pdf".replace("-.", "."));
+  assert.equal(safeDriverCommissionReceiptName("../../My CBE Receipt (Final).PDF"), "my-cbe-receipt-final.pdf");
   const path = buildDriverCommissionReceiptPath(
     "driver-123",
     "../../My Receipt.PDF",

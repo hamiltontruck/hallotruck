@@ -140,6 +140,7 @@ export function safeDriverCommissionReceiptName(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/-+/g, "-")
+    .replace(/-+\./g, ".")
     .replace(/^[-.]+|[-.]+$/g, "")
     .slice(-90);
   return normalized || "receipt";
