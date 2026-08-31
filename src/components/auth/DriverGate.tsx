@@ -15,21 +15,28 @@ export function DriverGate({ children }: { children: ReactNode }) {
 
     async function check(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
       if (!active) return;
+
       setSignedIn(Boolean(session));
-      const nextRole = session?.user.app_metadata?.role ?? null;
-      setRole(nextRole);
+      setRole(null);
       setDriverStatus(null);
 
-      if (session && nextRole === "driver") {
-        const { data } = await supabase
-          .from("profiles")
-          .select("driver_status")
-          .eq("id", session.user.id)
-          .maybeSingle();
-        if (active) setDriverStatus(data?.driver_status ?? null);
+      if (!session) {
+        setLoading(false);
+        return;
       }
 
-      if (active) setLoading(false);
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role, driver_status")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (!active) return;
+      if (!error && profile) {
+        setRole(profile.role ?? null);
+        setDriverStatus(profile.driver_status ?? null);
+      }
+      setLoading(false);
     }
 
     supabase.auth.getSession().then(({ data }) => void check(data.session));
@@ -63,5 +70,5 @@ export function DriverGate({ children }: { children: ReactNode }) {
 
   if (role === "driver") return <>{children}</>;
 
-  return <main className="min-h-screen bg-bone grid place-items-center p-5"><section className="bg-white border border-line p-7 max-w-md w-full"><p className="font-display font-bold text-2xl">Driver account required</p><p className="font-body text-sm text-steel mt-3">An Admin/CEO session is active in this browser. Sign it out before opening the driver workspace.</p><button onClick={switchAccount} className="w-full bg-asphalt text-white py-4 mt-6 font-semibold">Switch to driver login</button><Link to="/" className="block text-center text-xs text-steel mt-5">Return to Admin</Link></section></main>;
+  return <main className="min-h-screen bg-bone grid place-items-center p-5"><section className="bg-white border border-line p-7 max-w-md w-full"><p className="font-display font-bold text-2xl">Driver account required</p><p className="font-body text-sm text-steel mt-3">The active account belongs to another HALLOTRUCK workspace. Sign it out before opening the driver workspace.</p><button onClick={switchAccount} className="w-full bg-asphalt text-white py-4 mt-6 font-semibold">Switch to driver login</button><Link to="/" className="block text-center text-xs text-steel mt-5">Choose another portal</Link></section></main>;
 }
