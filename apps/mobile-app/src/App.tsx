@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { MobileAuthBoundary, type MobileIdentity } from "./auth/MobileAuthBoundary";
+import { DriverJobsBoard } from "./driver/DriverJobsBoard";
 
 type Role = "driver" | "customer";
 type Tab = "home" | "jobs" | "map" | "wallet" | "profile";
@@ -133,22 +134,9 @@ function CustomerHome({ setTab }: { setTab: (tab: Tab) => void }) {
   </div>;
 }
 
-const jobs = [
-  { route: "Finfinnee → Dire Dawa", cargo: "General cargo · 22 Ton", distance: "515 km", price: "ETB 440,000", status: "Haaraa" },
-  { route: "Adama → Hawassa", cargo: "Construction · 25 Ton", distance: "275 km", price: "ETB 285,000", status: "Dhihoo" },
-  { route: "Finfinnee → Bahir Dar", cargo: "Food products · 18 Ton", distance: "565 km", price: "ETB 390,000", status: "Bor" },
-];
-
-function JobsView({ role }: { role: Role }) {
+function JobsView({ role, identity }: { role: Role; identity: MobileIdentity }) {
   if (role === "customer") return <ShipmentForm />;
-  return <div className="space-y-5 px-4 pb-6 pt-5 sm:px-6">
-    <div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Marketplace</p><h1 className="mt-1 text-2xl font-black text-halo-navy">Hojii argaman</h1></div><button type="button" className="grid h-11 w-11 place-items-center rounded-2xl border border-halo-line bg-white text-halo-blue"><Icon name="filter" /></button></div>
-    <div className="grid grid-cols-3 gap-2 rounded-2xl bg-halo-soft p-1 text-xs font-bold"><button type="button" className="rounded-xl bg-white px-3 py-2.5 text-halo-blue shadow-sm">Hundaa</button><button type="button" className="px-3 py-2.5 text-halo-muted">Dhihoo</button><button type="button" className="px-3 py-2.5 text-halo-muted">Gatii olaanaa</button></div>
-    <div className="space-y-3">{jobs.map((job, index) => <article key={job.route} className="rounded-[24px] border border-halo-line bg-white p-4 shadow-halo-card">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider ${index === 0 ? "bg-emerald-50 text-emerald-700" : "bg-halo-soft text-halo-blue"}`}>{job.status}</span><h2 className="mt-3 text-base font-black text-halo-navy">{job.route}</h2><p className="mt-1 text-xs text-halo-muted">{job.cargo}</p></div><button type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-halo-soft text-halo-blue"><Icon name="plus" className="h-4 w-4" /></button></div>
-      <div className="mt-4 flex items-end justify-between border-t border-halo-line pt-3"><div className="flex items-center gap-1.5 text-xs text-halo-muted"><Icon name="map" className="h-4 w-4" />{job.distance}</div><p className="text-sm font-black text-halo-blue">{job.price}</p></div>
-    </article>)}</div>
-  </div>;
+  return <DriverJobsBoard userId={identity.userId} fullName={identity.fullName} />;
 }
 
 function Field({ label, value, icon }: { label: string; value: string; icon: IconName }) {
@@ -242,11 +230,11 @@ function MobileWorkspace({
   const [tab, setTab] = useState<Tab>("home");
   const content = useMemo(() => {
     if (tab === "home") return role === "driver" ? <DriverHome setTab={setTab} /> : <CustomerHome setTab={setTab} />;
-    if (tab === "jobs") return <JobsView role={role} />;
+    if (tab === "jobs") return <JobsView role={role} identity={identity} />;
     if (tab === "map") return <LiveMapView role={role} />;
     if (tab === "wallet") return <WalletView role={role} />;
     return <ProfileView role={role} />;
-  }, [role, tab]);
+  }, [identity, role, tab]);
 
   useEffect(() => {
     setTab("home");

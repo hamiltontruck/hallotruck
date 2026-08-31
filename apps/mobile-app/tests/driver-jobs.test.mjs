@@ -1,0 +1,85 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import {
+  normalizeDriverActiveTrip,
+  normalizeDriverAvailableJobs,
+  normalizeDriverTruckOptions,
+} from "../.test-dist/driver-jobs/driver-jobs.model.js";
+
+const serviceSource = readFileSync(new URL("../src/driver/driver-jobs.service.ts", import.meta.url), "utf8");
+const componentSource = readFileSync(new URL("../src/driver/DriverJobsBoard.tsx", import.meta.url), "utf8");
+const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+
+test("available jobs preserve unknown money and distance instead of inventing zero", () => {
+  const jobs = normalizeDriverAvailableJobs([
+    {
+      id: "order-1",
+      tracking_id: "HT-2026-001",
+      pickup_address: "Finfinnee",
+      dropoff_address: "Hawassa",
+      vehicle_type: "Truck 22 Ton",
+      distance_km: null,
+      price_etb: "440000",
+      cargo_description: "General cargo",
+    },
+  ]);
+
+  assert.equal(jobs.length, 1);
+  assert.equal(jobs[0].distanceKm, null);
+  assert.equal(jobs[0].priceEtb, 440000);
+});
+
+test("malformed job and truck rows are rejected before rendering or claiming", () => {
+  assert.deepEqual(normalizeDriverAvailableJobs([{ id: "missing-required-fields" }]), []);
+  assert.deepEqual(normalizeDriverTruckOptions([{ id: "truck-1", plate_number: "" }]), []);
+});
+
+test("only accepted and in_transit rows become active driver trips", () => {
+  assert.equal(normalizeDriverActiveTrip({
+    id: "order-1",
+    tracking_id: "HT-2026-001",
+    status: "placed",
+    pickup_address: "A",
+    dropoff_address: "B",
+  }), null);
+
+  const active = normalizeDriverActiveTrip({
+    id: "order-1",
+    tracking_id: "HT-2026-001",
+    status: "in_transit",
+    pickup_address: "A",
+    dropoff_address: "B",
+    price_etb: "500000",
+  });
+  assert.equal(active?.status, "in_transit");
+  assert.equal(active?.priceEtb, 500000);
+});
+
+test("service uses canonical server authorization and isolates active orders to the authenticated driver", () => {
+  assert.match(serviceSource, /\.rpc\("get_available_jobs"\)/);
+  assert.match(serviceSource, /\.rpc\("driver_available_trucks_for_order"/);
+  assert.match(serviceSource, /\.rpc\("claim_order_with_truck"/);
+  assert.match(serviceSource, /\.eq\("driver_id", user\.id\)/);
+  assert.match(serviceSource, /data\.user\.id !== expectedUserId/);
+  assert.doesNotMatch(serviceSource, /user_metadata|app_metadata/);
+  assert.doesNotMatch(serviceSource, /\.eq\("status", "placed"\)/);
+});
+
+test("job board guards overlapping refresh and claim requests while preserving confirmed data", () => {
+  assert.match(componentSource, /busyRef\.current/);
+  assert.match(componentSource, /queuedRefreshRef\.current/);
+  assert.match(componentSource, /requestIdRef\.current/);
+  assert.match(componentSource, /claimLockRef\.current/);
+  assert.match(componentSource, /setSnapshot\(nextSnapshot\)/);
+  assert.doesNotMatch(componentSource, /setSnapshot\(null\)/);
+  assert.match(componentSource, /role="alert"/);
+  assert.match(componentSource, /aria-busy=\{refreshing\}/);
+});
+
+test("mobile app replaces the hardcoded driver marketplace but preserves the customer shipment form", () => {
+  assert.match(appSource, /import \{ DriverJobsBoard \} from "\.\/driver\/DriverJobsBoard"/);
+  assert.match(appSource, /role === "customer"\) return <ShipmentForm \/>/);
+  assert.match(appSource, /<DriverJobsBoard userId=\{identity\.userId\} fullName=\{identity\.fullName\} \/>/);
+  assert.doesNotMatch(appSource, /const jobs = \[/);
+});
