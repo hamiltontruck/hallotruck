@@ -1,4 +1,5 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { MobileAuthBoundary, type MobileIdentity } from "./auth/MobileAuthBoundary";
 
 type Role = "driver" | "customer";
 type Tab = "home" | "jobs" | "map" | "wallet" | "profile";
@@ -57,11 +58,6 @@ function HaloLogo({ compact = false }: { compact?: boolean }) {
   </div>;
 }
 
-function RoleSwitch({ role, onChange }: { role: Role; onChange: (role: Role) => void }) {
-  return <div className="grid grid-cols-2 rounded-2xl bg-halo-soft p-1" aria-label="App role">
-    {(["driver", "customer"] as Role[]).map((item) => <button key={item} type="button" onClick={() => onChange(item)} className={`min-h-10 rounded-xl px-3 text-xs font-bold transition ${role === item ? "bg-white text-halo-blue shadow-sm" : "text-halo-muted"}`}>{item === "driver" ? "Driver" : "Customer"}</button>)}
-  </div>;
-}
 
 function SectionTitle({ eyebrow, title, action }: { eyebrow: string; title: string; action?: string }) {
   return <div className="flex items-end justify-between gap-3">
@@ -233,8 +229,16 @@ function BottomNav({ role, tab, setTab }: { role: Role; tab: Tab; setTab: (tab: 
   </nav>;
 }
 
-export default function App() {
-  const [role, setRole] = useState<Role>("driver");
+function MobileWorkspace({
+  identity,
+  onSignOut,
+  signingOut,
+}: {
+  identity: MobileIdentity;
+  onSignOut: () => Promise<void>;
+  signingOut: boolean;
+}) {
+  const role: Role = identity.role;
   const [tab, setTab] = useState<Tab>("home");
   const content = useMemo(() => {
     if (tab === "home") return role === "driver" ? <DriverHome setTab={setTab} /> : <CustomerHome setTab={setTab} />;
@@ -244,19 +248,37 @@ export default function App() {
     return <ProfileView role={role} />;
   }, [role, tab]);
 
-  function changeRole(nextRole: Role) {
-    setRole(nextRole);
+  useEffect(() => {
     setTab("home");
-  }
+  }, [role]);
 
   return <div className="halo-mobile-app min-h-screen bg-halo-canvas text-halo-navy">
     <div className="mx-auto min-h-screen w-full max-w-[520px] bg-halo-canvas shadow-[0_0_70px_rgba(16,33,61,0.10)]">
       <header className="sticky top-0 z-40 flex min-h-[72px] items-center justify-between gap-3 border-b border-halo-line bg-white/95 px-4 backdrop-blur-xl sm:px-6">
         <HaloLogo />
-        <div className="flex items-center gap-2"><RoleSwitch role={role} onChange={changeRole} /><button type="button" className="relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-halo-soft text-halo-blue"><Icon name="bell" className="h-5 w-5" /><span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-halo-soft bg-red-500" /></button></div>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="hidden max-w-28 truncate rounded-xl bg-halo-soft px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-halo-blue sm:block">{identity.fullName}</span>
+          <button type="button" onClick={() => void onSignOut()} disabled={signingOut} aria-label={`Sign out ${identity.fullName}`} className="min-h-10 shrink-0 rounded-xl border border-halo-line px-3 text-xs font-black text-halo-navy disabled:opacity-60">{signingOut ? "…" : "Ba'i"}</button>
+          <button type="button" className="relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-halo-soft text-halo-blue" aria-label="Notifications"><Icon name="bell" className="h-5 w-5" /><span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-halo-soft bg-red-500" /></button>
+        </div>
       </header>
       <main>{content}</main>
       <BottomNav role={role} tab={tab} setTab={setTab} />
     </div>
   </div>;
+}
+
+export default function App() {
+  return (
+    <MobileAuthBoundary>
+      {({ identity, signOut, signingOut }) => (
+        <MobileWorkspace
+          key={`${identity.userId}:${identity.role}`}
+          identity={identity}
+          onSignOut={signOut}
+          signingOut={signingOut}
+        />
+      )}
+    </MobileAuthBoundary>
+  );
 }

@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "rootDir": "src/auth",
+    "declaration": false,
+    "isolatedModules": false
+  },
+  "include": ["src/auth/access-policy.ts"]
+}

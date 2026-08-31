@@ -26,7 +26,7 @@ npm run dev
 
 ## Current implementation status
 
-This first slice establishes the isolated build and the production-quality responsive UI shell. It intentionally uses display data only. Connecting the screens to the existing authentication, services, Supabase queries, order state machine, payment records, and live GPS must be completed in a separate focused integration slice with role-isolation and regression tests.
+The responsive UI shell now includes a secure Supabase authentication boundary. Email/password sessions are restored in isolated mobile storage, and the workspace is selected only from `profiles.role` plus `driver_status` in the database. Operational screens still use display data; orders, payments, wallet records and live GPS remain separate integration slices.
 
 ## Design constraints
 
@@ -35,3 +35,15 @@ This first slice establishes the isolated build and the production-quality respo
 - Touch targets are at least approximately 40–44 px.
 - Focus-visible states and reduced-motion preferences are supported.
 - No style from this package is loaded by the existing root application.
+
+
+## Mobile authentication boundary
+
+- Requires `VITE_SUPABASE_URL` and the public `VITE_SUPABASE_ANON_KEY`.
+- Never accepts a service-role key in the browser bundle.
+- Does not trust `user_metadata` or a user-controlled role switch.
+- Reads `profiles.role`, `profiles.driver_status` and `profiles.full_name` under the signed-in user's existing RLS policy.
+- Allows Customer accounts and approved Driver accounts only.
+- Keeps pending/rejected Drivers in onboarding, blocks suspended Drivers, and denies Admin/CEO/Partner accounts.
+- Uses a dedicated `hallo-mobile-auth-v1` storage key so the mobile workspace does not inherit a leadership session from the root web portal.
+- Covers the role decision contract with deterministic Node tests in Mobile App CI.
