@@ -23,9 +23,11 @@ test("normalizes only assigned active lifecycle rows", () => {
     dropoff_address: "Finfinnee",
     price_etb: "12000",
     accepted_at: null,
+    selected_payment_method: "cash",
   });
   assert.equal(accepted?.status, "accepted");
   assert.equal(accepted?.priceEtb, 12000);
+  assert.equal(accepted?.selectedPaymentMethod, "cash");
   assert.equal(normalizeDriverActiveTripOrder({ ...accepted, status: "delivered" }), null);
   assert.equal(normalizeDriverActiveTripOrder({ id: "missing-fields", status: "in_transit" }), null);
 });

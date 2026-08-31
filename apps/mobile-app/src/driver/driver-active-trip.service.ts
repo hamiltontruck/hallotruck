@@ -60,11 +60,13 @@ async function readError(response: Response, fallback: string): Promise<string> 
   }
 }
 
+const activeTripColumns = "id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at,selected_payment_method";
+
 export async function fetchDriverActiveTrip(expectedUserId: string): Promise<DriverActiveTripOrder | null> {
   const { client, user } = await requireExpectedDriver(expectedUserId);
   const { data, error } = await client
     .from("orders")
-    .select("id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at")
+    .select(activeTripColumns)
     .eq("driver_id", user.id)
     .in("status", ["accepted", "in_transit"])
     .order("accepted_at", { ascending: true })
@@ -81,7 +83,7 @@ export async function fetchDriverAssignedTrip(
   const { client, user } = await requireExpectedDriver(expectedUserId);
   const { data, error } = await client
     .from("orders")
-    .select("id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at")
+    .select(activeTripColumns)
     .eq("id", orderId)
     .eq("driver_id", user.id)
     .in("status", ["accepted", "in_transit"])

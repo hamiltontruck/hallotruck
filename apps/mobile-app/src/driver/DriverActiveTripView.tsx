@@ -26,6 +26,7 @@ import {
   getQueuedDriverPingCount,
   syncQueuedDriverPings,
 } from "./driver-gps-queue";
+import { DriverDeliveryProofPanel } from "./DriverDeliveryProofPanel";
 
 type GpsState = "idle" | "requesting" | "queued" | "syncing" | "live";
 
@@ -102,6 +103,7 @@ export function DriverActiveTripView({
   const [pendingCount, setPendingCount] = useState(0);
   const [lastPingAt, setLastPingAt] = useState<string | null>(null);
   const [speedKmh, setSpeedKmh] = useState<number | null>(null);
+  const [completedTrackingId, setCompletedTrackingId] = useState<string | null>(null);
 
   useEffect(() => {
     tripRef.current = trip;
@@ -149,6 +151,7 @@ export function DriverActiveTripView({
         setRouteOrderId(null);
         if (previous) clearQueuedDriverPings(userId, previous.id);
       } else if (!previous || previous.id !== next.id) {
+        setCompletedTrackingId(null);
         clearWatch();
         setGpsState("idle");
         setDriverPosition(null);
@@ -313,6 +316,23 @@ export function DriverActiveTripView({
     }
   }, [clearWatch, pendingCount, userId]);
 
+  const handleDelivered = useCallback((trackingId: string) => {
+    const completed = tripRef.current;
+    clearWatch();
+    if (completed) clearQueuedDriverPings(userId, completed.id);
+    setGpsState("idle");
+    setPendingCount(0);
+    setDriverPosition(null);
+    setLastPingAt(null);
+    setSpeedKmh(null);
+    setRoute(null);
+    setRouteOrderId(null);
+    setCompletedTrackingId(trackingId);
+    setTrip(null);
+    tripRef.current = null;
+    void refreshTrip(true);
+  }, [clearWatch, refreshTrip, userId]);
+
   useEffect(() => {
     mountedRef.current = true;
     void refreshTrip();
@@ -355,6 +375,18 @@ export function DriverActiveTripView({
   }
 
   if (!trip) {
+    if (completedTrackingId) {
+      return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-5">
+        <section className="w-full max-w-sm rounded-[28px] border border-emerald-200 bg-white p-7 text-center shadow-halo-card" data-mobile-trip-complete>
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-3xl text-emerald-700">✓</span>
+          <p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{completedTrackingId}</p>
+          <h1 className="mt-2 text-2xl font-black text-halo-navy">Trip milkaa'inaan xumurameera</h1>
+          <p className="mt-3 text-sm leading-6 text-halo-muted">Delivery proof fi payment result server irratti olkaa'amaniiru. Trip kun active workspace keessaa haqameera.</p>
+          {error && <p role="alert" className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">{error}</p>}
+          <button type="button" onClick={() => { setCompletedTrackingId(null); void refreshTrip(); }} className="mt-6 min-h-12 w-full rounded-2xl bg-halo-blue px-5 font-black text-white">Hojii itti aanu ilaali</button>
+        </section>
+      </div>;
+    }
     return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-5"><section className="w-full max-w-sm rounded-[28px] border border-halo-line bg-white p-7 text-center shadow-halo-card"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Active trip</p><h1 className="mt-3 text-2xl font-black text-halo-navy">Trip hojii irra jiru hin jiru</h1><p className="mt-3 text-sm leading-6 text-halo-muted">Hojii fudhatte erga jiraate booda route fi GPS controls as irratti mul'atu.</p>{error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>}<button type="button" onClick={() => void refreshTrip()} className="mt-6 min-h-12 w-full rounded-2xl bg-halo-blue px-5 font-black text-white">Irra deebi'ii ilaali</button></section></div>;
   }
 
@@ -404,6 +436,10 @@ export function DriverActiveTripView({
           {watchIdRef.current !== null && <button type="button" onClick={stopSharing} className="min-h-12 w-full rounded-2xl border border-halo-line px-5 text-sm font-black text-halo-navy">GPS qooduu dhaabi</button>}
         </> : gpsState === "live" ? <button type="button" onClick={stopSharing} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-5 text-sm font-black text-halo-navy">GPS qooduu dhaabi</button> : <button type="button" onClick={startSharing} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white shadow-halo-button disabled:opacity-60">{gpsState === "requesting" ? "GPS jalqabaa jira…" : gpsState === "syncing" ? "GPS sync godhaa jira…" : trip.status === "in_transit" ? "GPS kallattii itti fufi" : "Imala jalqabi & GPS qoodi"}</button>}
       </div>
+
+      {trip.status === "in_transit" && (
+        <DriverDeliveryProofPanel trip={trip} userId={userId} onDelivered={handleDelivered} />
+      )}
 
       <div className="mt-4 flex items-center gap-3 rounded-2xl bg-halo-soft p-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-blue text-sm font-black text-white">{fullName.trim().slice(0, 1).toUpperCase() || "D"}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-black text-halo-navy">{fullName}</p><p className="mt-0.5 text-[10px] text-halo-muted">Assigned Driver · server-authorized trip</p></div></div>
     </section>
