@@ -57,7 +57,7 @@ jobs:
         run: npm run build
 
       - name: Remove one-time workflow
-        run: git rm .github/workflows/apply-mobile-driver-commission-payment.yml scripts/apply-mobile-driver-commission-payment.mjs
+        run: git rm -f .github/workflows/apply-mobile-driver-commission-payment.yml scripts/apply-mobile-driver-commission-payment.mjs
 
       - name: Commit validated result
         run: |
