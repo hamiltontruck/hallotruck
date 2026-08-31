@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-dist-document-upload",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": [
+    "src/driver/driver-profile.model.ts",
+    "src/driver/driver-document-upload.model.ts"
+  ]
+}
