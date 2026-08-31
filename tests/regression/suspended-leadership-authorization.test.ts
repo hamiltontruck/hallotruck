@@ -14,6 +14,7 @@ const rootWebPolicyMigrationPath = path.join(
   "supabase/migrations/20260901024500_harden_root_web_leadership_policies.sql",
 );
 const rootWebPolicyMigration = await readFile(rootWebPolicyMigrationPath, "utf8");
+const rootWebPolicySql = rootWebPolicyMigration.replace(/--.*$/gm, "");
 
 const hardenedAdminFunctions = [
   "admin_approve_driver_onboarding",
@@ -130,11 +131,11 @@ test("root web leadership policies use the current database profile", () => {
 });
 
 test("root web policy hardening removes stale JWT leadership authorization", () => {
-  assert.doesNotMatch(rootWebPolicyMigration, /app_metadata/i);
-  assert.doesNotMatch(rootWebPolicyMigration, /user_metadata/i);
-  assert.doesNotMatch(rootWebPolicyMigration, /auth\.jwt\(\)/i);
-  assert.doesNotMatch(rootWebPolicyMigration, /disable row level security/i);
-  assert.doesNotMatch(rootWebPolicyMigration, /grant all/i);
+  assert.doesNotMatch(rootWebPolicySql, /app_metadata/i);
+  assert.doesNotMatch(rootWebPolicySql, /user_metadata/i);
+  assert.doesNotMatch(rootWebPolicySql, /auth\.jwt\(\)/i);
+  assert.doesNotMatch(rootWebPolicySql, /disable row level security/i);
+  assert.doesNotMatch(rootWebPolicySql, /grant all/i);
 });
 
 test("root web slice does not alter mobile or push-notification policies", () => {
