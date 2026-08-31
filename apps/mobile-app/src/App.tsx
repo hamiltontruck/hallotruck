@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { MobileAuthBoundary, type MobileIdentity } from "./auth/MobileAuthBoundary";
 import { DriverJobsBoard } from "./driver/DriverJobsBoard";
 import { DriverActiveTripView } from "./driver/DriverActiveTripView";
+import { DriverWalletView } from "./driver/DriverWalletView";
 
 type Role = "driver" | "customer";
 type Tab = "home" | "jobs" | "map" | "wallet" | "profile";
@@ -186,14 +187,12 @@ function LiveMapView({ role, identity }: { role: Role; identity: MobileIdentity 
   return <CustomerLiveMapView />;
 }
 
-function WalletView({ role }: { role: Role }) {
-  const transactions = role === "driver"
-    ? [["Finfinnee → Hawassa", "+ ETB 45,000", "Xumurame"], ["Adama → Finfinnee", "+ ETB 30,000", "Xumurame"], ["Payout", "- ETB 50,000", "Baafame"]]
-    : [["ORD-2026-0789", "ETB 18,750", "In transit"], ["ORD-2026-0756", "ETB 24,500", "Delivered"], ["ORD-2026-0741", "ETB 14,000", "Delivered"]];
+function CustomerPaymentsView() {
+  const transactions = [["ORD-2026-0789", "ETB 18,750", "In transit"], ["ORD-2026-0756", "ETB 24,500", "Delivered"], ["ORD-2026-0741", "ETB 14,000", "Delivered"]];
   return <div className="space-y-5 px-4 pb-7 pt-5 sm:px-6">
-    <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{role === "driver" ? "Wallet" : "Payments"}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{role === "driver" ? "Maallaqa kee" : "Kaffaltii fi invoice"}</h1></div>
-    <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-halo-blue to-halo-blue-dark p-5 text-white shadow-halo-float"><div className="absolute -right-9 -top-9 h-32 w-32 rounded-full border-[24px] border-white/5"/><div className="relative"><p className="text-xs text-white/60">{role === "driver" ? "Available balance" : "Total paid"}</p><p className="mt-2 text-3xl font-black tracking-tight">ETB {role === "driver" ? "126,450" : "57,250"}</p><div className="mt-5 flex gap-2"><button type="button" className="min-h-11 flex-1 rounded-2xl bg-halo-gold px-4 text-xs font-black text-halo-navy">{role === "driver" ? "Payout" : "Invoice ilaali"}</button><button type="button" className="grid h-11 w-11 place-items-center rounded-2xl bg-white/12"><Icon name="arrow" className="h-4 w-4" /></button></div></div></section>
-    <section className="space-y-3"><SectionTitle eyebrow="Recent activity" title="Galmee dhihoo" action="Hundaa" />{transactions.map(([title, amount, status]) => <article key={title} className="flex items-center gap-3 rounded-[20px] border border-halo-line bg-white p-3.5 shadow-halo-card"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-soft text-halo-blue"><Icon name={title === "Payout" ? "wallet" : "truck"} className="h-5 w-5" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-extrabold text-halo-navy">{title}</p><p className="mt-1 text-[10px] text-halo-muted">Har'a · {status}</p></div><p className={`text-xs font-black ${amount.startsWith("+") ? "text-emerald-700" : "text-halo-navy"}`}>{amount}</p></article>)}</section>
+    <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Payments</p><h1 className="mt-1 text-2xl font-black text-halo-navy">Kaffaltii fi invoice</h1></div>
+    <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-halo-blue to-halo-blue-dark p-5 text-white shadow-halo-float"><div className="absolute -right-9 -top-9 h-32 w-32 rounded-full border-[24px] border-white/5"/><div className="relative"><p className="text-xs text-white/60">Total paid</p><p className="mt-2 text-3xl font-black tracking-tight">ETB 57,250</p><div className="mt-5 flex gap-2"><button type="button" className="min-h-11 flex-1 rounded-2xl bg-halo-gold px-4 text-xs font-black text-halo-navy">Invoice ilaali</button><button type="button" className="grid h-11 w-11 place-items-center rounded-2xl bg-white/12"><Icon name="arrow" className="h-4 w-4" /></button></div></div></section>
+    <section className="space-y-3"><SectionTitle eyebrow="Recent activity" title="Galmee dhihoo" action="Hundaa" />{transactions.map(([title, amount, status]) => <article key={title} className="flex items-center gap-3 rounded-[20px] border border-halo-line bg-white p-3.5 shadow-halo-card"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-soft text-halo-blue"><Icon name="truck" className="h-5 w-5" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-extrabold text-halo-navy">{title}</p><p className="mt-1 text-[10px] text-halo-muted">Har'a · {status}</p></div><p className="text-xs font-black text-halo-navy">{amount}</p></article>)}</section>
   </div>;
 }
 
@@ -238,7 +237,7 @@ function MobileWorkspace({
     if (tab === "home") return role === "driver" ? <DriverHome setTab={setTab} /> : <CustomerHome setTab={setTab} />;
     if (tab === "jobs") return <JobsView role={role} identity={identity} />;
     if (tab === "map") return <LiveMapView role={role} identity={identity} />;
-    if (tab === "wallet") return <WalletView role={role} />;
+    if (tab === "wallet") return role === "driver" ? <DriverWalletView userId={identity.userId} /> : <CustomerPaymentsView />;
     return <ProfileView role={role} />;
   }, [identity, role, tab]);
 
