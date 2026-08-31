@@ -6,4 +6,5 @@ dist/
 .test-dist-delivery/
 .test-dist-wallet/
 .test-dist-commission/
+.test-dist-profile/
 *.local
