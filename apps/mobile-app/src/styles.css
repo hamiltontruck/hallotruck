@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@theme {
+  --color-halo-blue: #0759c7;
+  --color-halo-blue-dark: #063b84;
+  --color-halo-navy: #10213d;
+  --color-halo-gold: #f5b400;
+  --color-halo-gold-dark: #9a6700;
+  --color-halo-gold-soft: #fff6d8;
+  --color-halo-canvas: #f6f8fc;
+  --color-halo-surface: #ffffff;
+  --color-halo-soft: #edf4ff;
+  --color-halo-muted: #667085;
+  --color-halo-line: #e4e9f2;
+  --shadow-halo-card: 0 8px 28px rgba(16, 33, 61, 0.065);
+  --shadow-halo-float: 0 18px 48px rgba(16, 33, 61, 0.15);
+  --shadow-halo-button: 0 12px 30px rgba(7, 89, 199, 0.25);
+}
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #10213d;
+  background: #f6f8fc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: #f6f8fc;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+  background: #f6f8fc;
+  overscroll-behavior-y: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(245, 180, 0, 0.5);
+  outline-offset: 2px;
+}
+
+.halo-mobile-app {
+  isolation: isolate;
+}
+
+.halo-map-grid {
+  background-color: #e9f1ec;
+  background-image:
+    linear-gradient(rgba(16, 33, 61, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 33, 61, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 16% 24%, rgba(255, 255, 255, 0.95) 0 5%, transparent 5.5%),
+    radial-gradient(circle at 72% 44%, rgba(255, 255, 255, 0.9) 0 7%, transparent 7.5%),
+    radial-gradient(circle at 38% 76%, rgba(255, 255, 255, 0.9) 0 8%, transparent 8.5%);
+  background-size: 32px 32px, 32px 32px, auto, auto, auto;
+}
+
+@media (min-width: 768px) {
+  body {
+    background:
+      radial-gradient(circle at 18% 10%, rgba(7, 89, 199, 0.09), transparent 28%),
+      radial-gradient(circle at 82% 90%, rgba(245, 180, 0, 0.11), transparent 24%),
+      #f6f8fc;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
