@@ -4,4 +4,5 @@ dist/
 .test-dist/
 .test-dist-active/
 .test-dist-delivery/
+.test-dist-wallet/
 *.local

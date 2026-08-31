@@ -38,7 +38,7 @@ The Driver Jobs workspace is database-backed:
 - preserves server enforcement for driver approval, truck ownership/type/capacity, document validity, active-trip exclusion and commission settlement;
 - refreshes periodically and reacts to changes on the signed-in driver's orders.
 
-Driver Active Trip reads the assigned order, route geometry and navigation instructions from production services. GPS remains offline-safe and shows `in_transit` only after server confirmation. An In Transit Driver can now capture the delivery photo, receiver name and signature, report the customer-selected payment outcome, and complete the order through the existing atomic `driver_finish_trip` RPC. Driver wallet records, Customer booking, Customer payments and Customer live tracking remain separate integration slices.
+Driver Active Trip reads the assigned order, route geometry and navigation instructions from production services. GPS remains offline-safe and shows `in_transit` only after server confirmation. An In Transit Driver can now capture the delivery photo, receiver name and signature, report the customer-selected payment outcome, and complete the order through the existing atomic `driver_finish_trip` RPC. Driver Wallet now reads the signed-in Driver's financial summary, commission position and completed-trip payment results from existing self-scoped production sources. Customer booking, Customer payments and Customer live tracking remain separate integration slices.
 
 ## Design constraints
 
@@ -85,3 +85,14 @@ Driver Active Trip reads the assigned order, route geometry and navigation instr
 - Calls the existing authenticated `driver_finish_trip` RPC so proof, Delivered status and payment result remain one server transaction.
 - Reconciles ambiguous retry outcomes against `delivery_proofs` before deleting uploaded files.
 - Stops live GPS and clears order-scoped queued pings after successful completion.
+
+
+## Driver Wallet boundary
+
+- Uses `driver_financial_summary(p_driver_id)` for released earnings, deposits and commission due.
+- Uses `my_driver_commission_summary()` for the Driver's current commission and job-lock position.
+- Reads recent immutable `driver_trip_payment_results` only for the signed-in assigned Driver.
+- Loads financial, commission and trip-history sources independently so one failure does not blank the others.
+- Preserves the last confirmed values during transient refresh failures and rejects stale refresh responses.
+- Refreshes on Driver-filtered realtime changes and coalesces overlapping refresh events.
+- Remains read-only; commission payment upload and payout requests are separate future slices.
