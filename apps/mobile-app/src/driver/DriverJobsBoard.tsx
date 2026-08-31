@@ -185,7 +185,7 @@ export function DriverJobsBoard({ userId, fullName }: { userId: string; fullName
     mountedRef.current = true;
     void refreshRef.current();
     const interval = window.setInterval(() => void refreshRef.current(), MARKET_REFRESH_MS);
-    let unsubscribe = () => undefined;
+    let unsubscribe: () => void = () => {};
     try {
       unsubscribe = subscribeToMyDriverOrders(userId, () => void refreshRef.current());
     } catch (caught) {
