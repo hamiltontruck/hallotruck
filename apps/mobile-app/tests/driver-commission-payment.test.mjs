@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   DRIVER_COMMISSION_RECEIPT_MAX_BYTES,
   buildDriverCommissionReceiptPath,
@@ -7,6 +8,10 @@ import {
   safeDriverCommissionReceiptName,
   validateDriverCommissionPayment,
 } from "../.test-dist-commission/driver-commission-payment.model.js";
+
+const serviceSource = readFileSync(new URL("../src/driver/driver-commission-payment.service.ts", import.meta.url), "utf8");
+const panelSource = readFileSync(new URL("../src/driver/DriverCommissionPaymentPanel.tsx", import.meta.url), "utf8");
+const walletSource = readFileSync(new URL("../src/driver/DriverWalletView.tsx", import.meta.url), "utf8");
 
 const receipt = {
   name: "CBE Receipt 2026.JPG",
@@ -103,4 +108,35 @@ test("normalizes only complete self-scoped payment history rows", () => {
   assert.equal(rows.length, 1);
   assert.equal(rows[0].amountEtb, 1200.5);
   assert.equal(rows[0].status, "pending");
+});
+
+test("service preserves authenticated Driver, private owner path and authoritative RPC boundaries", () => {
+  assert.match(serviceSource, /auth\.getUser\(\)/);
+  assert.match(serviceSource, /auth\.getSession\(\)/);
+  assert.match(serviceSource, /user\.id !== expectedUserId/);
+  assert.match(serviceSource, /session\.user\.id !== expectedUserId/);
+  assert.match(serviceSource, /driver-commission-receipts/);
+  assert.match(serviceSource, /buildDriverCommissionReceiptPath/);
+  assert.match(serviceSource, /upsert: false/);
+  assert.match(serviceSource, /submit_driver_commission_payment/);
+  assert.match(serviceSource, /p_receipt_path: path/);
+  assert.match(serviceSource, /\.eq\("driver_id", expectedUserId\)/);
+  assert.doesNotMatch(serviceSource, /service_role|user_metadata|app_metadata/);
+});
+
+test("panel subtracts pending review, locks submission and surfaces review status", () => {
+  assert.match(panelSource, /Math\.max\(0, balanceEtb - pendingEtb\)/);
+  assert.match(panelSource, /if \(submitting\) return/);
+  assert.match(panelSource, /disabled=\{!canSubmit\}/);
+  assert.match(panelSource, /Pending review/);
+  assert.match(panelSource, /rejectionReason/);
+  assert.match(panelSource, /accept="image\/jpeg,image\/png,image\/webp,application\/pdf"/);
+});
+
+test("wallet loads commission payment history independently and refreshes after submission", () => {
+  assert.match(walletSource, /fetchDriverCommissionPayments\(userId\)/);
+  assert.match(walletSource, /paymentsResult\.status === "fulfilled"/);
+  assert.match(walletSource, /setPayments\(paymentsResult\.value\)/);
+  assert.match(walletSource, /DriverCommissionPaymentPanel/);
+  assert.match(walletSource, /onSubmitted=\{async \(\) => \{ await load\(true\); \}\}/);
 });
