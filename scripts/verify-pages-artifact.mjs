@@ -54,19 +54,38 @@ function getLocalAssetReferences(html) {
   return references;
 }
 
-function assertReferencesExist(indexPath, applicationRoot) {
+function assertReferencesExist(
+  indexPath,
+  applicationRoot,
+  { publishedBase = null, requireRelative = false } = {},
+) {
   const html = readFileSync(indexPath, "utf8");
   const references = getLocalAssetReferences(html);
 
   assert(references.length > 0, `${indexPath} does not reference any local assets.`);
 
   for (const reference of references) {
-    assert(
-      !reference.startsWith("/"),
-      `${indexPath} contains an absolute asset path (${reference}); the mobile app must remain subpath-safe.`,
-    );
+    let assetPath;
 
-    const assetPath = resolve(dirname(indexPath), reference);
+    if (reference.startsWith("/")) {
+      assert(
+        !requireRelative,
+        `${indexPath} contains an absolute asset path (${reference}); the mobile app must remain subpath-safe.`,
+      );
+      assert(
+        publishedBase &&
+          (reference === publishedBase || reference.startsWith(`${publishedBase}/`)),
+        `${indexPath} contains an asset outside the approved published base ${publishedBase}: ${reference}`,
+      );
+
+      const relativeReference = reference
+        .slice(publishedBase.length)
+        .replace(/^\/+/, "");
+      assetPath = resolve(applicationRoot, relativeReference);
+    } else {
+      assetPath = resolve(dirname(indexPath), reference);
+    }
+
     const rootPrefix = `${applicationRoot}${sep}`;
 
     assert(
@@ -85,8 +104,12 @@ const mobileIndex = resolve(mobileRoot, "index.html");
 assert(existsSync(rootIndex), "Root Pages artifact is missing dist/index.html.");
 assert(existsSync(mobileIndex), "Mobile Pages artifact is missing dist/mobile/index.html.");
 
-assertReferencesExist(rootIndex, pagesRoot);
-const mobileHtml = assertReferencesExist(mobileIndex, mobileRoot);
+assertReferencesExist(rootIndex, pagesRoot, {
+  publishedBase: "/hallotruck",
+});
+const mobileHtml = assertReferencesExist(mobileIndex, mobileRoot, {
+  requireRelative: true,
+});
 
 assert(
   !mobileHtml.includes('src="/assets/') && !mobileHtml.includes('href="/assets/'),
