@@ -36,6 +36,9 @@ export type DriverTruckRecord = {
 
 export type DriverVerificationRecord = {
   id: string;
+  filePath: string;
+  originalName: string;
+  mimeType: string;
   documentKey: VerificationDocumentKey;
   truckId: string | null;
   status: VerificationStatus;
@@ -45,6 +48,16 @@ export type DriverVerificationRecord = {
 };
 
 export type DocumentHealth = "missing" | "pending" | "verified" | "rejected" | "expired";
+export type DocumentExpiryLevel = "none" | "soon" | "critical" | "expired";
+export type DocumentExpiryWarning = {
+  level: DocumentExpiryLevel;
+  daysRemaining: number | null;
+};
+export type DocumentExpirySummary = {
+  expired: number;
+  critical: number;
+  soon: number;
+};
 
 export const identityDocumentKeys: readonly VerificationDocumentKey[] = [
   "driver_photo",
@@ -68,6 +81,13 @@ const documentKeySet = new Set<VerificationDocumentKey>([
   ...identityDocumentKeys,
   ...vehicleDocumentKeys,
 ]);
+const previewMimeTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function recordOf(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -102,6 +122,10 @@ function optionalDate(value: unknown): string | null {
   const text = optionalText(value);
   if (!text || !/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
   return Number.isNaN(Date.parse(`${text}T00:00:00Z`)) ? null : text;
+}
+
+function utcDay(value: Date): number {
+  return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
 }
 
 export function normalizeDriverProfile(value: unknown, expectedUserId?: string): DriverProfileRecord | null {
@@ -150,16 +174,23 @@ export function normalizeDriverVerification(value: unknown): DriverVerificationR
   const row = recordOf(value);
   if (!row) return null;
   const id = requiredText(row.id);
+  const filePath = requiredText(row.file_path);
+  const originalName = requiredText(row.original_name);
+  const mimeType = requiredText(row.mime_type);
   const documentKey = requiredText(row.document_key);
   const status = row.status === "pending" || row.status === "verified" || row.status === "rejected"
     ? row.status
     : null;
-  if (!id || !documentKey || !documentKeySet.has(documentKey as VerificationDocumentKey) || !status) return null;
+  if (!id || !filePath || !originalName || !mimeType || !previewMimeTypes.has(mimeType)
+    || !documentKey || !documentKeySet.has(documentKey as VerificationDocumentKey) || !status) return null;
   const truckId = optionalText(row.truck_id);
   const isIdentity = identityDocumentKeys.includes(documentKey as VerificationDocumentKey);
   if ((isIdentity && truckId !== null) || (!isIdentity && truckId === null)) return null;
   return {
     id,
+    filePath,
+    originalName,
+    mimeType,
     documentKey: documentKey as VerificationDocumentKey,
     truckId,
     status,
@@ -169,17 +200,42 @@ export function normalizeDriverVerification(value: unknown): DriverVerificationR
   };
 }
 
+export function documentExpiryWarning(
+  record: DriverVerificationRecord | undefined,
+  today = new Date(),
+  warningDays = 30,
+  criticalDays = 7,
+): DocumentExpiryWarning {
+  if (!record || record.status === "rejected" || !record.expiryDate) {
+    return { level: "none", daysRemaining: null };
+  }
+  const expiryDay = Date.parse(`${record.expiryDate}T00:00:00Z`);
+  if (!Number.isFinite(expiryDay)) return { level: "none", daysRemaining: null };
+  const daysRemaining = Math.floor((expiryDay - utcDay(today)) / DAY_MS);
+  if (daysRemaining < 0) return { level: "expired", daysRemaining };
+  if (daysRemaining <= Math.max(0, criticalDays)) return { level: "critical", daysRemaining };
+  if (daysRemaining <= Math.max(criticalDays, warningDays)) return { level: "soon", daysRemaining };
+  return { level: "none", daysRemaining };
+}
+
+export function documentExpirySummary(
+  records: readonly DriverVerificationRecord[],
+  today = new Date(),
+): DocumentExpirySummary {
+  return records.reduce<DocumentExpirySummary>((summary, record) => {
+    const level = documentExpiryWarning(record, today).level;
+    if (level === "expired" || level === "critical" || level === "soon") summary[level] += 1;
+    return summary;
+  }, { expired: 0, critical: 0, soon: 0 });
+}
+
 export function documentHealth(
   record: DriverVerificationRecord | undefined,
   today = new Date(),
 ): DocumentHealth {
   if (!record) return "missing";
   if (record.status === "rejected") return "rejected";
-  if (record.expiryDate) {
-    const expiry = new Date(`${record.expiryDate}T23:59:59.999Z`);
-    const current = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    if (expiry.getTime() < current.getTime()) return "expired";
-  }
+  if (documentExpiryWarning(record, today).level === "expired") return "expired";
   return record.status;
 }
 

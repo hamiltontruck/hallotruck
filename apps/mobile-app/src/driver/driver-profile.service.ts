@@ -9,9 +9,30 @@ import {
   type DriverVerificationRecord,
 } from "./driver-profile.model";
 
+const DRIVER_PREVIEW_SECONDS = 120;
+const previewMimeTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
+
+export type DriverDocumentPreview = {
+  signedUrl: string;
+  mimeType: string;
+  originalName: string;
+  expiresInSeconds: number;
+};
+
 function requireClient(): SupabaseClient {
   if (!mobileSupabase) throw new Error("Supabase mobile configuration hin guutamne.");
   return mobileSupabase;
+}
+
+function requiredText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
 }
 
 async function requireExpectedDriver(expectedUserId: string): Promise<{
@@ -66,13 +87,62 @@ export async function fetchDriverVerificationFiles(expectedUserId: string): Prom
   const { client, user } = await requireExpectedDriver(expectedUserId);
   const { data, error } = await client
     .from("driver_verification_files")
-    .select("id,document_key,truck_id,status,expiry_date,rejection_reason,updated_at")
+    .select("id,file_path,original_name,mime_type,document_key,truck_id,status,expiry_date,rejection_reason,updated_at")
     .eq("driver_id", user.id)
     .order("updated_at", { ascending: false, nullsFirst: false });
   if (error) throw new Error(error.message);
   return (Array.isArray(data) ? data : [])
     .map(normalizeDriverVerification)
     .filter((record): record is DriverVerificationRecord => record !== null);
+}
+
+export async function createDriverDocumentPreview({
+  expectedUserId,
+  documentId,
+  expectedFilePath,
+}: {
+  expectedUserId: string;
+  documentId: string;
+  expectedFilePath: string;
+}): Promise<DriverDocumentPreview> {
+  const normalizedDocumentId = requiredText(documentId);
+  const normalizedExpectedPath = requiredText(expectedFilePath);
+  if (!normalizedDocumentId || !normalizedExpectedPath) {
+    throw new Error("Document preview request sirrii miti.");
+  }
+  const { client, user } = await requireExpectedDriver(expectedUserId);
+  const { data, error } = await client
+    .from("driver_verification_files")
+    .select("id,driver_id,file_path,original_name,mime_type")
+    .eq("id", normalizedDocumentId)
+    .eq("driver_id", user.id)
+    .eq("file_path", normalizedExpectedPath)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const filePath = requiredText(data?.file_path);
+  const originalName = requiredText(data?.original_name);
+  const mimeType = requiredText(data?.mime_type);
+  if (data?.id !== normalizedDocumentId || data?.driver_id !== user.id || !filePath || !originalName || !mimeType) {
+    throw new Error("Document jijjiirameera ykn siif hin hayyamamne. Profile haaromsi.");
+  }
+  if (filePath !== normalizedExpectedPath || !filePath.startsWith(`${user.id}/`)) {
+    throw new Error("Document path owner boundary hin eegu.");
+  }
+  if (!previewMimeTypes.has(mimeType)) {
+    throw new Error("Document type kana preview gochuun hin danda'amu.");
+  }
+  const { data: signed, error: signedError } = await client.storage
+    .from("driver-verification")
+    .createSignedUrl(filePath, DRIVER_PREVIEW_SECONDS);
+  if (signedError || !signed?.signedUrl) {
+    throw new Error(signedError?.message || "Private document preview uumuu hin dandeenye.");
+  }
+  return {
+    signedUrl: signed.signedUrl,
+    mimeType,
+    originalName,
+    expiresInSeconds: DRIVER_PREVIEW_SECONDS,
+  };
 }
 
 export function subscribeToDriverProfile(
