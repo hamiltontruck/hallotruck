@@ -123,6 +123,14 @@ function statusBadge(status: string | null | undefined) {
   return "border-amber/30 bg-amber/10 text-amber-dim";
 }
 
+function isCurrentVerifiedDocument(doc: DriverVerificationFile, today = new Date()) {
+  if (doc.status !== "verified") return false;
+  if (!doc.expiry_date) return true;
+  const expiryDay = Date.parse(`${doc.expiry_date}T23:59:59.999Z`);
+  const currentDay = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  return Number.isFinite(expiryDay) && expiryDay >= currentDay;
+}
+
 export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverComplianceFixture } = {}) {
   const [drivers, setDrivers] = useState<DriverRow[]>(fixture?.drivers ?? []);
   const [trucks, setTrucks] = useState<TruckRow[]>(fixture?.trucks ?? []);
@@ -194,16 +202,22 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
     void load();
   }, [fixture]);
 
+  const pendingDocumentDriverIds = useMemo(
+    () => new Set(documents.filter((doc) => doc.status === "pending").map((doc) => doc.driver_id)),
+    [documents],
+  );
+  const driverNeedsReview = (driver: DriverRow) => (
+    pendingDocumentDriverIds.has(driver.id)
+    || (driver.driver_status !== "approved" && driver.driver_status !== "suspended")
+  );
   const visibleDrivers = useMemo(
-    () => filter === "all"
-      ? drivers
-      : drivers.filter((driver) => driver.driver_status !== "approved" && driver.driver_status !== "suspended"),
-    [drivers, filter],
+    () => filter === "all" ? drivers : drivers.filter(driverNeedsReview),
+    [drivers, filter, pendingDocumentDriverIds],
   );
 
   const pendingDriverCount = useMemo(
-    () => drivers.filter((driver) => driver.driver_status !== "approved" && driver.driver_status !== "suspended").length,
-    [drivers],
+    () => drivers.filter(driverNeedsReview).length,
+    [drivers, pendingDocumentDriverIds],
   );
 
   const globalReleased = useMemo(
@@ -222,14 +236,12 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
     const reason = status === "rejected" ? window.prompt("Rejection / correction note for the driver:", "Please upload a clearer valid document.") : null;
     if (status === "rejected" && reason === null) return;
     setBusy(doc.id); setError("");
-    const { data: auth } = await supabase.auth.getUser();
-    const { error } = await supabase.from("driver_verification_files").update({
-      status,
-      rejection_reason: status === "rejected" ? reason?.trim() || "Document rejected by reviewer." : null,
-      reviewed_by: auth.user?.id ?? null,
-      reviewed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }).eq("id", doc.id);
+    const { error } = await supabase.rpc("admin_review_driver_verification_document", {
+      p_document_id: doc.id,
+      p_expected_file_path: doc.file_path,
+      p_status: status,
+      p_rejection_reason: status === "rejected" ? reason?.trim() || "Document rejected by reviewer." : null,
+    });
     if (error) setError(error.message);
     else await load();
     setBusy("");
@@ -306,11 +318,11 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
           const driverOrders = orders.filter((order) => order.driver_id === driver.id);
           const deliveredOrders = driverOrders.filter((order) => order.status === "delivered");
           const submittedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key)).length;
-          const verifiedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "verified")).length;
+          const verifiedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && isCurrentVerifiedDocument(doc))).length;
           const pendingIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "pending")).length;
           const rejectedIdentity = identityRequired.filter((key) => identityDocs.some((doc) => doc.document_key === key && doc.status === "rejected")).length;
           const submittedVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key)).length;
-          const verifiedVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key && doc.status === "verified")).length;
+          const verifiedVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key && isCurrentVerifiedDocument(doc))).length;
           const pendingVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key && doc.status === "pending")).length;
           const rejectedVehicle = vehicleRequired.filter((key) => vehicleDocs.some((doc) => doc.document_key === key && doc.status === "rejected")).length;
           const onboardingReady = verifiedIdentity === identityRequired.length && Boolean(assignedTruck) && verifiedVehicle === vehicleRequired.length;

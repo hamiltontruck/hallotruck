@@ -49,9 +49,9 @@ import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router-dom";
 import { AdminDriverCompliance } from ${JSON.stringify(path.join(root, "src/pages/AdminDriverCompliance.tsx"))};
 const fixture = {
-  drivers: [{ id:"driver-1", full_name:"Abiyu Nagash Enterprise Driver", phone:"+251911000000", email:"driver@example.com", home_address:"Adama", driver_status:"pending" }],
+  drivers: [{ id:"driver-1", full_name:"Abiyu Nagash Enterprise Driver", phone:"+251911000000", email:"driver@example.com", home_address:"Adama", driver_status:"pending" }, { id:"driver-approved", full_name:"Approved Replacement Driver", phone:"+251922000000", email:"approved@example.com", home_address:"Addis Ababa", driver_status:"approved" }],
   trucks: [],
-  documents: [],
+  documents: [{ id:"doc-approved-pending", driver_id:"driver-approved", truck_id:null, document_key:"license_front", file_path:"driver-approved/identity/license_front/replacement.jpg", original_name:"replacement.jpg", mime_type:"image/jpeg", expiry_date:"2027-12-31", status:"pending", rejection_reason:null, reviewed_at:null, created_at:${JSON.stringify(now)}, updated_at:${JSON.stringify(now)} }],
   history: [],
   orders: [{ id:"order-1", tracking_id:"HT-2026-ACTIVE-001", driver_id:"driver-1", truck_id:null, pickup_address:"Adama", dropoff_address:"Addis Ababa", vehicle_type:"Dry Cargo", price_etb:75700, status:"accepted", payment_status:"pending", accepted_at:${JSON.stringify(now)}, delivered_at:null, created_at:${JSON.stringify(now)} }],
   payments: [],
@@ -76,7 +76,7 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-admin-driver-compliance-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Driver operations &amp; verification", "Cannot approve yet: Waiting for driver documents.", "Cannot remove while active trip HT-2026-ACTIVE-001 is accepted."]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Driver operations &amp; verification", "Cannot approve yet: Waiting for driver documents.", "Cannot remove while active trip HT-2026-ACTIVE-001 is accepted.", "Approved Replacement Driver", "replacement.jpg"]) {
         if (!dom.includes(expected)) throw new Error(`Admin Driver Compliance ${width}px smoke missing: ${expected}`);
       }
     } finally { await rm(profile, { recursive: true, force: true }); }
