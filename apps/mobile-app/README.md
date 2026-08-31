@@ -38,7 +38,7 @@ The Driver Jobs workspace is database-backed:
 - preserves server enforcement for driver approval, truck ownership/type/capacity, document validity, active-trip exclusion and commission settlement;
 - refreshes periodically and reacts to changes on the signed-in driver's orders.
 
-Driver live-map controls, driver wallet records, Customer booking, Customer payments and live GPS remain separate integration slices. Those screens continue to use display data until their focused production integrations are completed.
+Driver Active Trip now reads the assigned order, route geometry and navigation instructions from production services. GPS updates use the authenticated tracking function, remain offline-safe, and show `in_transit` only after the server-confirmed order state is re-read. Driver wallet records, Customer booking, Customer payments and Customer live tracking remain separate integration slices.
 
 ## Design constraints
 
@@ -58,3 +58,16 @@ Driver live-map controls, driver wallet records, Customer booking, Customer paym
 - Keeps pending/rejected Drivers in onboarding, blocks suspended Drivers, and denies Admin/CEO/Partner accounts.
 - Uses a dedicated `hallo-mobile-auth-v1` storage key so the mobile workspace does not inherit a leadership session from the root web portal.
 - Covers the role decision contract with deterministic Node tests in Mobile App CI.
+
+
+## Driver Active Trip boundary
+
+- Reads only the signed-in Driver's `accepted` or `in_transit` order under existing Orders RLS.
+- Loads route geometry and instructions through the authenticated `navigation` Edge Function.
+- Sends high-accuracy browser GPS through the authenticated `tracking` Edge Function.
+- Keeps the database order `accepted` while a GPS ping is only queued offline.
+- Re-reads the assigned order after every successful ping before showing `in_transit` or live status.
+- Stores at most 20 queued pings per Driver/order under the isolated `hallo-mobile-driver-gps-v1` key.
+- Syncs queued pings when connectivity returns and preserves authorization/lifecycle failures for the Driver.
+- Stops and clears stale GPS work when the order is no longer assigned or active.
+- Uses real route geometry in a lightweight SVG route viewport; a full tile basemap remains a later renderer slice.

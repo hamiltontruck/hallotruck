@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { MobileAuthBoundary, type MobileIdentity } from "./auth/MobileAuthBoundary";
 import { DriverJobsBoard } from "./driver/DriverJobsBoard";
+import { DriverActiveTripView } from "./driver/DriverActiveTripView";
 
 type Role = "driver" | "customer";
 type Tab = "home" | "jobs" | "map" | "wallet" | "profile";
@@ -152,7 +153,7 @@ function ShipmentForm() {
   </div>;
 }
 
-function LiveMapView({ role }: { role: Role }) {
+function CustomerLiveMapView() {
   return <div className="relative min-h-[calc(100dvh-137px)] overflow-hidden bg-[#e9f1ec]">
     <div className="absolute inset-0 halo-map-grid" />
     <svg viewBox="0 0 420 720" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-label="Live route map">
@@ -166,7 +167,7 @@ function LiveMapView({ role }: { role: Role }) {
     </svg>
 
     <div className="absolute inset-x-3 top-3 z-10 rounded-[22px] border border-white/70 bg-white/94 p-4 shadow-halo-float backdrop-blur-xl">
-      <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-muted">{role === "driver" ? "Active trip" : "Live order"}</p><h1 className="mt-1 text-lg font-black text-halo-navy">Finfinnee → Hawassa</h1></div><span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[9px] font-black text-emerald-700">LIVE</span></div>
+      <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-muted">Live order</p><h1 className="mt-1 text-lg font-black text-halo-navy">Finfinnee → Hawassa</h1></div><span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[9px] font-black text-emerald-700">LIVE</span></div>
       <div className="mt-3 flex items-center gap-3 text-xs text-halo-muted"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Pickup</span><span className="h-px flex-1 bg-halo-line"/><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-500" />Destination</span></div>
     </div>
 
@@ -175,9 +176,14 @@ function LiveMapView({ role }: { role: Role }) {
     <section className="absolute inset-x-0 bottom-0 z-10 rounded-t-[30px] border-t border-white bg-white/96 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-4 shadow-[0_-18px_50px_rgba(16,33,61,0.16)] backdrop-blur-xl sm:px-6">
       <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
       <div className="grid grid-cols-3 divide-x divide-halo-line text-center"><div><p className="text-[10px] font-bold text-halo-muted">ETA</p><p className="mt-1 text-sm font-black text-halo-navy">4:30 PM</p></div><div><p className="text-[10px] font-bold text-halo-muted">Fageenya</p><p className="mt-1 text-sm font-black text-halo-navy">128 km</p></div><div><p className="text-[10px] font-bold text-halo-muted">Yeroo hafe</p><p className="mt-1 text-sm font-black text-halo-navy">1h 45m</p></div></div>
-      <div className="mt-4 flex items-center gap-3 rounded-2xl bg-halo-soft p-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-blue text-white"><Icon name={role === "driver" ? "truck" : "user"} /></span><div className="min-w-0 flex-1"><p className="text-sm font-black text-halo-navy">{role === "driver" ? "Fuso · ABC-12345" : "Abdi D. · Driver"}</p><p className="mt-0.5 text-[10px] text-halo-muted">{role === "driver" ? "GPS active · Signal gaarii" : "★ 4.8 · Fuso 10 Ton"}</p></div><button type="button" className="grid h-10 w-10 place-items-center rounded-xl bg-white text-halo-blue"><Icon name="phone" className="h-4.5 w-4.5" /></button></div>
+      <div className="mt-4 flex items-center gap-3 rounded-2xl bg-halo-soft p-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-blue text-white"><Icon name="user" /></span><div className="min-w-0 flex-1"><p className="text-sm font-black text-halo-navy">Abdi D. · Driver</p><p className="mt-0.5 text-[10px] text-halo-muted">★ 4.8 · Fuso 10 Ton</p></div><button type="button" className="grid h-10 w-10 place-items-center rounded-xl bg-white text-halo-blue"><Icon name="phone" className="h-4.5 w-4.5" /></button></div>
     </section>
   </div>;
+}
+
+function LiveMapView({ role, identity }: { role: Role; identity: MobileIdentity }) {
+  if (role === "driver") return <DriverActiveTripView userId={identity.userId} fullName={identity.fullName} />;
+  return <CustomerLiveMapView />;
 }
 
 function WalletView({ role }: { role: Role }) {
@@ -231,7 +237,7 @@ function MobileWorkspace({
   const content = useMemo(() => {
     if (tab === "home") return role === "driver" ? <DriverHome setTab={setTab} /> : <CustomerHome setTab={setTab} />;
     if (tab === "jobs") return <JobsView role={role} identity={identity} />;
-    if (tab === "map") return <LiveMapView role={role} />;
+    if (tab === "map") return <LiveMapView role={role} identity={identity} />;
     if (tab === "wallet") return <WalletView role={role} />;
     return <ProfileView role={role} />;
   }, [identity, role, tab]);
