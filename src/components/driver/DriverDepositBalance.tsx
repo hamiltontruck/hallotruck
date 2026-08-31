@@ -1,96 +1,98 @@
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
+import type { HalloLanguage } from "../../i18n/LanguageProvider";
 import { supabase } from "../../services/supabase.client";
-import { formatEtb } from "../../utils/currency";
-import { calculateDriverDepositWallet } from "../../domain/driver-deposit";
+import {
+  DriverDepositBalanceState,
+  type DriverFinancialSummary,
+} from "./DriverDepositBalanceState";
 
-type DriverFinancialSummary = {
-  admin_deposit_etb: number | string;
-  commission_charged_etb: number | string;
-  commission_paid_etb: number | string;
-  available_deposit_etb: number | string;
-  commission_due_etb: number | string;
-};
+const SUMMARY_FIELDS = [
+  "admin_deposit_etb",
+  "commission_charged_etb",
+  "commission_paid_etb",
+  "available_deposit_etb",
+  "commission_due_etb",
+] as const;
 
-function amount(value: number | string | null | undefined) {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-}
+function normalizeSummary(row: unknown): DriverFinancialSummary | null {
+  if (!row || typeof row !== "object") return null;
+  const record = row as Record<string, unknown>;
+  const normalized: Record<string, number> = {};
 
-export function DriverDepositBalance({ fixtureSummary = null }: { fixtureSummary?: DriverFinancialSummary | null } = {}) {
-  const [summary, setSummary] = useState<DriverFinancialSummary | null>(fixtureSummary);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (fixtureSummary) return;
-    let active = true;
-
-    async function load() {
-      const { data: auth, error: authError } = await supabase.auth.getUser();
-      if (authError || !auth.user) {
-        if (active) setError(authError?.message || "Sign in required.");
-        return;
-      }
-
-      const { data, error: rpcError } = await supabase.rpc("driver_financial_summary", {
-        p_driver_id: auth.user.id,
-      });
-
-      if (!active) return;
-      if (rpcError) {
-        setError(rpcError.message);
-        return;
-      }
-
-      setSummary((data?.[0] ?? null) as DriverFinancialSummary | null);
-      setError("");
+  for (const field of SUMMARY_FIELDS) {
+    const value = Number(record[field]);
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`Driver financial summary returned an invalid ${field} value.`);
     }
-
-    void load();
-    return () => { active = false; };
-  }, [fixtureSummary]);
-
-  if (error) {
-    return <p className="mt-6 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>;
+    normalized[field] = value;
   }
 
-  if (!summary) {
-    return <p className="mt-6 border border-line bg-white p-5 text-sm text-steel">Loading deposit balance…</p>;
-  }
-
-  const deposited = amount(summary.admin_deposit_etb);
-  const wallet = calculateDriverDepositWallet({
-    depositedEtb: deposited,
-    commissionChargedEtb: amount(summary.commission_charged_etb),
-    commissionPaidEtb: amount(summary.commission_paid_etb),
-  });
-  const deducted = wallet.depositConsumedEtb;
-  const available = amount(summary.available_deposit_etb);
-  const due = amount(summary.commission_due_etb);
-
-  return <section className="mt-6 border border-line bg-white">
-    <div className="border-b border-line bg-asphalt p-5 text-white sm:p-6">
-      <p className="font-mono text-[10px] uppercase tracking-[.18em] text-amber">DRIVER DEPOSIT WALLET</p>
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="font-display text-2xl font-bold">Available deposit balance</h2>
-          <p className="mt-2 max-w-xl text-xs leading-5 text-white/60">Verified HALLO Smart commission is deducted automatically from your Admin-recorded deposit.</p>
-        </div>
-        <p className="font-display text-3xl font-bold text-amber">{formatEtb(available)}</p>
-      </div>
-    </div>
-
-    <div className="grid grid-cols-2 gap-px bg-line sm:grid-cols-4">
-      <Metric label="Deposit total" value={formatEtb(deposited)} />
-      <Metric label="Commission deducted" value={formatEtb(deducted)} />
-      <Metric label="Available balance" value={formatEtb(available)} strong />
-      <Metric label="Commission due" value={formatEtb(due)} alert={due > 0} />
-    </div>
-  </section>;
+  return normalized as DriverFinancialSummary;
 }
 
-function Metric({ label, value, strong = false, alert = false }: { label: string; value: string; strong?: boolean; alert?: boolean }) {
-  return <div className="bg-white p-4 sm:p-5">
-    <p className="text-[10px] uppercase tracking-wide text-steel">{label}</p>
-    <p className={`mt-2 font-display text-lg font-bold ${alert ? "text-route" : strong ? "text-emerald-800" : "text-asphalt"}`}>{value}</p>
-  </div>;
+export async function loadDriverDepositSummary(): Promise<DriverFinancialSummary | null> {
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+  if (authError) throw new Error(authError.message);
+  if (!auth.user) throw new Error("Sign in required.");
+
+  const { data, error } = await supabase.rpc("driver_financial_summary", {
+    p_driver_id: auth.user.id,
+  });
+  if (error) throw new Error(error.message);
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return normalizeSummary(row);
+}
+
+function subscribeToDriverDepositChanges(onChange: () => void) {
+  let active = true;
+  let channel: ReturnType<typeof supabase.channel> | null = null;
+
+  void supabase.auth.getUser().then(({ data: auth, error }) => {
+    if (!active || error || !auth.user) return;
+    const filter = `driver_id=eq.${auth.user.id}`;
+
+    channel = supabase
+      .channel(`driver-deposit-balance-${auth.user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_deposits", filter }, () => onChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_charges", filter }, () => onChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_payment_confirmations", filter }, () => onChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_payments", filter }, () => onChange())
+      .subscribe();
+  });
+
+  return () => {
+    active = false;
+    if (channel) void supabase.removeChannel(channel);
+  };
+}
+
+export function DriverDepositBalance({
+  fixtureSummary = null,
+  language = "en",
+}: {
+  fixtureSummary?: DriverFinancialSummary | null;
+  language?: HalloLanguage;
+} = {}) {
+  const hasFixture = fixtureSummary !== null;
+  const loadSummary = useCallback(
+    () => hasFixture
+      ? Promise.resolve(fixtureSummary as DriverFinancialSummary)
+      : loadDriverDepositSummary(),
+    [fixtureSummary, hasFixture],
+  );
+  const subscribe = useCallback(
+    (onChange: () => void) => hasFixture ? () => undefined : subscribeToDriverDepositChanges(onChange),
+    [hasFixture],
+  );
+
+  return (
+    <DriverDepositBalanceState
+      language={language}
+      loadSummary={loadSummary}
+      subscribe={subscribe}
+      initialSummary={hasFixture ? fixtureSummary : undefined}
+      loadOnMount={!hasFixture}
+    />
+  );
 }

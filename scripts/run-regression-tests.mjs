@@ -35,6 +35,7 @@ try{
   ["tests/regression/driver-payment-action-banner-reliability.test.ts",path.join(outputDirectory,"driver-payment-action-banner-reliability.test.mjs")],
   ["tests/regression/driver-commission-wallet-reliability.test.ts",path.join(outputDirectory,"driver-commission-wallet-reliability.test.mjs")],
   ["tests/regression/driver-earnings-refresh-lifecycle.test.ts",path.join(outputDirectory,"driver-earnings-refresh-lifecycle.test.mjs")],
+  ["tests/regression/driver-deposit-balance-lifecycle.test.ts",path.join(outputDirectory,"driver-deposit-balance-lifecycle.test.mjs")],
   ["tests/regression/trip-completion-workflow.test.ts",path.join(outputDirectory,"trip-completion-workflow.test.mjs")],
   ["tests/regression/simplified-customer-driver-workflow.test.ts",path.join(outputDirectory,"simplified-customer-driver-workflow.test.mjs")],
   ["tests/regression/driver-trip-history.test.ts",path.join(outputDirectory,"driver-trip-history.test.mjs")],

@@ -49,7 +49,7 @@ function dumpDom(chrome, url, profileDirectory, viewport) {
     "--no-default-browser-check",
     "--hide-scrollbars",
     `--window-size=${viewport.width},${viewport.height}`,
-    "--virtual-time-budget=8000",
+    "--virtual-time-budget=12000",
     `--user-data-dir=${profileDirectory}`,
     "--dump-dom",
     url,
@@ -92,9 +92,23 @@ async function prepareFixture() {
   const fixtureSource = `
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { DriverDepositBalance } from ${JSON.stringify(path.join(root, "src", "components", "driver", "DriverDepositBalance.tsx"))};
+import { DriverDepositBalanceState } from ${JSON.stringify(path.join(root, "src", "components", "driver", "DriverDepositBalanceState.tsx"))};
 import { DriverDepositHistory } from ${JSON.stringify(path.join(root, "src", "components", "admin", "DriverDepositHistory.tsx"))};
 
+const confirmedSummary = {
+  admin_deposit_etb: 100000,
+  commission_charged_etb: 18678,
+  commission_paid_etb: 18272,
+  available_deposit_etb: 99594,
+  commission_due_etb: 0,
+};
+const recoveredSummary = {
+  admin_deposit_etb: 120000,
+  commission_charged_etb: 20000,
+  commission_paid_etb: 19000,
+  available_deposit_etb: 119000,
+  commission_due_etb: 0,
+};
 const deposits = [
   {
     id: "deposit-active",
@@ -117,22 +131,51 @@ const deposits = [
 ];
 
 let reversal = null;
+let loadCalls = 0;
+let realtimeRefresh = null;
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const waitUntil = async (check, label, timeout = 4000) => {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (check()) return;
+    await wait(20);
+  }
+  throw new Error("Timed out waiting for " + label);
+};
+const loadSummary = async () => {
+  loadCalls += 1;
+  if (loadCalls === 1) {
+    await wait(80);
+    return null;
+  }
+  if (loadCalls === 2) {
+    await wait(180);
+    return confirmedSummary;
+  }
+  if (loadCalls === 3) {
+    await wait(180);
+    throw new Error("Temporary driver ledger refresh failure.");
+  }
+  await wait(220);
+  return recoveredSummary;
+};
+const subscribe = (onChange) => {
+  realtimeRefresh = onChange;
+  return () => { realtimeRefresh = null; };
+};
 const setTextarea = (input, value) => {
   const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set;
   setter.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
-createRoot(document.getElementById("root")).render(React.createElement("main", { className: "min-h-screen bg-[#f5f3ed] p-3 text-asphalt" },
-  React.createElement(DriverDepositBalance, { fixtureSummary: {
-    admin_deposit_etb: 100000,
-    commission_charged_etb: 18678,
-    commission_paid_etb: 18272,
-    available_deposit_etb: 99594,
-    commission_due_etb: 0,
-  }}),
-  React.createElement("section", { className: "mt-4 border border-asphalt/10 bg-white p-4" },
+createRoot(document.getElementById("root")).render(React.createElement("main", { className: "min-h-screen min-w-0 overflow-x-hidden bg-[#f5f3ed] p-3 text-asphalt" },
+  React.createElement(DriverDepositBalanceState, {
+    language: "en",
+    loadSummary,
+    subscribe,
+  }),
+  React.createElement("section", { className: "mt-4 min-w-0 border border-asphalt/10 bg-white p-4" },
     React.createElement("h2", { className: "font-display text-xl font-semibold" }, "Deposit history"),
     React.createElement(DriverDepositHistory, {
       deposits,
@@ -141,13 +184,43 @@ createRoot(document.getElementById("root")).render(React.createElement("main", {
   ),
 ));
 
-await wait(250);
+await waitUntil(
+  () => document.querySelector('[data-driver-deposit-state="unavailable"]'),
+  "fulfilled empty deposit state",
+);
+document.documentElement.dataset.initialUnavailable = String(loadCalls === 1);
+
+const retryButton = document.querySelector('[data-deposit-retry="true"]');
+retryButton?.click();
+retryButton?.click();
+await waitUntil(
+  () => document.querySelector('[data-driver-deposit-state="ready"]')?.textContent.includes("99,594 ETB"),
+  "confirmed deposit after retry",
+);
+document.documentElement.dataset.retryGuarded = String(loadCalls === 2);
+
+realtimeRefresh?.();
+await wait(20);
+realtimeRefresh?.();
+realtimeRefresh?.();
+await waitUntil(
+  () => document.querySelector('[data-driver-deposit-state="stale"]')?.textContent.includes("99,594 ETB"),
+  "preserved confirmed deposit during failed refresh",
+);
+document.documentElement.dataset.preservedConfirmed = "true";
+
+await waitUntil(
+  () => document.querySelector('[data-driver-deposit-state="ready"]')?.textContent.includes("119,000 ETB"),
+  "queued deposit recovery",
+);
+document.documentElement.dataset.queuedRefresh = String(loadCalls === 4);
+document.documentElement.dataset.recovered = "true";
+
 const reverseButton = Array.from(document.querySelectorAll("button")).find((button) => button.textContent.includes("Reverse deposit"));
 reverseButton?.click();
-await wait(100);
+await waitUntil(() => document.querySelector("textarea"), "deposit reversal textarea");
 const textarea = document.querySelector("textarea");
 setTextarea(textarea, "Duplicate cash receipt");
-await wait(50);
 document.querySelector('[data-reversal-form="true"]').requestSubmit();
 await wait(250);
 
@@ -193,25 +266,30 @@ preview.stderr.on("data", (chunk) => { previewOutput += chunk.toString(); });
 try {
   await waitForServer(baseUrl);
   const chrome = findChrome();
-  for (const width of [320, 360, 390, 412]) {
+  for (const width of [320, 360, 390, 412, 430, 768]) {
     const dom = await render(chrome, { width, height: 915 });
     const label = `Driver deposit ${width}px smoke`;
     assertContains(dom, [
       'data-ready="true"',
+      'data-initial-unavailable="true"',
+      'data-retry-guarded="true"',
+      'data-preserved-confirmed="true"',
+      'data-queued-refresh="true"',
+      'data-recovered="true"',
       'data-reversal-submitted="true"',
       'data-active-count="1"',
       'data-reversed-count="1"',
       'data-overflow="false"',
       "Available deposit balance",
-      "99,594 ETB",
+      "119,000 ETB",
       "Commission deducted",
-      "406 ETB",
+      "1,000 ETB",
       "Deposit history",
       "active",
       "reversed",
     ], label);
   }
-  console.log("Driver Deposit browser smoke passed at 320px, 360px, 390px and 412px with reconciled balance, reversal submission and no horizontal overflow.");
+  console.log("Driver Deposit browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with fulfilled-empty recovery, guarded Retry, one queued realtime refresh, preserved confirmed balance, reversal submission and no horizontal overflow.");
 } catch (error) {
   if (previewOutput.trim()) console.error(previewOutput.trim());
   throw error;

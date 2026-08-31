@@ -48,7 +48,7 @@ test("driver primary navigation exposes canonical home, jobs, trip, wallet and p
 });
 
 test("driver wallet keeps deposit, commission and trip earnings visibly separated", () => {
-  assert.match(driverWallet, /<DriverDepositBalance \/>/);
+  assert.match(driverWallet, /<DriverDepositBalance language=\{language\} \/>/);
   assert.match(driverWallet, /<DriverCommissionWallet \/>/);
   assert.match(driverWallet, /to="\/driver\/earnings"/);
   assert.match(driverWallet, /Customer collections/);

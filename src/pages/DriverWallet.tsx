@@ -83,7 +83,7 @@ export function DriverWallet() {
           <h2 id="wallet-live-title" className="mt-1 font-display text-2xl font-bold text-asphalt">{text.live}</h2>
         </div>
         <div className="space-y-6">
-          <DriverDepositBalance />
+          <DriverDepositBalance language={language} />
           <DriverCommissionWallet />
         </div>
       </section>
