@@ -176,10 +176,14 @@ export async function submitDriverVerificationDocument(
       .update(record)
       .eq("id", existing.id)
       .eq("driver_id", user.id)
+      .eq("file_path", existing.file_path)
       .select("id")
       .maybeSingle();
-    if (error || !data?.id) mutationError = new Error(error?.message || "Document record update hin mirkanoofne.");
-    else recordId = data.id as string;
+    if (error || !data?.id) {
+      mutationError = new Error(error?.message || "Document biraa yeroo wal fakkaatutti jijjiirameera. Profile refresh godhi.");
+    } else {
+      recordId = data.id as string;
+    }
   } else {
     const { data, error } = await client
       .from("driver_verification_files")
