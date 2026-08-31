@@ -1,0 +1,108 @@
+name: Apply mobile Driver profile
+
+on:
+  push:
+    branches:
+      - feat/mobile-driver-profile
+    paths:
+      - ".github/workflows/apply-mobile-driver-profile.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout focused branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mobile-driver-profile
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Integrate Driver profile
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("apps/mobile-app/src/App.tsx")
+          text = path.read_text()
+
+          wallet_import = 'import { DriverWalletView } from "./driver/DriverWalletView";'
+          profile_import = 'import { DriverProfileView } from "./driver/DriverProfileView";'
+          if profile_import not in text:
+              if wallet_import not in text:
+                  raise SystemExit("DriverWalletView import not found")
+              text = text.replace(wallet_import, wallet_import + "\n" + profile_import, 1)
+
+          replacements = {
+              'function ProfileView({ role }: { role: Role }) {': 'function CustomerProfileView() {',
+              '{role === "driver" ? "Abdi Driver" : "Moha Customer"}': 'Moha Customer',
+              '{role === "driver" ? "Verified driver · Active" : "Customer account · Verified"}': 'Customer account · Verified',
+              '[role === "driver" ? "Driver documents" : "Account details", "shield" as IconName],': '["Account details", "shield" as IconName],',
+              '[role === "driver" ? "Vehicle information" : "Saved locations", role === "driver" ? "truck" as IconName : "pin" as IconName],': '["Saved locations", "pin" as IconName],',
+              'return <ProfileView role={role} />;': 'return role === "driver" ? <DriverProfileView userId={identity.userId} fallbackName={identity.fullName} /> : <CustomerProfileView />;',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"Expected App pattern not found: {old}")
+              text = text.replace(old, new, 1)
+          path.write_text(text)
+
+          readme = Path("apps/mobile-app/README.md")
+          body = readme.read_text()
+          old_scope = "- Driver home, database-backed available jobs, active-trip summary, wallet, and profile shell."
+          new_scope = "- Driver home, database-backed available jobs, active-trip summary, wallet, and production profile/compliance status."
+          if old_scope not in body:
+              raise SystemExit("README scope line not found")
+          body = body.replace(old_scope, new_scope, 1)
+          old_status = "Driver Wallet now reads the signed-in Driver's financial summary, commission position and completed-trip payment results from existing self-scoped production sources. Customer booking, Customer payments and Customer live tracking remain separate integration slices."
+          new_status = "Driver Wallet now reads the signed-in Driver's financial summary, commission position and completed-trip payment results from existing self-scoped production sources. Driver Profile now reads the signed-in Driver's account, assigned trucks and identity/vehicle verification status from existing RLS-protected tables. Customer booking, Customer payments and Customer live tracking remain separate integration slices."
+          if old_status not in body:
+              raise SystemExit("README status line not found")
+          body = body.replace(old_status, new_status, 1)
+          body += (
+              "\n\n## Driver Profile boundary\n\n"
+              "- Reads only the signed-in Driver's `profiles` row and requires the database role to remain Driver.\n"
+              "- Reads only trucks whose `driver_id` matches the authenticated Driver under existing Trucks RLS.\n"
+              "- Reads only the Driver's own `driver_verification_files` rows under existing verification RLS.\n"
+              "- Shows database Driver status, rating, preferred vehicle, assigned truck details and 5 identity plus 7 vehicle checklist items.\n"
+              "- Treats missing, pending, rejected, verified and expired documents as different states; expired evidence never counts as verified.\n"
+              "- Loads profile, truck and document sources independently and preserves each last confirmed snapshot during transient failures.\n"
+              "- Refreshes periodically and on Driver-filtered realtime changes while coalescing overlapping refreshes.\n"
+              "- Is read-only: it does not upload, replace, delete or approve verification evidence and does not change truck assignment.\n"
+          )
+          readme.write_text(body)
+          PY
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile-app
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck mobile app
+        working-directory: apps/mobile-app
+        run: npm run typecheck
+
+      - name: Test mobile auth, operations and profile
+        working-directory: apps/mobile-app
+        run: npm test
+
+      - name: Build mobile app
+        working-directory: apps/mobile-app
+        run: npm run build
+
+      - name: Remove one-time workflow
+        run: rm .github/workflows/apply-mobile-driver-profile.yml
+
+      - name: Commit validated result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app .github/workflows/apply-mobile-driver-profile.yml
+          git commit -m "Integrate production mobile Driver profile"
+          git push origin HEAD:feat/mobile-driver-profile
