@@ -3,4 +3,5 @@ dist/
 .vite/
 .test-dist/
 .test-dist-active/
+.test-dist-delivery/
 *.local

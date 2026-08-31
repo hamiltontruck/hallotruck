@@ -38,7 +38,7 @@ The Driver Jobs workspace is database-backed:
 - preserves server enforcement for driver approval, truck ownership/type/capacity, document validity, active-trip exclusion and commission settlement;
 - refreshes periodically and reacts to changes on the signed-in driver's orders.
 
-Driver Active Trip now reads the assigned order, route geometry and navigation instructions from production services. GPS updates use the authenticated tracking function, remain offline-safe, and show `in_transit` only after the server-confirmed order state is re-read. Driver wallet records, Customer booking, Customer payments and Customer live tracking remain separate integration slices.
+Driver Active Trip reads the assigned order, route geometry and navigation instructions from production services. GPS remains offline-safe and shows `in_transit` only after server confirmation. An In Transit Driver can now capture the delivery photo, receiver name and signature, report the customer-selected payment outcome, and complete the order through the existing atomic `driver_finish_trip` RPC. Driver wallet records, Customer booking, Customer payments and Customer live tracking remain separate integration slices.
 
 ## Design constraints
 
@@ -71,3 +71,17 @@ Driver Active Trip now reads the assigned order, route geometry and navigation i
 - Syncs queued pings when connectivity returns and preserves authorization/lifecycle failures for the Driver.
 - Stops and clears stale GPS work when the order is no longer assigned or active.
 - Uses real route geometry in a lightweight SVG route viewport; a full tile basemap remains a later renderer slice.
+
+
+## Driver Delivery Proof boundary
+
+- Appears only for the signed-in Driver's `in_transit` order.
+- Uses mobile rear-camera capture or gallery selection; images must be under 8 MB.
+- Requires receiver name, delivery photo and pointer/touch signature.
+- Restricts payment outcomes to the customer's database-selected Cash or Bank / Telebirr method, plus Payment not received.
+- Requires the exact invoice amount for cash collected by the Driver.
+- Does not queue delivery or financial mutations offline.
+- Uploads proof files only to the private `delivery-proofs` bucket under the order ID.
+- Calls the existing authenticated `driver_finish_trip` RPC so proof, Delivered status and payment result remain one server transaction.
+- Reconciles ambiguous retry outcomes against `delivery_proofs` before deleting uploaded files.
+- Stops live GPS and clears order-scoped queued pings after successful completion.
