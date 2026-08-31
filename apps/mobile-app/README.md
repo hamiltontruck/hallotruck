@@ -113,3 +113,17 @@ Driver Active Trip reads the assigned order, route geometry and navigation instr
 - Loads profile, truck and document sources independently and preserves each last confirmed snapshot during transient failures.
 - Refreshes periodically and on Driver-filtered realtime changes while coalescing overlapping refreshes.
 - Is read-only: it does not upload, replace, delete or approve verification evidence and does not change truck assignment.
+
+
+## Driver document upload boundary
+
+- Allows the signed-in Driver to upload or replace only their own identity and assigned-truck verification evidence.
+- Accepts JPG, PNG, WebP or PDF up to 10 MB; Driver/truck photos remain image-only.
+- Stores private objects under `<driver-id>/identity/...` or `<driver-id>/truck-<truck-id>/...` with `upsert: false`.
+- Verifies both the current Supabase user and restored session before storage and database mutation.
+- Re-checks vehicle ownership before vehicle-document submission.
+- Resets every new or replacement submission to Pending for Admin/CEO review and clears stale rejection metadata.
+- Uploads the new object before updating the database, removes it after a confirmed database failure, and reconciles ambiguous mutation outcomes before cleanup.
+- Removes the superseded private object only after the database points to the new object.
+- Locks overlapping submissions and never queues verification mutations offline.
+- Does not approve documents, change Driver status, change truck assignment, alter RLS or expose a service-role key.

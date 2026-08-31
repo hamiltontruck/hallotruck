@@ -106,7 +106,7 @@ test("profile view keeps independent sources and last confirmed snapshots", () =
   assert.match(componentSource, /refreshInFlightRef/);
   assert.match(componentSource, /queuedRefreshRef/);
   assert.match(componentSource, /data-mobile-driver-profile/);
-  assert.match(componentSource, /Read-only profile/);
+  assert.match(componentSource, /DriverDocumentUploadSheet/);
 });
 
 test("App routes only Driver profile to production profile component", () => {

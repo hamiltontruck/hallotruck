@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DriverDocumentUploadSheet } from "./DriverDocumentUploadSheet";
 import {
   documentHealth,
   documentProgress,
@@ -78,14 +79,18 @@ function SourceError({ message, onRetry }: { message: string; onRetry: () => voi
 function DocumentRow({
   documentKey,
   record,
+  onUpload,
+  uploadDisabled = false,
 }: {
   documentKey: VerificationDocumentKey;
   record: DriverVerificationRecord | undefined;
+  onUpload: () => void;
+  uploadDisabled?: boolean;
 }) {
   const health = documentHealth(record);
   const copy = healthCopy[health];
   return <article className="border-t border-halo-line px-4 py-3 first:border-t-0">
-    <div className="flex items-start gap-3"><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ${copy.className}`}>{health === "verified" ? "✓" : health === "rejected" || health === "expired" ? "!" : "•"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-extrabold leading-5 text-halo-navy">{documentLabels[documentKey]}</p><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${copy.className}`}>{copy.label}</span></div>{record?.expiryDate && <p className="mt-1 text-[10px] text-halo-muted">Expiry: {formatDate(record.expiryDate)}</p>}{record?.rejectionReason && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold leading-4 text-red-700">Sababa: {record.rejectionReason}</p>}{!record && <p className="mt-1 text-[10px] text-halo-muted">Document kana mobile profile irratti hin argamne.</p>}</div></div>
+    <div className="flex items-start gap-3"><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ${copy.className}`}>{health === "verified" ? "✓" : health === "rejected" || health === "expired" ? "!" : "•"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-extrabold leading-5 text-halo-navy">{documentLabels[documentKey]}</p><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${copy.className}`}>{copy.label}</span></div>{record?.expiryDate && <p className="mt-1 text-[10px] text-halo-muted">Expiry: {formatDate(record.expiryDate)}</p>}{record?.rejectionReason && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold leading-4 text-red-700">Sababa: {record.rejectionReason}</p>}{!record && <p className="mt-1 text-[10px] text-halo-muted">Document kana mobile profile irratti hin argamne.</p>}<button type="button" onClick={onUpload} disabled={uploadDisabled} className="mt-3 min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{record ? "Jijjiiri" : "Galchi"}</button></div></div>
   </article>;
 }
 
@@ -112,6 +117,8 @@ export function DriverProfileView({ userId, fallbackName }: { userId: string; fa
   const [documentsError, setDocumentsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
+  const [uploadTarget, setUploadTarget] = useState<{ documentKey: VerificationDocumentKey; truckId: string | null; record: DriverVerificationRecord | undefined } | null>(null);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (refreshInFlightRef.current) {
@@ -208,6 +215,7 @@ export function DriverProfileView({ userId, fallbackName }: { userId: string; fa
   return <div className="space-y-5 px-4 pb-8 pt-5 sm:px-6" data-mobile-driver-profile>
     <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Driver profile</p><h1 className="mt-1 text-2xl font-black text-halo-navy">Eenyummaa fi compliance</h1><p className="mt-2 text-xs leading-5 text-halo-muted">Odeeffannoo database fi Admin/CEO verification status yeroo dhugaa ilaali.</p></div>
 
+    {uploadNotice && <div role="status" className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-700">{uploadNotice}</div>}
     {profileError && <SourceError message={profileError} onRetry={() => void refresh()} />}
     <section className="rounded-[28px] border border-halo-line bg-white p-4 shadow-halo-card">
       <div className="flex items-start gap-4"><span className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-halo-blue text-lg font-black text-white">{initials}</span><div className="min-w-0 flex-1"><h2 className="break-words text-xl font-black text-halo-navy">{profile?.fullName || fallbackName}</h2><p className="mt-1 break-all text-xs text-halo-muted">{profile?.phone || "Phone —"}</p>{profileStatus && <><span className={`mt-3 inline-flex rounded-full px-3 py-1.5 text-[9px] font-black ${profileStatus.className}`}>{profileStatus.label}</span><p className="mt-2 text-[10px] leading-4 text-halo-muted">{profileStatus.detail}</p></>}</div>{profile?.ratingAvg !== null && profile?.ratingAvg !== undefined && <span className="shrink-0 rounded-xl bg-halo-gold-soft px-3 py-2 text-xs font-black text-halo-gold-dark">{profile.ratingAvg.toFixed(1)} ★</span>}</div>
@@ -218,10 +226,17 @@ export function DriverProfileView({ userId, fallbackName }: { userId: string; fa
 
     <section className="space-y-3"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Fleet</p><h2 className="mt-1 text-xl font-black text-halo-navy">Konkolaataa kee</h2></div><span className="text-xs font-bold text-halo-muted">{trucks.length} total</span></div>{trucksError && <SourceError message={trucksError} onRetry={() => void refresh()} />}{trucksConfirmed && trucks.length === 0 ? <div className="rounded-[22px] border border-dashed border-halo-line bg-white p-5 text-center"><p className="text-sm font-black text-halo-navy">Konkolaataan assign hin taane</p><p className="mt-2 text-xs leading-5 text-halo-muted">Admin/CEO irraa vehicle assignment ykn onboarding completion barbaachisa.</p></div> : <div className="flex snap-x gap-3 overflow-x-auto pb-2">{trucks.map((truck) => <TruckCard key={truck.id} truck={truck} selected={selectedTruck?.id === truck.id} onSelect={() => setSelectedTruckId(truck.id)} />)}</div>}</section>
 
-    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Identity checklist</p><h2 className="mt-1 text-lg font-black text-halo-navy">Driver documents</h2></div>{documentsError && <div className="px-4 pb-4"><SourceError message={documentsError} onRetry={() => void refresh()} /></div>}{identityDocumentKeys.map((key) => <DocumentRow key={key} documentKey={key} record={documents.find((record) => record.documentKey === key && record.truckId === null)} />)}</section>
+    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Identity checklist</p><h2 className="mt-1 text-lg font-black text-halo-navy">Driver documents</h2></div>{documentsError && <div className="px-4 pb-4"><SourceError message={documentsError} onRetry={() => void refresh()} /></div>}{identityDocumentKeys.map((key) => {
+  const record = documents.find((item) => item.documentKey === key && item.truckId === null);
+  return <DocumentRow key={key} documentKey={key} record={record} onUpload={() => { setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: null, record }); }} />;
+})}</section>
 
-    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Vehicle checklist</p><h2 className="mt-1 text-lg font-black text-halo-navy">{selectedTruck ? selectedTruck.plateNumber : "Konkolaataa hin filatamne"}</h2><p className="mt-1 text-[10px] text-halo-muted">Vehicle tokko filachuun document status isaa ilaali.</p></div>{vehicleDocumentKeys.map((key) => <DocumentRow key={key} documentKey={key} record={selectedTruck ? documents.find((record) => record.documentKey === key && record.truckId === selectedTruck.id) : undefined} />)}</section>
+    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Vehicle checklist</p><h2 className="mt-1 text-lg font-black text-halo-navy">{selectedTruck ? selectedTruck.plateNumber : "Konkolaataa hin filatamne"}</h2><p className="mt-1 text-[10px] text-halo-muted">Vehicle tokko filachuun document status isaa ilaali.</p></div>{vehicleDocumentKeys.map((key) => {
+  const record = selectedTruck ? documents.find((item) => item.documentKey === key && item.truckId === selectedTruck.id) : undefined;
+  return <DocumentRow key={key} documentKey={key} record={record} uploadDisabled={!selectedTruck} onUpload={() => { if (!selectedTruck) return; setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: selectedTruck.id, record }); }} />;
+})}</section>
 
-    <div className="rounded-2xl bg-halo-gold-soft p-4 text-xs leading-5 text-halo-gold-dark"><strong>Read-only profile:</strong> Mobile page kun status database keessaa qofa agarsiisa. Document upload/replacement fi Admin review hojii itti aanu keessatti adda hojjatama.</div>
+    <div className="rounded-2xl bg-halo-gold-soft p-4 text-xs leading-5 text-halo-gold-dark"><strong>Document upload/replacement:</strong> File haaraan Pending ta'ee Admin/CEO review eeggata. Verified document jijjiiruun verification duraanii hin dhaalu.</div>
+    {uploadTarget && <DriverDocumentUploadSheet userId={userId} documentKey={uploadTarget.documentKey} documentLabel={documentLabels[uploadTarget.documentKey]} truckId={uploadTarget.truckId} currentRecord={uploadTarget.record} onClose={() => setUploadTarget(null)} onUploaded={async (message) => { setUploadNotice(message); setUploadTarget(null); await refresh(); }} />}
   </div>;
 }
