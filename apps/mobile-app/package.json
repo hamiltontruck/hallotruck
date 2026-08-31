@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit --pretty false",
-    "test": "node -e \"for (const path of ['.test-dist','.test-dist-active','.test-dist-delivery','.test-dist-wallet','.test-dist-commission']) require('fs').rmSync(path,{recursive:true,force:true})\" && tsc -p tsconfig.policy.json && tsc -p tsconfig.driver-jobs.json && tsc -p tsconfig.active-trip.json && tsc -p tsconfig.delivery-proof.json && tsc -p tsconfig.driver-wallet.json && tsc -p tsconfig.driver-commission-payment.json && node --test tests/access-policy.test.mjs tests/driver-jobs.test.mjs tests/driver-active-trip.test.mjs tests/driver-delivery-proof.test.mjs tests/driver-wallet.test.mjs tests/driver-commission-payment.test.mjs",
+    "test": "node -e \"for (const path of ['.test-dist','.test-dist-active','.test-dist-delivery','.test-dist-wallet','.test-dist-commission','.test-dist-profile']) require('fs').rmSync(path,{recursive:true,force:true})\" && tsc -p tsconfig.policy.json && tsc -p tsconfig.driver-jobs.json && tsc -p tsconfig.active-trip.json && tsc -p tsconfig.delivery-proof.json && tsc -p tsconfig.driver-wallet.json && tsc -p tsconfig.driver-commission-payment.json && tsc -p tsconfig.driver-profile.json && node --test tests/access-policy.test.mjs tests/driver-jobs.test.mjs tests/driver-active-trip.test.mjs tests/driver-delivery-proof.test.mjs tests/driver-wallet.test.mjs tests/driver-commission-payment.test.mjs tests/driver-profile.test.mjs",
     "test:ci": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {

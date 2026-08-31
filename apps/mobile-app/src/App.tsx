@@ -3,6 +3,7 @@ import { MobileAuthBoundary, type MobileIdentity } from "./auth/MobileAuthBounda
 import { DriverJobsBoard } from "./driver/DriverJobsBoard";
 import { DriverActiveTripView } from "./driver/DriverActiveTripView";
 import { DriverWalletView } from "./driver/DriverWalletView";
+import { DriverProfileView } from "./driver/DriverProfileView";
 
 type Role = "driver" | "customer";
 type Tab = "home" | "jobs" | "map" | "wallet" | "profile";
@@ -196,12 +197,12 @@ function CustomerPaymentsView() {
   </div>;
 }
 
-function ProfileView({ role }: { role: Role }) {
+function CustomerProfileView() {
   return <div className="space-y-5 px-4 pb-7 pt-5 sm:px-6">
-    <section className="flex items-center gap-4 rounded-[26px] border border-halo-line bg-white p-4 shadow-halo-card"><span className="grid h-16 w-16 place-items-center rounded-[22px] bg-halo-blue text-white"><Icon name="user" className="h-8 w-8" /></span><div><h1 className="text-xl font-black text-halo-navy">{role === "driver" ? "Abdi Driver" : "Moha Customer"}</h1><p className="mt-1 text-xs text-halo-muted">{role === "driver" ? "Verified driver · Active" : "Customer account · Verified"}</p><span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black text-emerald-700"><Icon name="check" className="h-3 w-3" /> ACTIVE</span></div></section>
+    <section className="flex items-center gap-4 rounded-[26px] border border-halo-line bg-white p-4 shadow-halo-card"><span className="grid h-16 w-16 place-items-center rounded-[22px] bg-halo-blue text-white"><Icon name="user" className="h-8 w-8" /></span><div><h1 className="text-xl font-black text-halo-navy">Moha Customer</h1><p className="mt-1 text-xs text-halo-muted">Customer account · Verified</p><span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black text-emerald-700"><Icon name="check" className="h-3 w-3" /> ACTIVE</span></div></section>
     <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card">{[
-      [role === "driver" ? "Driver documents" : "Account details", "shield" as IconName],
-      [role === "driver" ? "Vehicle information" : "Saved locations", role === "driver" ? "truck" as IconName : "pin" as IconName],
+      ["Account details", "shield" as IconName],
+      ["Saved locations", "pin" as IconName],
       ["Language · Afaan Oromoo", "message" as IconName],
       ["Support & help", "phone" as IconName],
     ].map(([label, icon], index) => <button key={label} type="button" className={`flex min-h-15 w-full items-center gap-3 px-4 text-left ${index ? "border-t border-halo-line" : ""}`}><span className="grid h-9 w-9 place-items-center rounded-xl bg-halo-soft text-halo-blue"><Icon name={icon as IconName} className="h-4 w-4" /></span><span className="flex-1 text-sm font-bold text-halo-navy">{label}</span><Icon name="chevron" className="h-4 w-4 text-halo-muted" /></button>)}</section>
@@ -238,7 +239,7 @@ function MobileWorkspace({
     if (tab === "jobs") return <JobsView role={role} identity={identity} />;
     if (tab === "map") return <LiveMapView role={role} identity={identity} />;
     if (tab === "wallet") return role === "driver" ? <DriverWalletView userId={identity.userId} /> : <CustomerPaymentsView />;
-    return <ProfileView role={role} />;
+    return role === "driver" ? <DriverProfileView userId={identity.userId} fallbackName={identity.fullName} /> : <CustomerProfileView />;
   }, [identity, role, tab]);
 
   useEffect(() => {
