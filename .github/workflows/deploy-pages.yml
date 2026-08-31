@@ -28,6 +28,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/mobile-app/package-lock.json
 
       - name: Install
         run: npm ci
@@ -55,6 +58,36 @@ jobs:
 
       - name: Browser E2E smoke tests
         run: npm run test:e2e-smoke
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile-app
+        run: npm ci --no-audit --no-fund
+
+      - name: Test mobile app
+        working-directory: apps/mobile-app
+        run: npm test
+
+      - name: Build mobile app
+        working-directory: apps/mobile-app
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
+
+      - name: Driver document preview browser smoke
+        working-directory: apps/mobile-app
+        run: npm run test:document-preview-smoke
+
+      - name: Publish mobile app into Pages artifact
+        run: |
+          rm -rf dist/mobile
+          mkdir -p dist/mobile
+          cp -R apps/mobile-app/dist/. dist/mobile/
+          printf '%s\n' "${GITHUB_SHA}" > dist/mobile/release.txt
+
+      - name: Validate combined Pages artifact
+        run: node scripts/verify-pages-artifact.mjs
 
       - name: Configure Pages
         if: github.event_name != 'pull_request'
