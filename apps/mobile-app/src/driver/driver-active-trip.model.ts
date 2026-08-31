@@ -1,3 +1,5 @@
+import type { DriverSelectedPaymentMethod } from "./driver-delivery-proof.model";
+
 export type DriverActiveTripOrder = {
   id: string;
   trackingId: string;
@@ -6,6 +8,7 @@ export type DriverActiveTripOrder = {
   dropoffAddress: string;
   priceEtb: number | null;
   acceptedAt: string | null;
+  selectedPaymentMethod: DriverSelectedPaymentMethod;
 };
 
 export type DriverRouteStep = {
@@ -76,7 +79,10 @@ export function normalizeDriverActiveTripOrder(value: unknown): DriverActiveTrip
   const pickupAddress = requiredText(row.pickup_address);
   const dropoffAddress = requiredText(row.dropoff_address);
   const status = row.status === "accepted" || row.status === "in_transit" ? row.status : null;
-  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !status) return null;
+  const selectedPaymentMethod = row.selected_payment_method === "cash" || row.selected_payment_method === "bank_telebirr"
+    ? row.selected_payment_method
+    : null;
+  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !status || !selectedPaymentMethod) return null;
 
   return {
     id,
@@ -86,6 +92,7 @@ export function normalizeDriverActiveTripOrder(value: unknown): DriverActiveTrip
     dropoffAddress,
     priceEtb: optionalFiniteNumber(row.price_etb),
     acceptedAt: optionalText(row.accepted_at),
+    selectedPaymentMethod,
   };
 }
 
