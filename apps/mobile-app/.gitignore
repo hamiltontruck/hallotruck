@@ -5,4 +5,5 @@ dist/
 .test-dist-active/
 .test-dist-delivery/
 .test-dist-wallet/
+.test-dist-commission/
 *.local

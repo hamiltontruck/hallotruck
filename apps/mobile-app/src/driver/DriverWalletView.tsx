@@ -12,14 +12,18 @@ import {
   fetchDriverWalletTrips,
   subscribeToDriverWallet,
 } from "./driver-wallet.service";
+import { DriverCommissionPaymentPanel } from "./DriverCommissionPaymentPanel";
+import type { DriverCommissionPayment } from "./driver-commission-payment.model";
+import { fetchDriverCommissionPayments } from "./driver-commission-payment.service";
 
 type SourceErrors = {
   financial: string | null;
   commission: string | null;
+  payments: string | null;
   trips: string | null;
 };
 
-const EMPTY_ERRORS: SourceErrors = { financial: null, commission: null, trips: null };
+const EMPTY_ERRORS: SourceErrors = { financial: null, commission: null, payments: null, trips: null };
 const REFRESH_MS = 30_000;
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -61,6 +65,7 @@ export function DriverWalletView({ userId }: { userId: string }) {
   const queuedRefreshRef = useRef(false);
   const [financial, setFinancial] = useState<DriverFinancialSummary | null>(null);
   const [commission, setCommission] = useState<DriverCommissionSummary | null>(null);
+  const [payments, setPayments] = useState<DriverCommissionPayment[] | null>(null);
   const [trips, setTrips] = useState<DriverWalletTrip[] | null>(null);
   const [errors, setErrors] = useState<SourceErrors>(EMPTY_ERRORS);
   const [loading, setLoading] = useState(true);
@@ -80,6 +85,7 @@ export function DriverWalletView({ userId }: { userId: string }) {
     const results = await Promise.allSettled([
       fetchDriverFinancialSummary(userId),
       fetchDriverCommissionSummary(userId),
+      fetchDriverCommissionPayments(userId),
       fetchDriverWalletTrips(userId),
     ]);
     if (!mountedRef.current || requestId !== requestIdRef.current) {
@@ -88,7 +94,7 @@ export function DriverWalletView({ userId }: { userId: string }) {
     }
 
     const nextErrors: SourceErrors = { ...EMPTY_ERRORS };
-    const [financialResult, commissionResult, tripsResult] = results;
+    const [financialResult, commissionResult, paymentsResult, tripsResult] = results;
     let confirmedAny = false;
 
     if (financialResult.status === "fulfilled") {
@@ -103,6 +109,13 @@ export function DriverWalletView({ userId }: { userId: string }) {
       confirmedAny = true;
     } else {
       nextErrors.commission = errorMessage(commissionResult.reason, "Commission summary fe'uun hin danda'amne.");
+    }
+
+    if (paymentsResult.status === "fulfilled") {
+      setPayments(paymentsResult.value);
+      confirmedAny = true;
+    } else {
+      nextErrors.payments = errorMessage(paymentsResult.reason, "Commission payment history fe'uun hin danda'amne.");
     }
 
     if (tripsResult.status === "fulfilled") {
@@ -145,7 +158,7 @@ export function DriverWalletView({ userId }: { userId: string }) {
     };
   }, [load, userId]);
 
-  const initialUnknown = !financial && !commission && !trips;
+  const initialUnknown = !financial && !commission && !payments && !trips;
   if (loading && initialUnknown) {
     return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-6 text-center">
       <div><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-halo-line border-t-halo-blue"/><p className="mt-4 text-sm font-bold text-halo-muted">Wallet kee fe'aa jira…</p></div>
@@ -180,6 +193,16 @@ export function DriverWalletView({ userId }: { userId: string }) {
       {errors.commission && <div className="mt-3"><SourceNotice message={errors.commission} onRetry={() => void load(true)} /></div>}
       <div className="mt-4 grid grid-cols-2 gap-3"><Metric label="Charged" value={formatWalletEtb(commission?.chargedEtb ?? financial?.commissionChargedEtb ?? null)} /><Metric label="Approved paid" value={formatWalletEtb(commission?.approvedPaidEtb ?? financial?.commissionPaidEtb ?? null)} /><Metric label="Pending review" value={formatWalletEtb(commission?.pendingEtb ?? null)} /><Metric label="Balance" value={formatWalletEtb(commission?.balanceEtb ?? financial?.commissionDueEtb ?? null)} /></div>
     </section>
+
+    {commission && <DriverCommissionPaymentPanel
+      userId={userId}
+      balanceEtb={commission.balanceEtb}
+      pendingEtb={commission.pendingEtb}
+      payments={payments}
+      sourceError={errors.payments}
+      onRetry={() => void load(true)}
+      onSubmitted={async () => { await load(true); }}
+    />}
 
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">Recent activity</p><h2 className="mt-1 text-lg font-black text-halo-navy">Trip payment history</h2></div>{lastUpdated && <span className="text-[9px] font-bold text-halo-muted">Updated {dateLabel(lastUpdated)}</span>}</div>
