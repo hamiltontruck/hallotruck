@@ -19,3 +19,7 @@ create unique index if not exists partner_job_requests_one_accepted_truck
 create unique index if not exists partner_job_requests_one_accepted_driver
   on public.partner_job_requests(selected_driver_id)
   where status = 'accepted';
+
+-- Reassert Data API least privilege after all table changes.
+revoke all on public.partner_job_requests from public, anon;
+grant select on public.partner_job_requests to authenticated;
