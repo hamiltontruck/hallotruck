@@ -96,14 +96,14 @@ export async function uploadPartnerDocument(partnerId: string, projectId: string
   });
 
   if (error) {
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("partner_documents")
       .select("*")
       .eq("partner_id", partnerId)
       .eq("storage_path", path)
       .maybeSingle();
     if (existing) return existing as PartnerDocument;
-    await supabase.storage.from("partner-documents").remove([path]);
+    if (!lookupError) await supabase.storage.from("partner-documents").remove([path]);
     throw error;
   }
 
