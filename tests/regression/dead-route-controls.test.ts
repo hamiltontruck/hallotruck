@@ -94,8 +94,9 @@ test("Partner settlement busy actions explain the temporary workflow lock", () =
   assert.match(source, /partner-settlement-workflow-busy-guidance/);
   assert.match(source, /Another settlement operation is in progress\. Wait for it to finish before starting a new settlement action\./);
   assert.match(source, /role="status" aria-live="polite"/);
-  assert.match(source, /aria-describedby=\{busy \? settlementBusyGuidanceId : undefined\}/);
-  assert.match(source, /title=\{busy \? settlementBusyReason : undefined\}/);
+  assert.match(source, /aria-describedby=\{workflowLocked \? settlementBusyGuidanceId : undefined\}/);
+  assert.match(source, /title=\{workflowLocked \? workflowGuidance/);
+  assert.match(source, /const workflowGuidance = busy \? settlementBusyReason : actionLockReason/);
   assert.match(source, /aria-busy=\{busy\}/);
   assert.match(smoke, /data-busy-guidance/);
   assert.match(smoke, /data-described-disabled/);

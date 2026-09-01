@@ -27,6 +27,9 @@ export function AdminPartnerSettlementWorkflow({
   corrections,
   busy,
   runAction,
+  actionsLocked = false,
+  actionLockReason = "Partner finance actions are locked for this organization.",
+  payableEtb = null,
 }: {
   partnerId: string;
   projects: PartnerFinanceProject[];
@@ -36,11 +39,26 @@ export function AdminPartnerSettlementWorkflow({
   corrections: FinancialCorrection[];
   busy: boolean;
   runAction: (work: () => Promise<void>, message: string) => Promise<boolean>;
+  actionsLocked?: boolean;
+  actionLockReason?: string;
+  payableEtb?: number | string | null;
 }) {
   const [open, setOpen] = useState<OpenPanel>(null);
+  const parsedPayable = payableEtb === null || payableEtb === undefined ? null : Number(payableEtb);
+  const availablePayable = parsedPayable !== null && Number.isFinite(parsedPayable)
+    ? Math.max(0, Math.round(parsedPayable * 100) / 100)
+    : null;
+  const noPayableBalance = availablePayable !== null && availablePayable <= 0;
+  const workflowLocked = busy || actionsLocked;
+  const workflowGuidance = busy ? settlementBusyReason : actionLockReason;
+  const createGuidance = workflowLocked
+    ? workflowGuidance
+    : "No payable Partner balance is available. Accrue HALLO-generated freight or clear active settlement reservations before creating a new request.";
+  const createDisabled = workflowLocked || noPayableBalance;
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (createDisabled) return;
     const form = event.currentTarget;
     const values = new FormData(form);
     const succeeded = await runAction(
@@ -60,6 +78,7 @@ export function AdminPartnerSettlementWorkflow({
     action: "submit_review" | "approve" | "reject",
     notes: string,
   ) {
+    if (workflowLocked) return;
     const succeeded = await runAction(
       () => transitionPartnerSettlement(settlementId, action, notes),
       action === "submit_review"
@@ -79,6 +98,7 @@ export function AdminPartnerSettlementWorkflow({
 
   async function recordPayment(event: FormEvent<HTMLFormElement>, settlementId: string) {
     event.preventDefault();
+    if (workflowLocked) return;
     const values = new FormData(event.currentTarget);
     const paidAtValue = String(values.get("paidAt"));
     const succeeded = await runAction(
@@ -97,6 +117,7 @@ export function AdminPartnerSettlementWorkflow({
 
   async function reverse(event: FormEvent<HTMLFormElement>, settlementId: string) {
     event.preventDefault();
+    if (workflowLocked) return;
     const values = new FormData(event.currentTarget);
     const succeeded = await runAction(
       () => reversePaidPartnerSettlement(settlementId, String(values.get("reason"))),
@@ -116,12 +137,13 @@ export function AdminPartnerSettlementWorkflow({
       <p className="font-mono text-[9px] uppercase tracking-[.18em] text-steel">NEW SETTLEMENT REQUEST</p>
       <h2 className="mt-2 font-display text-xl font-bold">Create pending settlement</h2>
       <p className="mt-2 text-xs leading-5 text-steel">A request must pass review and approval before any partial or full payment is recorded.</p>
-      {busy && <p id={settlementBusyGuidanceId} role="status" aria-live="polite" className="mt-3 border border-amber/30 bg-amber/10 px-3 py-2 text-xs leading-5 text-asphalt">{settlementBusyReason}</p>}
+      {(workflowLocked || noPayableBalance) && <p id={settlementBusyGuidanceId} role="status" aria-live="polite" className="mt-3 border border-amber/30 bg-amber/10 px-3 py-2 text-xs leading-5 text-asphalt">{createGuidance}</p>}
+      {availablePayable !== null && <p className="mt-3 text-xs font-semibold text-steel">Available payable balance: {formatEtb(availablePayable)}</p>}
       <form onSubmit={create} className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-xs font-semibold">Requested amount ETB<input name="amount" required type="number" min="0.01" step="0.01" className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 px-3"/></label>
-        <label className="text-xs font-semibold">Project<select name="projectId" className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 bg-white px-3"><option value="">No project</option>{projects.map((project)=><option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-        <label className="text-xs font-semibold sm:col-span-2">Request note<textarea name="note" minLength={2} maxLength={1000} rows={3} className="mt-2 w-full min-w-0 border border-asphalt/20 p-3" placeholder="Optional purpose or internal context"/></label>
-        <button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} className="min-h-11 bg-asphalt px-4 py-3 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{busy?"Saving…":"Create pending request"}</button>
+        <label className="text-xs font-semibold">Requested amount ETB<input name="amount" required disabled={workflowLocked || noPayableBalance} type="number" min="0.01" max={availablePayable ?? undefined} step="0.01" className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 px-3 disabled:opacity-50"/></label>
+        <label className="text-xs font-semibold">Project<select name="projectId" disabled={workflowLocked || noPayableBalance} className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 bg-white px-3 disabled:opacity-50"><option value="">No project</option>{projects.map((project)=><option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+        <label className="text-xs font-semibold sm:col-span-2">Request note<textarea name="note" disabled={workflowLocked || noPayableBalance} minLength={2} maxLength={1000} rows={3} className="mt-2 w-full min-w-0 border border-asphalt/20 p-3 disabled:opacity-50" placeholder="Optional purpose or internal context"/></label>
+        <button disabled={createDisabled} aria-describedby={createDisabled ? settlementBusyGuidanceId : undefined} title={createDisabled ? createGuidance : "Create pending settlement request"} className="min-h-11 bg-asphalt px-4 py-3 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{busy?"Saving…":"Create pending request"}</button>
       </form>
     </section>
 
@@ -142,16 +164,16 @@ export function AdminPartnerSettlementWorkflow({
               {settlement.rejection_reason&&<p className="mt-2 text-xs text-route">Rejected: {settlement.rejection_reason}</p>}
             </div>
             <div className="flex max-w-full flex-wrap gap-2 lg:max-w-md lg:justify-end">
-              {progress.status==="pending"&&<button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} onClick={()=>void transition(settlement.id,"submit_review","")} className="min-h-11 bg-amber px-4 py-3 text-xs font-semibold text-asphalt disabled:opacity-40">Start review</button>}
-              {progress.status==="under_review"&&<><button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} onClick={()=>toggle(settlement.id,"approve")} className="min-h-11 bg-emerald-700 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Approve</button><button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} onClick={()=>toggle(settlement.id,"reject")} className="min-h-11 bg-route px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Reject</button></>}
-              {(progress.status==="approved"||progress.status==="partially_paid")&&<button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} onClick={()=>toggle(settlement.id,"payment")} className="min-h-11 bg-emerald-700 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Record payment</button>}
-              {progress.status==="paid"&&<button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} onClick={()=>toggle(settlement.id,"reverse")} className="min-h-11 bg-route px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Reverse settlement</button>}
+              {progress.status==="pending"&&<button disabled={workflowLocked} aria-describedby={workflowLocked ? settlementBusyGuidanceId : undefined} title={workflowLocked ? workflowGuidance : "Start settlement review"} onClick={()=>void transition(settlement.id,"submit_review","")} className="min-h-11 bg-amber px-4 py-3 text-xs font-semibold text-asphalt disabled:opacity-40">Start review</button>}
+              {progress.status==="under_review"&&<><button disabled={workflowLocked} aria-describedby={workflowLocked ? settlementBusyGuidanceId : undefined} title={workflowLocked ? workflowGuidance : "Approve settlement"} onClick={()=>toggle(settlement.id,"approve")} className="min-h-11 bg-emerald-700 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Approve</button><button disabled={workflowLocked} aria-describedby={workflowLocked ? settlementBusyGuidanceId : undefined} title={workflowLocked ? workflowGuidance : "Reject settlement"} onClick={()=>toggle(settlement.id,"reject")} className="min-h-11 bg-route px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Reject</button></>}
+              {(progress.status==="approved"||progress.status==="partially_paid")&&<button disabled={workflowLocked} aria-describedby={workflowLocked ? settlementBusyGuidanceId : undefined} title={workflowLocked ? workflowGuidance : "Record audited settlement payment"} onClick={()=>toggle(settlement.id,"payment")} className="min-h-11 bg-emerald-700 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Record payment</button>}
+              {progress.status==="paid"&&<button disabled={workflowLocked} aria-describedby={workflowLocked ? settlementBusyGuidanceId : undefined} title={workflowLocked ? workflowGuidance : "Reverse paid settlement"} onClick={()=>toggle(settlement.id,"reverse")} className="min-h-11 bg-route px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Reverse settlement</button>}
               <button type="button" onClick={()=>toggle(settlement.id,"audit")} className="min-h-11 border border-asphalt/20 px-4 py-3 text-xs font-semibold">Audit {settlementEvents.length}</button>
             </div>
           </div>
 
-          {open?.settlementId===settlement.id&&open.kind==="approve"&&<AuditForm title="Approve settlement" onSubmit={(event)=>void approveOrReject(event,settlement.id,"approve")} busy={busy} button="Confirm approval" placeholder="Required approval notes"/>}
-          {open?.settlementId===settlement.id&&open.kind==="reject"&&<AuditForm title="Reject settlement" onSubmit={(event)=>void approveOrReject(event,settlement.id,"reject")} busy={busy} button="Confirm rejection" placeholder="Required rejection reason" minLength={5}/>}
+          {open?.settlementId===settlement.id&&open.kind==="approve"&&<AuditForm title="Approve settlement" onSubmit={(event)=>void approveOrReject(event,settlement.id,"approve")} disabled={workflowLocked} disabledReason={workflowGuidance} button="Confirm approval" placeholder="Required approval notes"/>}
+          {open?.settlementId===settlement.id&&open.kind==="reject"&&<AuditForm title="Reject settlement" onSubmit={(event)=>void approveOrReject(event,settlement.id,"reject")} disabled={workflowLocked} disabledReason={workflowGuidance} button="Confirm rejection" placeholder="Required rejection reason" minLength={5}/>}
           {open?.settlementId===settlement.id&&open.kind==="payment"&&<form onSubmit={(event)=>void recordPayment(event,settlement.id)} className="mt-4 grid gap-3 border border-emerald-600/20 bg-emerald-50/50 p-4 sm:grid-cols-2">
             <p className="font-display text-lg font-bold sm:col-span-2">Record partial or full payment</p>
             <label className="text-xs font-semibold">Amount ETB<input name="amount" required type="number" min="0.01" max={progress.outstandingEtb} step="0.01" className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 px-3"/></label>
@@ -159,9 +181,9 @@ export function AdminPartnerSettlementWorkflow({
             <label className="text-xs font-semibold">Provider<input name="provider" maxLength={120} placeholder="CBE / Telebirr / office" className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 px-3"/></label>
             <label className="text-xs font-semibold">Transaction reference<input name="transactionRef" required minLength={3} maxLength={160} className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 px-3"/></label>
             <label className="text-xs font-semibold sm:col-span-2">Payment time<input name="paidAt" type="datetime-local" className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 px-3"/></label>
-            <button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} className="min-h-11 bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{busy?"Recording…":"Confirm audited payment"}</button>
+            <button disabled={workflowLocked} aria-describedby={workflowLocked ? settlementBusyGuidanceId : undefined} title={workflowLocked ? workflowGuidance : "Confirm audited settlement payment"} className="min-h-11 bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{busy?"Recording…":"Confirm audited payment"}</button>
           </form>}
-          {open?.settlementId===settlement.id&&open.kind==="reverse"&&<form onSubmit={(event)=>void reverse(event,settlement.id)} className="mt-4 grid gap-3 border border-route/20 bg-route/5 p-4"><p className="font-display text-lg font-bold">Reverse paid settlement</p><label className="text-xs font-semibold">Reversal reason<textarea name="reason" required minLength={5} maxLength={500} rows={3} className="mt-2 w-full min-w-0 border border-asphalt/20 p-3"/></label><p className="text-[11px] text-steel">The original settlement and payment rows remain unchanged. A correction entry restores the Partner balance.</p><button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} className="min-h-11 bg-route px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">Confirm immutable reversal</button></form>}
+          {open?.settlementId===settlement.id&&open.kind==="reverse"&&<form onSubmit={(event)=>void reverse(event,settlement.id)} className="mt-4 grid gap-3 border border-route/20 bg-route/5 p-4"><p className="font-display text-lg font-bold">Reverse paid settlement</p><label className="text-xs font-semibold">Reversal reason<textarea name="reason" required disabled={workflowLocked} minLength={5} maxLength={500} rows={3} className="mt-2 w-full min-w-0 border border-asphalt/20 p-3 disabled:opacity-50"/></label><p className="text-[11px] text-steel">The original settlement and payment rows remain unchanged. A correction entry restores the Partner balance.</p><button disabled={workflowLocked} aria-describedby={workflowLocked ? settlementBusyGuidanceId : undefined} title={workflowLocked ? workflowGuidance : "Confirm immutable settlement reversal"} className="min-h-11 bg-route px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">Confirm immutable reversal</button></form>}
           {open?.settlementId===settlement.id&&open.kind==="audit"&&<div className="mt-4 border border-asphalt/10 bg-[#f8f7f3] p-4"><p className="font-display text-lg font-bold">Settlement audit trail</p>{settlementEvents.length===0?<p className="mt-3 text-xs text-steel">No structured events recorded.</p>:<ol className="mt-3 space-y-3">{settlementEvents.map((item)=><li key={String(item.id)} className="border-l-2 border-amber pl-3"><p className="text-xs font-semibold capitalize">{item.event_type.replaceAll("_"," ")} · {item.to_status.replaceAll("_"," ")}</p><p className="mt-1 text-[10px] text-steel">{new Date(item.created_at).toLocaleString()}{item.amount_etb?` · ${formatEtb(Number(item.amount_etb))}`:""}</p>{item.reason&&<p className="mt-1 break-words text-xs text-steel">{item.reason}</p>}</li>)}</ol>}</div>}
         </article>;
       })}</div>}
@@ -174,6 +196,6 @@ function Status({ status }: { status: string }) {
   return <span className={`w-fit px-3 py-1.5 text-[9px] font-semibold uppercase ${tone}`}>{status.replaceAll("_"," ")}</span>;
 }
 
-function AuditForm({ title, onSubmit, busy, button, placeholder, minLength=2 }: { title: string; onSubmit: (event: FormEvent<HTMLFormElement>) => void; busy: boolean; button: string; placeholder: string; minLength?: number }) {
-  return <form onSubmit={onSubmit} className="mt-4 grid gap-3 border border-asphalt/10 bg-[#f8f7f3] p-4"><p className="font-display text-lg font-bold">{title}</p><label className="text-xs font-semibold">Notes<textarea name="notes" required minLength={minLength} maxLength={minLength===5?500:1000} rows={3} className="mt-2 w-full min-w-0 border border-asphalt/20 p-3" placeholder={placeholder}/></label><button disabled={busy} aria-describedby={busy ? settlementBusyGuidanceId : undefined} title={busy ? settlementBusyReason : undefined} className="min-h-11 bg-asphalt px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{button}</button></form>;
+function AuditForm({ title, onSubmit, disabled, disabledReason, button, placeholder, minLength=2 }: { title: string; onSubmit: (event: FormEvent<HTMLFormElement>) => void; disabled: boolean; disabledReason: string; button: string; placeholder: string; minLength?: number }) {
+  return <form onSubmit={onSubmit} className="mt-4 grid gap-3 border border-asphalt/10 bg-[#f8f7f3] p-4"><p className="font-display text-lg font-bold">{title}</p><label className="text-xs font-semibold">Notes<textarea name="notes" required disabled={disabled} minLength={minLength} maxLength={minLength===5?500:1000} rows={3} className="mt-2 w-full min-w-0 border border-asphalt/20 p-3 disabled:opacity-50" placeholder={placeholder}/></label><button disabled={disabled} aria-describedby={disabled ? settlementBusyGuidanceId : undefined} title={disabled ? disabledReason : button} className="min-h-11 bg-asphalt px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{button}</button></form>;
 }
