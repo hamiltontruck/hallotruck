@@ -54,5 +54,5 @@ test("Direct Partner business mutations are replaced by guarded RPC calls", () =
 test("Document upload preserves committed metadata on ambiguous client failures", () => {
   assert.match(service, /\.eq\("storage_path", path\)[\s\S]*\.maybeSingle\(\)/i);
   assert.match(service, /if \(existing\) return existing as PartnerDocument/i);
-  assert.match(service, /storage\.from\("partner-documents"\)\.remove\(\[path\]\)/i);
+  assert.match(service, /if \(!lookupError\) await supabase\.storage\.from\("partner-documents"\)\.remove\(\[path\]\)/i);
 });
