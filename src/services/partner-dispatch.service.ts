@@ -60,7 +60,10 @@ function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
-async function hydrateRequests(rows: Array<Omit<PartnerJobRequest, "order" | "organization" | "truck_label" | "driver_label">>) {
+async function hydrateRequests(
+  rows: Array<Omit<PartnerJobRequest, "order" | "organization" | "truck_label" | "driver_label">>,
+  fleetVehicles: FleetVehicle[] = [],
+) {
   const orderIds = [...new Set(rows.map((row) => row.order_id))];
   const partnerIds = [...new Set(rows.map((row) => row.partner_id))];
   const truckIds = [...new Set(rows.map((row) => row.selected_truck_id).filter(Boolean))] as string[];
@@ -73,10 +76,10 @@ async function hydrateRequests(rows: Array<Omit<PartnerJobRequest, "order" | "or
     partnerIds.length
       ? supabase.from("partner_organizations").select("id,name,code,status").in("id", partnerIds)
       : Promise.resolve({ data: [], error: null }),
-    truckIds.length
+    truckIds.length && fleetVehicles.length === 0
       ? supabase.from("trucks").select("id,plate_number,vehicle_type").in("id", truckIds)
       : Promise.resolve({ data: [], error: null }),
-    driverIds.length
+    driverIds.length && fleetVehicles.length === 0
       ? supabase.from("profiles").select("id,full_name,phone").in("id", driverIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -86,14 +89,24 @@ async function hydrateRequests(rows: Array<Omit<PartnerJobRequest, "order" | "or
   const organizationsById = new Map((organizations.data ?? []).map((row) => [row.id, row as PartnerDispatchOrganization]));
   const trucksById = new Map((trucks.data ?? []).map((row) => [row.id, `${row.plate_number} · ${row.vehicle_type}`]));
   const driversById = new Map((drivers.data ?? []).map((row) => [row.id, row.full_name?.trim() || row.phone?.trim() || "Approved driver"]));
+  const fleetByTruck = new Map(fleetVehicles.map((vehicle) => [vehicle.vehicle_id, vehicle]));
 
-  return rows.map((row) => ({
-    ...row,
-    order: ordersById.get(row.order_id) ?? null,
-    organization: organizationsById.get(row.partner_id) ?? null,
-    truck_label: row.selected_truck_id ? trucksById.get(row.selected_truck_id) ?? "Selected truck" : null,
-    driver_label: row.selected_driver_id ? driversById.get(row.selected_driver_id) ?? "Selected driver" : null,
-  })) as PartnerJobRequest[];
+  return rows.map((row) => {
+    const fleetVehicle = row.selected_truck_id ? fleetByTruck.get(row.selected_truck_id) : undefined;
+    return {
+      ...row,
+      order: ordersById.get(row.order_id) ?? null,
+      organization: organizationsById.get(row.partner_id) ?? null,
+      truck_label: row.selected_truck_id
+        ? fleetVehicle
+          ? `${fleetVehicle.plate_number} · ${fleetVehicle.vehicle_type}`
+          : trucksById.get(row.selected_truck_id) ?? "Selected truck"
+        : null,
+      driver_label: row.selected_driver_id
+        ? fleetVehicle?.assigned_driver_name ?? driversById.get(row.selected_driver_id) ?? "Selected driver"
+        : null,
+    };
+  }) as PartnerJobRequest[];
 }
 
 export async function loadAdminPartnerDispatchData(): Promise<AdminPartnerDispatchData> {
@@ -116,9 +129,13 @@ export async function loadPartnerDispatchData(partnerId: string) {
     supabase.rpc("fleet_enterprise_vehicles", { p_partner_id: partnerId }),
   ]);
   [requests.error, vehicles.error].forEach(throwIfError);
+  const fleetVehicles = (vehicles.data ?? []) as FleetVehicle[];
   return {
-    requests: await hydrateRequests((requests.data ?? []) as Array<Omit<PartnerJobRequest, "order" | "organization" | "truck_label" | "driver_label">>),
-    vehicles: (vehicles.data ?? []) as FleetVehicle[],
+    requests: await hydrateRequests(
+      (requests.data ?? []) as Array<Omit<PartnerJobRequest, "order" | "organization" | "truck_label" | "driver_label">>,
+      fleetVehicles,
+    ),
+    vehicles: fleetVehicles,
   };
 }
 
