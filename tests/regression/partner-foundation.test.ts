@@ -70,7 +70,9 @@ test("Partner migration enforces RLS, Data API grants and private storage", () =
 
 test("Partner routes are protected and existing protected routes remain present", () => {
   const app = readFileSync(path.join(process.cwd(), "src", "App.tsx"), "utf8");
-  assert.match(app, /path="\/partner" element={<PartnerGate><PartnerPortal \/><\/PartnerGate>}/);
+  const hub = readFileSync(path.join(process.cwd(), "src", "pages", "PartnerOperationsHub.tsx"), "utf8");
+  assert.match(app, /path="\/partner" element={<PartnerGate><PartnerOperationsHub \/><\/PartnerGate>}/);
+  assert.match(hub, /<PartnerPortal \/>/);
   assert.match(app, /path="\/partner\/wallet" element={<PartnerGate><PartnerWallet \/><\/PartnerGate>}/);
   assert.match(app, /path="\/admin\/partners" element={<AdminGate>/);
   assert.match(app, /path="\/admin" element={<AdminGate>/);

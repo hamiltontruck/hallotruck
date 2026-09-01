@@ -26,6 +26,7 @@ const groups = [
     links: [
       ["Executive intelligence", "/admin/intelligence"],
       ["Partner onboarding", "/admin/partners"],
+      ["Partner job dispatch", "/admin/partner-dispatch"],
     ],
   },
 ] as const;
