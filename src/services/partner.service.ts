@@ -48,25 +48,25 @@ export async function loadPartnerWorkspace(partnerId: string) {
 }
 
 export async function createPartnerProject(partnerId: string, name: string, description: string) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const userId = sessionData.session?.user.id;
-  if (!userId) throw new Error("Partner session expired.");
-  const { data, error } = await supabase.from("partner_projects").insert({ partner_id: partnerId, name: name.trim(), description: description.trim() || null, created_by: userId }).select("*").single();
+  const { data, error } = await supabase.rpc("partner_create_project", {
+    p_partner_id: partnerId,
+    p_name: name,
+    p_description: description,
+    p_request_key: crypto.randomUUID(),
+  });
   if (error) throw error;
-  await supabase.from("partner_activity_log").insert({ partner_id: partnerId, actor_id: userId, action: "project_created", entity_type: "project", entity_id: data.id, metadata: { name: data.name } });
+  if (!data) throw new Error("Partner project was not returned after creation.");
   return data as PartnerProject;
 }
 
 export async function updatePartnerProjectProgress(project: PartnerProject, progress: number, note: string) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const userId = sessionData.session?.user.id;
-  if (!userId) throw new Error("Partner session expired.");
-  const nextStatus = progress >= 100 ? "completed" : progress > 0 && project.status === "planned" ? "active" : project.status;
-  const { error } = await supabase.from("partner_projects").update({ progress, status: nextStatus, updated_at: new Date().toISOString() }).eq("id", project.id);
+  const { error } = await supabase.rpc("partner_update_project_progress", {
+    p_project_id: project.id,
+    p_progress: progress,
+    p_note: note,
+    p_request_key: crypto.randomUUID(),
+  });
   if (error) throw error;
-  const { error: progressError } = await supabase.from("partner_project_progress").insert({ partner_id: project.partner_id, project_id: project.id, progress, note: note.trim() || null, created_by: userId });
-  if (progressError) throw progressError;
-  await supabase.from("partner_activity_log").insert({ partner_id: project.partner_id, actor_id: userId, action: "project_progress_updated", entity_type: "project", entity_id: project.id, metadata: { progress } });
 }
 
 export async function sendPartnerMessage(partnerId: string, projectId: string | null, body: string) {
@@ -78,19 +78,39 @@ export async function sendPartnerMessage(partnerId: string, projectId: string | 
 }
 
 export async function uploadPartnerDocument(partnerId: string, projectId: string | null, folderId: string | null, file: File) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const userId = sessionData.session?.user.id;
-  if (!userId) throw new Error("Partner session expired.");
+  const requestKey = crypto.randomUUID();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-");
   const path = `${partnerId}/${projectId ?? "shared"}/${crypto.randomUUID()}-${safeName}`;
   const { error: uploadError } = await supabase.storage.from("partner-documents").upload(path, file, { upsert: false, contentType: file.type || undefined });
   if (uploadError) throw uploadError;
-  const { data, error } = await supabase.from("partner_documents").insert({ partner_id: partnerId, project_id: projectId, folder_id: folderId, file_name: file.name, storage_path: path, mime_type: file.type || null, size_bytes: file.size, uploaded_by: userId }).select("*").single();
+
+  const { data, error } = await supabase.rpc("partner_register_document", {
+    p_partner_id: partnerId,
+    p_project_id: projectId,
+    p_folder_id: folderId,
+    p_file_name: file.name,
+    p_storage_path: path,
+    p_mime_type: file.type || null,
+    p_size_bytes: file.size,
+    p_request_key: requestKey,
+  });
+
   if (error) {
+    const { data: existing } = await supabase
+      .from("partner_documents")
+      .select("*")
+      .eq("partner_id", partnerId)
+      .eq("storage_path", path)
+      .maybeSingle();
+    if (existing) return existing as PartnerDocument;
     await supabase.storage.from("partner-documents").remove([path]);
     throw error;
   }
-  await supabase.from("partner_activity_log").insert({ partner_id: partnerId, actor_id: userId, action: "document_uploaded", entity_type: "document", entity_id: data.id, metadata: { file_name: file.name } });
+
+  if (!data) {
+    await supabase.storage.from("partner-documents").remove([path]);
+    throw new Error("Partner document metadata was not returned after upload.");
+  }
   return data as PartnerDocument;
 }
 
