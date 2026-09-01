@@ -1,18 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
-const migrationsDir = path.join(process.cwd(), "supabase", "migrations");
 const migration = readFileSync(
-  path.join(migrationsDir, "20260901033000_require_active_partner_finance_organization.sql"),
+  path.join(process.cwd(), "supabase", "migrations", "20260901033000_require_active_partner_finance_organization.sql"),
   "utf8",
 );
-const migrationHistory = readdirSync(migrationsDir)
-  .filter((name) => name.endsWith(".sql"))
-  .sort()
-  .map((name) => readFileSync(path.join(migrationsDir, name), "utf8"))
-  .join("\n");
 
 type PartnerFinanceContext = {
   leadership: boolean;
@@ -77,19 +71,20 @@ test("Partner finance helper joins the organization and requires active status",
   assert.match(migration, /organization\.status\s*=\s*'active'/i);
 });
 
-test("wallet, settlements, fleet and commission policies share the hardened helper", () => {
-  for (const policyName of [
-    "partner_commission_rules_select",
-    "partner_fleet_select",
-    "partner_earnings_select",
-    "partner_settlements_select",
-    "partner_settlement_events_authorized_read",
-    "partner_settlement_payments_authorized_read",
+test("wallet, settlements, fleet and commission policies are migration-verified", () => {
+  for (const [tableName, policyName] of [
+    ["partner_commission_rules", "partner_commission_rules_select"],
+    ["partner_fleet_vehicles", "partner_fleet_select"],
+    ["partner_freight_earnings", "partner_earnings_select"],
+    ["partner_settlements", "partner_settlements_select"],
+    ["partner_settlement_events", "partner_settlement_events_authorized_read"],
+    ["partner_settlement_payments", "partner_settlement_payments_authorized_read"],
   ]) {
-    const index = migrationHistory.indexOf(policyName);
-    assert.notEqual(index, -1, `missing policy ${policyName}`);
-    assert.match(migrationHistory.slice(index, index + 1600), /can_view_partner_finance/i, `${policyName} must use the shared helper`);
+    assert.ok(migration.includes(`'public', '${tableName}', '${policyName}'`), `missing policy verification for ${policyName}`);
   }
+  assert.match(migration, /from \([\s\S]*values[\s\S]*left join pg_catalog\.pg_policies policy/i);
+  assert.match(migration, /coalesce\(policy\.qual, ''\) not ilike '%can_view_partner_finance%'/i);
+  assert.match(migration, /raise exception 'Partner finance policies missing hardened helper coverage/i);
 });
 
 test("function execution remains unavailable to signed-out callers", () => {
