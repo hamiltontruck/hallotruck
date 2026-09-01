@@ -5,6 +5,7 @@ import test from "node:test";
 
 const root = process.cwd();
 const migration = readFileSync(path.join(root, "supabase", "migrations", "20260901233000_partner_job_request_assignment.sql"), "utf8");
+const readGuards = readFileSync(path.join(root, "supabase", "migrations", "20260901233500_partner_job_request_read_and_reservation_guards.sql"), "utf8");
 const service = readFileSync(path.join(root, "src", "services", "partner-dispatch.service.ts"), "utf8");
 const partnerPage = readFileSync(path.join(root, "src", "pages", "PartnerDispatch.tsx"), "utf8");
 const adminPage = readFileSync(path.join(root, "src", "pages", "AdminPartnerDispatch.tsx"), "utf8");
@@ -26,6 +27,15 @@ test("Partner job requests are auditable, idempotent and RPC-only", () => {
   assert.match(migration, /revoke insert, update, delete on public\.partner_job_requests from authenticated/i);
   assert.match(migration, /revoke all on function public\.admin_offer_partner_job[\s\S]*from public,anon/i);
   assert.match(migration, /grant execute on function public\.partner_respond_job_request[\s\S]*to authenticated/i);
+});
+
+test("Partner order details and accepted resources remain tenant isolated", () => {
+  assert.match(readGuards, /create policy orders_partner_job_read/i);
+  assert.match(readGuards, /request\.order_id = orders\.id/i);
+  assert.match(readGuards, /private\.is_partner_member\(request\.partner_id\)/i);
+  assert.match(readGuards, /partner_job_requests_one_accepted_truck/i);
+  assert.match(readGuards, /partner_job_requests_one_accepted_driver/i);
+  assert.match(readGuards, /where status = 'accepted'/i);
 });
 
 test("Admin offer and confirmation use current database authorization and preserve dispatch guards", () => {
