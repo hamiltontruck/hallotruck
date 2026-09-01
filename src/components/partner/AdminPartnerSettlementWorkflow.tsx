@@ -173,7 +173,7 @@ export function AdminPartnerSettlementWorkflow({
           </div>
 
           {open?.settlementId===settlement.id&&open.kind==="approve"&&<AuditForm title="Approve settlement" onSubmit={(event)=>void approveOrReject(event,settlement.id,"approve")} disabled={workflowLocked} disabledReason={workflowGuidance} button="Confirm approval" placeholder="Required approval notes"/>}
-          {open?.settlementId===settlement.id&&open.kind==="reject"&&<AuditForm title="Reject settlement" onSubmit={(event)=>void approveOrReject(event,settlement.id,"reject")} disabled={workflowLocked} disabledReason={workflowGuidance} button="Confirm rejection" placeholder="Required rejection reason" minLength={5}/>} 
+          {open?.settlementId===settlement.id&&open.kind==="reject"&&<AuditForm title="Reject settlement" onSubmit={(event)=>void approveOrReject(event,settlement.id,"reject")} disabled={workflowLocked} disabledReason={workflowGuidance} button="Confirm rejection" placeholder="Required rejection reason" minLength={5}/>}
           {open?.settlementId===settlement.id&&open.kind==="payment"&&<form onSubmit={(event)=>void recordPayment(event,settlement.id)} className="mt-4 grid gap-3 border border-emerald-600/20 bg-emerald-50/50 p-4 sm:grid-cols-2">
             <p className="font-display text-lg font-bold sm:col-span-2">Record partial or full payment</p>
             <label className="text-xs font-semibold">Amount ETB<input name="amount" required type="number" min="0.01" max={progress.outstandingEtb} step="0.01" className="mt-2 min-h-11 w-full min-w-0 border border-asphalt/20 px-3"/></label>
