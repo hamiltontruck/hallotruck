@@ -1,5 +1,9 @@
 import { supabase } from "./supabase.client";
 import { calculatePaymentSummary } from "../utils/paymentSummary";
+import {
+  requireValidEmail,
+  requireValidEthiopianPhone,
+} from "../domain/contact-validation";
 
 export type AdminRole = "admin" | "ceo";
 
@@ -258,11 +262,13 @@ export async function createOrder(input: NewOrderInput) {
 }
 
 export async function createCustomer(input: { fullName: string; phone: string; email?: string; companyName?: string }) {
+  const phone = requireValidEthiopianPhone(input.phone);
+  const email = input.email?.trim() ? requireValidEmail(input.email) : null;
   const { data: auth } = await supabase.auth.getUser();
   const { error } = await supabase.from("customers").insert({
     full_name: input.fullName,
-    phone: input.phone,
-    email: input.email || null,
+    phone,
+    email,
     company_name: input.companyName || null,
     created_by: auth.user?.id,
   });
@@ -291,3 +297,4 @@ export function subscribeToAdminData(onChange: () => void) {
     .on("postgres_changes", { event: "*", schema: "public", table: "delivery_proofs" }, onChange)
     .subscribe();
 }
+
