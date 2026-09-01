@@ -1,6 +1,8 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { AdminPartnerSettlementWorkflow } from "../components/partner/AdminPartnerSettlementWorkflow";
 import { PartnerStatement } from "../components/partner/PartnerStatement";
+import { buildPartnerSettlementControlSummary } from "../domain/partner-settlement-control";
 import {
   addPartnerVehicle,
   createCommissionRule,
@@ -38,6 +40,16 @@ export function AdminPartnerFinance() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const selectedOrganization = organizations.find((item) => item.id === partnerId) ?? null;
+  const organizationName = selectedOrganization?.name ?? "Partner";
+  const partnerActionsLocked = Boolean(selectedOrganization && selectedOrganization.status !== "active");
+  const partnerActionLockReason = selectedOrganization
+    ? `${selectedOrganization.name} is ${selectedOrganization.status}. Reactivate the organization before adding fleet, accruing freight or changing settlements.`
+    : "Select an active Partner organization before changing finance controls.";
+  const settlementControl = useMemo(
+    () => buildPartnerSettlementControlSummary(settlements, settlementPayments, corrections, summary.payable_etb),
+    [corrections, settlementPayments, settlements, summary.payable_etb],
+  );
 
   const load = useCallback(async (requestedId?: string) => {
     setLoading(true);
@@ -91,6 +103,7 @@ export function AdminPartnerFinance() {
 
   async function saveRule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (partnerActionsLocked) { setError(partnerActionLockReason); return; }
     const values = new FormData(event.currentTarget);
     await runAction(
       () => createCommissionRule(partnerId, String(values.get("type")) as "percentage" | "fixed", Number(values.get("value"))),
@@ -100,6 +113,7 @@ export function AdminPartnerFinance() {
 
   async function addVehicle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (partnerActionsLocked) { setError(partnerActionLockReason); return; }
     const form = event.currentTarget;
     const values = new FormData(form);
     const succeeded = await runAction(
@@ -111,6 +125,7 @@ export function AdminPartnerFinance() {
 
   async function accrueFreight(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (partnerActionsLocked) { setError(partnerActionLockReason); return; }
     const form = event.currentTarget;
     const values = new FormData(form);
     const succeeded = await runAction(
@@ -125,15 +140,13 @@ export function AdminPartnerFinance() {
     if (succeeded) form.reset();
   }
 
-  const organizationName = organizations.find((item) => item.id === partnerId)?.name ?? "Partner";
-
   return <main className="min-h-screen overflow-x-hidden bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10">
     <div className="mx-auto max-w-7xl space-y-5">
       <section className="bg-asphalt p-6 text-white sm:p-8">
         <p className="font-mono text-[10px] tracking-[.22em] text-amber">PARTNER FINANCE CONTROL</p>
         <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div><h1 className="font-display text-3xl font-bold sm:text-4xl">Partner wallet & settlement control</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">HALLO freight commission, approval-controlled partial settlements and immutable financial audit history.</p></div>
-          <select value={partnerId} onChange={(event)=>void load(event.target.value)} className="min-h-11 min-w-0 max-w-full border border-white/20 bg-white px-3 py-3 text-sm text-asphalt"><option value="">Choose organization</option>{organizations.map((organization)=><option key={organization.id} value={organization.id}>{organization.name} · {organization.code}</option>)}</select>
+          <div><h1 className="font-display text-3xl font-bold sm:text-4xl">Partner wallet & settlement control</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">HALLO freight commission, approval-controlled partial settlements and immutable financial audit history.</p>{selectedOrganization&&<p className="mt-3 w-fit border border-white/15 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-white/70">Organization status: {selectedOrganization.status}</p>}</div>
+          <select value={partnerId} onChange={(event)=>void load(event.target.value)} className="min-h-11 min-w-0 max-w-full border border-white/20 bg-white px-3 py-3 text-sm text-asphalt"><option value="">Choose organization</option>{organizations.map((organization)=><option key={organization.id} value={organization.id}>{organization.name} · {organization.code} · {organization.status}</option>)}</select>
         </div>
       </section>
 
@@ -141,26 +154,38 @@ export function AdminPartnerFinance() {
       {success&&<p className="border border-emerald-600/30 bg-emerald-50 p-4 text-sm text-emerald-800" aria-live="polite">{success}</p>}
 
       {loadFailed?<section className="border border-route/30 bg-white p-6"><p className="text-sm text-steel">No Partner finance totals are shown because a required source failed.</p><button type="button" onClick={()=>void load(partnerId)} className="mt-4 min-h-11 bg-asphalt px-5 py-3 text-sm font-semibold text-white">Retry Partner finance</button></section>:!partnerId?<p className="border border-asphalt/10 bg-white p-10 text-center text-steel">Create or select a Partner organization first.</p>:loading?<p className="border border-asphalt/10 bg-white p-10 text-center text-steel" aria-live="polite">Loading Partner finance…</p>:<>
+        {partnerActionsLocked&&<section data-testid="partner-finance-organization-lock" className="border border-amber/40 bg-amber/10 p-5 text-sm leading-6 text-asphalt" role="alert"><p className="font-semibold">Finance actions are locked for this {selectedOrganization?.status} organization.</p><p className="mt-1 text-steel">Admins can review immutable Partner finance history here, but new commission rules, fleet adds, freight accruals and settlement changes require an active organization. Reactivate it from <Link className="font-semibold text-amber-dim underline underline-offset-4" to="/admin/partners">Partner onboarding control</Link>.</p></section>}
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Card label="Gross HALLO freight" value={formatEtb(numeric(summary.gross_etb))}/><Card label="HALLO share" value={formatEtb(numeric(summary.hallo_commission_etb))}/><Card label="Partner net" value={formatEtb(numeric(summary.partner_net_etb))}/><Card label="Payable" value={formatEtb(numeric(summary.payable_etb))} strong/>
           <Card label="Reserved / pending" value={formatEtb(numeric(summary.pending_settlement_etb))}/><Card label="Effective paid" value={formatEtb(numeric(summary.paid_settlement_etb))}/><Card label="Fleet total" value={String(summary.fleet_total)} detail={`${summary.fleet_available} available`}/><Card label="HALLO loads" value={String(summary.hallo_freight_count)} detail="Commissionable only"/>
         </section>
+        <section data-testid="partner-settlement-control-summary" className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))]">
+          <div className="min-w-0 border border-asphalt/10 bg-white p-4">
+            <p className="font-mono text-[9px] uppercase tracking-[.18em] text-steel">NEXT FINANCE ACTION</p>
+            <p className="mt-3 break-words font-display text-xl font-bold">{settlementControl.nextAction}</p>
+            <p className="mt-2 text-xs leading-5 text-steel">Available payable: {formatEtb(settlementControl.payableEtb)} · Active requests: {formatEtb(settlementControl.activeRequestEtb)}</p>
+          </div>
+          <Card label="Need review" value={String(settlementControl.pendingReviewCount)} detail="Pending requests"/>
+          <Card label="Awaiting decision" value={String(settlementControl.underReviewCount)} detail="Under review"/>
+          <Card label="Ready to pay" value={String(settlementControl.payableSettlementCount)} detail={formatEtb(settlementControl.outstandingApprovedEtb)}/>
+          <Card label="Exceptions" value={String(settlementControl.exceptionCount)} detail="Rejected or reversed"/>
+        </section>
 
         <section className="grid gap-5 xl:grid-cols-2">
-          <Panel title="Commission rule"><form onSubmit={saveRule} className="grid gap-3 sm:grid-cols-3"><select name="type" className="min-h-11 min-w-0 border p-3"><option value="percentage">Percentage</option><option value="fixed">Fixed ETB</option></select><input name="value" required min="0" step="0.01" type="number" placeholder="1 or 500" className="min-h-11 min-w-0 border p-3"/><button disabled={busy} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Activate rule</button></form></Panel>
-          <Panel title="Add fleet vehicle"><form onSubmit={addVehicle} className="grid gap-3 sm:grid-cols-4"><input name="plate" required placeholder="Plate" className="min-h-11 min-w-0 border p-3"/><input name="vehicleType" required placeholder="Truck type" className="min-h-11 min-w-0 border p-3"/><input name="capacity" type="number" min="0" step="0.1" placeholder="Tons" className="min-h-11 min-w-0 border p-3"/><button disabled={busy} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Add truck</button></form></Panel>
+          <Panel title="Commission rule"><form onSubmit={saveRule} className="grid gap-3 sm:grid-cols-3"><select name="type" disabled={partnerActionsLocked} className="min-h-11 min-w-0 border p-3 disabled:opacity-50"><option value="percentage">Percentage</option><option value="fixed">Fixed ETB</option></select><input name="value" required disabled={partnerActionsLocked} min="0" step="0.01" type="number" placeholder="1 or 500" className="min-h-11 min-w-0 border p-3 disabled:opacity-50"/><button disabled={busy||partnerActionsLocked} title={partnerActionsLocked?partnerActionLockReason:"Activate Partner commission rule"} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Activate rule</button></form></Panel>
+          <Panel title="Add fleet vehicle"><form onSubmit={addVehicle} className="grid gap-3 sm:grid-cols-4"><input name="plate" required disabled={partnerActionsLocked} placeholder="Plate" className="min-h-11 min-w-0 border p-3 disabled:opacity-50"/><input name="vehicleType" required disabled={partnerActionsLocked} placeholder="Truck type" className="min-h-11 min-w-0 border p-3 disabled:opacity-50"/><input name="capacity" disabled={partnerActionsLocked} type="number" min="0" step="0.1" placeholder="Tons" className="min-h-11 min-w-0 border p-3 disabled:opacity-50"/><button disabled={busy||partnerActionsLocked} title={partnerActionsLocked?partnerActionLockReason:"Add Partner fleet vehicle"} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Add truck</button></form></Panel>
         </section>
 
         <Panel title="Accrue HALLO-generated freight">
           <form onSubmit={accrueFreight} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <input name="orderId" required placeholder="Released order UUID" className="min-h-11 min-w-0 border p-3"/>
-            <select name="projectId" className="min-h-11 min-w-0 border bg-white p-3"><option value="">No project</option>{projects.map((project)=><option key={project.id} value={project.id}>{project.name}</option>)}</select>
-            <select name="vehicleId" className="min-h-11 min-w-0 border bg-white p-3"><option value="">No Partner truck</option>{fleet.map((vehicle)=><option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} · {vehicle.vehicle_type}</option>)}</select>
-            <button disabled={busy} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Record earning</button>
+            <input name="orderId" required disabled={partnerActionsLocked} placeholder="Released order UUID" className="min-h-11 min-w-0 border p-3 disabled:opacity-50"/>
+            <select name="projectId" disabled={partnerActionsLocked} className="min-h-11 min-w-0 border bg-white p-3 disabled:opacity-50"><option value="">No project</option>{projects.map((project)=><option key={project.id} value={project.id}>{project.name}</option>)}</select>
+            <select name="vehicleId" disabled={partnerActionsLocked} className="min-h-11 min-w-0 border bg-white p-3 disabled:opacity-50"><option value="">No Partner truck</option>{fleet.map((vehicle)=><option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} · {vehicle.vehicle_type}</option>)}</select>
+            <button disabled={busy||partnerActionsLocked} title={partnerActionsLocked?partnerActionLockReason:"Record HALLO-generated Partner freight"} className="min-h-11 bg-asphalt p-3 font-semibold text-white disabled:opacity-40">Record earning</button>
           </form>
         </Panel>
 
-        <AdminPartnerSettlementWorkflow partnerId={partnerId} projects={projects} settlements={settlements} payments={settlementPayments} events={settlementEvents} corrections={corrections} busy={busy} runAction={runAction}/>
+        <AdminPartnerSettlementWorkflow partnerId={partnerId} projects={projects} settlements={settlements} payments={settlementPayments} events={settlementEvents} corrections={corrections} busy={busy} runAction={runAction} actionsLocked={partnerActionsLocked} actionLockReason={partnerActionLockReason} payableEtb={settlementControl.payableEtb}/>
         <PartnerStatement organizationName={organizationName} projects={projects} earnings={earnings} settlements={settlements} payments={settlementPayments} corrections={corrections}/>
       </>}
     </div>
