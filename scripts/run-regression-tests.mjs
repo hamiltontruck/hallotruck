@@ -13,6 +13,7 @@ try{
   ["tests/regression/business-rules.test.ts",path.join(outputDirectory,"business-rules.test.mjs")],
   ["tests/regression/partner-foundation.test.ts",path.join(outputDirectory,"partner-foundation.test.mjs")],
   ["tests/regression/partner-onboarding.test.ts",path.join(outputDirectory,"partner-onboarding.test.mjs")],
+  ["tests/regression/partner-dispatch.test.ts",path.join(outputDirectory,"partner-dispatch.test.mjs")],
   ["tests/regression/finance-dashboard-v3.test.ts",path.join(outputDirectory,"finance-dashboard-v3.test.mjs")],
   ["tests/regression/financial-corrections.test.ts",path.join(outputDirectory,"financial-corrections.test.mjs")],
   ["tests/regression/payment-reference-integrity.test.ts",path.join(outputDirectory,"payment-reference-integrity.test.mjs")],
