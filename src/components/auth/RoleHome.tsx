@@ -5,18 +5,41 @@ import { supabase } from "../../services/supabase.client";
 import { AdminGate } from "./AdminGate";
 
 export function RoleHome({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [profileRole, setProfileRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    function check(nextSession: Session | null) {
-      setSession(nextSession);
+    let active = true;
+
+    async function check(nextSession: Session | null) {
+      if (!active) return;
+      setLoading(true);
+      setProfileRole(null);
+
+      if (!nextSession) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", nextSession.user.id)
+        .maybeSingle();
+
+      if (!active) return;
+      setProfileRole(!error ? profile?.role ?? null : null);
       setLoading(false);
     }
 
-    supabase.auth.getSession().then(({ data }) => check(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => check(nextSession));
-    return () => data.subscription.unsubscribe();
+    supabase.auth.getSession().then(({ data }) => void check(data.session));
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      void check(nextSession);
+    });
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
@@ -27,7 +50,7 @@ export function RoleHome({ children }: { children: ReactNode }) {
     );
   }
 
-  if (session?.user.app_metadata?.role === "driver") {
+  if (profileRole === "driver") {
     return <Navigate to="/driver/jobs" replace />;
   }
 

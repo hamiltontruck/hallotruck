@@ -13,6 +13,8 @@ const customerLiveOrders = source("src/pages/CustomerLiveOrders.tsx");
 const driverNav = source("src/components/driver/DriverBottomNav.tsx");
 const driverHeader = source("src/components/layout/Header.tsx");
 const driverWallet = source("src/pages/DriverWallet.tsx");
+const driverGate = source("src/components/auth/DriverGate.tsx");
+const roleHome = source("src/components/auth/RoleHome.tsx");
 const adminNav = source("src/components/admin/AdminMobileBottomNav.tsx");
 const navigationCss = source("src/styles/role-navigation.css");
 const main = source("src/main.tsx");
@@ -45,6 +47,17 @@ test("driver primary navigation exposes canonical home, jobs, trip, wallet and p
   assert.match(app, /path="\/driver\/wallet" element={<DriverGate><DriverShell><DriverWallet/);
   assert.match(app, /path="\/driver\/earnings" element={<DriverGate><DriverShell><Earnings/);
   assert.doesNotMatch(app, /path="\/driver" element={<Navigate to="\/driver\/jobs"/);
+});
+
+test("root route and DriverGate derive roles from the current profile row", () => {
+  assert.match(driverGate, /from\("profiles"\)[\s\S]*select\("role, driver_status"\)/);
+  assert.match(driverGate, /profile\.role/);
+  assert.match(driverGate, /profile\.driver_status/);
+  assert.doesNotMatch(driverGate, /app_metadata|user_metadata/);
+
+  assert.match(roleHome, /from\("profiles"\)[\s\S]*select\("role"\)/);
+  assert.match(roleHome, /profile\?\.role/);
+  assert.doesNotMatch(roleHome, /app_metadata|user_metadata/);
 });
 
 test("driver wallet keeps deposit, commission and trip earnings visibly separated", () => {

@@ -9,6 +9,13 @@ const migrationPath = path.join(
 );
 const migration = await readFile(migrationPath, "utf8");
 
+const rootWebPolicyMigrationPath = path.join(
+  process.cwd(),
+  "supabase/migrations/20260901024500_harden_root_web_leadership_policies.sql",
+);
+const rootWebPolicyMigration = await readFile(rootWebPolicyMigrationPath, "utf8");
+const rootWebPolicySql = rootWebPolicyMigration.replace(/--.*$/gm, "");
+
 const hardenedAdminFunctions = [
   "admin_approve_driver_onboarding",
   "admin_assign_order",
@@ -25,6 +32,25 @@ const hardenedAdminFunctions = [
   "admin_update_quote_pricing_rule",
   "admin_update_quote_pricing_rule_v2",
   "admin_upsert_driver_document",
+];
+
+const hardenedRootWebPolicies = [
+  "customer dispatch request participants read",
+  "customers admin manage",
+  "delivery proofs participants read",
+  "commission audit admin or own driver",
+  "driver presence participants read",
+  "notifications: admin reads all",
+  "orders admin manage",
+  "payment review audit leadership read",
+  "profiles admin manage",
+  "profiles: leadership driver status update",
+  "ratings participants read",
+  "delivery proof cleanup",
+  "delivery proof read",
+  "delivery proof upload",
+  "driver commission receipt read",
+  "payment receipts leadership read",
 ];
 
 test("shared leadership helper is database-backed and rejects suspended profiles", () => {
@@ -92,4 +118,34 @@ test("required Issue 188 RPCs are explicitly covered", () => {
   ]) {
     assert.match(migration, new RegExp(required.replace(".", "\\.")));
   }
+});
+
+test("root web leadership policies use the current database profile", () => {
+  for (const policyName of hardenedRootWebPolicies) {
+    assert.match(
+      rootWebPolicyMigration,
+      new RegExp(`create policy "${policyName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?private\\.is_admin_or_ceo\\(\\)`),
+      `${policyName} must use private.is_admin_or_ceo()`,
+    );
+  }
+});
+
+test("root web policy hardening removes stale JWT leadership authorization", () => {
+  assert.doesNotMatch(rootWebPolicySql, /app_metadata/i);
+  assert.doesNotMatch(rootWebPolicySql, /user_metadata/i);
+  assert.doesNotMatch(rootWebPolicySql, /auth\.jwt\(\)/i);
+  assert.doesNotMatch(rootWebPolicySql, /disable row level security/i);
+  assert.doesNotMatch(rootWebPolicySql, /grant all/i);
+});
+
+test("root web slice does not alter mobile or push-notification policies", () => {
+  assert.doesNotMatch(rootWebPolicyMigration, /mobile_devices/i);
+  assert.doesNotMatch(rootWebPolicyMigration, /push_notification_(deliveries|outbox)/i);
+});
+
+test("root web policy migration changes authorization only", () => {
+  assert.doesNotMatch(rootWebPolicyMigration, /\b(insert|update|delete)\s+into\s+public\./i);
+  assert.doesNotMatch(rootWebPolicyMigration, /\btruncate\b/i);
+  assert.match(rootWebPolicyMigration, /begin;/i);
+  assert.match(rootWebPolicyMigration, /commit;/i);
 });
