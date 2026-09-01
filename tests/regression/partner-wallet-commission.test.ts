@@ -10,6 +10,7 @@ const partnerWallet = readFileSync(path.join(process.cwd(), "src", "pages", "Par
 const partnerFinanceService = readFileSync(path.join(process.cwd(), "src", "services", "partner-finance.service.ts"), "utf8");
 const walletFoundation = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260826_partner_wallet_fleet_commission.sql"), "utf8");
 const settlementWorkflow = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260827164956_partner_settlement_enterprise_workflow.sql"), "utf8");
+const partnerOrganizationAuthorization = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260901033000_harden_partner_finance_organization_status.sql"), "utf8");
 
 function commission(gross:number,type:"percentage"|"fixed",value:number){const hallo=type==="percentage"?Math.round(gross*value)/100:Math.min(value,gross);return{hallo,net:gross-hallo};}
 function wallet(net:number,pending:number,paid:number){return Math.max(net-pending-paid,0);}
@@ -41,6 +42,35 @@ test("Partner wallet summary qualifies immutable ledger columns and preserves au
     assert.match(summaryFix, new RegExp(`create or replace function public\\.${rpc}[\\s\\S]*?if not \\(select private\\.is_admin_or_ceo\\(\\)\\)`, "i"));
   }
   assert.doesNotMatch(summaryFix, /delete\s+from|update\s+public\.partner_freight_earnings/i);
+});
+
+test("Partner finance authorization requires an active organization", () => {
+  assert.match(partnerOrganizationAuthorization, /create or replace function public\.can_view_partner_finance\(p_partner_id uuid\)/i);
+  assert.match(partnerOrganizationAuthorization, /select \(select private\.is_admin_or_ceo\(\)\)[\s\S]*or exists/i);
+  assert.match(partnerOrganizationAuthorization, /join public\.partner_organizations organization[\s\S]*organization\.id = membership\.partner_id/i);
+  assert.match(partnerOrganizationAuthorization, /membership\.user_id = \(select auth\.uid\(\)\)/i);
+  assert.match(partnerOrganizationAuthorization, /membership\.active/i);
+  assert.match(partnerOrganizationAuthorization, /membership\.member_role in \('owner', 'admin'\)/i);
+  assert.match(partnerOrganizationAuthorization, /organization\.status::text = 'active'/i);
+  assert.match(partnerOrganizationAuthorization, /revoke all on function public\.can_view_partner_finance\(uuid\) from public, anon/i);
+  assert.match(partnerOrganizationAuthorization, /grant execute on function public\.can_view_partner_finance\(uuid\) to authenticated, service_role/i);
+  assert.doesNotMatch(partnerOrganizationAuthorization, /auth\.jwt|app_metadata|user_metadata/i);
+
+  for (const [table, policy] of [
+    ["partner_commission_rules", "partner_commission_rules_select"],
+    ["partner_fleet_vehicles", "partner_fleet_select"],
+    ["partner_freight_earnings", "partner_earnings_select"],
+    ["partner_settlements", "partner_settlements_select"],
+  ] as const) {
+    assert.match(walletFoundation, new RegExp(`create policy ${policy} on public\\.${table}[\\s\\S]*can_view_partner_finance\\(partner_id\\)`, "i"));
+  }
+
+  for (const [table, policy] of [
+    ["partner_settlement_payments", "partner_settlement_payments_authorized_read"],
+    ["partner_settlement_events", "partner_settlement_events_authorized_read"],
+  ] as const) {
+    assert.match(settlementWorkflow, new RegExp(`create policy ${policy}[\\s\\S]*on public\\.${table}[\\s\\S]*can_view_partner_finance\\(partner_id\\)`, "i"));
+  }
 });
 
 test("Partner earnings are limited to released HALLO freight and never external automatic freight", () => {
