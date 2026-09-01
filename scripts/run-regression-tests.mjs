@@ -45,6 +45,7 @@ try{
   ["tests/regression/admin-order-assignment-evidence.test.ts",path.join(outputDirectory,"admin-order-assignment-evidence.test.mjs")],
   ["tests/regression/suspended-leadership-authorization.test.ts",path.join(outputDirectory,"suspended-leadership-authorization.test.mjs")],
   ["tests/regression/tracking-database-authorization.test.ts",path.join(outputDirectory,"tracking-database-authorization.test.mjs")],
+  ["tests/regression/dispatch-readiness-execute-boundary.test.ts",path.join(outputDirectory,"dispatch-readiness-execute-boundary.test.mjs")],
   ["tests/regression/driver-document-review-boundary.test.ts",path.join(outputDirectory,"driver-document-review-boundary.test.mjs")],
   ["tests/regression/posthog-analytics.test.ts",path.join(outputDirectory,"posthog-analytics.test.mjs")],
  ];
