@@ -23,8 +23,10 @@ import { AdminIntelligence } from "./pages/AdminIntelligence";
 import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
 import { AdminPartnerControl } from "./pages/AdminPartnerControl";
 import { AdminPartnerFinance } from "./pages/AdminPartnerFinance";
+import { AdminPartnerDispatch } from "./pages/AdminPartnerDispatch";
 import { AdminMore } from "./pages/AdminMore";
-import { PartnerPortal } from "./pages/PartnerPortal";
+import { PartnerDispatch } from "./pages/PartnerDispatch";
+import { PartnerOperationsHub } from "./pages/PartnerOperationsHub";
 import { PartnerWallet } from "./pages/PartnerWallet";
 import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
@@ -114,6 +116,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin/intelligence" element={<AdminGate><AdminToolShell><AdminIntelligence /></AdminToolShell></AdminGate>} />
 <Route path="/admin/finance" element={<AdminGate><AdminToolShell><AdminFinanceDashboardV3 /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partner-finance" element={<AdminGate><AdminToolShell><AdminPartnerFinance /></AdminToolShell></AdminGate>} />
+<Route path="/admin/partner-dispatch" element={<AdminGate><AdminToolShell><AdminPartnerDispatch /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-finance-search" element={<AdminGate><AdminToolShell><AdminDriverFinanceSearch /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
@@ -123,8 +126,9 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin/payment-review/reference-conflicts" element={<AdminGate><AdminToolShell><AdminPaymentReferenceConflicts /></AdminToolShell></AdminGate>} />
 <Route path="/admin/manual-driver-documents" element={<AdminGate><AdminToolShell><AdminManualDriverDocuments /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partners" element={<AdminGate><AdminToolShell><AdminPartnerControl /></AdminToolShell></AdminGate>} />
-<Route path="/partner/login" element={<PartnerGate><PartnerPortal /></PartnerGate>} />
-<Route path="/partner" element={<PartnerGate><PartnerPortal /></PartnerGate>} />
+<Route path="/partner/login" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
+<Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
+<Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
 <Route path="/partner/wallet" element={<PartnerGate><PartnerWallet /></PartnerGate>} />
 <Route path="/customer/login" element={<CustomerLogin />} />
 <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="home" /></CustomerGate>} />
