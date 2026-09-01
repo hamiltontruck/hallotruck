@@ -7,6 +7,10 @@ import {
   type PasswordResetRequester,
 } from "../services/password-recovery.service";
 import { passwordRecoveryCopy } from "../i18n/passwordRecoveryCopy";
+import {
+  requireValidEmail,
+  requireValidEthiopianPhone,
+} from "../domain/contact-validation";
 
 type Feedback = {
   kind: "error" | "success";
@@ -119,11 +123,15 @@ export function CustomerLogin({
         throw new Error(connection.offline);
       }
 
+      const normalizedEmail = requireValidEmail(email);
+
       if (mode === "signup") {
+        if (!fullName.trim()) throw new Error("Enter your full name.");
+        const normalizedPhone = requireValidEthiopianPhone(phone);
         const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
-          options: { data: { full_name: fullName.trim(), phone: phone.trim(), role: "customer" } },
+          options: { data: { full_name: fullName.trim(), phone: normalizedPhone, role: "customer" } },
         });
         if (error) throw error;
         if (data.session) navigate("/customer", { replace: true });
@@ -132,7 +140,7 @@ export function CustomerLogin({
       }
 
       const data = await withSingleNetworkRetry(async () => {
-        const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        const result = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
         if (result.error) throw result.error;
         return result.data;
       });
@@ -173,7 +181,8 @@ export function CustomerLogin({
         throw new Error(connection.offline);
       }
 
-      await withSingleNetworkRetry(() => passwordResetRequester(email.trim()));
+      const normalizedEmail = requireValidEmail(email);
+      await withSingleNetworkRetry(() => passwordResetRequester(normalizedEmail));
       setFeedback({ kind: "success", text: resetCopy.sent });
     } catch (error) {
       const networkFailure = isNetworkFailure(error) || !navigator.onLine;
@@ -234,10 +243,10 @@ export function CustomerLogin({
 
           <div className="mt-6 space-y-4">
             {!resetMode && mode === "signup" && <>
-              <Field label={t("common.fullName")} value={fullName} onChange={setFullName} autoComplete="name" />
-              <Field label={t("common.phone")} value={phone} onChange={setPhone} autoComplete="tel" placeholder="+251…" />
+              <Field label={t("common.fullName")} value={fullName} onChange={setFullName} autoComplete="name" maxLength={120} />
+              <Field label={t("common.phone")} value={phone} onChange={setPhone} type="tel" inputMode="tel" autoComplete="tel" placeholder="09xxxxxxxx" maxLength={17} />
             </>}
-            <Field label={resetMode ? resetCopy.email : t("common.email")} value={email} onChange={setEmail} type="email" autoComplete="email" />
+            <Field label={resetMode ? resetCopy.email : t("common.email")} value={email} onChange={setEmail} type="email" autoComplete="email" maxLength={254} />
             {!resetMode && <Field label={t("common.password")} value={password} onChange={setPassword} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={10} />}
           </div>
 
@@ -263,6 +272,26 @@ export function CustomerLogin({
   );
 }
 
-function Field({ label, value, onChange, type = "text", autoComplete, placeholder, minLength }: { label: string; value: string; onChange: (value: string) => void; type?: string; autoComplete?: string; placeholder?: string; minLength?: number }) {
-  return <label className="block text-sm">{label}<input required type={type} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} placeholder={placeholder} minLength={minLength} className="mt-2 w-full border border-line px-4 py-3 outline-none focus:border-emerald-700" /></label>;
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  inputMode,
+  autoComplete,
+  placeholder,
+  minLength,
+  maxLength,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  inputMode?: "text" | "tel" | "email" | "numeric" | "decimal" | "search" | "url" | "none";
+  autoComplete?: string;
+  placeholder?: string;
+  minLength?: number;
+  maxLength?: number;
+}) {
+  return <label className="block text-sm">{label}<input required type={type} inputMode={inputMode} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} placeholder={placeholder} minLength={minLength} maxLength={maxLength} className="mt-2 w-full border border-line px-4 py-3 outline-none focus:border-emerald-700" /></label>;
 }
