@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getCurrentPartnerMemberships, type PartnerMembership } from "../services/partner.service";
 import {
@@ -63,12 +63,16 @@ export function PartnerDispatch() {
   const organization = memberships.find((membership) => membership.partner_id === partnerId)?.partner_organizations;
   const canManage = ["owner", "admin"].includes(memberships.find((membership) => membership.partner_id === partnerId)?.member_role ?? "");
   const dispatchReady = useMemo(
-    () => vehicles.filter((vehicle) => vehicle.dispatch_ready && vehicle.status === "available" && Boolean(vehicle.assigned_driver_id)),
+    () => vehicles.filter((vehicle) =>
+      vehicle.dispatch_ready
+      && vehicle.status === "available"
+      && Boolean(vehicle.assigned_driver_id)
+      && vehicle.partner_vehicle_id !== vehicle.vehicle_id
+    ),
     [vehicles],
   );
 
-  async function respond(event: FormEvent, request: PartnerJobRequest, action: "accept" | "reject") {
-    event.preventDefault();
+  async function respond(request: PartnerJobRequest, action: "accept" | "reject") {
     if (busyKey) return;
     const truckId = truckByRequest[request.id] || null;
     if (action === "accept" && !truckId) {
@@ -156,13 +160,13 @@ export function PartnerDispatch() {
                           {dispatchReady.map((vehicle) => <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>{vehicle.plate_number} · {vehicle.vehicle_type} · {vehicle.assigned_driver_name ?? "Driver"}</option>)}
                         </select>
                       </label>
-                      {dispatchReady.length === 0 && <p className="text-xs leading-5 text-route">No driver-bound compliant truck is ready. HALLO Admin must assign an approved driver and clear fleet compliance first.</p>}
+                      {dispatchReady.length === 0 && <p className="text-xs leading-5 text-route">No driver-bound operational truck is ready. HALLO Admin must assign an approved driver, link the Partner fleet record to a canonical truck, and clear fleet compliance first.</p>}
                       <label className="block text-xs font-semibold">Response note
                         <textarea value={noteByRequest[request.id] ?? ""} onChange={(event) => setNoteByRequest((current) => ({ ...current, [request.id]: event.target.value }))} rows={3} maxLength={1000} className="mt-2 w-full border border-asphalt/15 bg-white px-3 py-3 font-normal" />
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        <button type="button" disabled={Boolean(busyKey) || dispatchReady.length === 0} onClick={(event) => void respond(event, request, "accept")} className="min-h-12 bg-emerald-700 px-3 text-xs font-semibold text-white disabled:opacity-40">{busyKey === `accept:${request.id}` ? "Accepting…" : "Accept job"}</button>
-                        <button type="button" disabled={Boolean(busyKey)} onClick={(event) => void respond(event, request, "reject")} className="min-h-12 border border-route/35 px-3 text-xs font-semibold text-route disabled:opacity-40">{busyKey === `reject:${request.id}` ? "Rejecting…" : "Reject"}</button>
+                        <button type="button" disabled={Boolean(busyKey) || dispatchReady.length === 0} onClick={() => void respond(request, "accept")} className="min-h-12 bg-emerald-700 px-3 text-xs font-semibold text-white disabled:opacity-40">{busyKey === `accept:${request.id}` ? "Accepting…" : "Accept job"}</button>
+                        <button type="button" disabled={Boolean(busyKey)} onClick={() => void respond(request, "reject")} className="min-h-12 border border-route/35 px-3 text-xs font-semibold text-route disabled:opacity-40">{busyKey === `reject:${request.id}` ? "Rejecting…" : "Reject"}</button>
                       </div>
                     </form>
                   )}
