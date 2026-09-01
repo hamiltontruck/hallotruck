@@ -71,6 +71,7 @@ test("Partner migration enforces RLS, Data API grants and private storage", () =
 test("Partner routes are protected and existing protected routes remain present", () => {
   const app = readFileSync(path.join(process.cwd(), "src", "App.tsx"), "utf8");
   assert.match(app, /path="\/partner" element={<PartnerGate><PartnerPortal \/><\/PartnerGate>}/);
+  assert.match(app, /path="\/partner\/wallet" element={<PartnerGate><PartnerWallet \/><\/PartnerGate>}/);
   assert.match(app, /path="\/admin\/partners" element={<AdminGate>/);
   assert.match(app, /path="\/admin" element={<AdminGate>/);
   assert.match(app, /path="\/customer" element={<CustomerGate>/);
@@ -86,4 +87,12 @@ test("Partner UI includes projects, documents, payments, activity, chat and mobi
   assert.match(admin, /Document review queue/);
   assert.match(admin, /Assign existing account/);
   assert.match(admin, /overflow-x-hidden/);
+});
+
+test("Partner owners and admins can discover the protected wallet for the selected organization", () => {
+  const partner = readFileSync(path.join(process.cwd(), "src", "pages", "PartnerPortal.tsx"), "utf8");
+  assert.match(partner, /const canViewFinance = \["owner", "admin"\]\.includes/);
+  assert.match(partner, /canViewFinance && partnerId/);
+  assert.match(partner, /\/partner\/wallet\?organization=\$\{encodeURIComponent\(partnerId\)\}/);
+  assert.match(partner, /Wallet & statements/);
 });
