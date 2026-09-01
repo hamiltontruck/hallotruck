@@ -1,3 +1,5 @@
+begin;
+
 create or replace function public.normalize_customer_contact()
 returns trigger
 language plpgsql
@@ -55,3 +57,5 @@ for each row
 execute function public.normalize_customer_contact();
 
 revoke all on function public.normalize_customer_contact() from public, anon, authenticated;
+
+commit;
