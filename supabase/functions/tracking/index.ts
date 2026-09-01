@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const service = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -89,31 +90,25 @@ Deno.serve(async (request) => {
     const orderId = new URL(request.url).searchParams.get("orderId");
     if (!orderId) return json({ error: "orderId query parameter is required" }, 400);
 
-    const { data: order, error: orderError } = await service
-      .from("orders")
-      .select("id,driver_id,customer_id")
-      .eq("id", orderId)
-      .maybeSingle();
+    const userClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
 
-    if (orderError || !order) return json({ error: "Order not found" }, 404);
-    const role = String(user.app_metadata?.role ?? "");
-    const allowed = order.driver_id === user.id
-      || order.customer_id === user.id
-      || role === "admin"
-      || role === "ceo";
-    if (!allowed) return json({ error: "Not authorized for this order" }, 403);
+    const { data, error } = await userClient.rpc("get_latest_tracking_point", {
+      p_order_id: orderId,
+    });
 
-    const { data, error } = await service
-      .from("tracking_pings")
-      .select("id,location,heading,speed_kmh,accuracy_m,source_recorded_at,recorded_at")
-      .eq("order_id", orderId)
-      .order("recorded_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    if (error) {
+      const status = error.code === "42501" ? 403
+        : error.code === "P0002" ? 404
+        : 500;
+      return json({ error: error.message }, status);
+    }
 
-    if (error) return json({ error: "Failed to load tracking data" }, 500);
-    if (!data) return json({ error: "No tracking data yet" }, 404);
-    return json(data);
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return json({ error: "No tracking data yet" }, 404);
+    return json(row);
   }
 
   return json({ error: "Method not allowed" }, 405);
