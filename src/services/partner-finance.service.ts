@@ -150,12 +150,12 @@ export async function loadPartnerFinance(partnerId: string) {
 }
 
 export async function createCommissionRule(partnerId: string, commissionType: "percentage" | "fixed", commissionValue: number) {
-  const { data: session } = await supabase.auth.getSession();
-  const userId = session.session?.user.id;
-  if (!userId) throw new Error("Admin session expired.");
-  const { error: deactivateError } = await supabase.from("partner_commission_rules").update({ active: false }).eq("partner_id", partnerId).eq("active", true);
-  if (deactivateError) throw deactivateError;
-  const { error } = await supabase.from("partner_commission_rules").insert({ partner_id: partnerId, commission_type: commissionType, commission_value: commissionValue, created_by: userId });
+  const { error } = await supabase.rpc("admin_activate_partner_commission_rule", {
+    p_partner_id: partnerId,
+    p_commission_type: commissionType,
+    p_commission_value: commissionValue,
+    p_effective_from: null,
+  });
   if (error) throw error;
 }
 
