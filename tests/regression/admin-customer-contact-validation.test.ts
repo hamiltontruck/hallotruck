@@ -9,6 +9,21 @@ const migrationPath = path.join(
 );
 const migration = await readFile(migrationPath, "utf8");
 const migrationSql = migration.replace(/--.*$/gm, "");
+const adminService = await readFile(
+  path.join(process.cwd(), "src/services/admin.service.ts"),
+  "utf8",
+);
+
+test("admin customer creation validates and normalizes contact before insert", () => {
+  assert.match(adminService, /const phone = requireValidEthiopianPhone\(input\.phone\)/);
+  assert.match(
+    adminService,
+    /const email = input\.email\?\.trim\(\) \? requireValidEmail\(input\.email\) : null/,
+  );
+  assert.match(adminService, /from\("customers"\)\.insert\(\{[\s\S]*phone,[\s\S]*email,/);
+  assert.doesNotMatch(adminService, /phone: input\.phone/);
+  assert.doesNotMatch(adminService, /email: input\.email \|\| null/);
+});
 
 test("customer contact validation is enforced at the table boundary", () => {
   assert.match(migration, /create or replace function public\.normalize_customer_contact\(\)/);
@@ -50,3 +65,4 @@ test("migration does not rewrite existing customer rows", () => {
   assert.doesNotMatch(migrationSql, /\bupdate\s+public\.customers\b/i);
   assert.doesNotMatch(migrationSql, /\bdelete\s+from\s+public\.customers\b/i);
 });
+
