@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { PartnerFleetPanel } from "../components/partner/PartnerFleetPanel";
 import {
@@ -101,6 +101,7 @@ export function PartnerPortal() {
   const pendingDocuments = workspace.documents.filter((document) => document.status === "pending").length;
   const canManage = ["owner", "admin", "editor"].includes(currentMembership?.member_role ?? "");
   const canManageFleet = ["owner", "admin"].includes(currentMembership?.member_role ?? "");
+  const canViewFinance = ["owner", "admin"].includes(currentMembership?.member_role ?? "");
   const visibleTabs = canManageFleet ? tabs : tabs.filter((item) => item !== "fleet");
 
   const projectsById = useMemo(() => new Map(workspace.projects.map((project) => [project.id, project])), [workspace.projects]);
@@ -169,6 +170,11 @@ export function PartnerPortal() {
               <select value={partnerId} onChange={(event) => void load(event.target.value)} className="min-w-0 border border-white/15 bg-white/5 px-3 py-2 text-sm text-white">
                 {memberships.map((membership) => <option key={membership.partner_id} value={membership.partner_id} className="text-asphalt">{membership.partner_organizations?.name ?? membership.partner_id}</option>)}
               </select>
+            )}
+            {canViewFinance && partnerId && (
+              <Link to={`/partner/wallet?organization=${encodeURIComponent(partnerId)}`} className="border border-emerald-500/60 px-4 py-2 text-xs font-semibold text-emerald-300">
+                Wallet & statements
+              </Link>
             )}
             <button type="button" onClick={() => void load(partnerId)} className="border border-amber/50 px-4 py-2 text-xs font-semibold text-amber">Refresh</button>
             <button type="button" onClick={() => void supabase.auth.signOut()} className="border border-white/15 px-4 py-2 text-xs font-semibold text-white/70">Sign out</button>
