@@ -7,6 +7,10 @@ import {
   type PasswordResetRequester,
 } from "../services/password-recovery.service";
 import { passwordRecoveryCopy } from "../i18n/passwordRecoveryCopy";
+import {
+  requireValidEmail,
+  requireValidEthiopianPhone,
+} from "../domain/contact-validation";
 
 export function Login({
   passwordResetRequester = requestPasswordResetEmail,
@@ -57,24 +61,25 @@ export function Login({
     setMessage(null);
 
     try {
+      const normalizedEmail = requireValidEmail(email);
+
       if (resetMode) {
-        await passwordResetRequester(email.trim());
+        await passwordResetRequester(normalizedEmail);
         setMessage(resetCopy.sent);
         return;
       }
 
       if (mode === "signup") {
-        if (!fullName.trim() || !phone.trim()) {
-          throw new Error(t("driver.error.namePhone"));
-        }
+        if (!fullName.trim()) throw new Error(t("driver.error.namePhone"));
+        const normalizedPhone = requireValidEthiopianPhone(phone);
 
         const { data, error: signupError } = await supabase.auth.signUp({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
           options: {
             data: {
               full_name: fullName.trim(),
-              phone: phone.trim(),
+              phone: normalizedPhone,
               role: "driver",
             },
           },
@@ -97,7 +102,7 @@ export function Login({
         }
       } else {
         const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         });
 
@@ -141,18 +146,18 @@ export function Login({
             <>
               <label className="block">
                 <span className="font-body text-sm text-asphalt">{t("common.fullName")}</span>
-                <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" autoComplete="name" required />
+                <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" autoComplete="name" maxLength={120} required />
               </label>
               <label className="block">
                 <span className="font-body text-sm text-asphalt">{t("common.phone")}</span>
-                <input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" placeholder="+251..." autoComplete="tel" required />
+                <input type="tel" inputMode="tel" value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" placeholder="09xxxxxxxx" autoComplete="tel" maxLength={17} required />
               </label>
             </>
           )}
 
           <label className="block">
             <span className="font-body text-sm text-asphalt">{resetMode ? resetCopy.email : t("common.email")}</span>
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" autoComplete="email" required />
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" autoComplete="email" maxLength={254} required />
           </label>
 
           {!resetMode && <label className="block">
