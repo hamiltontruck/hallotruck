@@ -28,6 +28,9 @@ import { AdminMore } from "./pages/AdminMore";
 import { PartnerDispatch } from "./pages/PartnerDispatch";
 import { PartnerOperationsHub } from "./pages/PartnerOperationsHub";
 import { PartnerWallet } from "./pages/PartnerWallet";
+import { PartnerOrders } from "./pages/PartnerOrders";
+import { PartnerOrderNew } from "./pages/PartnerOrderNew";
+import { PartnerOrderDetails } from "./pages/PartnerOrderDetails";
 import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { Documents } from "./pages/Documents";
@@ -130,6 +133,9 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
 <Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
 <Route path="/partner/wallet" element={<PartnerGate><PartnerWallet /></PartnerGate>} />
+<Route path="/partner/orders" element={<PartnerGate><PartnerOrders /></PartnerGate>} />
+<Route path="/partner/orders/new" element={<PartnerGate><PartnerOrderNew /></PartnerGate>} />
+<Route path="/partner/orders/:orderId" element={<PartnerGate><PartnerOrderDetails /></PartnerGate>} />
 <Route path="/customer/login" element={<CustomerLogin />} />
 <Route path="/customer" element={<CustomerGate><CustomerWorkspace section="home" /></CustomerGate>} />
 <Route path="/customer/orders" element={<CustomerGate><CustomerWorkspace section="orders" /></CustomerGate>} />
