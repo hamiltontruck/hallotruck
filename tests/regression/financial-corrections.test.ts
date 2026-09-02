@@ -5,11 +5,15 @@ import test from "node:test";
 
 const root = process.cwd();
 const migration = readFileSync(path.join(root, "supabase", "migrations", "20260827101439_immutable_financial_corrections.sql"), "utf8");
+const restorationMigration = readFileSync(path.join(root, "supabase", "migrations", "20260902065000_legacy_over_refund_restoration.sql"), "utf8");
 const releaseGuard = readFileSync(path.join(root, "supabase", "migrations", "20260827102244_count_all_refunds_in_release_guard.sql"), "utf8");
 const adminService = readFileSync(path.join(root, "src", "services", "admin.service.ts"), "utf8");
 const correctionService = readFileSync(path.join(root, "src", "services", "financial-correction.service.ts"), "utf8");
 const adminFinance = readFileSync(path.join(root, "src", "pages", "SmartLogistics.tsx"), "utf8");
 const correctionForm = readFileSync(path.join(root, "src", "components", "admin", "PaymentCorrectionForm.tsx"), "utf8");
+const restorationForm = readFileSync(path.join(root, "src", "components", "admin", "LegacyRefundRestorationForm.tsx"), "utf8");
+const paymentCollection = readFileSync(path.join(root, "src", "components", "admin", "AdminPaymentCollectionControl.tsx"), "utf8");
+const paymentSummary = readFileSync(path.join(root, "src", "utils", "paymentSummary.ts"), "utf8");
 const partnerFinance = readFileSync(path.join(root, "src", "services", "partner-finance.service.ts"), "utf8");
 const partnerWallet = readFileSync(path.join(root, "src", "pages", "PartnerWallet.tsx"), "utf8");
 const driverEarnings = readFileSync(path.join(root, "src", "services", "driver-earnings.service.ts"), "utf8");
@@ -95,4 +99,45 @@ test("all refund events recalculate driver earnings and Finance commission", () 
   assert.match(releaseGuard, /filter \(where payment\.event = 'refunded'\)/i);
   assert.doesNotMatch(releaseGuard, /provider\s*=\s*'credit_refund'/i);
   assert.match(releaseGuard, /revoke all on function public\.release_confirmed_driver_payment_internal\(uuid\)[\s\S]*from public, anon, authenticated/i);
+});
+
+test("legacy excess-refund restoration is append-only, evidence-backed and idempotent", () => {
+  assert.match(restorationMigration, /'legacy_refund_restoration'/i);
+  assert.match(restorationMigration, /external_evidence_reference/i);
+  assert.match(restorationMigration, /create or replace function public\.admin_restore_legacy_excess_refund/i);
+  assert.match(restorationMigration, /not \(select private\.is_admin_or_ceo\(\)\)/i);
+  assert.match(restorationMigration, /Restoration request was already processed/i);
+  assert.match(restorationMigration, /Only a refunded payment can be restored/i);
+  assert.match(restorationMigration, /financial-correction refunds cannot be restored with the legacy workflow/i);
+  assert.match(restorationMigration, /Restoration exceeds the current ledger anomaly/i);
+  assert.match(restorationMigration, /Restoration exceeds the remaining legacy refund amount/i);
+  assert.match(restorationMigration, /driver_commission_reversal_etb[\s\S]*0, 0, 0, 0/i);
+  assert.match(restorationMigration, /revoke all on function public\.admin_restore_legacy_excess_refund[\s\S]*from public, anon/i);
+  assert.match(restorationMigration, /grant execute on function public\.admin_restore_legacy_excess_refund[\s\S]*to authenticated/i);
+  assert.doesNotMatch(restorationMigration, /update\s+public\.payments/i);
+  assert.doesNotMatch(restorationMigration, /delete\s+from\s+public\.payments/i);
+  assert.doesNotMatch(restorationMigration, /insert\s+into\s+public\.payments/i);
+});
+
+test("central balance guard prevents legacy anomalies from creating artificial collection capacity", () => {
+  assert.match(restorationMigration, /create or replace function private\.enforce_effective_payment_balance/i);
+  assert.match(restorationMigration, /v_initiated \+ greatest\(0, v_effective_verified\)/i);
+  assert.match(restorationMigration, /Refund exceeds effective verified funds/i);
+  assert.match(restorationMigration, /Refunds must be appended through the auditable financial correction workflow/i);
+  assert.match(restorationMigration, /create trigger payments_effective_balance_guard[\s\S]*before insert or update of event, amount_etb, order_id/i);
+  assert.match(restorationMigration, /legacy_refund_restoration_total[\s\S]*order_payment_financial_summary/i);
+  assert.match(restorationMigration, /legacy_refund_restoration_total[\s\S]*admin_payment_integrity_report/i);
+  assert.match(restorationMigration, /legacy_refund_restoration_total[\s\S]*order_payment_ready_for_dispatch/i);
+});
+
+test("Finance UI labels ledger anomalies and never treats restoration as new commissionable money", () => {
+  assert.match(paymentSummary, /legacyRefundRestored/i);
+  assert.match(paymentSummary, /releasedGross \+ heldEscrow - refunded \+ legacyRefundRestored/i);
+  assert.match(paymentCollection, /Ledger anomaly/i);
+  assert.match(paymentCollection, /Ordinary collection actions are paused/i);
+  assert.match(paymentCollection, /LegacyRefundRestorationForm/i);
+  assert.match(restorationForm, /external evidence proves/i);
+  assert.match(restorationForm, /never edits or deletes the original payment row/i);
+  assert.match(correctionService, /admin_restore_legacy_excess_refund/i);
+  assert.match(correctionService, /p_external_evidence_reference/i);
 });
