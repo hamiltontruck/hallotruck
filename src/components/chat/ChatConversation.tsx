@@ -53,15 +53,23 @@ export function ChatConversation({
     event?.preventDefault();
     const trimmed = body.trim();
     if (!trimmed || sending) return;
-    await onSend({ body: trimmed, orderId, kind: orderId ? "order_context" : "text" });
-    setBody("");
-    setOrderId(null);
+    try {
+      await onSend({ body: trimmed, orderId, kind: orderId ? "order_context" : "text" });
+      setBody("");
+      setOrderId(null);
+    } catch {
+      // Keep the unsent message and context in the composer so the user can retry.
+    }
   }
 
   async function sendQuickReply(reply: string) {
     if (sending) return;
-    await onSend({ body: reply, orderId, kind: "quick_reply" });
-    setOrderId(null);
+    try {
+      await onSend({ body: reply, orderId, kind: "quick_reply" });
+      setOrderId(null);
+    } catch {
+      // The parent shows the error; keep the selected order context for retry.
+    }
   }
 
   function onComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
