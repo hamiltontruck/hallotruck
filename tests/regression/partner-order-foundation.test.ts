@@ -6,6 +6,7 @@ import path from "node:path";
 const read = (file: string) => readFile(path.join(process.cwd(), file), "utf8");
 const migration = await read("supabase/migrations/20260902013000_partner_order_foundation.sql");
 const quoteMigration = await read("supabase/migrations/20260902051000_partner_order_quote_review_approval.sql");
+const placementMigration = await read("supabase/migrations/20260902054000_partner_order_canonical_placement.sql");
 const app = await read("src/App.tsx");
 const service = await read("src/services/partner-order.service.ts");
 const list = await read("src/pages/PartnerOrders.tsx");
@@ -22,7 +23,7 @@ test("Partner order lifecycle and immutable history are separate from canonical 
   for (const status of ["draft","submitted","under_review","quoted","approved","placed","assigned","accepted","in_transit","delivered","completed","cancelled","rejected","expired"]) assert.match(migration, new RegExp(`'${status}'`));
   assert.match(migration, /create table public\.partner_order_status_history/);
   assert.match(migration, /partner_order_id uuid not null references public\.partner_orders\(id\) on delete restrict/);
-  assert.doesNotMatch(`${migration}\n${quoteMigration}`, /delete\s+from\s+public\.(orders|payments|partner_order_status_history)/i);
+  assert.doesNotMatch(`${migration}\n${quoteMigration}\n${placementMigration}`, /delete\s+from\s+public\.(orders|payments|partner_order_status_history)/i);
 });
 
 test("Partner order reads are tenant isolated and mutations are RPC-only", () => {
@@ -75,6 +76,28 @@ test("Quote state records amount, expiry, actor and version without creating a c
   assert.doesNotMatch(quoteMigration, /update\s+public\.orders/i);
 });
 
+test("Approved Partner order canonical placement is Admin-only, atomic and idempotent", () => {
+  assert.match(placementMigration, /function public\.admin_place_partner_order/);
+  assert.match(placementMigration, /if not \(select private\.is_admin_or_ceo\(\)\) then[\s\S]*Active Admin or CEO authorization is required/);
+  assert.match(placementMigration, /where id = p_order_id[\s\S]*for update/);
+  assert.match(placementMigration, /if v_order\.canonical_order_id is not null then[\s\S]*return v_order/);
+  assert.match(placementMigration, /if v_order\.status <> 'approved' then[\s\S]*Only approved Partner orders can be placed/);
+  assert.match(placementMigration, /v_partner_status <> 'active'[\s\S]*Active Partner organization is required/);
+  assert.match(placementMigration, /insert into public\.orders/);
+  assert.match(placementMigration, /'placed'::public\.order_status/);
+  assert.match(placementMigration, /v_order\.quote_amount_etb/);
+  assert.doesNotMatch(placementMigration, /insert into public\.orders[\s\S]{0,2500}\b(driver_id|truck_id)\b/i);
+  assert.match(placementMigration, /'prepaid'/);
+  assert.match(placementMigration, /'bank_telebirr'/);
+  assert.match(placementMigration, /set canonical_order_id = v_canonical_id,[\s\S]*status = 'placed'/);
+  assert.match(placementMigration, /from_status, to_status[\s\S]*'approved',[\s\S]*'placed'/);
+  assert.match(placementMigration, /partner_order_canonical_placed/);
+  assert.match(placementMigration, /revoke all on function public\.admin_place_partner_order\(uuid, uuid\) from public, anon, authenticated/);
+  assert.match(placementMigration, /grant execute on function public\.admin_place_partner_order\(uuid, uuid\) to authenticated/);
+  assert.doesNotMatch(placementMigration, /(user_metadata|app_metadata|auth\.jwt\(\))/i);
+  assert.doesNotMatch(placementMigration, /(insert|update|delete)\s+(into\s+)?public\.(payments|partner_settlements|driver_commission)/i);
+});
+
 test("Partner order pages are protected, discoverable and mobile-safe", () => {
   assert.match(app, /path="\/partner\/orders" element=\{<PartnerGate><PartnerOrders \/><\/PartnerGate>\}/);
   assert.match(app, /path="\/partner\/orders\/new" element=\{<PartnerGate><PartnerOrderNew \/><\/PartnerGate>\}/);
@@ -89,17 +112,22 @@ test("Partner order pages are protected, discoverable and mobile-safe", () => {
   assert.match(adminReview, /overflow-x-auto/);
 });
 
-test("Partner order quote UI exposes controlled Admin and Partner decisions", () => {
+test("Partner order quote and placement UI expose only controlled Admin and Partner decisions", () => {
   assert.match(service, /rpc\("admin_start_partner_order_review"/);
   assert.match(service, /rpc\("admin_quote_partner_order"/);
   assert.match(service, /rpc\("partner_respond_to_order_quote"/);
+  assert.match(service, /rpc\("admin_place_partner_order"/);
   assert.match(adminReview, /Start HALLO review/);
   assert.match(adminReview, /Issue quote to Partner/);
   assert.match(adminReview, /Awaiting Partner owner\/admin decision/);
+  assert.match(adminReview, /Place canonical HALLO order/);
+  assert.match(adminReview, /truck and driver remain unassigned/i);
+  assert.match(adminReview, /payment verification gate must pass before dispatch/i);
+  assert.match(adminReview, /Canonical HALLO order/);
+  assert.match(adminReview, /canonical_tracking_id/);
   assert.match(details, /Accept HALLO quote/);
   assert.match(details, /Reject quote/);
   assert.match(details, /required when rejecting/);
-  assert.match(details, /canonical order placement remains a separate Admin-controlled step/i);
 });
 
 test("Partner order contact validation accepts Ethiopian and explicit international numbers", () => {
@@ -119,7 +147,9 @@ test("New Partner order captures the first-slice operational requirements", () =
 test("Partner order browser smoke covers every production target width", () => {
   for (const width of [320,360,390,412,430,768,1280]) assert.match(browser, new RegExp(String(width)));
   assert.match(browser, /data-overflow/);
-  assert.match(browser, /Review, quote & approval/);
+  assert.match(browser, /Review, quote & placement/);
   assert.match(browser, /Accept HALLO quote/);
+  assert.match(browser, /Place canonical HALLO order/);
+  assert.match(browser, /HT-2026-E2EPLACE/);
   assert.match(packageJson, /node scripts\/partner-order-e2e-smoke\.mjs/);
 });
