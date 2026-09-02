@@ -61,6 +61,17 @@ test("audited dead-control fixes use router navigation", () => {
   }
 });
 
+test("Admin live tracking does not expose a Customer-only details route", () => {
+  const panel = readFileSync(path.join(process.cwd(), "src/components/admin/AdminLiveTripsPanel.tsx"), "utf8");
+  const map = readFileSync(path.join(process.cwd(), "src/components/tracking/CustomerLiveTripMap.tsx"), "utf8");
+  const customerPage = readFileSync(path.join(process.cwd(), "src/pages/CustomerTrackingPage.tsx"), "utf8");
+
+  assert.match(panel, /showCustomerDetailsLink=\{false\}/);
+  assert.match(map, /showCustomerDetailsLink && <Link to=\{`\/customer\/tracking\/\$\{orderId\}`\}/);
+  assert.match(map, /Retry tracking/);
+  assert.match(customerPage, /setRetryKey\(\(key\) => key \+ 1\)/);
+});
+
 test("driver compliance disabled actions explain approval and active-trip locks", () => {
   const source = readFileSync(path.join(process.cwd(), "src/pages/AdminDriverCompliance.tsx"), "utf8");
   const packageJson = readFileSync(path.join(process.cwd(), "package.json"), "utf8");

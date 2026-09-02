@@ -63,10 +63,12 @@ export function CustomerLiveTripMap({
   orderId,
   totalDistanceKm,
   standalone = false,
+  showCustomerDetailsLink = true,
 }: {
   orderId: string;
   totalDistanceKm: number | null;
   standalone?: boolean;
+  showCustomerDetailsLink?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -76,6 +78,7 @@ export function CustomerLiveTripMap({
   const [remainingKm, setRemainingKm] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   const progress = useMemo(() => {
     const total = Number(totalDistanceKm ?? 0);
@@ -114,7 +117,7 @@ export function CustomerLiveTripMap({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [orderId]);
+  }, [orderId, retryKey]);
 
   useEffect(() => {
     if (!container.current || mapRef.current || !mapTilerKey) return;
@@ -200,7 +203,18 @@ export function CustomerLiveTripMap({
 
   return (
     <div className="customer-live-map">
-      {error && <p className="mb-3 border border-route/30 bg-route/5 p-3 text-xs text-route">{error}</p>}
+      {error && (
+        <div className="mb-3 flex flex-col gap-3 border border-route/30 bg-route/5 p-3 text-xs text-route min-[390px]:flex-row min-[390px]:items-center min-[390px]:justify-between">
+          <p role="alert" className="min-w-0 break-words">{error}</p>
+          <button
+            type="button"
+            onClick={() => setRetryKey((key) => key + 1)}
+            className="min-h-11 shrink-0 border border-route/30 bg-white px-4 py-2 font-semibold"
+          >
+            Retry tracking
+          </button>
+        </div>
+      )}
 
       <div className="customer-live-map__timeline" aria-label="Trip progress">
         {timelineSteps.map((step, index) => (
@@ -236,7 +250,7 @@ export function CustomerLiveTripMap({
           Last GPS update: {new Date(trip.recorded_at).toLocaleString()} · {formatGpsAge(trip.recorded_at)}
         </p>
       )}
-      {!standalone && <Link to={`/customer/tracking/${orderId}`} className="customer-live-map__open-page">Open full live tracking →</Link>}
+      {!standalone && showCustomerDetailsLink && <Link to={`/customer/tracking/${orderId}`} className="customer-live-map__open-page">Open full live tracking →</Link>}
     </div>
   );
 }

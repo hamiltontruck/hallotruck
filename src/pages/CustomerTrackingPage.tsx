@@ -26,6 +26,7 @@ const copy: Record<HalloLanguage, {
   reason: string;
   cancelledAt: string;
   cancelOrder: string;
+  retry: string;
 }> = {
   en: {
     eyebrow: "LIVE CARGO TRACKING",
@@ -44,6 +45,7 @@ const copy: Record<HalloLanguage, {
     reason: "Cancellation reason",
     cancelledAt: "Cancelled",
     cancelOrder: "Cancel this order",
+    retry: "Retry tracking",
   },
   om: {
     eyebrow: "HORDOFFII FEʼUMSAA LIVE",
@@ -62,6 +64,7 @@ const copy: Record<HalloLanguage, {
     reason: "Sababa ajaja dhiisuu",
     cancelledAt: "Yeroo dhiifame",
     cancelOrder: "Ajaja kana dhiisi",
+    retry: "Hordoffii irra deebiʼii yaali",
   },
   am: {
     eyebrow: "ቀጥታ የጭነት ክትትል",
@@ -80,6 +83,7 @@ const copy: Record<HalloLanguage, {
     reason: "የስረዛ ምክንያት",
     cancelledAt: "የተሰረዘበት ጊዜ",
     cancelOrder: "ይህን ትዕዛዝ ሰርዝ",
+    retry: "ክትትሉን እንደገና ሞክር",
   },
 };
 
@@ -92,11 +96,13 @@ export function CustomerTrackingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
+      setLoading(true);
       try {
         const data = await getCustomerPortalData();
         if (cancelled) return;
@@ -117,7 +123,7 @@ export function CustomerTrackingPage() {
       cancelled = true;
       window.clearInterval(channel);
     };
-  }, [orderId, t.loadError, t.notFound]);
+  }, [orderId, retryKey, t.loadError, t.notFound]);
 
   useEffect(() => {
     if (!cancelOpen) return;
@@ -154,7 +160,14 @@ export function CustomerTrackingPage() {
       </header>
 
       <section className="customer-live-page__content">
-        {error && <p className="customer-nearby-sheet__error">{error}</p>}
+        {error && (
+          <div className="customer-nearby-sheet__error" role="alert">
+            <p>{error}</p>
+            <button type="button" disabled={loading} onClick={() => setRetryKey((key) => key + 1)}>
+              {loading ? "Loading…" : t.retry}
+            </button>
+          </div>
+        )}
 
         {order && (
           <>

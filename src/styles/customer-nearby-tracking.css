@@ -381,6 +381,23 @@
   font-size: 0.68rem;
 }
 
+.customer-nearby-sheet__error button {
+  min-height: 2.75rem;
+  margin-top: 0.65rem;
+  border: 1px solid rgb(198 93 59 / 0.3);
+  border-radius: 0.7rem;
+  background: #fff;
+  padding: 0.6rem 0.9rem;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+}
+
+.customer-nearby-sheet__error button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .customer-nearby-sheet__empty {
   display: grid;
   min-height: 12rem;
