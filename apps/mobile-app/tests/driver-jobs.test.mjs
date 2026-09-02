@@ -77,9 +77,12 @@ test("job board guards overlapping refresh and claim requests while preserving c
   assert.match(componentSource, /aria-busy=\{refreshing\}/);
 });
 
-test("mobile app replaces the hardcoded driver marketplace but preserves the customer shipment form", () => {
+test("mobile app replaces the hardcoded driver marketplace and routes customers to the customer workspace", () => {
   assert.match(appSource, /import \{ DriverJobsBoard \} from "\.\/driver\/DriverJobsBoard"/);
-  assert.match(appSource, /role === "customer"\) return <ShipmentForm \/>/);
+  assert.match(appSource, /import \{[\s\S]*loadCustomerMobileWorkspace/);
+  assert.match(appSource, /role === "customer"\) return <CustomerShipmentsView state=\{customerState\} \/>/);
+  assert.match(appSource, /<CustomerPaymentsView state=\{customerState\} \/>/);
   assert.match(appSource, /<DriverJobsBoard userId=\{identity\.userId\} fullName=\{identity\.fullName\} \/>/);
   assert.doesNotMatch(appSource, /const jobs = \[/);
+  assert.doesNotMatch(appSource, /return <ShipmentForm \/>/);
 });
