@@ -46,8 +46,10 @@ export function AdminDriverChatLauncher() {
       const rows = await loadAdminDriverChatInbox();
       setInbox(rows);
       setError("");
+      return rows;
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Driver chat inbox could not be loaded.");
+      return [];
     } finally {
       setLoadingInbox(false);
     }
@@ -73,12 +75,12 @@ export function AdminDriverChatLauncher() {
       setActorId(data.user?.id ?? "");
       setInbox(rows);
       const preferred = rows.find((row) => Number(row.unread_count) > 0) ?? rows[0];
-      if (!selectedDriverId && preferred) setSelectedDriverId(preferred.driver_id);
+      if (preferred) setSelectedDriverId((current) => current ?? preferred.driver_id);
     })().catch((loadError) => {
       if (active) setError(loadError instanceof Error ? loadError.message : "Admin Driver chat could not be opened.");
     });
     return () => { active = false; };
-  }, [open, selectedDriverId]);
+  }, [open]);
 
   useEffect(() => {
     if (!open || !selectedDriverId) return;
@@ -86,8 +88,7 @@ export function AdminDriverChatLauncher() {
     setLoadingConversation(true);
     setError("");
     void (async () => {
-      const existing = inbox.find((row) => row.driver_id === selectedDriverId)?.thread_id;
-      const nextThreadId = existing ?? await openAdminDriverChat(selectedDriverId);
+      const nextThreadId = await openAdminDriverChat(selectedDriverId);
       if (!active) return;
       setThreadId(nextThreadId);
       await refreshConversation(nextThreadId, selectedDriverId);
@@ -101,16 +102,24 @@ export function AdminDriverChatLauncher() {
       if (active) setLoadingConversation(false);
     });
     return () => { active = false; };
-  }, [open, selectedDriverId, inbox, refreshConversation, refreshInbox]);
+  }, [open, selectedDriverId, refreshConversation, refreshInbox]);
 
   useEffect(() => {
     if (!open || !threadId || !selectedDriverId) return;
-    const channel = watchDriverChat(threadId, () => {
-      void refreshConversation(threadId, selectedDriverId)
-        .then(() => markDriverChatRead(threadId))
-        .then(() => refreshInbox())
-        .catch(() => undefined);
-    });
+    const channel = watchDriverChat(
+      threadId,
+      () => {
+        void refreshConversation(threadId, selectedDriverId)
+          .then(() => markDriverChatRead(threadId))
+          .then(() => refreshInbox())
+          .catch(() => undefined);
+      },
+      () => {
+        void refreshConversation(threadId, selectedDriverId)
+          .then(() => refreshInbox())
+          .catch(() => undefined);
+      },
+    );
     return () => { void stopDriverChatWatch(channel); };
   }, [open, threadId, selectedDriverId, refreshConversation, refreshInbox]);
 
