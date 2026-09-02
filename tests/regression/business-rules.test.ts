@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {
@@ -65,6 +65,30 @@ test("vehicle capacities and cargo validation stay aligned", () => {
   assert.equal(validateCargoLoad("Trailer", 450, "quintal"), 45);
   assert.throws(() => validateCargoLoad("Isuzu 5 Ton", 51, "quintal"), /supports up to 5 tons/);
   assert.throws(() => validateCargoLoad("Trailer", 0, "ton"), /greater than zero/);
+});
+
+test("every supported vehicle class has a local optimized presentation asset", () => {
+  const presentationSource = readFileSync(path.join(process.cwd(), "src/domain/vehicle-presentation.ts"), "utf8");
+  const customerSelector = readFileSync(path.join(process.cwd(), "src/pages/CustomerMapHome.tsx"), "utf8");
+
+  for (const vehicleType of Object.keys(vehicleCapacityTons)) {
+    assert.match(presentationSource, new RegExp(`(?:^|\\n)\\s*${JSON.stringify(vehicleType).replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}:`));
+  }
+
+  const assets = [
+    "pickup-3-ton.webp",
+    "cargo-van-5-ton.webp",
+    "cab-over-box-truck-5-ton.webp",
+    "dry-cargo-truck-10-ton.webp",
+    "refrigerated-truck-15-ton.webp",
+    "cargo-truck-22-ton.webp",
+    "cargo-truck-25-ton.webp",
+    "cargo-truck-30-ton.webp",
+    "semi-trailer-45-ton.webp",
+  ];
+  for (const asset of assets) assert.equal(existsSync(path.join(process.cwd(), "public/vehicles", asset)), true, asset);
+  assert.match(customerSelector, /loading="lazy"/);
+  assert.match(customerSelector, /decoding="async"/);
 });
 
 test("formatted cargo load preserves the entered unit", () => {
