@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   listAdminPartnerOrders,
+  placeApprovedPartnerOrder,
   quotePartnerOrder,
   startPartnerOrderReview,
   type PartnerOrder,
   type PartnerOrderStatus,
 } from "../services/partner-order.service";
 
-type QueueFilter = "all" | "submitted" | "under_review" | "quoted" | "approved";
+type QueueFilter = "all" | "submitted" | "under_review" | "quoted" | "approved" | "placed";
 
-const queueStatuses: PartnerOrderStatus[] = ["submitted", "under_review", "quoted", "approved", "rejected", "expired"];
+const queueStatuses: PartnerOrderStatus[] = ["submitted", "under_review", "quoted", "approved", "placed", "rejected", "expired"];
 
 function title(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -22,6 +23,7 @@ function defaultExpiry() {
 }
 
 function statusTone(status: PartnerOrderStatus) {
+  if (status === "placed") return "border-emerald-800/35 bg-emerald-50 text-emerald-950";
   if (status === "approved") return "border-emerald-700/30 bg-emerald-50 text-emerald-900";
   if (status === "quoted") return "border-sky-700/30 bg-sky-50 text-sky-900";
   if (status === "rejected" || status === "expired") return "border-asphalt/10 bg-bone text-asphalt";
@@ -94,14 +96,31 @@ export function AdminPartnerOrderReview() {
     }
   }
 
+  async function placeOrder(order: PartnerOrder) {
+    if (busyKey) return;
+    setBusyKey(`place:${order.id}`);
+    setError("");
+    setNotice("");
+    try {
+      const placed = await placeApprovedPartnerOrder(order.id);
+      const tracking = placed.pricing.canonical_tracking_id;
+      setNotice(`${order.reference} placed into canonical HALLO orders${tracking ? ` as ${tracking}` : ""}.`);
+      await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Approved Partner order could not be placed.");
+    } finally {
+      setBusyKey("");
+    }
+  }
+
   return (
     <main className="min-w-0 overflow-x-hidden bg-[#f5f3ed] text-asphalt" data-testid="admin-partner-order-review-page">
       <header className="bg-asphalt px-4 py-6 text-white sm:px-7">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <p className="font-mono text-[10px] tracking-[.22em] text-amber">PARTNER ORDER CONTROL</p>
-            <h1 className="mt-2 break-words font-display text-3xl font-bold sm:text-4xl">Review, quote & approval</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">Review submitted Partner freight, issue an ETB quote with an explicit expiry, and wait for the Partner owner/admin decision before canonical order placement.</p>
+            <h1 className="mt-2 break-words font-display text-3xl font-bold sm:text-4xl">Review, quote & placement</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">Review submitted Partner freight, issue an ETB quote, and place an accepted quote into canonical HALLO orders exactly once before the existing dispatch flow begins.</p>
           </div>
           <button type="button" onClick={() => void load()} disabled={loading} className="min-h-11 self-start border border-amber/50 px-4 py-3 text-xs font-semibold text-amber disabled:opacity-50">Refresh queue</button>
         </div>
@@ -111,15 +130,16 @@ export function AdminPartnerOrderReview() {
         {error && <p role="alert" className="mb-4 break-words border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
         {notice && <p role="status" className="mb-4 break-words border border-emerald-700/25 bg-emerald-50 p-4 text-sm text-emerald-800">{notice}</p>}
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Metric label="Submitted" value={orders.filter((order) => order.status === "submitted").length} />
           <Metric label="Under review" value={orders.filter((order) => order.status === "under_review").length} />
           <Metric label="Awaiting Partner" value={orders.filter((order) => order.status === "quoted").length} />
           <Metric label="Approved" value={orders.filter((order) => order.status === "approved").length} />
+          <Metric label="Placed" value={orders.filter((order) => order.status === "placed").length} />
         </div>
 
         <nav className="mt-5 flex gap-2 overflow-x-auto pb-2" aria-label="Partner order review filters">
-          {(["all", "submitted", "under_review", "quoted", "approved"] as const).map((value) => (
+          {(["all", "submitted", "under_review", "quoted", "approved", "placed"] as const).map((value) => (
             <button key={value} type="button" onClick={() => setFilter(value)} className={`min-h-11 shrink-0 whitespace-nowrap border px-4 text-xs font-semibold ${filter === value ? "border-asphalt bg-asphalt text-white" : "border-asphalt/15 bg-white text-asphalt"}`}>{title(value)}</button>
           ))}
         </nav>
@@ -179,13 +199,27 @@ export function AdminPartnerOrderReview() {
                   </div>
                 )}
 
-                {order.quote_amount_etb && ["quoted", "approved", "rejected", "expired"].includes(order.status) && (
+                {order.quote_amount_etb && ["quoted", "approved", "placed", "rejected", "expired"].includes(order.status) && (
                   <div className="mt-5 border-t border-asphalt/10 pt-4">
                     <p className="font-mono text-[9px] uppercase tracking-wide text-steel">HALLO quote</p>
                     <p className="mt-2 font-display text-2xl font-bold">ETB {Number(order.quote_amount_etb).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                     <p className="mt-1 text-xs text-steel">Version {order.quote_version} · expires {order.quote_expires_at ? new Date(order.quote_expires_at).toLocaleString() : "not recorded"}</p>
                     {order.status === "quoted" && <p className="mt-3 text-sm font-semibold text-sky-800">Awaiting Partner owner/admin decision.</p>}
-                    {order.status === "approved" && <p className="mt-3 text-sm font-semibold text-emerald-800">Partner approved the quote. Canonical order placement remains a separate controlled production slice.</p>}
+                    {order.status === "approved" && (
+                      <div className="mt-4 space-y-3">
+                        <p className="text-sm font-semibold text-emerald-800">Partner accepted the HALLO quote. Placement creates one canonical order only; truck and driver remain unassigned.</p>
+                        <p className="text-xs leading-5 text-steel">The canonical order is prepaid/non-cash, so the existing payment verification gate must pass before dispatch assignment can advance.</p>
+                        <button type="button" disabled={Boolean(busyKey)} onClick={() => void placeOrder(order)} className="min-h-12 w-full bg-emerald-800 px-4 text-xs font-bold text-white disabled:opacity-40">{busyKey === `place:${order.id}` ? "Placing canonical order…" : "Place canonical HALLO order"}</button>
+                      </div>
+                    )}
+                    {order.status === "placed" && (
+                      <div className="mt-4 border border-emerald-800/20 bg-white/70 p-4">
+                        <p className="font-mono text-[9px] uppercase tracking-wide text-steel">Canonical HALLO order</p>
+                        <p className="mt-2 break-all font-display text-xl font-bold">{order.pricing.canonical_tracking_id ?? "Tracking pending refresh"}</p>
+                        <p className="mt-1 break-all text-xs text-steel">{order.canonical_order_id}</p>
+                        <p className="mt-3 text-sm font-semibold text-emerald-800">Placed successfully. Continue through the existing Admin → Partner dispatch and truck/driver confirmation flow.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </article>
