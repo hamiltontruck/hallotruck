@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminPaymentLedgerAnomalyPanel } from "../components/admin/AdminPaymentLedgerAnomalyPanel";
 import { useLanguage, type SupportedLanguage } from "../i18n/LanguageProvider";
 import { supabase } from "../services/supabase.client";
 import { AdminPaymentReview } from "./AdminPaymentReview";
@@ -216,6 +217,7 @@ function AdminUnreportedDeliveredPayments() {
 export function AdminPaymentWorkspace() {
   return (
     <>
+      <AdminPaymentLedgerAnomalyPanel />
       <AdminUnreportedDeliveredPayments />
       <AdminPaymentReview />
     </>
