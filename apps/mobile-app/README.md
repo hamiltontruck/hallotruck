@@ -38,7 +38,17 @@ The Driver Jobs workspace is database-backed:
 - preserves server enforcement for driver approval, truck ownership/type/capacity, document validity, active-trip exclusion and commission settlement;
 - refreshes periodically and reacts to changes on the signed-in driver's orders.
 
-Driver Active Trip reads the assigned order, route geometry and navigation instructions from production services. GPS remains offline-safe and shows `in_transit` only after server confirmation. An In Transit Driver can now capture the delivery photo, receiver name and signature, report the customer-selected payment outcome, and complete the order through the existing atomic `driver_finish_trip` RPC. Driver Wallet now reads the signed-in Driver's financial summary, commission position and completed-trip payment results from existing self-scoped production sources. Driver Profile now reads the signed-in Driver's account, assigned trucks and identity/vehicle verification status from existing RLS-protected tables. Customer booking, Customer payments and Customer live tracking remain separate integration slices.
+Driver Active Trip reads the assigned order, route geometry and navigation instructions from production services. GPS remains offline-safe and shows `in_transit` only after server confirmation. An In Transit Driver can now capture the delivery photo, receiver name and signature, report the customer-selected payment outcome, and complete the order through the existing atomic `driver_finish_trip` RPC. Driver Wallet now reads the signed-in Driver's financial summary, commission position and completed-trip payment results from existing self-scoped production sources. Driver Profile now reads the signed-in Driver's account, assigned trucks and identity/vehicle verification status from existing RLS-protected tables. Customer Home, Orders, Live Tracking, Wallet and Profile now read the signed-in Customer's own orders, payments and verified driver assignment cards under existing RLS. Customer route-picking and order creation remain a later mutation slice.
+
+
+## Customer mobile app boundary
+
+- Reads only orders whose `customer_id` matches the signed-in Customer.
+- Reads payment rows only for the Customer's own order IDs.
+- Uses `customer_driver_assignment_cards` as an optional read-only assignment source and filters it back to the Customer's order IDs.
+- Shows live map, wallet totals, payment history and profile stats from real Customer data instead of hardcoded finance values.
+- Keeps booking submission disabled until the route-picker and quote-submit mutation slice is implemented.
+- Does not create orders, upload receipts, approve payments, change order status, alter ledgers or bypass existing RLS.
 
 ## Design constraints
 
