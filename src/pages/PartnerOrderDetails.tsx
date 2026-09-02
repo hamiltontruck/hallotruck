@@ -59,7 +59,7 @@ export function PartnerOrderDetails() {
     try {
       const updated = await respondToPartnerOrderQuote(order.id, action, quoteReason);
       if (updated.status === "expired") setNotice("This quote expired before the response and can no longer be accepted.");
-      else setNotice(action === "accept" ? "HALLO quote accepted. The order is approved for the next controlled placement step." : "HALLO quote rejected and recorded in the order history.");
+      else setNotice(action === "accept" ? "HALLO quote accepted. The order is approved for Admin canonical placement." : "HALLO quote rejected and recorded in the order history.");
       setQuoteReason("");
       await load();
     } catch (reason) {
@@ -71,7 +71,7 @@ export function PartnerOrderDetails() {
 
   const organization = params.get("organization");
   const back = organization ? `/partner/orders?organization=${encodeURIComponent(organization)}` : "/partner/orders";
-  const quoteVisible = Boolean(order?.quote_amount_etb) && Boolean(order && ["quoted", "approved", "rejected", "expired"].includes(order.status));
+  const quoteVisible = Boolean(order?.quote_amount_etb) && Boolean(order && ["quoted", "approved", "placed", "rejected", "expired"].includes(order.status));
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f5f3ed] text-asphalt">
@@ -80,7 +80,7 @@ export function PartnerOrderDetails() {
           <div>
             <p className="font-mono text-[10px] text-amber">{order?.reference ?? "PARTNER ORDER"}</p>
             <h1 className="mt-2 font-display text-3xl font-bold">Order details</h1>
-            <p className="mt-2 text-sm text-white/55">Tenant-isolated order record, HALLO quote decision, and immutable lifecycle history.</p>
+            <p className="mt-2 text-sm text-white/55">Tenant-isolated order record, HALLO quote decision, canonical placement, and immutable lifecycle history.</p>
           </div>
           <Link to={back} className="min-h-11 border border-white/20 px-4 py-3 text-center text-xs font-semibold">Back to orders</Link>
         </div>
@@ -141,7 +141,7 @@ export function PartnerOrderDetails() {
 
               {order.status === "quoted" && (
                 <div className="mt-5 space-y-3 border-t border-asphalt/10 pt-4">
-                  <p className="text-sm leading-6 text-steel">Only an active Partner owner/admin can accept or reject this quote. Acceptance moves the Partner order to Approved; canonical order placement remains a separate Admin-controlled step.</p>
+                  <p className="text-sm leading-6 text-steel">Only an active Partner owner/admin can accept or reject this quote. Acceptance moves the Partner order to Approved; canonical placement is then an Admin/CEO-controlled action.</p>
                   <label className="block text-xs font-semibold">Response note / rejection reason
                     <textarea value={quoteReason} onChange={(event) => setQuoteReason(event.target.value)} rows={3} maxLength={2000} className="mt-2 w-full border border-asphalt/15 bg-white px-3 py-3 font-normal" placeholder="Optional when accepting; required when rejecting" />
                   </label>
@@ -152,7 +152,15 @@ export function PartnerOrderDetails() {
                 </div>
               )}
 
-              {order.status === "approved" && <p className="mt-5 border-t border-emerald-700/20 pt-4 text-sm font-semibold text-emerald-800">Quote accepted. This Partner order is approved and ready for the next controlled canonical-order placement slice.</p>}
+              {order.status === "approved" && <p className="mt-5 border-t border-emerald-700/20 pt-4 text-sm font-semibold text-emerald-800">Quote accepted. HALLO Admin/CEO must place the canonical order before dispatch begins.</p>}
+              {order.status === "placed" && (
+                <div className="mt-5 border-t border-emerald-700/20 pt-4">
+                  <p className="text-sm font-semibold text-emerald-800">Canonical HALLO order placed successfully.</p>
+                  <p className="mt-2 break-all font-mono text-xs text-asphalt">{order.pricing.canonical_tracking_id ?? "Tracking pending refresh"}</p>
+                  <p className="mt-1 break-all text-xs text-steel">{order.canonical_order_id}</p>
+                  <p className="mt-3 text-sm text-steel">Dispatch, truck selection, and driver confirmation continue through the existing controlled workflow.</p>
+                </div>
+              )}
               {order.status === "rejected" && <p className="mt-5 border-t border-route/20 pt-4 text-sm font-semibold text-route">Quote rejected. The decision is preserved in lifecycle history.</p>}
               {order.status === "expired" && <p className="mt-5 border-t border-asphalt/10 pt-4 text-sm font-semibold text-steel">Quote expired. HALLO must review and issue a new quote through a later controlled revision flow.</p>}
             </section>
