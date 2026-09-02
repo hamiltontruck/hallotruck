@@ -188,6 +188,17 @@ export function JobBoard() {
           {jobs.map((job) => {
             const options = truckOptions[job.id] ?? [];
             const selected = selectedTruckIds[job.id] ?? "";
+            const isLoadingTrucks = loadingTrucksFor === job.id;
+            const isAccepting = acceptingId === job.id;
+            const truckGuidanceId = `job-${job.id}-truck-guidance`;
+            const acceptGuidanceId = `job-${job.id}-accept-guidance`;
+            const acceptGuidance = isAccepting
+              ? "Assigning this truck and securing the load."
+              : selected
+                ? "Ready to assign the selected truck and accept this load."
+                : isLoadingTrucks
+                  ? "Loading compatible trucks before this load can be accepted."
+                  : "Choose a compatible truck before accepting this load.";
             return (
               <article key={job.id} className="border border-asphalt/10 bg-white p-5 transition hover:border-amber sm:p-6">
                 <div className="flex items-start justify-between gap-3">
@@ -225,9 +236,11 @@ export function JobBoard() {
                     onFocus={() => void loadTruckOptions(job.id)}
                     onChange={(event) => setSelectedTruckIds((current) => ({ ...current, [job.id]: event.target.value }))}
                     className="mt-2 w-full border border-asphalt/15 bg-white px-3 py-3 text-sm text-asphalt"
-                    disabled={loadingTrucksFor === job.id}
+                    disabled={isLoadingTrucks}
+                    aria-busy={isLoadingTrucks}
+                    aria-describedby={truckGuidanceId}
                   >
-                    <option value="">{loadingTrucksFor === job.id ? "Loading matching trucks…" : "Select matching truck"}</option>
+                    <option value="">{isLoadingTrucks ? "Loading matching trucks…" : "Select matching truck"}</option>
                     {options.map((truck) => (
                       <option key={truck.id} value={truck.id}>
                         {truck.plate_number} · {truck.vehicle_type}{truck.capacity_tons ? ` · ${truck.capacity_tons} t` : ""}
@@ -235,16 +248,23 @@ export function JobBoard() {
                     ))}
                   </select>
                   {truckOptions[job.id] && options.length === 0 && <p className="mt-2 text-xs text-route">No compatible available truck is ready for this load.</p>}
-                  <p className="mt-2 text-[11px] leading-relaxed text-steel">The server checks truck type, cargo tonnage, documents and active-trip availability again before acceptance.</p>
+                  <p id={truckGuidanceId} className="mt-2 text-[11px] leading-relaxed text-steel">The server checks truck type, cargo tonnage, documents and active-trip availability again before acceptance.</p>
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => void handleAccept(job)}
-                  disabled={acceptingId === job.id || !selected}
+                  disabled={isAccepting || !selected}
+                  aria-busy={isAccepting}
+                  aria-describedby={acceptGuidanceId}
+                  title={acceptGuidance}
                   className="mt-4 w-full bg-asphalt py-4 text-sm font-semibold text-white disabled:opacity-50"
                 >
-                  {acceptingId === job.id ? dt("jobs.securing") : "Assign truck & accept load →"}
+                  {isAccepting ? dt("jobs.securing") : "Assign truck & accept load →"}
                 </button>
+                <p id={acceptGuidanceId} className="mt-2 text-xs leading-relaxed text-steel" role="status" aria-live="polite">
+                  {acceptGuidance}
+                </p>
               </article>
             );
           })}
@@ -265,3 +285,4 @@ function compact(value: number) {
       ? `${(value / 1000).toFixed(1)}K`
       : value.toLocaleString();
 }
+
