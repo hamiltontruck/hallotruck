@@ -9,6 +9,7 @@ export interface PaymentSummary {
   heldEscrow: number;
   releasedGross: number;
   refunded: number;
+  legacyRefundRestored: number;
   rawVerified: number;
   verifiedPaid: number;
   pendingVerification: number;
@@ -29,6 +30,7 @@ function totalFor(entries: PaymentLedgerEntry[], event: string) {
  * Canonical financial summary used by Customer, Admin, Finance and invoices.
  *
  * - Every refunded ledger event reduces verified/committed money, regardless of provider.
+ * - An approved legacy-refund restoration is an append-only correction, not new money.
  * - Initiated payments are pending verification, not verified paid.
  * - Balance to pay uses verified money only.
  * - Remaining to submit also reserves pending initiated money to prevent duplicates.
@@ -38,13 +40,15 @@ function totalFor(entries: PaymentLedgerEntry[], event: string) {
 export function calculatePaymentSummary(
   invoiceTotalInput: number | string | null | undefined,
   entries: PaymentLedgerEntry[],
+  legacyRefundRestorationEtb: number | string | null | undefined = 0,
 ): PaymentSummary {
   const invoiceTotal = Math.max(0, Number(invoiceTotalInput || 0));
   const initiated = totalFor(entries, "initiated");
   const heldEscrow = totalFor(entries, "held_escrow");
   const releasedGross = totalFor(entries, "released");
   const refunded = totalFor(entries, "refunded");
-  const rawVerified = releasedGross + heldEscrow - refunded;
+  const legacyRefundRestored = Math.max(0, Number(legacyRefundRestorationEtb || 0));
+  const rawVerified = releasedGross + heldEscrow - refunded + legacyRefundRestored;
   const verifiedPaid = Math.max(0, rawVerified);
   const pendingVerification = Math.max(0, initiated);
   const committed = Math.max(0, verifiedPaid + pendingVerification);
@@ -55,6 +59,7 @@ export function calculatePaymentSummary(
     heldEscrow,
     releasedGross,
     refunded,
+    legacyRefundRestored,
     rawVerified,
     verifiedPaid,
     pendingVerification,
