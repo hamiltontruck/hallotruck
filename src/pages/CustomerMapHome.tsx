@@ -14,6 +14,7 @@ import {
   vehicleCapacityTons,
   type CargoUnit,
 } from "../services/customer-cargo.service";
+import { getVehiclePresentation } from "../domain/vehicle-presentation";
 import {
   CARGO_CATEGORIES,
   PACKAGING_TYPES,
@@ -373,6 +374,7 @@ export function CustomerMapHome() {
             <div className="customer-map-home__vehicles" role="group" aria-label={t.truckMatch}>
               {vehicleOptions.map((option) => {
                 const capacity = vehicleCapacityTons[option.toLowerCase()] ?? 0;
+                const presentation = getVehiclePresentation(option);
                 return (
                   <button
                     key={option}
@@ -381,7 +383,16 @@ export function CustomerMapHome() {
                     className={vehicle === option ? "is-active" : ""}
                     aria-pressed={vehicle === option}
                   >
-                    <span className="customer-map-home__vehicle-icon" aria-hidden="true">▰</span>
+                    {presentation && (
+                      <img
+                        src={presentation.image}
+                        alt={presentation.alt}
+                        loading="lazy"
+                        decoding="async"
+                        width="900"
+                        height="600"
+                      />
+                    )}
                     <strong>{t[vehicleKey(option)]}</strong>
                     <small>{t.maxCapacity}: {capacity} {t.ton}</small>
                   </button>
