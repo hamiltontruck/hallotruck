@@ -118,7 +118,11 @@ test("the actual Payment Ledger workspace shows reconciliation evidence and rest
   assert.match(paymentLedgerPanel, /PAYMENT LEDGER ANOMALY/i);
   assert.match(paymentLedgerPanel, /These orders are reconciliation exceptions, not ordinary unpaid invoices/i);
   assert.match(paymentLedgerPanel, /LegacyRefundRestorationForm/i);
-  assert.match(paymentLedgerPanel, /financial_correction/i);
+  assert.match(paymentLedgerPanel, /isEligibleLegacyExternalRefund/i);
+  for (const provider of ["cash", "cash_to_driver", "driver_cash", "financial_correction", "credit_refund", "internal"]) {
+    assert.match(paymentLedgerPanel, new RegExp(`\\"${provider}\\"`, "i"));
+  }
+  assert.match(paymentLedgerPanel, /provider_ref\?\.trim\(\) \?\? ""/i);
   assert.match(restorationForm, /external evidence proves/i);
   assert.match(restorationForm, /never edits or deletes the original payment row/i);
 });
