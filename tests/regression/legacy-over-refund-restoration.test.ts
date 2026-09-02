@@ -17,6 +17,14 @@ const paymentControl = readFileSync(
   path.join(root, "src", "components", "admin", "AdminPaymentCollectionControl.tsx"),
   "utf8",
 );
+const paymentLedgerPanel = readFileSync(
+  path.join(root, "src", "components", "admin", "AdminPaymentLedgerAnomalyPanel.tsx"),
+  "utf8",
+);
+const paymentWorkspace = readFileSync(
+  path.join(root, "src", "pages", "AdminPaymentWorkspace.tsx"),
+  "utf8",
+);
 const restorationForm = readFileSync(
   path.join(root, "src", "components", "admin", "LegacyRefundRestorationForm.tsx"),
   "utf8",
@@ -90,7 +98,16 @@ test("Admin finance control exposes anomaly state before ordinary collection act
   assert.match(paymentControl, /if \(summary\.ledgerAnomaly > 0\) return "anomaly"/i);
   assert.match(paymentControl, /Ledger anomaly requires Finance reconciliation/i);
   assert.match(paymentControl, /Ordinary collection actions are paused/i);
-  assert.match(paymentControl, /LegacyRefundRestorationForm/i);
+});
+
+test("the actual Payment Ledger workspace shows reconciliation evidence and restoration action", () => {
+  assert.match(paymentWorkspace, /AdminPaymentLedgerAnomalyPanel/i);
+  assert.match(paymentWorkspace, /<AdminPaymentLedgerAnomalyPanel \/>/i);
+  assert.match(paymentLedgerPanel, /admin_payment_integrity_report/i);
+  assert.match(paymentLedgerPanel, /PAYMENT LEDGER ANOMALY/i);
+  assert.match(paymentLedgerPanel, /These orders are reconciliation exceptions, not ordinary unpaid invoices/i);
+  assert.match(paymentLedgerPanel, /LegacyRefundRestorationForm/i);
+  assert.match(paymentLedgerPanel, /financial_correction/i);
   assert.match(restorationForm, /external evidence proves/i);
   assert.match(restorationForm, /never edits or deletes the original payment row/i);
 });
