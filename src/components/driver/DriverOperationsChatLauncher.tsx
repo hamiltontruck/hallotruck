@@ -85,12 +85,20 @@ export function DriverOperationsChatLauncher() {
 
   useEffect(() => {
     if (!open || !threadId || !actorId) return;
-    const channel = watchDriverChat(threadId, () => {
-      void refreshConversation(threadId, actorId)
-        .then(() => markDriverChatRead(threadId))
-        .then(() => refreshUnread())
-        .catch(() => undefined);
-    });
+    const channel = watchDriverChat(
+      threadId,
+      () => {
+        void refreshConversation(threadId, actorId)
+          .then(() => markDriverChatRead(threadId))
+          .then(() => refreshUnread())
+          .catch(() => undefined);
+      },
+      () => {
+        void refreshConversation(threadId, actorId)
+          .then(() => refreshUnread())
+          .catch(() => undefined);
+      },
+    );
     return () => { void stopDriverChatWatch(channel); };
   }, [open, threadId, actorId, refreshConversation, refreshUnread]);
 
