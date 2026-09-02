@@ -11,7 +11,7 @@ export type PartnerOrderPayload = {
   schedule: { pickup_date: string; pickup_time?: string; delivery_deadline?: string; priority: string };
   pickup_contact: PartnerOrderContact;
   delivery_contact: PartnerOrderContact;
-  pricing: { state: "pending_calculation" | "manual_quote_required" };
+  pricing: { state: "pending_calculation" | "manual_quote_required" | "quoted" | "approved" | "rejected" | "expired"; currency?: "ETB"; quoted_amount_etb?: number; quote_expires_at?: string; quote_version?: number };
   payment: { method: string; status: "unpaid" };
   partner_notes?: string;
 };
@@ -23,9 +23,19 @@ export type PartnerOrder = PartnerOrderPayload & {
   reference: string;
   status: PartnerOrderStatus;
   admin_notes: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  quoted_at: string | null;
+  quoted_by: string | null;
+  quote_amount_etb: number | null;
+  quote_expires_at: string | null;
+  quote_version: number;
+  approved_at: string | null;
+  rejected_at: string | null;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;
+  partner_organizations?: { name: string; code: string } | null;
 };
 
 export type PartnerOrderHistory = { id: number; from_status: string | null; to_status: string; actor_id: string; reason: string | null; created_at: string };
@@ -53,6 +63,15 @@ export async function listPartnerOrders(partnerId: string) {
   return (data ?? []) as PartnerOrder[];
 }
 
+export async function listAdminPartnerOrders() {
+  const { data, error } = await supabase
+    .from("partner_orders")
+    .select("*,partner_organizations(name,code)")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as PartnerOrder[];
+}
+
 export async function getPartnerOrder(orderId: string) {
   const [order, history] = await Promise.all([
     supabase.from("partner_orders").select("*").eq("id", orderId).single(),
@@ -75,5 +94,43 @@ export async function submitPartnerOrder(orderId: string) {
   const { data, error } = await supabase.rpc("partner_submit_order", { p_order_id: orderId, p_reason: "Submitted by Partner for HALLO review", p_request_key: crypto.randomUUID() });
   if (error) throw error;
   if (!data) throw new Error("Submitted Partner order was not returned.");
+  return data as PartnerOrder;
+}
+
+export async function startPartnerOrderReview(orderId: string, adminNotes: string) {
+  const { data, error } = await supabase.rpc("admin_start_partner_order_review", {
+    p_order_id: orderId,
+    p_admin_notes: adminNotes.trim() || null,
+    p_request_key: crypto.randomUUID(),
+  });
+  if (error) throw error;
+  if (!data) throw new Error("Partner order review state was not returned.");
+  return data as PartnerOrder;
+}
+
+export async function quotePartnerOrder(orderId: string, amountEtb: number, expiresAt: string, adminNotes: string) {
+  if (!Number.isFinite(amountEtb) || amountEtb <= 0) throw new Error("Quote amount must be greater than zero.");
+  if (!expiresAt || Number.isNaN(new Date(expiresAt).getTime())) throw new Error("Choose a valid quote expiry.");
+  const { data, error } = await supabase.rpc("admin_quote_partner_order", {
+    p_order_id: orderId,
+    p_quote_amount_etb: amountEtb,
+    p_quote_expires_at: new Date(expiresAt).toISOString(),
+    p_admin_notes: adminNotes.trim() || null,
+    p_request_key: crypto.randomUUID(),
+  });
+  if (error) throw error;
+  if (!data) throw new Error("Quoted Partner order was not returned.");
+  return data as PartnerOrder;
+}
+
+export async function respondToPartnerOrderQuote(orderId: string, action: "accept" | "reject", reason = "") {
+  const { data, error } = await supabase.rpc("partner_respond_to_order_quote", {
+    p_order_id: orderId,
+    p_action: action,
+    p_reason: reason.trim() || null,
+    p_request_key: crypto.randomUUID(),
+  });
+  if (error) throw error;
+  if (!data) throw new Error("Partner quote response was not returned.");
   return data as PartnerOrder;
 }
