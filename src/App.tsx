@@ -24,6 +24,7 @@ import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
 import { AdminPartnerControl } from "./pages/AdminPartnerControl";
 import { AdminPartnerFinance } from "./pages/AdminPartnerFinance";
 import { AdminPartnerDispatch } from "./pages/AdminPartnerDispatch";
+import { AdminPartnerOrderReview } from "./pages/AdminPartnerOrderReview";
 import { AdminMore } from "./pages/AdminMore";
 import { PartnerDispatch } from "./pages/PartnerDispatch";
 import { PartnerOperationsHub } from "./pages/PartnerOperationsHub";
@@ -120,6 +121,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin/finance" element={<AdminGate><AdminToolShell><AdminFinanceDashboardV3 /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partner-finance" element={<AdminGate><AdminToolShell><AdminPartnerFinance /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partner-dispatch" element={<AdminGate><AdminToolShell><AdminPartnerDispatch /></AdminToolShell></AdminGate>} />
+<Route path="/admin/partner-orders" element={<AdminGate><AdminToolShell><AdminPartnerOrderReview /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-finance-search" element={<AdminGate><AdminToolShell><AdminDriverFinanceSearch /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
