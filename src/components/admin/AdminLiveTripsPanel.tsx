@@ -155,7 +155,11 @@ export function AdminLiveTripsPanel({ orders, trucks, drivers }: AdminLiveTripsP
                   <span className="flex items-center gap-2 text-[10px] font-semibold text-emerald-700"><i className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" /> TRACKING</span>
                 </div>
 
-                <CustomerLiveTripMap orderId={selected.id} totalDistanceKm={totalDistanceKm} />
+                <CustomerLiveTripMap
+                  orderId={selected.id}
+                  totalDistanceKm={totalDistanceKm}
+                  showCustomerDetailsLink={false}
+                />
               </div>
             </div>
           )}
