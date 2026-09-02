@@ -34,6 +34,15 @@ type RestorationRow = {
   created_at: string;
 };
 
+const ineligibleLegacyProviders = new Set([
+  "cash",
+  "cash_to_driver",
+  "driver_cash",
+  "financial_correction",
+  "credit_refund",
+  "internal",
+]);
+
 function amount(value: number | string | null | undefined) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -41,6 +50,13 @@ function amount(value: number | string | null | undefined) {
 
 function money(value: number | string | null | undefined) {
   return amount(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function isEligibleLegacyExternalRefund(refund: RefundRow) {
+  const provider = refund.provider.trim().toLowerCase();
+  const reference = refund.provider_ref?.trim() ?? "";
+  if (!reference || ineligibleLegacyProviders.has(provider)) return false;
+  return !refund.raw_payload || !("correction_id" in refund.raw_payload);
 }
 
 export function AdminPaymentLedgerAnomalyPanel() {
@@ -146,11 +162,9 @@ export function AdminPaymentLedgerAnomalyPanel() {
       <div className="mt-4 grid gap-4">
         {integrityRows.map((row) => {
           const anomaly = amount(row.ledger_anomaly_etb);
-          const eligibleRefunds = refunds.filter((refund) => {
-            if (refund.order_id !== row.order_id) return false;
-            if (refund.provider.trim().toLowerCase() === "financial_correction") return false;
-            return !refund.raw_payload || !("correction_id" in refund.raw_payload);
-          });
+          const eligibleRefunds = refunds.filter((refund) =>
+            refund.order_id === row.order_id && isEligibleLegacyExternalRefund(refund),
+          );
 
           return <article key={row.order_id} className="border border-route/25 bg-white p-4 sm:p-5">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
@@ -179,7 +193,7 @@ export function AdminPaymentLedgerAnomalyPanel() {
                     const maxRestoration = Math.min(anomaly, sourceRemaining);
                     if (maxRestoration <= 0) return null;
                     return <div key={refund.id} className="rounded-xl border border-asphalt/10 bg-[#faf9f5] p-3">
-                      <p className="break-all font-mono text-[10px] text-steel">{refund.provider} · {refund.provider_ref ?? "no reference"} · original refund ETB {money(refund.amount_etb)} · {new Date(refund.created_at).toLocaleString()}</p>
+                      <p className="break-all font-mono text-[10px] text-steel">{refund.provider} · {refund.provider_ref} · original refund ETB {money(refund.amount_etb)} · {new Date(refund.created_at).toLocaleString()}</p>
                       <LegacyRefundRestorationForm refundPaymentId={refund.id} refundAmountEtb={sourceRemaining} maxRestorationEtb={maxRestoration} onSaved={load} />
                     </div>;
                   })}
