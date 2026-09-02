@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
 import { LanguageSwitcher, useLanguage } from "../../i18n/LanguageProvider";
 import { DriverBottomNav } from "../driver/DriverBottomNav";
+import { DriverOperationsChatLauncher } from "../driver/DriverOperationsChatLauncher";
 
 const primaryLinks = [
   { to: "/driver", key: "home" as const, end: true },
@@ -119,6 +120,7 @@ export function Header() {
               ● {approved ? t("common.online") : pendingCopy.status}
             </p>
           </div>
+          {approved && <DriverOperationsChatLauncher />}
           <button onClick={() => setMenuOpen((value) => !value)} className="w-11 h-11 border border-white/15 grid place-items-center" aria-label="Open driver menu"><span className="text-xl">{menuOpen ? "×" : "☰"}</span></button>
         </div>
       </div>
