@@ -7,10 +7,12 @@ export type PaymentCorrectionType =
   | "invalidated"
   | "cancelled_order";
 
+export type FinancialCorrectionType = PaymentCorrectionType | "reversed_settlement" | "legacy_refund_restoration";
+
 export type FinancialCorrection = {
   id: string;
   request_key: string;
-  correction_type: PaymentCorrectionType | "reversed_settlement";
+  correction_type: FinancialCorrectionType;
   source_payment_id: string | null;
   refund_payment_id: string | null;
   partner_earning_id: string | null;
@@ -25,6 +27,7 @@ export type FinancialCorrection = {
   partner_net_reversal_etb: number | string;
   reason: string;
   actor_id: string;
+  external_evidence_reference?: string | null;
   created_at: string;
 };
 
@@ -46,6 +49,23 @@ export async function reversePayment(input: {
     p_amount_etb: input.amountEtb,
     p_reason: input.reason.trim(),
     p_correction_type: input.correctionType,
+    p_request_key: correctionRequestKey(),
+  });
+  if (error) throw new Error(error.message);
+  return String(data);
+}
+
+export async function restoreLegacyExcessRefund(input: {
+  refundPaymentId: string;
+  amountEtb: number;
+  reason: string;
+  externalEvidenceReference: string;
+}) {
+  const { data, error } = await supabase.rpc("admin_restore_legacy_excess_refund", {
+    p_refund_payment_id: input.refundPaymentId,
+    p_amount_etb: input.amountEtb,
+    p_reason: input.reason.trim(),
+    p_external_evidence_reference: input.externalEvidenceReference.trim(),
     p_request_key: correctionRequestKey(),
   });
   if (error) throw new Error(error.message);
