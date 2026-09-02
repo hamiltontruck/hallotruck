@@ -151,19 +151,20 @@ export async function getMyDriverChatUnreadCount() {
 
 export function watchDriverChat(
   threadId: string,
-  onChange: () => void,
+  onMessage: () => void,
+  onReadReceipt?: () => void,
 ): RealtimeChannel {
   return supabase
     .channel(`driver-chat-${threadId}`)
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "driver_chat_messages", filter: `thread_id=eq.${threadId}` },
-      onChange,
+      onMessage,
     )
     .on(
       "postgres_changes",
       { event: "UPDATE", schema: "public", table: "driver_chat_threads", filter: `id=eq.${threadId}` },
-      onChange,
+      () => onReadReceipt?.(),
     )
     .subscribe();
 }
