@@ -5,6 +5,7 @@ import App from "./App";
 import { initializeAnalytics } from "./services/analytics";
 import "./index.css";
 import "./styles/customer-quote-restoration.css";
+import "./styles/customer-mobile-confirm-overlay.css";
 import "./styles/admin-order-cleanup.css";
 import "./styles/shared-portal-logo.css";
 
