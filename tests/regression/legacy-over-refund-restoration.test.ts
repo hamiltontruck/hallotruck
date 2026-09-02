@@ -13,6 +13,10 @@ const anomalyGuardMigration = readFileSync(
   path.join(root, "supabase", "migrations", "20260902065100_block_unresolved_ledger_anomaly_payments.sql"),
   "utf8",
 );
+const externalRefundGuardMigration = readFileSync(
+  path.join(root, "supabase", "migrations", "20260902065200_restrict_legacy_restoration_to_external_refunds.sql"),
+  "utf8",
+);
 const paymentControl = readFileSync(
   path.join(root, "src", "components", "admin", "AdminPaymentCollectionControl.tsx"),
   "utf8",
@@ -83,6 +87,13 @@ test("restoration is Admin/CEO-only, evidence-backed, replay-safe and source-cap
   assert.match(restorationMigration, /Restoration exceeds the current ledger anomaly/i);
   assert.match(restorationMigration, /Restoration exceeds the remaining legacy refund amount/i);
   assert.match(restorationMigration, /revoke all on function public\.admin_restore_legacy_excess_refund[\s\S]*from public, anon/i);
+});
+
+test("final restoration RPC accepts only external Bank or Telebirr-style refund references", () => {
+  assert.match(externalRefundGuardMigration, /private\.is_external_payment_reference\(v_source_provider, v_source_reference\)/i);
+  assert.match(externalRefundGuardMigration, /Legacy restoration requires an external Bank \/ Telebirr payment reference/i);
+  assert.match(externalRefundGuardMigration, /financial-correction refunds cannot be restored with the legacy workflow/i);
+  assert.match(externalRefundGuardMigration, /not \(select private\.is_admin_or_ceo\(\)\)/i);
 });
 
 test("unresolved negative ledgers fail closed for new or advancing payments", () => {
