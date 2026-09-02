@@ -61,11 +61,15 @@ test("Confirm Order remains locked until route, truck, cargo, load and quote are
   assert.match(page, /const cleanCargoQuantity = cargoQuantity\.trim\(\)/);
 });
 
-test("Customer quote remains scrollable and single-column on narrow phones", () => {
-  assert.match(css, /max-height:min\((?:68|72)dvh,(?:42|44)rem\)/);
-  assert.match(css, /-webkit-overflow-scrolling:touch/);
-  assert.match(css, /@media\(max-width:420px\)/);
-  assert.match(css, /grid-template-columns:minmax\(0,1fr\)/);
+test("Customer quote remains compact, scrollable and unclipped on narrow phones", () => {
+  assert.match(css, /max-height:\s*min\(62dvh,\s*34rem\)/);
+  assert.match(css, /-webkit-overflow-scrolling:\s*touch/);
+  assert.match(css, /@media \(max-width: 420px\)/);
+  assert.match(css, /customer-map-home__load-grid[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.match(css, /customer-map-home__vehicles[\s\S]*grid-auto-flow:\s*row/);
+  assert.match(css, /customer-map-home__vehicles[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /customer-map-home__vehicles[\s\S]*overflow-x:\s*visible/);
+  assert.match(css, /customer-map-home__sheet-heading h2[\s\S]*-webkit-line-clamp:\s*2/);
   assert.match(css, /customer-map-home__load-grid textarea/);
-  assert.match(css, /customer-map-home__confirm-dock\{position:sticky/);
+  assert.match(css, /customer-map-home__confirm-dock\s*\{[\s\S]*position:\s*sticky/);
 });
