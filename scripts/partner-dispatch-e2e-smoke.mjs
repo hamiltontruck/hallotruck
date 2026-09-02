@@ -44,10 +44,17 @@ function render(chrome, width, profileDirectory) {
     "--dump-dom",
     `${baseUrl}partner-dispatch-e2e.html`,
   ];
-  for (const flag of ["--headless=new", "--headless"]) {
-    const result = spawnSync(chrome, [flag, ...args], { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, timeout: 30_000 });
-    if (!result.error && result.status === 0 && result.stdout) return result.stdout;
+  let lastDom = "";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (const flag of ["--headless=new", "--headless"]) {
+      const result = spawnSync(chrome, [flag, ...args], { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, timeout: 30_000 });
+      if (!result.error && result.status === 0 && result.stdout) {
+        lastDom = result.stdout;
+        if (lastDom.includes('data-ready="true"')) return lastDom;
+      }
+    }
   }
+  if (lastDom) return lastDom;
   throw new Error(`Chrome could not render Partner dispatch fixture at ${width}px.`);
 }
 
@@ -100,3 +107,4 @@ try {
   if (preview.exitCode === null) preview.kill("SIGKILL");
   await rm(fixtureFile, { force: true });
 }
+
