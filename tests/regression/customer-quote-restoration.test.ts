@@ -6,6 +6,8 @@ import path from "node:path";
 const page = await readFile(path.join(process.cwd(), "src/pages/CustomerMapHome.tsx"), "utf8");
 const service = await readFile(path.join(process.cwd(), "src/services/customer-cargo.service.ts"), "utf8");
 const css = await readFile(path.join(process.cwd(), "src/styles/customer-quote-restoration.css"), "utf8");
+const mobileOverlayCss = await readFile(path.join(process.cwd(), "src/styles/customer-mobile-confirm-overlay.css"), "utf8");
+const main = await readFile(path.join(process.cwd(), "src/main.tsx"), "utf8");
 
 test("Customer quote sheet starts expanded instead of hiding the order form", () => {
   assert.match(page, /sheetExpanded, setSheetExpanded\] = useState\(true\)/);
@@ -71,5 +73,12 @@ test("Customer quote remains compact, scrollable and unclipped on narrow phones"
   assert.match(css, /customer-map-home__vehicles[\s\S]*overflow-x:\s*visible/);
   assert.match(css, /customer-map-home__sheet-heading h2[\s\S]*-webkit-line-clamp:\s*2/);
   assert.match(css, /customer-map-home__load-grid textarea/);
-  assert.match(css, /customer-map-home__confirm-dock\s*\{[\s\S]*position:\s*sticky/);
+});
+
+test("Mobile Confirm Order dock stays after form fields instead of covering them", () => {
+  assert.match(main, /customer-quote-restoration\.css[\s\S]*customer-mobile-confirm-overlay\.css/);
+  assert.match(mobileOverlayCss, /@media \(max-width: 639px\)/);
+  assert.match(mobileOverlayCss, /customer-map-home__confirm-dock[\s\S]*position:\s*static/);
+  assert.match(mobileOverlayCss, /customer-map-home__confirm-dock[\s\S]*bottom:\s*auto/);
+  assert.match(mobileOverlayCss, /customer-map-home__confirm-dock[\s\S]*margin:\s*0\.9rem 0 0/);
 });
