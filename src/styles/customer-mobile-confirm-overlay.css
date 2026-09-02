@@ -1,0 +1,20 @@
+/* Mobile Customer order sheet: Confirm Order must not cover truck or form controls. */
+@media (max-width: 639px) {
+  .customer-map-home__sheet-body {
+    padding-bottom: 0.9rem;
+  }
+
+  .customer-map-home__confirm-dock {
+    position: static;
+    z-index: auto;
+    bottom: auto;
+    margin: 0.9rem 0 0;
+    background: #f6f3eb;
+    padding: 0.75rem 0 0;
+    backdrop-filter: none;
+  }
+
+  .customer-map-home__confirm {
+    margin-top: 0.5rem;
+  }
+}
