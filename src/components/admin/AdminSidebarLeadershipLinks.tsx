@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
+import { AdminDriverChatLauncher } from "./AdminDriverChatLauncher";
 
 export function AdminSidebarLeadershipLinks() {
   const [mount, setMount] = useState<HTMLElement | null>(null);
@@ -21,9 +22,7 @@ export function AdminSidebarLeadershipLinks() {
     };
   }, []);
 
-  if (!mount) return null;
-
-  return createPortal(
+  const navigation = mount ? createPortal(
     <div className="space-y-1">
       <p className="mb-2 px-3 font-mono text-[9px] tracking-[.2em] text-white/30">CEO CONTROL</p>
       <Link to="/admin/intelligence" className="flex w-full items-center gap-3 px-3 py-3 text-sm text-white/60 transition hover:bg-white/5 hover:text-white">
@@ -68,5 +67,7 @@ export function AdminSidebarLeadershipLinks() {
       </Link>
     </div>,
     mount,
-  );
+  ) : null;
+
+  return <>{navigation}<AdminDriverChatLauncher /></>;
 }
