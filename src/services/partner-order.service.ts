@@ -11,7 +11,16 @@ export type PartnerOrderPayload = {
   schedule: { pickup_date: string; pickup_time?: string; delivery_deadline?: string; priority: string };
   pickup_contact: PartnerOrderContact;
   delivery_contact: PartnerOrderContact;
-  pricing: { state: "pending_calculation" | "manual_quote_required" | "quoted" | "approved" | "rejected" | "expired"; currency?: "ETB"; quoted_amount_etb?: number; quote_expires_at?: string; quote_version?: number };
+  pricing: {
+    state: "pending_calculation" | "manual_quote_required" | "quoted" | "approved" | "rejected" | "expired";
+    currency?: "ETB";
+    quoted_amount_etb?: number;
+    quote_expires_at?: string;
+    quote_version?: number;
+    canonical_order_id?: string;
+    canonical_tracking_id?: string;
+    placed_at?: string;
+  };
   payment: { method: string; status: "unpaid" };
   partner_notes?: string;
 };
@@ -132,5 +141,15 @@ export async function respondToPartnerOrderQuote(orderId: string, action: "accep
   });
   if (error) throw error;
   if (!data) throw new Error("Partner quote response was not returned.");
+  return data as PartnerOrder;
+}
+
+export async function placeApprovedPartnerOrder(orderId: string) {
+  const { data, error } = await supabase.rpc("admin_place_partner_order", {
+    p_order_id: orderId,
+    p_request_key: crypto.randomUUID(),
+  });
+  if (error) throw error;
+  if (!data) throw new Error("Canonical Partner order placement was not returned.");
   return data as PartnerOrder;
 }
