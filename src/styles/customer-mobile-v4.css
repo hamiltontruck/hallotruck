@@ -1,10 +1,9 @@
 /*
  * HALO Customer mobile v4 visual layer.
  *
- * The dedicated /mobile/ workspace already uses the HALO blue/gold v4 system.
- * This file applies the same visual language to the root-web Customer portal on
- * phone widths only, without changing routing, authorization, data behavior or
- * desktop presentation.
+ * Approved Customer phone reference: full-map booking, compact truck/cargo
+ * selection, quote summary, map-first tracking and clean payment/profile cards.
+ * Visual/UI only: no routing, authorization, data or desktop behavior changes.
  */
 @media (max-width: 639px) {
   .customer-portal-mobile {
@@ -29,7 +28,7 @@
     color: var(--customer-v4-navy) !important;
   }
 
-  /* Shared v4 header treatment for Customer pages that render the root-web header. */
+  /* Shared Customer chrome. */
   .customer-portal-mobile .customer-main-header {
     border-bottom: 1px solid var(--customer-v4-line) !important;
     background: rgb(255 255 255 / 0.96) !important;
@@ -76,13 +75,12 @@
   .customer-portal-mobile .customer-order-card__actions .is-primary,
   .customer-portal-mobile .customer-order-card__actions .is-payment {
     border: 0 !important;
-    border-radius: 0.95rem !important;
+    border-radius: 0.9rem !important;
     background: var(--customer-v4-blue) !important;
     color: #fff !important;
     box-shadow: 0 10px 22px rgb(7 89 199 / 0.18) !important;
   }
 
-  /* Keep every Customer phone page on the same canvas/card language. */
   .customer-portal-mobile .customer-content,
   .customer-portal-mobile .customer-section-intro {
     background: transparent !important;
@@ -98,6 +96,7 @@
     color: var(--customer-v4-gold-dark) !important;
   }
 
+  /* Orders, Payments and Profile use the same compact white-card language. */
   .customer-portal-mobile .customer-orders-overview,
   .customer-portal-mobile .customer-order-card,
   .customer-portal-mobile .customer-profile-card,
@@ -105,9 +104,9 @@
   .customer-portal-mobile .customer-payment-history,
   .customer-portal-mobile .customer-proof {
     border: 1px solid var(--customer-v4-line) !important;
-    border-radius: 1.5rem !important;
+    border-radius: 1.15rem !important;
     background: #fff !important;
-    box-shadow: 0 12px 32px rgb(16 33 61 / 0.07) !important;
+    box-shadow: 0 8px 24px rgb(16 33 61 / 0.07) !important;
   }
 
   .customer-portal-mobile .customer-summary-value,
@@ -115,8 +114,8 @@
   .customer-portal-mobile .customer-profile-value,
   .customer-portal-mobile .customer-profile-progress {
     border: 1px solid #e7edf6 !important;
-    border-radius: 1rem !important;
-    background: #f7faff !important;
+    border-radius: 0.9rem !important;
+    background: #f8fbff !important;
   }
 
   .customer-portal-mobile .customer-summary-value p,
@@ -133,10 +132,19 @@
     box-shadow: 0 10px 24px rgb(7 89 199 / 0.18);
   }
 
+  .customer-portal-mobile .customer-order-filters {
+    gap: 0.38rem !important;
+  }
+
   .customer-portal-mobile .customer-order-filters button {
+    min-height: 2.35rem !important;
     border-color: var(--customer-v4-line) !important;
+    border-radius: 999px !important;
     background: #fff !important;
     color: var(--customer-v4-muted) !important;
+    padding: 0.48rem 0.72rem !important;
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
   }
 
   .customer-portal-mobile .customer-order-filters button.is-active {
@@ -161,19 +169,275 @@
     background: linear-gradient(90deg, var(--customer-v4-blue), var(--customer-v4-gold)) !important;
   }
 
-  /* Booking/map sheet uses the same white, rounded, elevated v4 surface. */
-  .customer-portal-mobile .customer-map-home__sheet {
+  /* HOME — full-map booking surface from the approved reference. */
+  .customer-portal-mobile .customer-map-home__welcome,
+  .customer-portal-mobile .customer-map-home__map-title {
+    display: none !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__stage {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__map-shell {
+    min-height: calc(100dvh - 4.3rem - env(safe-area-inset-bottom)) !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #e9eee8 !important;
+    box-shadow: none !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__map {
+    padding: 0 !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__map > div {
+    min-height: calc(100dvh - 4.3rem - env(safe-area-inset-bottom)) !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__map > div > .grid:first-child {
+    position: absolute !important;
+    z-index: 30 !important;
+    top: 0.78rem !important;
+    right: 0.78rem !important;
+    left: 0.78rem !important;
+    display: grid !important;
+    gap: 0.45rem !important;
+    border: 1px solid rgb(16 24 40 / 0.08) !important;
+    border-radius: 1.05rem !important;
+    background: rgb(255 255 255 / 0.97) !important;
+    padding: 0.68rem !important;
+    box-shadow: 0 12px 30px rgb(16 24 40 / 0.15) !important;
+    backdrop-filter: blur(16px);
+  }
+
+  .customer-portal-mobile .customer-map-home__map > div > .grid:first-child label {
+    color: var(--customer-v4-muted) !important;
+    font-size: 0.58rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__map > div > .grid:first-child input {
+    min-height: 2.65rem !important;
+    margin-top: 0.2rem !important;
     border: 1px solid var(--customer-v4-line) !important;
-    border-radius: 1.75rem 1.75rem 0 0 !important;
-    background: rgb(255 255 255 / 0.98) !important;
-    box-shadow: 0 -16px 40px rgb(16 33 61 / 0.12) !important;
+    border-radius: 0.78rem !important;
+    background: #fff !important;
+    padding: 0.55rem 0.7rem !important;
+    color: var(--customer-v4-navy) !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__map > div > .h-64,
+  .customer-portal-mobile .customer-map-home__map .maplibregl-map {
+    height: calc(100dvh - 4.3rem - env(safe-area-inset-bottom)) !important;
+    min-height: 34rem !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__map .maplibregl-ctrl-group {
+    overflow: hidden !important;
+    border: 1px solid rgb(16 24 40 / 0.08) !important;
+    border-radius: 0.8rem !important;
+    background: #fff !important;
+    box-shadow: 0 8px 20px rgb(16 24 40 / 0.14) !important;
+  }
+
+  /* BOOKING — compact floating sheet, two-column vehicle cards and quote CTA. */
+  .customer-portal-mobile .customer-map-home__sheet,
+  .customer-portal-mobile .customer-map-home__sheet.is-expanded,
+  .customer-portal-mobile .customer-map-home__sheet.is-collapsed {
+    position: fixed !important;
+    z-index: 45 !important;
+    right: 0.55rem !important;
+    left: 0.55rem !important;
+    bottom: calc(4.3rem + env(safe-area-inset-bottom)) !important;
+    top: auto !important;
+    width: auto !important;
+    max-height: min(67dvh, 42rem) !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid rgb(16 24 40 / 0.08) !important;
+    border-radius: 1.45rem !important;
+    background: rgb(255 255 255 / 0.985) !important;
+    padding: 0.28rem 0.72rem 0.78rem !important;
+    box-shadow: 0 -12px 34px rgb(16 24 40 / 0.12), 0 18px 44px rgb(16 24 40 / 0.18) !important;
+    backdrop-filter: blur(20px);
+  }
+
+  .customer-portal-mobile .customer-map-home__sheet.is-collapsed {
+    min-height: 8.5rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__handle {
+    width: 2.7rem !important;
+    height: 1.2rem !important;
+    margin: 0 auto 0.2rem !important;
+    background: transparent !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__handle::before {
+    display: block !important;
+    width: 2.7rem !important;
+    height: 0.23rem !important;
+    margin-top: 0.45rem !important;
+    border-radius: 999px !important;
+    background: #c7c9ce !important;
+    content: "" !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__sheet-heading {
+    align-items: flex-start !important;
+    gap: 0.55rem !important;
+    padding: 0 0.08rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__sheet-heading h2 {
+    margin-top: 0.15rem !important;
+    color: var(--customer-v4-navy) !important;
+    font-size: 1rem !important;
+    line-height: 1.16 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__quote span,
+  .customer-portal-mobile .customer-map-home__quote small {
+    color: #98a2b3 !important;
+    font-size: 0.5rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__quote strong {
+    color: var(--customer-v4-blue) !important;
+    font-size: 0.92rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__sheet-body {
+    max-height: calc(min(67dvh, 42rem) - 6rem) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding: 0 0.05rem 0.3rem !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .customer-portal-mobile .customer-map-home__sheet-body::-webkit-scrollbar {
+    display: none;
+  }
+
+  .customer-portal-mobile .customer-map-home__readiness {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 0.28rem !important;
+    margin: 0.55rem 0 0.62rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__readiness span {
+    min-height: 1.9rem !important;
+    border: 1px solid var(--customer-v4-line) !important;
+    border-radius: 0.62rem !important;
+    background: #f8fafc !important;
+    padding: 0.35rem 0.08rem !important;
+    color: #7b8492 !important;
+    font-size: 0.49rem !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__readiness span.is-ready {
+    border-color: #b7dfc7 !important;
+    background: #edf8f1 !important;
+    color: #137a45 !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__vehicles {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    gap: 0.55rem !important;
+    overflow: visible !important;
+    margin-top: 0.45rem !important;
+    padding-bottom: 0 !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__vehicles button {
+    position: relative !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--customer-v4-line) !important;
+    border-radius: 0.88rem !important;
+    background: #fff !important;
+    padding: 0 !important;
+    text-align: left !important;
+    box-shadow: 0 2px 8px rgb(16 24 40 / 0.04) !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__vehicles button img {
+    width: 100% !important;
+    aspect-ratio: 1.65 / 1 !important;
+    border-radius: 0 !important;
+    background: #f5f4f0 !important;
+    object-fit: cover !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__vehicles button strong,
+  .customer-portal-mobile .customer-map-home__vehicles button small {
+    display: block !important;
+    padding-right: 0.58rem !important;
+    padding-left: 0.58rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__vehicles button strong {
+    margin-top: 0.42rem !important;
+    color: var(--customer-v4-navy) !important;
+    font-size: 0.7rem !important;
+    font-weight: 900 !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__vehicles button small {
+    margin: 0.12rem 0 0.52rem !important;
+    color: var(--customer-v4-muted) !important;
+    font-size: 0.55rem !important;
+    line-height: 0.78rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__vehicles button.is-active {
+    border-color: var(--customer-v4-blue) !important;
+    background: #fff !important;
+    color: var(--customer-v4-navy) !important;
+    box-shadow: 0 0 0 2px rgb(7 89 199 / 0.11) !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__load-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.52rem !important;
+    margin-top: 0.6rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__load-grid label,
+  .customer-portal-mobile .customer-map-home__load-grid > div,
+  .customer-portal-mobile .customer-map-home__payment-method label {
+    border: 1px solid #eaecf0 !important;
+    border-radius: 0.78rem !important;
+    background: #fff !important;
+    padding: 0.58rem !important;
+    color: var(--customer-v4-muted) !important;
+    font-size: 0.58rem !important;
   }
 
   .customer-portal-mobile .customer-map-home__sheet input,
   .customer-portal-mobile .customer-map-home__sheet select,
   .customer-portal-mobile .customer-map-home__sheet textarea {
-    border-color: var(--customer-v4-line) !important;
-    border-radius: 1rem !important;
+    min-height: 2.45rem !important;
+    border-color: #d0d5dd !important;
+    border-radius: 0.68rem !important;
     background: #fff !important;
     color: var(--customer-v4-navy) !important;
   }
@@ -186,11 +450,60 @@
     outline-offset: 1px;
   }
 
-  /* Bottom nav mirrors the dedicated mobile app: white chrome, blue active state, gold underline. */
+  .customer-portal-mobile .customer-map-home__confirm-dock {
+    position: static !important;
+    margin-top: 0.7rem !important;
+    border-top: 1px solid #eaecf0 !important;
+    background: #fff !important;
+    padding-top: 0.62rem !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__confirm {
+    min-height: 3rem !important;
+    margin-top: 0.42rem !important;
+    border: 0 !important;
+    border-radius: 0.82rem !important;
+    background: var(--customer-v4-blue) !important;
+    color: #fff !important;
+    font-size: 0.82rem !important;
+    font-weight: 850 !important;
+    box-shadow: 0 10px 24px rgb(7 89 199 / 0.2) !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__confirm:disabled {
+    background: #d0d5dd !important;
+    color: #fff !important;
+    box-shadow: none !important;
+  }
+
+  /* TRACKING — keep the map visually dominant and status surfaces compact. */
+  .customer-portal-mobile .customer-live-page {
+    min-height: 100dvh !important;
+    background: #eef2f7 !important;
+    color: var(--customer-v4-navy) !important;
+  }
+
+  .customer-portal-mobile .customer-live-page__header > a,
+  .customer-portal-mobile .customer-live-page__header > div,
+  .customer-portal-mobile .customer-live-page__badge,
+  .customer-portal-mobile .customer-live-page__driver,
+  .customer-portal-mobile .customer-live-page__route {
+    border-color: rgb(16 24 40 / 0.08) !important;
+    background: rgb(255 255 255 / 0.97) !important;
+    box-shadow: 0 8px 24px rgb(16 24 40 / 0.12) !important;
+  }
+
+  .customer-portal-mobile .customer-live-page__badge {
+    border-color: #b7dfc7 !important;
+    background: rgb(237 248 241 / 0.97) !important;
+    color: #137a45 !important;
+  }
+
+  /* Bottom nav — five compact actions, blue active state and HALO gold marker. */
   .customer-portal-mobile .customer-dashboard-nav,
   .customer-portal-mobile .customer-map-home .customer-dashboard-nav {
     border-top: 1px solid var(--customer-v4-line) !important;
-    background: rgb(255 255 255 / 0.98) !important;
+    background: rgb(255 255 255 / 0.985) !important;
     box-shadow: 0 -10px 30px rgb(16 33 61 / 0.08) !important;
     backdrop-filter: blur(18px);
   }
@@ -235,7 +548,7 @@
     width: 1.9rem;
     height: 1.9rem;
     place-items: center;
-    border-radius: 0.75rem;
+    border-radius: 0.72rem;
     background: transparent;
     color: currentColor;
     font-size: 0;
@@ -263,13 +576,18 @@
   .customer-view-payments {
     padding-bottom: calc(4.3rem + env(safe-area-inset-bottom)) !important;
   }
-
-  .customer-portal-mobile .customer-map-home__sheet {
-    bottom: calc(4.3rem + env(safe-area-inset-bottom)) !important;
-  }
 }
 
 @media (max-width: 340px) {
+  .customer-portal-mobile .customer-map-home__sheet,
+  .customer-portal-mobile .customer-map-home__sheet.is-expanded,
+  .customer-portal-mobile .customer-map-home__sheet.is-collapsed {
+    right: 0.35rem !important;
+    left: 0.35rem !important;
+    padding-right: 0.55rem !important;
+    padding-left: 0.55rem !important;
+  }
+
   .customer-portal-mobile .customer-dashboard-nav__item,
   .customer-portal-mobile .customer-map-home .customer-dashboard-nav__item {
     padding-right: 0.05rem !important;
