@@ -18,106 +18,57 @@
     padding: 0.18rem !important;
   }
 
-  .customer-map-home > .customer-dashboard-nav .customer-dashboard-nav__inner {
-    width: 100% !important;
-    max-width: none !important;
-    min-height: 0 !important;
-    padding: 0 !important;
-  }
-
+  .customer-map-home > .customer-dashboard-nav .customer-dashboard-nav__inner { width: 100% !important; max-width: none !important; min-height: 0 !important; padding: 0 !important; }
   .customer-map-home > .customer-dashboard-nav .customer-dashboard-nav__title { display: none !important; }
-
-  .customer-map-home > .customer-dashboard-nav .customer-dashboard-nav__tabs {
-    display: grid !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 0.12rem !important;
-    width: 100% !important;
-  }
-
-  .customer-map-home > .customer-dashboard-nav .customer-dashboard-nav__item {
-    min-width: 0 !important;
-    min-height: 2.05rem !important;
-    padding: 0.32rem 0.38rem !important;
-    border: 0 !important;
-    border-radius: 999px !important;
-    font-size: 0.61rem !important;
-    line-height: 0.72rem !important;
-    box-shadow: none !important;
-  }
-
+  .customer-map-home > .customer-dashboard-nav .customer-dashboard-nav__tabs { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 0.12rem !important; width: 100% !important; }
+  .customer-map-home > .customer-dashboard-nav .customer-dashboard-nav__item { min-width: 0 !important; min-height: 2.05rem !important; padding: 0.32rem 0.38rem !important; border: 0 !important; border-radius: 999px !important; font-size: 0.61rem !important; line-height: 0.72rem !important; box-shadow: none !important; }
   .customer-map-home > .customer-dashboard-nav .customer-dashboard-nav__icon { display: none !important; }
 
   .customer-view-home .customer-map-home,
   .customer-view-home .customer-map-home__stage,
-  .customer-view-home .customer-map-home__map-shell {
-    min-height: 100dvh !important;
-    height: 100dvh !important;
-  }
-
-  .customer-view-home .customer-map-home__stage {
-    position: relative !important;
-    overflow: hidden !important;
-  }
-
+  .customer-view-home .customer-map-home__map-shell { min-height: 100dvh !important; height: 100dvh !important; }
+  .customer-view-home .customer-map-home__stage { position: relative !important; overflow: hidden !important; }
   .customer-view-home .customer-map-home__map-title { display: none !important; }
+  .customer-view-home .customer-map-home__map { position: absolute !important; inset: 0 !important; height: 100% !important; }
 
-  .customer-view-home .customer-map-home__map {
-    position: absolute !important;
-    inset: 0 !important;
-    height: 100% !important;
-  }
-
-  /* Keep both route rows completely below the floating nav and inside the left safe area. */
+  /* Final landscape left-edge lock: use viewport coordinates, not inherited/transformed card offsets. */
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child {
+    position: fixed !important;
     top: max(4.15rem, calc(env(safe-area-inset-top) + 4.15rem)) !important;
-    left: max(1rem, calc(env(safe-area-inset-left) + 0.75rem)) !important;
+    left: max(0.85rem, calc(env(safe-area-inset-left) + 0.65rem)) !important;
     right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
     width: min(37vw, 20rem) !important;
     max-width: calc(100vw - 7rem - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
     padding: 0.42rem 0.58rem !important;
     border-radius: 0.86rem !important;
   }
 
-  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div {
-    padding: 0.02rem 0 0.02rem 1rem !important;
-  }
-
-  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div {
-    margin-top: 0.1rem !important;
-    padding-top: 0.24rem !important;
-  }
-
-  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div::before {
-    left: 0.08rem !important;
-    top: 1.34rem !important;
-    width: 0.5rem !important;
-    height: 0.5rem !important;
-  }
-
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div { padding: 0.02rem 0 0.02rem 1rem !important; }
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div { margin-top: 0.1rem !important; padding-top: 0.24rem !important; }
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div::before { left: 0.08rem !important; top: 1.34rem !important; width: 0.5rem !important; height: 0.5rem !important; }
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div::before { top: 1.58rem !important; }
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child label { font-size: 0.46rem !important; line-height: 0.58rem !important; }
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child input { min-height: 1.45rem !important; padding: 0.1rem 0.12rem !important; font-size: 0.62rem !important; line-height: 0.78rem !important; }
 
-  /* Right-side My Location stays clear of route card and map zoom controls. */
-  .customer-view-home .customer-map-home__map > .customer-quote-map > .customer-quote-map__status {
-    top: max(4.2rem, calc(env(safe-area-inset-top) + 4.2rem)) !important;
-    right: max(4.4rem, calc(env(safe-area-inset-right) + 4.4rem)) !important;
-    left: auto !important;
-    width: max-content !important;
-  }
-
+  /* Right-side controls remain unchanged. */
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .customer-quote-map__status { top: max(4.2rem, calc(env(safe-area-inset-top) + 4.2rem)) !important; right: max(4.4rem, calc(env(safe-area-inset-right) + 4.4rem)) !important; left: auto !important; width: max-content !important; }
   .customer-view-home .customer-quote-map__actions button:first-child { min-height: 1.85rem !important; padding: 0.32rem 0.58rem !important; font-size: 0.54rem !important; }
+  .customer-view-home .customer-map-home__map .maplibregl-ctrl-top-right { top: max(6.35rem, calc(env(safe-area-inset-top) + 6.35rem)) !important; right: max(0.8rem, calc(env(safe-area-inset-right) + 0.55rem)) !important; }
 
-  .customer-view-home .customer-map-home__map .maplibregl-ctrl-top-right {
-    top: max(6.35rem, calc(env(safe-area-inset-top) + 6.35rem)) !important;
-    right: max(0.8rem, calc(env(safe-area-inset-right) + 0.55rem)) !important;
-  }
-
-  /* Keep collapsed step fully on-screen above the landscape edge. */
+  /* Final collapsed-card left-edge lock: viewport anchored and never translated off-screen. */
   .customer-view-home .customer-map-home__sheet.is-collapsed {
-    left: max(1rem, calc(env(safe-area-inset-left) + 0.75rem)) !important;
+    position: fixed !important;
+    left: max(0.85rem, calc(env(safe-area-inset-left) + 0.65rem)) !important;
     right: auto !important;
     bottom: max(0.75rem, calc(env(safe-area-inset-bottom) + 0.55rem)) !important;
+    top: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
     width: min(39vw, 21rem) !important;
     max-width: calc(100vw - 7rem - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
     min-height: 3.75rem !important;
@@ -132,70 +83,14 @@
   .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-heading h2 { font-size: 0.74rem !important; line-height: 0.88rem !important; }
   .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-toggle { width: 1.9rem !important; height: 1.9rem !important; }
 
-  /* Expanded step: use a scrollable right-side panel instead of covering the whole map. */
-  .customer-view-home .customer-map-home__sheet.is-expanded {
-    top: max(4.15rem, calc(env(safe-area-inset-top) + 4.15rem)) !important;
-    right: max(0.85rem, calc(env(safe-area-inset-right) + 0.65rem)) !important;
-    bottom: max(0.7rem, calc(env(safe-area-inset-bottom) + 0.5rem)) !important;
-    left: auto !important;
-    width: min(58vw, 36rem) !important;
-    max-width: calc(100vw - 22rem - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
-    min-width: 24rem !important;
-    height: auto !important;
-    max-height: none !important;
-    margin: 0 !important;
-    border-radius: 1rem !important;
-    padding: 0.2rem 0.75rem 0.75rem !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain !important;
-    box-shadow: 0 12px 30px rgb(16 24 40 / 0.20) !important;
-  }
-
-  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__handle {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 2 !important;
-    height: 0.55rem !important;
-    width: 2.5rem !important;
-    margin: 0 auto 0.1rem !important;
-  }
-
-  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading {
-    position: sticky !important;
-    top: 0.55rem !important;
-    z-index: 1 !important;
-    min-height: 3.15rem !important;
-    gap: 0.5rem !important;
-    padding: 0.2rem 0 0.35rem !important;
-    background: rgb(255 255 255 / 0.98) !important;
-  }
-
-  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading h2 {
-    font-size: 0.86rem !important;
-    line-height: 1rem !important;
-  }
-
-  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-toggle {
-    width: 2rem !important;
-    height: 2rem !important;
-  }
-
-  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-body {
-    padding-bottom: 0.25rem !important;
-  }
-
-  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 0.25rem !important;
-  }
-
-  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 0.45rem !important;
-  }
-
-  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button {
-    min-height: 5.2rem !important;
-  }
+  /* Expanded step remains the approved scrollable right-side panel. */
+  .customer-view-home .customer-map-home__sheet.is-expanded { top: max(4.15rem, calc(env(safe-area-inset-top) + 4.15rem)) !important; right: max(0.85rem, calc(env(safe-area-inset-right) + 0.65rem)) !important; bottom: max(0.7rem, calc(env(safe-area-inset-bottom) + 0.5rem)) !important; left: auto !important; width: min(58vw, 36rem) !important; max-width: calc(100vw - 22rem - env(safe-area-inset-left) - env(safe-area-inset-right)) !important; min-width: 24rem !important; height: auto !important; max-height: none !important; margin: 0 !important; border-radius: 1rem !important; padding: 0.2rem 0.75rem 0.75rem !important; overflow-x: hidden !important; overflow-y: auto !important; overscroll-behavior: contain !important; box-shadow: 0 12px 30px rgb(16 24 40 / 0.20) !important; }
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__handle { position: sticky !important; top: 0 !important; z-index: 2 !important; height: 0.55rem !important; width: 2.5rem !important; margin: 0 auto 0.1rem !important; }
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading { position: sticky !important; top: 0.55rem !important; z-index: 1 !important; min-height: 3.15rem !important; gap: 0.5rem !important; padding: 0.2rem 0 0.35rem !important; background: rgb(255 255 255 / 0.98) !important; }
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading h2 { font-size: 0.86rem !important; line-height: 1rem !important; }
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-toggle { width: 2rem !important; height: 2rem !important; }
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-body { padding-bottom: 0.25rem !important; }
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 0.25rem !important; }
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.45rem !important; }
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button { min-height: 5.2rem !important; }
 }
