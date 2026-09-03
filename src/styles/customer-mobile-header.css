@@ -1,0 +1,6 @@
+/* Mobile Customer booking screen: remove the large portal header to preserve route/map space. */
+@media (max-width: 639px) {
+  .customer-map-home__header {
+    display: none !important;
+  }
+}
