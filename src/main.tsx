@@ -12,6 +12,7 @@ import "./styles/customer-premium-booking-ui.css";
 import "./styles/customer-mobile-header.css";
 import "./styles/customer-mobile-reference-redesign.css";
 import "./styles/customer-mobile-v4.css";
+import "./styles/customer-mobile-v4-consistency.css";
 import "./styles/admin-order-cleanup.css";
 import "./styles/shared-portal-logo.css";
 
