@@ -64,21 +64,27 @@
     box-shadow: none !important;
   }
 
-  /* Remove the wide status backdrop. Keep only the My Location pill floating at right. */
-  .customer-view-home .customer-quote-map__status {
-    top: calc(max(0.78rem, env(safe-area-inset-top)) + 7.45rem) !important;
+  /* My Location only: pin the pill fully below the route card at the right edge. */
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .customer-quote-map__status {
+    position: absolute !important;
+    top: calc(max(0.78rem, env(safe-area-inset-top)) + 8.85rem) !important;
     right: 1.15rem !important;
+    bottom: auto !important;
     left: auto !important;
-    width: auto !important;
+    z-index: 12 !important;
+    width: max-content !important;
+    max-width: calc(100vw - 2.3rem) !important;
     min-width: 0 !important;
     min-height: 0 !important;
     display: block !important;
+    transform: none !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
+    overflow: visible !important;
   }
 
   .customer-view-home .customer-quote-map__status-copy {
@@ -91,7 +97,7 @@
     max-width: none !important;
     align-items: center !important;
     justify-content: flex-end !important;
-    gap: 0.3rem !important;
+    gap: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
@@ -101,6 +107,9 @@
 
   .customer-view-home .customer-quote-map__actions button:first-child {
     order: 99 !important;
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
     margin: 0 !important;
     width: auto !important;
     min-width: 0 !important;
@@ -117,7 +126,7 @@
   }
 
   .customer-view-home .customer-map-home__map .maplibregl-ctrl-top-right {
-    top: calc(max(0.78rem, env(safe-area-inset-top)) + 10.6rem) !important;
+    top: calc(max(0.78rem, env(safe-area-inset-top)) + 11.65rem) !important;
     right: 1.15rem !important;
   }
 
@@ -180,7 +189,7 @@
     right: 0.72rem !important;
   }
 
-  .customer-view-home .customer-quote-map__status,
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .customer-quote-map__status,
   .customer-view-home .customer-map-home__map .maplibregl-ctrl-top-right {
     right: 0.72rem !important;
   }
