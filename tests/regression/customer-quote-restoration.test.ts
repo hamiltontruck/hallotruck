@@ -9,9 +9,14 @@ const css = await readFile(path.join(process.cwd(), "src/styles/customer-quote-r
 const mobileOverlayCss = await readFile(path.join(process.cwd(), "src/styles/customer-mobile-confirm-overlay.css"), "utf8");
 const premiumCss = await readFile(path.join(process.cwd(), "src/styles/customer-premium-booking-ui.css"), "utf8");
 const main = await readFile(path.join(process.cwd(), "src/main.tsx"), "utf8");
+const routeFirst = await readFile(path.join(process.cwd(), "src/customer-mobile-route-first.ts"), "utf8");
 
-test("Customer quote sheet starts expanded instead of hiding the order form", () => {
-  assert.match(page, /sheetExpanded, setSheetExpanded\] = useState\(true\)/);
+test("Customer mobile starts with the map and route inputs before showing truck choices", () => {
+  assert.match(main, /customer-mobile-route-first/);
+  assert.match(routeFirst, /\(max-width: 639px\)/);
+  assert.match(routeFirst, /customer-map-home__sheet\.is-expanded/);
+  assert.match(routeFirst, /handle\.click\(\)/);
+  assert.match(page, /if \(routePoints\) setSheetExpanded\(true\)/);
   assert.match(page, /customer-map-home__sheet-body/);
 });
 
