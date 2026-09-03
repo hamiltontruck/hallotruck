@@ -14,16 +14,35 @@ function validCoordinate(lng: number | null | undefined, lat: number | null | un
 
 function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: number | null) {
   const element = document.createElement("div");
-  element.className = `customer-tracking-map__marker customer-tracking-map__marker--${kind}`;
   element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : kind === "dropoff" ? "Drop-off location" : "Truck location");
+  element.style.display = "grid";
+  element.style.placeItems = "center";
+  element.style.boxSizing = "border-box";
+  element.style.border = "3px solid #fff";
+  element.style.boxShadow = "0 5px 15px rgba(16,33,61,.25)";
 
-  if (kind === "truck") {
+  if (kind === "pickup") {
+    element.style.width = "20px";
+    element.style.height = "20px";
+    element.style.borderRadius = "50%";
+    element.style.background = "#0759c7";
+  } else if (kind === "dropoff") {
+    element.style.width = "20px";
+    element.style.height = "20px";
+    element.style.borderRadius = "50%";
+    element.style.background = "#f5b400";
+  } else {
+    element.style.width = "34px";
+    element.style.height = "34px";
+    element.style.borderRadius = "12px";
+    element.style.background = "#10213d";
+    element.style.color = "#fff";
+    element.style.fontSize = "17px";
+    element.style.fontWeight = "900";
     element.innerHTML = '<span aria-hidden="true">➤</span>';
     if (heading != null && Number.isFinite(Number(heading))) {
       element.style.transform = `rotate(${Number(heading)}deg)`;
     }
-  } else {
-    element.innerHTML = '<span aria-hidden="true"></span>';
   }
 
   return element;
@@ -116,24 +135,32 @@ export function CustomerTrackingMap({ trip }: { trip: CustomerLiveTrip | undefin
   const hasEndpoints = Boolean(
     trip && validCoordinate(trip.pickup_lng, trip.pickup_lat) && validCoordinate(trip.dropoff_lng, trip.dropoff_lat),
   );
+  const hasTruck = Boolean(trip && validCoordinate(trip.truck_lng, trip.truck_lat));
 
   return (
-    <section className="customer-tracking-map-card" aria-label="Live trip map">
-      <div className="customer-tracking-map-card__head">
+    <section
+      aria-label="Live trip map"
+      style={{ marginTop: 14, overflow: "hidden", border: "1px solid #dfe7f1", borderRadius: 22, background: "#fff", boxShadow: "0 10px 30px rgba(16,33,61,.06)" }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 15px 12px" }}>
         <div>
-          <small>REAL MAP</small>
-          <strong>Pickup → Drop-off → Truck</strong>
+          <small style={{ display: "block", color: "#0759c7", fontSize: 10, fontWeight: 900, letterSpacing: ".08em" }}>REAL MAP</small>
+          <strong style={{ display: "block", marginTop: 4, color: "#10213d", fontSize: 15 }}>Pickup → Drop-off → Truck</strong>
         </div>
-        <span>{trip?.truck_lat != null && trip?.truck_lng != null ? "GPS live" : "Waiting GPS"}</span>
+        <span style={{ borderRadius: 999, background: hasTruck ? "#ecfdf3" : "#fff7ed", padding: "6px 9px", color: hasTruck ? "#027a48" : "#b54708", fontSize: 10, fontWeight: 900 }}>
+          {hasTruck ? "GPS LIVE" : "WAITING GPS"}
+        </span>
       </div>
-      <div ref={containerRef} className="customer-tracking-map" />
+      <div ref={containerRef} style={{ width: "100%", height: 310, background: "#dfe9f5" }} />
       {!hasEndpoints && (
-        <p className="customer-tracking-map-card__note">Pickup/drop-off coordinates secure live-trip RPC irraa yeroo argaman map irratti mul'atu.</p>
+        <p style={{ margin: 0, padding: "10px 14px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>
+          Pickup/drop-off coordinates secure live-trip RPC irraa yeroo argaman map irratti mul'atu.
+        </p>
       )}
-      <div className="customer-tracking-map-card__legend" aria-label="Map legend">
-        <span><i className="pickup" /> Pickup</span>
-        <span><i className="dropoff" /> Drop-off</span>
-        <span><i className="truck" /> Truck</span>
+      <div aria-label="Map legend" style={{ display: "flex", flexWrap: "wrap", gap: 12, padding: "11px 14px 13px", color: "#68778d", fontSize: 10, fontWeight: 800 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 9, height: 9, borderRadius: 999, background: "#0759c7" }} /> Pickup</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 9, height: 9, borderRadius: 999, background: "#f5b400" }} /> Drop-off</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 9, height: 9, borderRadius: 3, background: "#10213d" }} /> Truck</span>
       </div>
     </section>
   );
