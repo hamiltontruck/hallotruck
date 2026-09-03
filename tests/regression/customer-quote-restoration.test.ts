@@ -7,6 +7,7 @@ const page = await readFile(path.join(process.cwd(), "src/pages/CustomerMapHome.
 const service = await readFile(path.join(process.cwd(), "src/services/customer-cargo.service.ts"), "utf8");
 const css = await readFile(path.join(process.cwd(), "src/styles/customer-quote-restoration.css"), "utf8");
 const mobileOverlayCss = await readFile(path.join(process.cwd(), "src/styles/customer-mobile-confirm-overlay.css"), "utf8");
+const premiumCss = await readFile(path.join(process.cwd(), "src/styles/customer-premium-booking-ui.css"), "utf8");
 const main = await readFile(path.join(process.cwd(), "src/main.tsx"), "utf8");
 
 test("Customer quote sheet starts expanded instead of hiding the order form", () => {
@@ -81,4 +82,13 @@ test("Mobile Confirm Order dock stays after form fields instead of covering them
   assert.match(mobileOverlayCss, /customer-map-home__confirm-dock[\s\S]*position:\s*static/);
   assert.match(mobileOverlayCss, /customer-map-home__confirm-dock[\s\S]*bottom:\s*auto/);
   assert.match(mobileOverlayCss, /customer-map-home__confirm-dock[\s\S]*margin:\s*0\.9rem 0 0/);
+});
+
+test("Premium Customer booking UI preserves route inputs while matching the approved card design", () => {
+  assert.match(main, /customer-mobile-confirm-overlay\.css[\s\S]*customer-premium-booking-ui\.css/);
+  assert.match(premiumCss, /customer-map-home__sheet\.is-expanded[\s\S]*top:\s*clamp\(/);
+  assert.match(premiumCss, /customer-map-home__vehicles button\.is-active::after/);
+  assert.match(premiumCss, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(premiumCss, /background:\s*#0b5bd3/);
+  assert.match(premiumCss, /customer-map-home__confirm-dock[\s\S]*position:\s*static/);
 });
