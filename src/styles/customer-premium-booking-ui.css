@@ -1,0 +1,255 @@
+/* Premium Customer booking UI — visual-only refinement based on the approved mobile reference. */
+.customer-map-home__sheet {
+  border-color: rgb(15 23 42 / 0.08);
+  background: rgb(255 255 255 / 0.985);
+  box-shadow: 0 -18px 46px rgb(15 23 42 / 0.16), 0 22px 56px rgb(15 23 42 / 0.14);
+}
+
+.customer-map-home__sheet-heading h2 {
+  color: #101828;
+  letter-spacing: -0.025em;
+}
+
+.customer-map-home__readiness span {
+  min-height: 2.15rem;
+  border-color: #e4e7ec;
+  border-radius: 0.72rem;
+  background: #f8fafc;
+  color: #667085;
+}
+
+.customer-map-home__readiness span.is-ready {
+  border-color: #b7dfc7;
+  background: #edf8f1;
+  color: #137a45;
+}
+
+.customer-map-home__vehicles {
+  gap: 0.75rem;
+}
+
+.customer-map-home__vehicles button {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e4e7ec;
+  border-radius: 1rem;
+  background: #fff;
+  padding: 0;
+  color: #101828;
+  box-shadow: 0 2px 7px rgb(15 23 42 / 0.04);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.customer-map-home__vehicles button:active {
+  transform: scale(0.985);
+}
+
+.customer-map-home__vehicles button img {
+  width: 100%;
+  aspect-ratio: 1.65 / 1;
+  border-radius: 0;
+  background: #f6f4ef;
+  object-fit: cover;
+}
+
+.customer-map-home__vehicles button strong,
+.customer-map-home__vehicles button small {
+  padding-right: 0.72rem;
+  padding-left: 0.72rem;
+}
+
+.customer-map-home__vehicles button strong {
+  margin-top: 0.62rem;
+  color: inherit;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.customer-map-home__vehicles button small {
+  margin-top: 0.18rem;
+  margin-bottom: 0.72rem;
+  color: #667085;
+  font-size: 0.64rem;
+}
+
+.customer-map-home__vehicles button.is-active {
+  border-color: #0b5bd3;
+  background: #fff;
+  color: #101828;
+  box-shadow: 0 0 0 2px rgb(11 91 211 / 0.12), 0 10px 24px rgb(15 23 42 / 0.08);
+}
+
+.customer-map-home__vehicles button.is-active::after {
+  content: "✓";
+  position: absolute;
+  z-index: 2;
+  top: 0.48rem;
+  right: 0.48rem;
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #0b5bd3;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow: 0 2px 8px rgb(11 91 211 / 0.28);
+}
+
+.customer-map-home__vehicles button.is-active small {
+  color: #667085;
+}
+
+.customer-map-home__load-grid label,
+.customer-map-home__load-grid > div,
+.customer-map-home__payment-method label {
+  border: 1px solid #eaecf0;
+  background: #fff;
+  color: #667085;
+}
+
+.customer-map-home__load-grid input,
+.customer-map-home__load-grid select,
+.customer-map-home__load-grid textarea {
+  border-color: #d0d5dd;
+  background: #fff;
+  color: #101828;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+}
+
+.customer-map-home__load-grid input:focus,
+.customer-map-home__load-grid select:focus,
+.customer-map-home__load-grid textarea:focus {
+  outline: 2px solid rgb(11 91 211 / 0.14);
+  outline-offset: 1px;
+  border-color: #0b5bd3;
+}
+
+.customer-map-home__quote strong {
+  color: #0b5bd3;
+}
+
+.customer-map-home__confirm {
+  border-radius: 0.9rem;
+  background: #0b5bd3;
+  box-shadow: 0 12px 28px rgb(11 91 211 / 0.22);
+}
+
+.customer-map-home__confirm:disabled {
+  background: #d0d5dd;
+  color: #fff;
+}
+
+.customer-map-home__confirm-dock.is-ready .customer-map-home__confirm {
+  box-shadow: 0 12px 28px rgb(11 91 211 / 0.24);
+}
+
+@media (max-width: 639px) {
+  /* Keep both route inputs usable: the booking sheet starts lower than the pickup/drop-off card. */
+  .customer-map-home__sheet.is-expanded {
+    top: clamp(19.5rem, 42dvh, 25rem);
+    bottom: 0;
+    max-height: none;
+    border-radius: 1.55rem 1.55rem 0 0;
+    padding: 0.25rem 0.85rem calc(0.9rem + env(safe-area-inset-bottom));
+  }
+
+  .customer-map-home__sheet.is-collapsed {
+    top: auto;
+    bottom: 0;
+  }
+
+  .customer-map-home__handle {
+    height: 1.8rem;
+  }
+
+  .customer-map-home__sheet-heading {
+    column-gap: 0.55rem;
+    row-gap: 0.3rem;
+  }
+
+  .customer-map-home__sheet-heading h2 {
+    font-size: 1rem;
+    line-height: 1.15rem;
+  }
+
+  .customer-map-home__readiness {
+    gap: 0.34rem;
+    margin: 0.7rem 0 0.72rem;
+  }
+
+  .customer-map-home__readiness span {
+    padding: 0.42rem 0.14rem;
+    font-size: 0.53rem;
+  }
+
+  .customer-map-home__vehicles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.68rem;
+    margin-top: 0.45rem;
+  }
+
+  .customer-map-home__vehicles button {
+    min-height: 0;
+    border-radius: 0.95rem;
+  }
+
+  .customer-map-home__vehicles button img {
+    aspect-ratio: 1.55 / 1;
+  }
+
+  .customer-map-home__vehicles button strong {
+    font-size: 0.76rem;
+  }
+
+  .customer-map-home__vehicles button small {
+    font-size: 0.61rem;
+    line-height: 0.86rem;
+  }
+
+  .customer-map-home__load-grid {
+    gap: 0.65rem;
+    margin-top: 0.72rem;
+  }
+
+  .customer-map-home__load-grid label,
+  .customer-map-home__load-grid > div {
+    border-radius: 0.85rem;
+    padding: 0.68rem;
+  }
+
+  .customer-map-home__payment-method {
+    gap: 0.6rem;
+  }
+
+  .customer-map-home__confirm-dock {
+    position: static;
+    margin-top: 0.9rem;
+    border-top: 1px solid #eaecf0;
+    background: #fff;
+    padding-top: 0.75rem;
+  }
+
+  .customer-map-home__confirm {
+    min-height: 3.25rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .customer-map-home__sheet.is-expanded {
+    top: clamp(18.75rem, 41dvh, 23rem);
+  }
+
+  .customer-map-home__vehicles {
+    gap: 0.55rem;
+  }
+
+  .customer-map-home__vehicles button strong,
+  .customer-map-home__vehicles button small {
+    padding-right: 0.58rem;
+    padding-left: 0.58rem;
+  }
+}
