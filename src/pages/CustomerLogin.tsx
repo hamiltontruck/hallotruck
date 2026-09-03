@@ -224,8 +224,15 @@ export function CustomerLogin({
 
       <section className="grid place-items-center p-5 py-10">
         <form onSubmit={submit} className="w-full max-w-md border border-line bg-white p-7 sm:p-9">
-          <div className="flex flex-wrap items-center justify-between gap-4"><Link to="/" className="font-display text-xl font-bold">HALLO<span className="text-amber">TRUCK</span></Link><div className="lg:hidden"><LanguageSwitcher /></div></div>
-          <p className="mt-2 font-mono text-[10px] tracking-[.2em] text-emerald-700">{t("customer.label")}</p>
+          <div className="relative">
+            <div className="absolute right-0 top-0 lg:hidden"><LanguageSwitcher /></div>
+            <div className="px-14 text-center">
+              <Link to="/" className="font-display text-xl font-bold">HALLO<span className="text-amber">TRUCK</span></Link>
+              <p className="mt-2 whitespace-nowrap font-mono text-[10px] tracking-[.16em] text-emerald-700">
+                SHIPPERS <span className="text-amber">•</span> CUSTOMERS <span className="text-amber">•</span> ORDER
+              </p>
+            </div>
+          </div>
           <h2 className="mt-8 font-display text-3xl font-bold">{resetMode ? resetCopy.customerTitle : mode === "login" ? t("customer.login.title") : t("customer.signup.title")}</h2>
           <p className="mt-2 text-sm leading-6 text-steel">{resetMode ? resetCopy.customerDescription : mode === "login" ? t("customer.login.desc") : t("customer.signup.desc")}</p>
 
