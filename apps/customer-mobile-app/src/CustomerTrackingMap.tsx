@@ -88,7 +88,6 @@ export function CustomerTrackingMap({ trip }: { trip: CustomerLiveTrip | undefin
       style: mapStyle,
       center: [39.6, 8.8],
       zoom: 6,
-      attributionControl: true,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     mapRef.current = map;
