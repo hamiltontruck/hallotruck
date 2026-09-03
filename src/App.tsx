@@ -63,7 +63,6 @@ import "./styles/customer-nearby-home-bridge.css";
 import "./styles/customer-live-orders.css";
 import "./styles/customer-live-map-smart.css";
 import "./styles/driver-mobile-flow.css";
-import "./styles/driver-mobile-v4-smart.css";
 import "./styles/partner-onboarding.css";
 import "./styles/role-navigation.css";
 
