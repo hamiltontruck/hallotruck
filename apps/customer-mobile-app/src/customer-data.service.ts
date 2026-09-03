@@ -25,9 +25,21 @@ export type CustomerMobileProfile = {
   created_at: string | null;
 };
 
+export type CustomerMobilePayment = {
+  id: string;
+  order_id: string;
+  provider: string | null;
+  provider_ref: string | null;
+  amount_etb: number | null;
+  event: string | null;
+  receipt_path: string | null;
+  created_at: string | null;
+};
+
 export type CustomerMobileData = {
   orders: CustomerMobileOrder[];
   profile: CustomerMobileProfile | null;
+  payments: CustomerMobilePayment[];
 };
 
 export function formatEtb(amount: number | null | undefined) {
@@ -40,7 +52,7 @@ export function formatOrderStatus(value: string | null | undefined) {
   return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export async function loadCustomerMobileData(userId: string): Promise<CustomerMobileData> {
+async function requireCustomerSession(userId: string) {
   const client = customerSupabase;
   if (!client) throw new Error("Customer Supabase is not configured.");
 
@@ -48,6 +60,12 @@ export async function loadCustomerMobileData(userId: string): Promise<CustomerMo
   if (authError || !auth.user || auth.user.id !== userId) {
     throw new Error("Customer session expired.");
   }
+
+  return client;
+}
+
+export async function loadCustomerMobileData(userId: string): Promise<CustomerMobileData> {
+  const client = await requireCustomerSession(userId);
 
   const [ordersResult, profileResult] = await Promise.all([
     client
@@ -61,13 +79,42 @@ export async function loadCustomerMobileData(userId: string): Promise<CustomerMo
   if (ordersResult.error) throw new Error(ordersResult.error.message);
   if (profileResult.error) throw new Error(profileResult.error.message);
 
+  const orders = (ordersResult.data ?? []) as CustomerMobileOrder[];
   const profile = ((profileResult.data?.[0] ?? null) as CustomerMobileProfile | null);
   if (profile && profile.id !== userId) {
     throw new Error("Customer profile ownership mismatch.");
   }
 
+  const orderIds = orders.map((order) => order.id);
+  let payments: CustomerMobilePayment[] = [];
+
+  if (orderIds.length) {
+    const paymentResult = await client
+      .from("payments")
+      .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,created_at")
+      .in("order_id", orderIds)
+      .order("created_at", { ascending: false });
+
+    if (paymentResult.error) throw new Error(paymentResult.error.message);
+    payments = (paymentResult.data ?? []) as CustomerMobilePayment[];
+  }
+
   return {
-    orders: (ordersResult.data ?? []) as CustomerMobileOrder[],
+    orders,
     profile,
+    payments,
   };
+}
+
+export async function createCustomerPaymentReceiptUrl(userId: string, path: string) {
+  const client = await requireCustomerSession(userId);
+  const cleanPath = path.trim();
+  if (!cleanPath) throw new Error("Payment receipt path is missing.");
+
+  const { data, error } = await client.storage
+    .from("payment-receipts")
+    .createSignedUrl(cleanPath, 300);
+
+  if (error) throw new Error(error.message);
+  return data.signedUrl;
 }
