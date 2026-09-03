@@ -6,6 +6,7 @@ import {
   type CustomerTrackingData,
   type CustomerTrackingOrder,
 } from "./customer-tracking.service";
+import { CustomerTrackingMap } from "./CustomerTrackingMap";
 
 type TrackingState =
   | { kind: "loading" }
@@ -139,28 +140,31 @@ function DriverCard({ assignment }: { assignment: CustomerTrackingAssignment | u
 function LivePositionCard({ trip }: { trip: CustomerLiveTrip | undefined }) {
   const hasGps = trip?.truck_lat != null && trip?.truck_lng != null;
   return (
-    <section style={{ ...cardStyle, marginTop: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <div><small style={{ color: "#0759c7", fontWeight: 900 }}>LIVE GPS SNAPSHOT</small><h2 style={{ margin: "5px 0 0", fontSize: 19 }}>{hasGps ? "Truck location received" : "GPS update eeggachaa jira"}</h2></div>
-        <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 999, background: hasGps ? "#12b76a" : "#f5b400", boxShadow: hasGps ? "0 0 0 6px rgba(18,183,106,.12)" : "0 0 0 6px rgba(245,180,0,.12)" }} />
-      </div>
-
-      <div style={{ marginTop: 15, borderRadius: 18, background: "linear-gradient(145deg,#eaf2ff,#f8fbff)", padding: 15 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div><small style={{ color: "#68778d" }}>Truck latitude</small><strong style={{ display: "block", marginTop: 3 }}>{formatCoordinate(trip?.truck_lat)}</strong></div>
-          <div><small style={{ color: "#68778d" }}>Truck longitude</small><strong style={{ display: "block", marginTop: 3 }}>{formatCoordinate(trip?.truck_lng)}</strong></div>
-          <div><small style={{ color: "#68778d" }}>Speed</small><strong style={{ display: "block", marginTop: 3 }}>{trip?.speed_kmh == null ? "—" : `${Math.round(Number(trip.speed_kmh))} km/h`}</strong></div>
-          <div><small style={{ color: "#68778d" }}>Heading</small><strong style={{ display: "block", marginTop: 3 }}>{trip?.heading == null ? "—" : `${Math.round(Number(trip.heading))}°`}</strong></div>
+    <>
+      <CustomerTrackingMap trip={trip} />
+      <section style={{ ...cardStyle, marginTop: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div><small style={{ color: "#0759c7", fontWeight: 900 }}>LIVE GPS SNAPSHOT</small><h2 style={{ margin: "5px 0 0", fontSize: 19 }}>{hasGps ? "Truck location received" : "GPS update eeggachaa jira"}</h2></div>
+          <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 999, background: hasGps ? "#12b76a" : "#f5b400", boxShadow: hasGps ? "0 0 0 6px rgba(18,183,106,.12)" : "0 0 0 6px rgba(245,180,0,.12)" }} />
         </div>
-        <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid #d8e5f5" }}><small style={{ color: "#68778d" }}>Last GPS record</small><strong style={{ display: "block", marginTop: 3, fontSize: 12 }}>{formatRecordedAt(trip?.recorded_at)}</strong></div>
-      </div>
 
-      <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 11 }}>
-        <div style={{ borderRadius: 14, background: "#f8fafc", padding: 11 }}><span style={{ color: "#68778d" }}>Pickup GPS</span><strong style={{ display: "block", marginTop: 4 }}>{formatCoordinate(trip?.pickup_lat)}, {formatCoordinate(trip?.pickup_lng)}</strong></div>
-        <div style={{ borderRadius: 14, background: "#f8fafc", padding: 11 }}><span style={{ color: "#68778d" }}>Drop-off GPS</span><strong style={{ display: "block", marginTop: 4 }}>{formatCoordinate(trip?.dropoff_lat)}, {formatCoordinate(trip?.dropoff_lng)}</strong></div>
-      </div>
-      <p style={{ margin: "12px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>ETA ykn route hin tilmaamamu. Kun existing secured live-trip RPC irraa dhufe GPS snapshot qofa dha.</p>
-    </section>
+        <div style={{ marginTop: 15, borderRadius: 18, background: "linear-gradient(145deg,#eaf2ff,#f8fbff)", padding: 15 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div><small style={{ color: "#68778d" }}>Truck latitude</small><strong style={{ display: "block", marginTop: 3 }}>{formatCoordinate(trip?.truck_lat)}</strong></div>
+            <div><small style={{ color: "#68778d" }}>Truck longitude</small><strong style={{ display: "block", marginTop: 3 }}>{formatCoordinate(trip?.truck_lng)}</strong></div>
+            <div><small style={{ color: "#68778d" }}>Speed</small><strong style={{ display: "block", marginTop: 3 }}>{trip?.speed_kmh == null ? "—" : `${Math.round(Number(trip.speed_kmh))} km/h`}</strong></div>
+            <div><small style={{ color: "#68778d" }}>Heading</small><strong style={{ display: "block", marginTop: 3 }}>{trip?.heading == null ? "—" : `${Math.round(Number(trip.heading))}°`}</strong></div>
+          </div>
+          <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid #d8e5f5" }}><small style={{ color: "#68778d" }}>Last GPS record</small><strong style={{ display: "block", marginTop: 3, fontSize: 12 }}>{formatRecordedAt(trip?.recorded_at)}</strong></div>
+        </div>
+
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 11 }}>
+          <div style={{ borderRadius: 14, background: "#f8fafc", padding: 11 }}><span style={{ color: "#68778d" }}>Pickup GPS</span><strong style={{ display: "block", marginTop: 4 }}>{formatCoordinate(trip?.pickup_lat)}, {formatCoordinate(trip?.pickup_lng)}</strong></div>
+          <div style={{ borderRadius: 14, background: "#f8fafc", padding: 11 }}><span style={{ color: "#68778d" }}>Drop-off GPS</span><strong style={{ display: "block", marginTop: 4 }}>{formatCoordinate(trip?.dropoff_lat)}, {formatCoordinate(trip?.dropoff_lng)}</strong></div>
+        </div>
+        <p style={{ margin: "12px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>ETA ykn route hin tilmaamamu. Kun existing secured live-trip RPC irraa dhufe GPS snapshot qofa dha.</p>
+      </section>
+    </>
   );
 }
 
