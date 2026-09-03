@@ -1,0 +1,409 @@
+/*
+ * HALO Customer mobile v4 — expanded booking step.
+ * Visual/UI only. Keeps the existing Customer Portal, truck choices, cargo
+ * validation, quote calculation and order submission behavior unchanged.
+ */
+@media (max-width: 639px) {
+  /* Step 02 becomes the clean rounded phone sheet from the approved reference. */
+  .customer-view-home .customer-map-home__sheet.is-expanded {
+    z-index: 82 !important;
+    top: max(0.45rem, env(safe-area-inset-top)) !important;
+    right: 0.42rem !important;
+    bottom: max(0.45rem, env(safe-area-inset-bottom)) !important;
+    left: 0.42rem !important;
+    width: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid rgb(16 24 40 / 0.08) !important;
+    border-radius: 1.6rem !important;
+    background: rgb(255 255 255 / 0.995) !important;
+    padding: 0.22rem 0.7rem 0.72rem !important;
+    box-shadow: 0 20px 55px rgb(16 24 40 / 0.22) !important;
+    backdrop-filter: blur(22px);
+  }
+
+  /* The full booking sheet visually owns the viewport, as in the reference. */
+  .customer-view-home .customer-map-home:has(.customer-map-home__sheet.is-expanded) .customer-dashboard-nav {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__handle {
+    width: 3rem !important;
+    height: 1.35rem !important;
+    margin-bottom: 0.08rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__handle::before {
+    width: 2.8rem !important;
+    height: 0.22rem !important;
+    margin-top: 0.48rem !important;
+    background: #aeb5c0 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: start !important;
+    gap: 0.3rem 0.55rem !important;
+    padding: 0.05rem 0.12rem 0.38rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading > div:first-child {
+    min-width: 0 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading .customer-eyebrow {
+    color: #3c9b78 !important;
+    font-size: 0.52rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.09em !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading h2 {
+    max-width: 15rem !important;
+    margin-top: 0.18rem !important;
+    overflow: hidden !important;
+    color: #101828 !important;
+    font-size: 1.02rem !important;
+    font-weight: 900 !important;
+    line-height: 1.16rem !important;
+    letter-spacing: -0.025em !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__quote {
+    align-self: center !important;
+    padding: 0.08rem 0 !important;
+    text-align: right !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__quote span,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__quote small {
+    display: none !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__quote strong {
+    color: #0759c7 !important;
+    font-size: 0.8rem !important;
+    font-weight: 900 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-toggle {
+    grid-column: 2 !important;
+    grid-row: 1 / span 2 !important;
+    width: 2.35rem !important;
+    height: 2.35rem !important;
+    align-self: center !important;
+    border: 1px solid #e4e7ec !important;
+    border-radius: 999px !important;
+    background: #fff !important;
+    color: #667085 !important;
+    box-shadow: 0 3px 10px rgb(16 24 40 / 0.06) !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-body {
+    max-height: none !important;
+    height: calc(100% - 4.55rem) !important;
+    overflow-y: auto !important;
+    padding: 0.05rem 0.06rem 0.4rem !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-body::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Route / Truck / Cargo / Load / Quote readiness row. */
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness {
+    position: sticky !important;
+    z-index: 4 !important;
+    top: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 0.28rem !important;
+    margin: 0 0 0.62rem !important;
+    background: rgb(255 255 255 / 0.985) !important;
+    padding: 0.28rem 0 0.22rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness span {
+    min-height: 2rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.18rem !important;
+    border: 1px solid #e4e7ec !important;
+    border-radius: 0.68rem !important;
+    background: #fbfcfe !important;
+    padding: 0.34rem 0.12rem !important;
+    color: #98a2b3 !important;
+    font-size: 0.5rem !important;
+    font-weight: 850 !important;
+    white-space: nowrap !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness span.is-ready {
+    border-color: #b8e2cf !important;
+    background: #eef9f3 !important;
+    color: #247a58 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness span:nth-child(2).is-ready {
+    border-color: #bfd4f5 !important;
+    background: #eef5ff !important;
+    color: #0759c7 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness b {
+    font-size: 0.55rem !important;
+  }
+
+  /* Truck cards match the 2x2 reference while preserving all existing options. */
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    gap: 0.5rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button {
+    position: relative !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid #e4e7ec !important;
+    border-radius: 0.86rem !important;
+    background: #fff !important;
+    padding: 0 !important;
+    color: #101828 !important;
+    text-align: left !important;
+    box-shadow: 0 2px 8px rgb(16 24 40 / 0.035) !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button img {
+    display: block !important;
+    width: 100% !important;
+    aspect-ratio: 1.7 / 1 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #f7f6f3 !important;
+    object-fit: cover !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button strong,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button small {
+    display: block !important;
+    padding-right: 0.58rem !important;
+    padding-left: 0.58rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button strong {
+    margin-top: 0.4rem !important;
+    color: #101828 !important;
+    font-size: 0.68rem !important;
+    font-weight: 900 !important;
+    line-height: 0.9rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button small {
+    margin: 0.1rem 0 0.48rem !important;
+    color: #667085 !important;
+    font-size: 0.54rem !important;
+    line-height: 0.72rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button.is-active,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button[aria-pressed="true"] {
+    border-color: #0b67d8 !important;
+    box-shadow: 0 0 0 1px #0b67d8, 0 5px 16px rgb(11 103 216 / 0.08) !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button[aria-pressed="true"]::after {
+    position: absolute !important;
+    z-index: 3 !important;
+    top: 0.42rem !important;
+    right: 0.42rem !important;
+    display: grid !important;
+    width: 1.12rem !important;
+    height: 1.12rem !important;
+    place-items: center !important;
+    border: 2px solid #fff !important;
+    border-radius: 999px !important;
+    background: #0759c7 !important;
+    color: #fff !important;
+    content: "✓" !important;
+    font-size: 0.58rem !important;
+    font-weight: 950 !important;
+    box-shadow: 0 2px 7px rgb(7 89 199 / 0.22) !important;
+  }
+
+  /* Cargo / packaging / load controls use the same compact card language. */
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.48rem !important;
+    margin-top: 0.6rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid > label,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid > div {
+    min-width: 0 !important;
+    border: 1px solid #eaecf0 !important;
+    border-radius: 0.8rem !important;
+    background: #fff !important;
+    padding: 0.56rem !important;
+    color: #667085 !important;
+    font-size: 0.55rem !important;
+    font-weight: 750 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid label.sm\:col-span-2 {
+    grid-column: 1 / -1 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid input,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid select,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid textarea {
+    width: 100% !important;
+    min-height: 2.45rem !important;
+    margin-top: 0.3rem !important;
+    border: 1px solid #d0d5dd !important;
+    border-radius: 0.68rem !important;
+    background: #fff !important;
+    padding: 0.54rem 0.6rem !important;
+    color: #101828 !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid textarea {
+    min-height: 3.4rem !important;
+    resize: vertical !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid strong {
+    display: block !important;
+    margin-top: 0.25rem !important;
+    color: #101828 !important;
+    font-size: 0.7rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__payment-method {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+    margin-top: 0.62rem !important;
+    border: 1px solid #eaecf0 !important;
+    border-radius: 0.86rem !important;
+    background: #fff !important;
+    padding: 0.58rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__payment-method legend {
+    padding: 0 0.18rem !important;
+    color: #667085 !important;
+    font-size: 0.55rem !important;
+    font-weight: 850 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__payment-method label {
+    min-height: 2.45rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.38rem !important;
+    border: 1px solid #e4e7ec !important;
+    border-radius: 0.72rem !important;
+    background: #fbfcfe !important;
+    padding: 0.52rem 0.58rem !important;
+    color: #667085 !important;
+    font-size: 0.58rem !important;
+    font-weight: 800 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__payment-method label.is-active {
+    border-color: #bcd2f3 !important;
+    background: #eef5ff !important;
+    color: #0759c7 !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__privacy,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__quote-state,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__error {
+    margin-top: 0.5rem !important;
+    border-radius: 0.72rem !important;
+    font-size: 0.58rem !important;
+    line-height: 0.85rem !important;
+  }
+
+  /* Quote + primary CTA finish the sheet like the reference footer. */
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__confirm-dock {
+    position: sticky !important;
+    z-index: 5 !important;
+    bottom: -0.42rem !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(8.8rem, 46%) !important;
+    align-items: center !important;
+    gap: 0.62rem !important;
+    margin: 0.62rem -0.06rem 0 !important;
+    border-top: 1px solid #eaecf0 !important;
+    background: rgb(255 255 255 / 0.985) !important;
+    padding: 0.62rem 0.06rem 0.42rem !important;
+    backdrop-filter: blur(18px);
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__confirm-dock p {
+    margin: 0 !important;
+    color: #667085 !important;
+    font-size: 0.54rem !important;
+    line-height: 0.8rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__confirm {
+    min-height: 3rem !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0.82rem !important;
+    background: #0759c7 !important;
+    color: #fff !important;
+    font-size: 0.78rem !important;
+    font-weight: 900 !important;
+    box-shadow: 0 10px 24px rgb(7 89 199 / 0.2) !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__confirm:disabled {
+    background: #d0d5dd !important;
+    color: #fff !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .customer-view-home .customer-map-home__sheet.is-expanded {
+    right: 0.26rem !important;
+    left: 0.26rem !important;
+    padding-right: 0.54rem !important;
+    padding-left: 0.54rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness {
+    gap: 0.18rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness span {
+    font-size: 0.45rem !important;
+    padding-right: 0.05rem !important;
+    padding-left: 0.05rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles,
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__load-grid {
+    gap: 0.38rem !important;
+  }
+}

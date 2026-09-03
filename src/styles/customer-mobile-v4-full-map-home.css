@@ -1,0 +1,274 @@
+/*
+ * HALO Customer mobile v4 — full-map Home lock.
+ *
+ * Visual/UI only. The Customer Home phone viewport is map-first like the
+ * approved reference: route controls float over the map, the booking sheet
+ * floats above the five-item bottom nav, and legacy header chrome does not
+ * consume map height. No routing, auth, order, payment or backend behavior.
+ */
+@media (max-width: 639px) {
+  .customer-portal-mobile.customer-view-home {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+    background: #e9eee8 !important;
+  }
+
+  .customer-view-home .customer-map-home {
+    position: relative !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+    background: #e9eee8 !important;
+  }
+
+  /* The approved v4 Home starts directly on the map. */
+  .customer-view-home .customer-map-home__header {
+    display: none !important;
+  }
+
+  .customer-view-home .customer-map-home__stage {
+    position: fixed !important;
+    z-index: 0 !important;
+    inset: 0 0 calc(4.3rem + env(safe-area-inset-bottom)) 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .customer-view-home .customer-map-home__map-shell,
+  .customer-view-home .customer-map-home__map,
+  .customer-view-home .customer-map-home__map > .customer-quote-map {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .customer-view-home .customer-map-home__map-shell {
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .h-64,
+  .customer-view-home .customer-map-home__map .maplibregl-map {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* Pickup / drop-off control card floats at the top of the map. */
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child {
+    position: absolute !important;
+    z-index: 35 !important;
+    top: max(0.68rem, env(safe-area-inset-top)) !important;
+    right: 0.72rem !important;
+    left: 0.72rem !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0.38rem !important;
+    margin: 0 !important;
+    border: 1px solid rgb(16 24 40 / 0.08) !important;
+    border-radius: 1rem !important;
+    background: rgb(255 255 255 / 0.97) !important;
+    padding: 0.58rem 0.62rem !important;
+    box-shadow: 0 12px 28px rgb(16 24 40 / 0.14) !important;
+    backdrop-filter: blur(18px);
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child label {
+    color: #667085 !important;
+    font-size: 0.55rem !important;
+    font-weight: 850 !important;
+    letter-spacing: 0.055em !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child input {
+    min-height: 2.45rem !important;
+    margin-top: 0.15rem !important;
+    border: 1px solid #e4e7ec !important;
+    border-radius: 0.72rem !important;
+    background: #fff !important;
+    padding: 0.48rem 0.62rem !important;
+    color: #10213d !important;
+    font-size: 0.73rem !important;
+    font-weight: 750 !important;
+    box-shadow: none !important;
+  }
+
+  /* Keep route feedback usable but make My Location the dominant map action. */
+  .customer-view-home .customer-quote-map__status {
+    position: absolute !important;
+    z-index: 36 !important;
+    top: calc(max(0.68rem, env(safe-area-inset-top)) + 8.65rem) !important;
+    right: 0.72rem !important;
+    left: 0.72rem !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 0.38rem !important;
+    margin: 0 !important;
+    pointer-events: none;
+  }
+
+  .customer-view-home .customer-quote-map__status-copy {
+    justify-self: start !important;
+    max-width: min(68vw, 16rem) !important;
+    overflow: hidden !important;
+    border: 1px solid rgb(16 24 40 / 0.06) !important;
+    border-radius: 999px !important;
+    background: rgb(255 255 255 / 0.92) !important;
+    padding: 0.38rem 0.58rem !important;
+    color: #667085 !important;
+    font-size: 0.56rem !important;
+    line-height: 0.76rem !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    box-shadow: 0 5px 16px rgb(16 24 40 / 0.08) !important;
+    backdrop-filter: blur(12px);
+  }
+
+  .customer-view-home .customer-quote-map__status-copy strong {
+    font-weight: 800 !important;
+  }
+
+  .customer-view-home .customer-quote-map__actions {
+    display: flex !important;
+    width: auto !important;
+    flex-wrap: wrap !important;
+    justify-self: end !important;
+    justify-content: flex-end !important;
+    gap: 0.3rem !important;
+    pointer-events: auto;
+  }
+
+  .customer-view-home .customer-quote-map__actions button {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 2.15rem !important;
+    flex: 0 0 auto !important;
+    border: 1px solid #d9e5f6 !important;
+    border-radius: 999px !important;
+    background: rgb(255 255 255 / 0.96) !important;
+    padding: 0.42rem 0.62rem !important;
+    color: #0759c7 !important;
+    font-size: 0.58rem !important;
+    font-weight: 850 !important;
+    box-shadow: 0 6px 18px rgb(16 24 40 / 0.1) !important;
+  }
+
+  /* Before a route exists the reference shows only the compact location pill. */
+  .customer-view-home .customer-quote-map__status:has(.customer-quote-map__actions button:only-child) {
+    grid-template-columns: 1fr auto !important;
+  }
+
+  .customer-view-home .customer-quote-map__status:has(.customer-quote-map__actions button:only-child) .customer-quote-map__status-copy {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+  }
+
+  .customer-view-home .customer-map-home__map .maplibregl-ctrl-top-right {
+    top: calc(max(0.68rem, env(safe-area-inset-top)) + 11.7rem) !important;
+    right: 0.72rem !important;
+  }
+
+  .customer-view-home .customer-map-home__map .maplibregl-ctrl-group {
+    overflow: hidden !important;
+    border: 1px solid rgb(16 24 40 / 0.08) !important;
+    border-radius: 0.78rem !important;
+    background: rgb(255 255 255 / 0.97) !important;
+    box-shadow: 0 7px 18px rgb(16 24 40 / 0.12) !important;
+  }
+
+  .customer-view-home .customer-quote-map__hint {
+    display: none !important;
+  }
+
+  /* Compact floating booking sheet above the five-item nav. */
+  .customer-view-home .customer-map-home__sheet,
+  .customer-view-home .customer-map-home__sheet.is-expanded,
+  .customer-view-home .customer-map-home__sheet.is-collapsed {
+    z-index: 55 !important;
+    right: 0.62rem !important;
+    left: 0.62rem !important;
+    bottom: calc(4.3rem + env(safe-area-inset-bottom)) !important;
+    border: 1px solid rgb(16 24 40 / 0.08) !important;
+    background: rgb(255 255 255 / 0.985) !important;
+    box-shadow: 0 -8px 28px rgb(16 24 40 / 0.12), 0 14px 34px rgb(16 24 40 / 0.14) !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed {
+    min-height: 7.35rem !important;
+    max-height: 7.35rem !important;
+    padding-bottom: 0.68rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-heading {
+    min-height: 4.35rem !important;
+    align-items: center !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-heading h2 {
+    max-width: 13rem !important;
+    font-size: 0.92rem !important;
+    line-height: 1.12rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__quote {
+    display: none !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet-toggle {
+    border-color: #d6e3f5 !important;
+    background: #f6f9fe !important;
+    color: #0759c7 !important;
+  }
+
+  .customer-view-home .customer-dashboard-nav {
+    z-index: 70 !important;
+    border-top: 1px solid #e2e9f3 !important;
+    background: rgb(255 255 255 / 0.985) !important;
+    box-shadow: 0 -8px 24px rgb(16 33 61 / 0.08) !important;
+    backdrop-filter: blur(18px);
+  }
+}
+
+@media (max-width: 340px) {
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child {
+    right: 0.48rem !important;
+    left: 0.48rem !important;
+  }
+
+  .customer-view-home .customer-quote-map__status {
+    right: 0.48rem !important;
+    left: 0.48rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet,
+  .customer-view-home .customer-map-home__sheet.is-expanded,
+  .customer-view-home .customer-map-home__sheet.is-collapsed {
+    right: 0.4rem !important;
+    left: 0.4rem !important;
+  }
+}
