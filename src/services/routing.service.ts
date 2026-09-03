@@ -1,3 +1,4 @@
+import { isHalloOperatingCoordinate } from "../customer-operating-region";
 import { supabase } from "./supabase.client";
 
 export interface TruckRoadRoute {
@@ -26,6 +27,10 @@ export async function getTruckRoadRoute(input: {
   vehicleType: string;
   signal?: AbortSignal;
 }): Promise<TruckRoadRoute> {
+  if (!isHalloOperatingCoordinate(input.pickup) || !isHalloOperatingCoordinate(input.dropoff)) {
+    throw new Error("Pickup and drop-off must be inside the HALLO Ethiopia–Djibouti–Somalia operating corridor.");
+  }
+
   const { data, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !data.session) throw new Error("Your session expired. Sign in and try again.");
 
