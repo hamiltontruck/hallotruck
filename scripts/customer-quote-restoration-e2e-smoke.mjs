@@ -61,6 +61,8 @@ const assetFiles = await readdir(path.join(root, "dist", "assets"));
 const cssFile = assetFiles.find((file) => /^index-.*\.css$/.test(file));
 if (!cssFile) throw new Error("Built CSS not found.");
 
+const fixtureImage = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
+
 await writeFile(htmlFile, `<!doctype html>
 <html>
 <head>
@@ -79,11 +81,11 @@ await writeFile(htmlFile, `<!doctype html>
         <div class="customer-map-home__sheet-heading"><div><p class="customer-eyebrow">02 · Truck filannoo</p><h2>Route fili</h2></div><div class="customer-map-home__quote"><span>Gatii tilmaamaa</span><strong>ETB 500,000</strong></div><button type="button" class="customer-map-home__sheet-toggle">⌄</button></div>
         <div class="customer-map-home__sheet-body">
           <div class="customer-map-home__vehicles">
-            <button type="button"><strong>Isuzu 5 Ton</strong><small>5 Tonii</small></button>
-            <button type="button"><strong>Truck 22 Ton</strong><small>22 Tonii</small></button>
-            <button type="button"><strong>Truck 25 Ton</strong><small>25 Tonii</small></button>
-            <button type="button"><strong>Truck 30 Ton</strong><small>30 Tonii</small></button>
-            <button type="button"><strong>Trailer</strong><small>40 Tonii</small></button>
+            <button type="button"><img src="${fixtureImage}" alt=""><strong>Isuzu 5 Ton</strong><small>5 Tonii</small></button>
+            <button type="button"><img src="${fixtureImage}" alt=""><strong>Truck 22 Ton</strong><small>22 Tonii</small></button>
+            <button type="button"><img src="${fixtureImage}" alt=""><strong>Truck 25 Ton</strong><small>25 Tonii</small></button>
+            <button type="button"><img src="${fixtureImage}" alt=""><strong>Truck 30 Ton</strong><small>30 Tonii</small></button>
+            <button type="button"><img src="${fixtureImage}" alt=""><strong>Trailer</strong><small>40 Tonii</small></button>
           </div>
           <div class="customer-map-home__load-grid">
             <label>Gosa feʼumsaa<select><option>Meeshaa waliigalaa</option></select></label>
@@ -110,14 +112,21 @@ await writeFile(htmlFile, `<!doctype html>
       const required = ['Isuzu 5 Ton','Truck 22 Ton','Truck 25 Ton','Truck 30 Ton','Gosa feʼumsaa','Akkaataa kuusaa / feʼumsaa','Tonii','Kuntaala','Gatii tilmaamaa'];
       const text = document.body.textContent ?? '';
       const sheetRect = sheet.getBoundingClientRect();
+      const bodyStyle = getComputedStyle(body);
       document.documentElement.dataset.fields = String(required.every((item) => text.includes(item)));
-      document.documentElement.dataset.expanded = String(getComputedStyle(body).display !== 'none' && sheetRect.height > 220);
+      document.documentElement.dataset.expanded = String(bodyStyle.display !== 'none' && sheetRect.height > 220);
       document.documentElement.dataset.overflow = String(document.documentElement.scrollWidth > document.documentElement.clientWidth || document.body.scrollWidth > document.body.clientWidth);
-      document.documentElement.dataset.scrollable = String(sheet.scrollHeight > sheet.clientHeight);
-      sheet.scrollTop = sheet.scrollHeight;
+      document.documentElement.dataset.scrollable = String(/auto|scroll/.test(bodyStyle.overflowY) && body.scrollHeight > body.clientHeight);
+      body.scrollTop = body.scrollHeight;
       const submitRect = submit.getBoundingClientRect();
+      const bodyRect = body.getBoundingClientRect();
       const finalSheetRect = sheet.getBoundingClientRect();
-      document.documentElement.dataset.submitReachable = String(submitRect.top >= finalSheetRect.top - 2 && submitRect.bottom <= finalSheetRect.bottom + 2);
+      document.documentElement.dataset.submitReachable = String(
+        submitRect.top >= bodyRect.top - 2 &&
+        submitRect.bottom <= bodyRect.bottom + 2 &&
+        submitRect.top >= finalSheetRect.top - 2 &&
+        submitRect.bottom <= finalSheetRect.bottom + 2
+      );
       document.documentElement.dataset.ready = 'true';
     })();
   </script>
@@ -150,7 +159,7 @@ try {
       await rm(profile, { recursive: true, force: true });
     }
   }
-  console.log("Customer quote browser smoke passed at 320px, 360px, 390px and 412px with all truck, tonnage and cargo fields visible and reachable.");
+  console.log("Customer quote browser smoke passed at 320px, 360px, 390px and 412px with a scrollable sheet body and reachable truck, cargo and Confirm Order controls.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([

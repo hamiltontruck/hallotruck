@@ -1,0 +1,599 @@
+/* Customer mobile reference redesign — visual/UI only. Desktop/tablet remains unchanged. */
+@media (max-width: 639px) {
+  :root {
+    --customer-mobile-blue: #0b5bd3;
+    --customer-mobile-ink: #101828;
+    --customer-mobile-muted: #667085;
+    --customer-mobile-line: #e4e7ec;
+    --customer-mobile-surface: #ffffff;
+    --customer-mobile-soft: #f8fafc;
+  }
+
+  /* HOME — full-map booking surface */
+  .customer-map-home {
+    min-height: 100dvh;
+    background: #eef2f7;
+  }
+
+  .customer-map-home__welcome,
+  .customer-map-home__map-title {
+    display: none;
+  }
+
+  .customer-map-home__stage {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .customer-map-home__map-shell {
+    min-height: calc(100dvh - 4.9rem - env(safe-area-inset-bottom));
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: #e9eee8;
+    box-shadow: none;
+  }
+
+  .customer-map-home__map {
+    padding: 0;
+  }
+
+  .customer-map-home__map > div {
+    min-height: calc(100dvh - 4.9rem - env(safe-area-inset-bottom));
+  }
+
+  .customer-map-home__map > div > .grid:first-child {
+    position: absolute;
+    z-index: 30;
+    top: 0.8rem;
+    right: 0.8rem;
+    left: 0.8rem;
+    display: grid;
+    gap: 0.48rem;
+    border: 1px solid rgb(16 24 40 / 0.08);
+    border-radius: 1.1rem;
+    background: rgb(255 255 255 / 0.97);
+    padding: 0.72rem;
+    box-shadow: 0 12px 30px rgb(16 24 40 / 0.16);
+    backdrop-filter: blur(16px);
+  }
+
+  .customer-map-home__map > div > .grid:first-child label {
+    color: var(--customer-mobile-muted);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+  }
+
+  .customer-map-home__map > div > .grid:first-child input {
+    min-height: 2.7rem;
+    margin-top: 0.22rem;
+    border: 1px solid var(--customer-mobile-line);
+    border-radius: 0.78rem;
+    background: #fff;
+    padding: 0.55rem 0.72rem;
+    color: var(--customer-mobile-ink);
+    font-size: 0.78rem;
+    font-weight: 700;
+    box-shadow: none;
+  }
+
+  .customer-map-home__map > div > .mb-2 {
+    position: absolute;
+    z-index: 31;
+    top: 10.2rem;
+    right: 0.8rem;
+    left: 0.8rem;
+    margin: 0;
+    border: 1px solid rgb(16 24 40 / 0.06);
+    border-radius: 0.75rem;
+    background: rgb(255 255 255 / 0.92);
+    padding: 0.48rem 0.62rem;
+    box-shadow: 0 5px 16px rgb(16 24 40 / 0.08);
+    backdrop-filter: blur(12px);
+  }
+
+  .customer-map-home__map > div > .h-64,
+  .customer-map-home__map .maplibregl-map {
+    height: calc(100dvh - 4.9rem - env(safe-area-inset-bottom)) !important;
+    min-height: 34rem;
+    border: 0 !important;
+    border-radius: 0;
+  }
+
+  .customer-map-home__map .maplibregl-ctrl-top-right {
+    top: 12.8rem;
+    right: 0.72rem;
+  }
+
+  .customer-map-home__map .maplibregl-ctrl-group {
+    border: 1px solid rgb(16 24 40 / 0.08);
+    border-radius: 0.82rem;
+    background: #fff;
+    box-shadow: 0 8px 20px rgb(16 24 40 / 0.14);
+  }
+
+  .customer-map-home__map > div > p:last-child {
+    display: none;
+  }
+
+  /* BOOKING SHEET — iOS-like bottom sheet matching the approved reference. */
+  .customer-map-home__sheet,
+  .customer-map-home__sheet.is-expanded,
+  .customer-map-home__sheet.is-collapsed {
+    position: fixed;
+    z-index: 45;
+    right: 0.55rem;
+    left: 0.55rem;
+    bottom: calc(4.9rem + env(safe-area-inset-bottom));
+    top: auto;
+    width: auto;
+    max-height: min(67dvh, 42rem);
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid rgb(16 24 40 / 0.08);
+    border-radius: 1.45rem;
+    background: rgb(255 255 255 / 0.985);
+    padding: 0.28rem 0.72rem 0.78rem;
+    box-shadow: 0 -12px 34px rgb(16 24 40 / 0.12), 0 18px 44px rgb(16 24 40 / 0.18);
+    backdrop-filter: blur(20px);
+  }
+
+  .customer-map-home__sheet.is-collapsed {
+    min-height: 8.8rem;
+  }
+
+  .customer-map-home__handle {
+    width: 2.7rem;
+    height: 1.2rem;
+    margin: 0 auto 0.2rem;
+    background: transparent;
+  }
+
+  .customer-map-home__handle::before {
+    content: "";
+    display: block;
+    width: 2.7rem;
+    height: 0.23rem;
+    margin-top: 0.45rem;
+    border-radius: 999px;
+    background: #c7c9ce;
+  }
+
+  .customer-map-home__sheet-heading {
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0 0.08rem;
+  }
+
+  .customer-map-home__sheet-heading .customer-eyebrow {
+    color: #157a58;
+    font-size: 0.55rem;
+    letter-spacing: 0.18em;
+  }
+
+  .customer-map-home__sheet-heading h2 {
+    max-width: 16rem;
+    margin-top: 0.18rem;
+    color: var(--customer-mobile-ink);
+    font-size: 1.02rem;
+    line-height: 1.16rem;
+    letter-spacing: -0.02em;
+  }
+
+  .customer-map-home__quote {
+    padding-top: 0.15rem;
+  }
+
+  .customer-map-home__quote span,
+  .customer-map-home__quote small {
+    color: #98a2b3;
+    font-size: 0.5rem;
+  }
+
+  .customer-map-home__quote strong {
+    color: var(--customer-mobile-blue);
+    font-size: 0.9rem;
+  }
+
+  .customer-map-home__sheet-body {
+    max-height: calc(min(67dvh, 42rem) - 6.1rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 0.05rem 0.3rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .customer-map-home__sheet-body::-webkit-scrollbar {
+    display: none;
+  }
+
+  .customer-map-home__readiness {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.28rem;
+    margin: 0.55rem 0 0.62rem;
+  }
+
+  .customer-map-home__readiness span {
+    min-height: 1.9rem;
+    border: 1px solid var(--customer-mobile-line);
+    border-radius: 0.62rem;
+    background: var(--customer-mobile-soft);
+    padding: 0.35rem 0.08rem;
+    color: #7b8492;
+    font-size: 0.49rem;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .customer-map-home__readiness span.is-ready {
+    border-color: #b7dfc7;
+    background: #edf8f1;
+    color: #137a45;
+  }
+
+  .customer-map-home__vehicles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+    gap: 0.55rem;
+    overflow: visible;
+    margin-top: 0.45rem;
+    padding-bottom: 0;
+  }
+
+  .customer-map-home__vehicles button {
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--customer-mobile-line);
+    border-radius: 0.88rem;
+    background: #fff;
+    padding: 0;
+    box-shadow: 0 2px 8px rgb(16 24 40 / 0.04);
+  }
+
+  .customer-map-home__vehicles button img {
+    width: 100%;
+    aspect-ratio: 1.65 / 1;
+    border-radius: 0;
+    background: #f5f4f0;
+    object-fit: cover;
+  }
+
+  .customer-map-home__vehicles button strong,
+  .customer-map-home__vehicles button small {
+    padding-right: 0.58rem;
+    padding-left: 0.58rem;
+  }
+
+  .customer-map-home__vehicles button strong {
+    margin-top: 0.45rem;
+    color: var(--customer-mobile-ink);
+    font-size: 0.7rem;
+    font-weight: 900;
+  }
+
+  .customer-map-home__vehicles button small {
+    margin: 0.12rem 0 0.55rem;
+    color: var(--customer-mobile-muted);
+    font-size: 0.55rem;
+    line-height: 0.78rem;
+  }
+
+  .customer-map-home__vehicles button.is-active {
+    border-color: var(--customer-mobile-blue);
+    background: #fff;
+    color: var(--customer-mobile-ink);
+    box-shadow: 0 0 0 2px rgb(11 91 211 / 0.11);
+  }
+
+  .customer-map-home__vehicles button.is-active::after {
+    top: 0.42rem;
+    right: 0.42rem;
+    width: 1.15rem;
+    height: 1.15rem;
+    background: var(--customer-mobile-blue);
+    font-size: 0.66rem;
+  }
+
+  .customer-map-home__load-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.52rem;
+    margin-top: 0.6rem;
+  }
+
+  .customer-map-home__load-grid label,
+  .customer-map-home__load-grid > div,
+  .customer-map-home__payment-method label {
+    border: 1px solid #eaecf0;
+    border-radius: 0.78rem;
+    background: #fff;
+    padding: 0.58rem;
+    color: var(--customer-mobile-muted);
+    font-size: 0.58rem;
+  }
+
+  .customer-map-home__load-grid input,
+  .customer-map-home__load-grid select,
+  .customer-map-home__load-grid textarea {
+    min-height: 2.45rem;
+    border-color: #d0d5dd;
+    border-radius: 0.68rem;
+    background: #fff;
+    color: var(--customer-mobile-ink);
+    font-size: 0.72rem;
+  }
+
+  .customer-map-home__confirm-dock {
+    position: static;
+    margin-top: 0.7rem;
+    border-top: 1px solid #eaecf0;
+    background: #fff;
+    padding-top: 0.62rem;
+  }
+
+  .customer-map-home__confirm {
+    min-height: 3rem;
+    margin-top: 0.42rem;
+    border-radius: 0.82rem;
+    background: var(--customer-mobile-blue);
+    font-size: 0.82rem;
+    box-shadow: 0 10px 24px rgb(11 91 211 / 0.2);
+  }
+
+  .customer-map-home__confirm:disabled {
+    background: #d0d5dd;
+    color: #fff;
+  }
+
+  /* TRACKING — full-map first, floating status header, compact trip cards. */
+  .customer-live-page {
+    min-height: 100dvh;
+    background: #eef2f7;
+    color: var(--customer-mobile-ink);
+  }
+
+  .customer-live-page__header {
+    position: fixed;
+    z-index: 60;
+    top: max(0.7rem, env(safe-area-inset-top));
+    right: 0.75rem;
+    left: 0.75rem;
+    display: grid;
+    grid-template-columns: 2.7rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  .customer-live-page__header > * {
+    pointer-events: auto;
+  }
+
+  .customer-live-page__header > a {
+    display: grid;
+    width: 2.7rem;
+    height: 2.7rem;
+    place-items: center;
+    border: 1px solid rgb(16 24 40 / 0.08);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.96);
+    color: var(--customer-mobile-ink);
+    box-shadow: 0 6px 20px rgb(16 24 40 / 0.12);
+  }
+
+  .customer-live-page__header > div {
+    justify-self: center;
+    min-width: 0;
+    border: 1px solid rgb(16 24 40 / 0.08);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.96);
+    padding: 0.55rem 0.85rem;
+    text-align: center;
+    box-shadow: 0 6px 20px rgb(16 24 40 / 0.12);
+  }
+
+  .customer-live-page__header p {
+    display: none;
+  }
+
+  .customer-live-page__header h1 {
+    max-width: 10.5rem;
+    overflow: hidden;
+    color: var(--customer-mobile-ink);
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .customer-live-page__badge {
+    border: 1px solid #b7dfc7;
+    border-radius: 999px;
+    background: rgb(237 248 241 / 0.96);
+    padding: 0.58rem 0.72rem;
+    color: #137a45;
+    font-size: 0.62rem;
+    font-weight: 900;
+    box-shadow: 0 6px 20px rgb(16 24 40 / 0.1);
+  }
+
+  .customer-live-page__content {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0 0 1rem;
+  }
+
+  .customer-live-page__map-shell {
+    order: -10;
+    overflow: hidden;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: #e7ece7;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .customer-live-page__map-shell .customer-live-map {
+    display: flex;
+    min-height: 61dvh;
+    flex-direction: column;
+    background: transparent;
+  }
+
+  .customer-live-page__map-shell .customer-live-map__canvas {
+    order: -20;
+    width: 100%;
+    height: 61dvh !important;
+    min-height: 28rem;
+    margin: 0 !important;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .customer-live-page__map-shell .customer-live-map__timeline {
+    order: 10;
+    margin: 0.55rem 0.75rem 0;
+    border: 1px solid var(--customer-mobile-line);
+    border-radius: 0.95rem;
+    background: #fff;
+    padding: 0.65rem;
+    box-shadow: 0 8px 22px rgb(16 24 40 / 0.08);
+  }
+
+  .customer-live-page__map-shell .customer-live-map > .grid {
+    order: 11;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin: 0.5rem 0.75rem 0;
+  }
+
+  .customer-live-page__map-shell .customer-live-map > .grid > div {
+    border: 1px solid var(--customer-mobile-line);
+    border-radius: 0.82rem;
+    background: #fff;
+    padding: 0.6rem;
+  }
+
+  .customer-live-page__map-shell .customer-live-map > p,
+  .customer-live-page__map-shell .customer-live-map > .mt-4 {
+    order: 12;
+    margin-right: 0.75rem !important;
+    margin-left: 0.75rem !important;
+  }
+
+  .customer-live-page__driver,
+  .customer-live-page__route,
+  .customer-live-page__waiting,
+  .customer-live-page__cancelled {
+    margin: 0 0.75rem;
+    border: 1px solid var(--customer-mobile-line);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 8px 24px rgb(16 24 40 / 0.08);
+  }
+
+  .customer-live-page__driver {
+    order: 20;
+    display: grid;
+    grid-template-columns: 2.8rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.72rem;
+  }
+
+  .customer-live-page__avatar {
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 999px;
+    background: #eaf2ff;
+    color: var(--customer-mobile-blue);
+    font-size: 0.72rem;
+    font-weight: 900;
+  }
+
+  .customer-live-page__driver h2 {
+    color: var(--customer-mobile-ink);
+    font-size: 0.78rem;
+  }
+
+  .customer-live-page__driver p,
+  .customer-live-page__driver small {
+    color: var(--customer-mobile-muted);
+    font-size: 0.58rem;
+  }
+
+  .customer-live-page__driver > a {
+    min-height: 2.35rem;
+    border: 1px solid #c9dcff;
+    border-radius: 999px;
+    background: #f2f7ff;
+    padding: 0.62rem 0.75rem;
+    color: var(--customer-mobile-blue);
+    font-size: 0.62rem;
+    font-weight: 900;
+  }
+
+  .customer-live-page__route {
+    order: 21;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    gap: 0.55rem 0.7rem;
+    padding: 0.8rem;
+  }
+
+  .customer-live-page__route strong {
+    color: var(--customer-mobile-ink);
+    font-size: 0.7rem;
+  }
+
+  .customer-live-page__route small {
+    color: var(--customer-mobile-muted);
+    font-size: 0.56rem;
+  }
+
+  .customer-live-page__cancel-order {
+    order: 30;
+    margin: 0.2rem 0.75rem 0;
+    border-radius: 0.82rem;
+  }
+
+  .customer-bottom-nav,
+  .customer-map-home .customer-bottom-nav {
+    z-index: 70;
+    border-top: 1px solid rgb(16 24 40 / 0.08);
+    background: rgb(255 255 255 / 0.97);
+    box-shadow: 0 -8px 24px rgb(16 24 40 / 0.08);
+    backdrop-filter: blur(16px);
+  }
+}
+
+@media (max-width: 390px) {
+  .customer-map-home__sheet,
+  .customer-map-home__sheet.is-expanded,
+  .customer-map-home__sheet.is-collapsed {
+    right: 0.38rem;
+    left: 0.38rem;
+    max-height: 65dvh;
+  }
+
+  .customer-map-home__sheet-heading h2 {
+    max-width: 13.5rem;
+    font-size: 0.94rem;
+  }
+
+  .customer-live-page__header {
+    right: 0.55rem;
+    left: 0.55rem;
+  }
+}
