@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App";
 import { initializeAnalytics } from "./services/analytics";
-import "./customer-mobile-home-reference";
 import "./index.css";
 import "./styles/customer-quote-restoration.css";
 import "./styles/customer-mobile-confirm-overlay.css";
