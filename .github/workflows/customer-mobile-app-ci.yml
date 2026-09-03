@@ -1,0 +1,35 @@
+name: Customer Mobile App CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/customer-mobile-app/**"
+      - ".github/workflows/customer-mobile-app-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/customer-mobile-app/**"
+      - ".github/workflows/customer-mobile-app-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  customer-mobile-app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/customer-mobile-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Customer role isolation tests
+        run: npm test
+      - name: Build
+        run: npm run build
