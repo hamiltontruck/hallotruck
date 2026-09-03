@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App";
 import { initializeAnalytics } from "./services/analytics";
+import "./customer-geocoding-region-guard";
 import "./customer-mobile-route-first";
 import "./index.css";
 import "./styles/customer-quote-restoration.css";
