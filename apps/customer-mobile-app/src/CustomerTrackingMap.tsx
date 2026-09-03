@@ -12,6 +12,15 @@ function validCoordinate(lng: number | null | undefined, lat: number | null | un
   return lng != null && lat != null && Number.isFinite(Number(lng)) && Number.isFinite(Number(lat));
 }
 
+function applyTruckHeading(element: HTMLElement, heading?: number | null) {
+  const arrow = element.querySelector<HTMLElement>("[data-truck-arrow]");
+  if (!arrow) return;
+  arrow.style.display = "inline-block";
+  arrow.style.transform = heading != null && Number.isFinite(Number(heading))
+    ? `rotate(${Number(heading)}deg)`
+    : "";
+}
+
 function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: number | null) {
   const element = document.createElement("div");
   element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : kind === "dropoff" ? "Drop-off location" : "Truck location");
@@ -39,10 +48,8 @@ function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: num
     element.style.color = "#fff";
     element.style.fontSize = "17px";
     element.style.fontWeight = "900";
-    element.innerHTML = '<span aria-hidden="true">➤</span>';
-    if (heading != null && Number.isFinite(Number(heading))) {
-      element.style.transform = `rotate(${Number(heading)}deg)`;
-    }
+    element.innerHTML = '<span data-truck-arrow aria-hidden="true">➤</span>';
+    applyTruckHeading(element, heading);
   }
 
   return element;
@@ -57,11 +64,7 @@ function setMarker(
 ) {
   if (current) {
     current.setLngLat(position);
-    if (kind === "truck") {
-      current.getElement().style.transform = heading != null && Number.isFinite(Number(heading))
-        ? `rotate(${Number(heading)}deg)`
-        : "";
-    }
+    if (kind === "truck") applyTruckHeading(current.getElement(), heading);
     return current;
   }
 
