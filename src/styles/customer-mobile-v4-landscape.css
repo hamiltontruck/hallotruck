@@ -1,5 +1,10 @@
 /* HALO Customer Portal v4 — phone landscape only. Portrait is intentionally untouched. */
 @media (orientation: landscape) and (max-height: 639px) and (max-width: 932px) {
+  /* Landscape only: remove the desktop-style top brand/actions header. */
+  .customer-main-header {
+    display: none !important;
+  }
+
   .customer-view-home .customer-map-home {
     min-height: 100dvh !important;
     height: 100dvh !important;
