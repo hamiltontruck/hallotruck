@@ -115,12 +115,21 @@ textarea:focus-visible {
 .halo-map-grid {
   background-color: #e9f1ec;
   background-image:
+    radial-gradient(circle at 28% 12%, rgba(188, 221, 204, 0.72) 0 10%, transparent 10.5%),
+    radial-gradient(circle at 82% 78%, rgba(190, 224, 244, 0.68) 0 11%, transparent 11.5%),
     linear-gradient(rgba(16, 33, 61, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(16, 33, 61, 0.035) 1px, transparent 1px),
     radial-gradient(circle at 16% 24%, rgba(255, 255, 255, 0.95) 0 5%, transparent 5.5%),
     radial-gradient(circle at 72% 44%, rgba(255, 255, 255, 0.9) 0 7%, transparent 7.5%),
     radial-gradient(circle at 38% 76%, rgba(255, 255, 255, 0.9) 0 8%, transparent 8.5%);
-  background-size: 32px 32px, 32px 32px, auto, auto, auto;
+  background-size: auto, auto, 32px 32px, 32px 32px, auto, auto, auto;
+}
+
+.customer-truck-photo {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(246, 248, 252, 0.9)),
+    radial-gradient(circle at 50% 90%, rgba(16, 33, 61, 0.12), transparent 34%),
+    #f7f4ef;
 }
 
 @keyframes customer-map-pulse {
