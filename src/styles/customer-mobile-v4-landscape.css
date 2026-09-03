@@ -1,0 +1,123 @@
+/* HALO Customer Portal v4 — phone landscape only. Portrait is intentionally untouched. */
+@media (orientation: landscape) and (max-height: 639px) and (max-width: 932px) {
+  /* Landscape only: remove the desktop-style top brand/actions header. */
+  .customer-main-header {
+    display: none !important;
+  }
+
+  .customer-view-home .customer-map-home {
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+  }
+
+  .customer-view-home .customer-map-home__map {
+    position: absolute !important;
+    inset: 0 !important;
+    height: 100% !important;
+  }
+
+  /* Compact route card at upper-left, leaving most of the map visible. */
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child {
+    top: max(0.55rem, env(safe-area-inset-top)) !important;
+    left: max(0.7rem, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: min(42vw, 23rem) !important;
+    padding: 0.48rem 0.65rem !important;
+    border-radius: 0.9rem !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div {
+    padding: 0.02rem 0 0.02rem 1.05rem !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div {
+    margin-top: 0.12rem !important;
+    padding-top: 0.28rem !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div::before {
+    left: 0.08rem !important;
+    top: 1.45rem !important;
+    width: 0.52rem !important;
+    height: 0.52rem !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div::before {
+    top: 1.72rem !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child label {
+    font-size: 0.48rem !important;
+    line-height: 0.6rem !important;
+  }
+
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child input {
+    min-height: 1.55rem !important;
+    padding: 0.12rem 0.15rem !important;
+    font-size: 0.66rem !important;
+    line-height: 0.82rem !important;
+  }
+
+  /* My Location floats independently to the right of the route card. */
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .customer-quote-map__status {
+    top: max(0.7rem, env(safe-area-inset-top)) !important;
+    right: max(4.2rem, calc(env(safe-area-inset-right) + 4.2rem)) !important;
+    left: auto !important;
+    width: max-content !important;
+  }
+
+  .customer-view-home .customer-quote-map__actions button:first-child {
+    min-height: 1.9rem !important;
+    padding: 0.34rem 0.6rem !important;
+    font-size: 0.55rem !important;
+  }
+
+  .customer-view-home .customer-map-home__map .maplibregl-ctrl-top-right {
+    top: max(3.25rem, calc(env(safe-area-inset-top) + 3.25rem)) !important;
+    right: max(0.7rem, env(safe-area-inset-right)) !important;
+  }
+
+  /* Collapsed booking step becomes a compact lower-left landscape card. */
+  .customer-view-home .customer-map-home__sheet.is-collapsed {
+    left: max(0.7rem, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    bottom: calc(3.55rem + env(safe-area-inset-bottom)) !important;
+    width: min(46vw, 25rem) !important;
+    min-height: 4.15rem !important;
+    max-height: 4.15rem !important;
+    padding: 0.08rem 0.62rem 0.3rem !important;
+    border-radius: 0.92rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__handle {
+    height: 0.52rem !important;
+    width: 2.45rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__handle::before {
+    width: 1.9rem !important;
+    margin-top: 0.18rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-heading {
+    min-height: 3.15rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-heading h2 {
+    font-size: 0.78rem !important;
+    line-height: 0.94rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-toggle {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  /* Keep navigation usable without consuming landscape map height. */
+  .customer-view-home .customer-mobile-bottom-nav,
+  .customer-view-home .customer-bottom-nav {
+    min-height: 3.35rem !important;
+    padding-top: 0.22rem !important;
+    padding-bottom: max(0.22rem, env(safe-area-inset-bottom)) !important;
+  }
+}
