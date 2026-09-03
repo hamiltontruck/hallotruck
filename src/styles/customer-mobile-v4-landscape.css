@@ -67,9 +67,9 @@
     height: 100% !important;
   }
 
-  /* Keep both route rows completely inside the left safe area. */
+  /* Keep both route rows completely below the floating nav and inside the left safe area. */
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child {
-    top: max(3.05rem, calc(env(safe-area-inset-top) + 3.05rem)) !important;
+    top: max(4.15rem, calc(env(safe-area-inset-top) + 4.15rem)) !important;
     left: max(1rem, calc(env(safe-area-inset-left) + 0.75rem)) !important;
     right: auto !important;
     width: min(37vw, 20rem) !important;
@@ -100,7 +100,7 @@
 
   /* Right-side My Location stays clear of route card and map zoom controls. */
   .customer-view-home .customer-map-home__map > .customer-quote-map > .customer-quote-map__status {
-    top: max(3.15rem, calc(env(safe-area-inset-top) + 3.15rem)) !important;
+    top: max(4.2rem, calc(env(safe-area-inset-top) + 4.2rem)) !important;
     right: max(4.4rem, calc(env(safe-area-inset-right) + 4.4rem)) !important;
     left: auto !important;
     width: max-content !important;
@@ -109,7 +109,7 @@
   .customer-view-home .customer-quote-map__actions button:first-child { min-height: 1.85rem !important; padding: 0.32rem 0.58rem !important; font-size: 0.54rem !important; }
 
   .customer-view-home .customer-map-home__map .maplibregl-ctrl-top-right {
-    top: max(5.45rem, calc(env(safe-area-inset-top) + 5.45rem)) !important;
+    top: max(6.35rem, calc(env(safe-area-inset-top) + 6.35rem)) !important;
     right: max(0.8rem, calc(env(safe-area-inset-right) + 0.55rem)) !important;
   }
 
@@ -131,4 +131,71 @@
   .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-heading { min-height: 2.95rem !important; }
   .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-heading h2 { font-size: 0.74rem !important; line-height: 0.88rem !important; }
   .customer-view-home .customer-map-home__sheet.is-collapsed .customer-map-home__sheet-toggle { width: 1.9rem !important; height: 1.9rem !important; }
+
+  /* Expanded step: use a scrollable right-side panel instead of covering the whole map. */
+  .customer-view-home .customer-map-home__sheet.is-expanded {
+    top: max(4.15rem, calc(env(safe-area-inset-top) + 4.15rem)) !important;
+    right: max(0.85rem, calc(env(safe-area-inset-right) + 0.65rem)) !important;
+    bottom: max(0.7rem, calc(env(safe-area-inset-bottom) + 0.5rem)) !important;
+    left: auto !important;
+    width: min(58vw, 36rem) !important;
+    max-width: calc(100vw - 22rem - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    min-width: 24rem !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border-radius: 1rem !important;
+    padding: 0.2rem 0.75rem 0.75rem !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    box-shadow: 0 12px 30px rgb(16 24 40 / 0.20) !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__handle {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 2 !important;
+    height: 0.55rem !important;
+    width: 2.5rem !important;
+    margin: 0 auto 0.1rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading {
+    position: sticky !important;
+    top: 0.55rem !important;
+    z-index: 1 !important;
+    min-height: 3.15rem !important;
+    gap: 0.5rem !important;
+    padding: 0.2rem 0 0.35rem !important;
+    background: rgb(255 255 255 / 0.98) !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-heading h2 {
+    font-size: 0.86rem !important;
+    line-height: 1rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-toggle {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__sheet-body {
+    padding-bottom: 0.25rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__readiness {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 0.25rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+  }
+
+  .customer-view-home .customer-map-home__sheet.is-expanded .customer-map-home__vehicles button {
+    min-height: 5.2rem !important;
+  }
 }
