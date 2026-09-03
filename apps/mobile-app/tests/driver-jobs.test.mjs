@@ -86,3 +86,19 @@ test("mobile app replaces the hardcoded driver marketplace and routes customers 
   assert.doesNotMatch(appSource, /const jobs = \[/);
   assert.doesNotMatch(appSource, /return <ShipmentForm \/>/);
 });
+
+test("customer mobile app keeps the v4 booking and live tracking reference surfaces", () => {
+  assert.match(appSource, /CustomerMapCanvas/);
+  assert.match(appSource, /Colonel Abdisa Aga Street, Adama/);
+  assert.match(appSource, /Start your booking/);
+  assert.match(appSource, /Choose truck & cargo/);
+  assert.match(appSource, /customerTruckOptions/);
+  for (const label of ["Route", "Truck", "Cargo", "Load", "Quote", "Pickup", "Van", "Isuzu 5 Ton", "Dry Cargo"]) {
+    assert.match(appSource, new RegExp(label));
+  }
+  assert.match(appSource, /ETB 28,500/);
+  assert.match(appSource, /Trip in progress/);
+  assert.match(appSource, /CustomerTrackingTimeline/);
+  assert.match(appSource, /Call driver/);
+  assert.match(appSource, /Chat with driver/);
+});

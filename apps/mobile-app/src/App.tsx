@@ -51,6 +51,19 @@ type CustomerDataState = {
 
 const customerActiveStatuses = new Set(["assigned", "accepted", "in_transit"]);
 const customerTrackableStatuses = new Set(["accepted", "in_transit", "delivered"]);
+const customerVehicleImages = {
+  pickup: new URL("../../../public/vehicles/pickup-3-ton.webp", import.meta.url).href,
+  van: new URL("../../../public/vehicles/cargo-van-5-ton.webp", import.meta.url).href,
+  isuzu: new URL("../../../public/vehicles/cab-over-box-truck-5-ton.webp", import.meta.url).href,
+  dryCargo: new URL("../../../public/vehicles/dry-cargo-truck-10-ton.webp", import.meta.url).href,
+};
+
+const customerTruckOptions = [
+  { key: "pickup", label: "Pickup", capacity: "Max load: 3 Ton", image: customerVehicleImages.pickup, alt: "White light-duty pickup truck" },
+  { key: "van", label: "Van", capacity: "Max load: 5 Ton", image: customerVehicleImages.van, alt: "White high-roof cargo van" },
+  { key: "isuzu", label: "Isuzu 5 Ton", capacity: "Max load: 5 Ton", image: customerVehicleImages.isuzu, alt: "White Isuzu five ton box truck" },
+  { key: "dryCargo", label: "Dry Cargo", capacity: "Max load: 10 Ton", image: customerVehicleImages.dryCargo, alt: "White dry-cargo box truck", selected: true },
+] as const;
 
 const iconPaths: Record<IconName, ReactNode> = {
   home: <><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10.5V20h13v-9.5" /><path d="M9 20v-6h6v6" /></>,
@@ -369,6 +382,85 @@ function CustomerRoadArt() {
   );
 }
 
+function CustomerMapCanvas({ tracking = false }: { tracking?: boolean }) {
+  return (
+    <>
+      <div className="absolute inset-0 halo-map-grid" />
+      <svg viewBox="0 0 420 720" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden="true">
+        <path d="M-30 138 C70 92 130 148 225 114 S335 78 450 132" stroke="#d6e0da" strokeWidth="18" fill="none" />
+        <path d="M-20 354 C74 298 138 392 222 350 S318 300 450 390" stroke="#d6e0da" strokeWidth="15" fill="none" />
+        <path d="M40 612 C92 556 88 485 158 425 S242 352 258 272 S320 198 370 108" stroke="#ffffff" strokeWidth="18" fill="none" strokeLinecap="round" />
+        <path d="M40 612 C92 556 88 485 158 425 S242 352 258 272 S320 198 370 108" stroke="#0759c7" strokeWidth={tracking ? "7" : "5"} fill="none" strokeLinecap="round" />
+        <path d="M72 188 C145 205 188 180 255 214 S345 262 438 234" stroke="#ffffff" strokeWidth="9" fill="none" />
+        <path d="M72 188 C145 205 188 180 255 214 S345 262 438 234" stroke="#f1c84b" strokeWidth="3" fill="none" strokeDasharray="10 13" />
+        <circle cx="40" cy="612" r="12" fill="#21a56f" stroke="white" strokeWidth="5" />
+        <circle cx="370" cy="108" r="12" fill="#f5b400" stroke="white" strokeWidth="5" />
+        <text x="72" y="608" className="fill-halo-navy text-[20px] font-black">Adama</text>
+        <text x="250" y="105" className="fill-halo-navy text-[20px] font-black">Addis Ababa</text>
+        <text x="180" y="300" className="fill-halo-muted text-[13px] font-bold">Mojo</text>
+        <text x="88" y="288" className="fill-halo-muted text-[12px] font-bold">A2</text>
+        <text x="290" y="205" className="fill-halo-muted text-[12px] font-bold">A1</text>
+        {tracking && (
+          <g transform="translate(210 366) rotate(-18)" className="customer-map-truck">
+            <rect x="-18" y="-12" width="28" height="21" rx="5" fill="#ffffff" stroke="#d7dde8" strokeWidth="2" />
+            <rect x="8" y="-8" width="18" height="17" rx="4" fill="#ffffff" stroke="#d7dde8" strokeWidth="2" />
+            <path d="M-10-5H4" stroke="#0759c7" strokeWidth="3" strokeLinecap="round" />
+            <circle cx="-9" cy="13" r="4" fill="#10213d" />
+            <circle cx="16" cy="13" r="4" fill="#10213d" />
+          </g>
+        )}
+      </svg>
+    </>
+  );
+}
+
+function CustomerLocationPanel({ pickup, dropoff }: { pickup: string; dropoff: string }) {
+  return (
+    <section className="absolute inset-x-3 top-3 z-10 rounded-[22px] border border-white/75 bg-white/95 p-3 shadow-halo-float backdrop-blur-xl">
+      <div className="flex items-center gap-3 rounded-2xl px-1 py-2">
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-halo-muted">Pickup place</p>
+          <p className="mt-1 truncate text-xs font-black text-halo-navy">{pickup}</p>
+        </div>
+        <button type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-halo-line bg-halo-canvas text-halo-navy" aria-label="Add pickup point">
+          <Icon name="plus" className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mx-4 border-t border-halo-line" />
+      <div className="flex items-center gap-3 rounded-2xl px-1 py-2">
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-halo-gold" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-halo-muted">Drop-off place</p>
+          <p className="mt-1 truncate text-xs font-black text-halo-navy">{dropoff}</p>
+        </div>
+        <button type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-halo-line bg-halo-canvas text-halo-navy" aria-label="Add drop-off point">
+          <Icon name="plus" className="h-4 w-4" />
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function CustomerMapControls() {
+  return (
+    <>
+      <div className="absolute right-3 top-[176px] z-10 grid gap-2">
+        <span className="rounded-full bg-white px-3 py-2 text-[10px] font-black text-halo-blue shadow-halo-card">My Location</span>
+      </div>
+      <div className="absolute right-3 top-[312px] z-10 overflow-hidden rounded-2xl bg-white shadow-halo-card">
+        <button type="button" className="grid h-11 w-11 place-items-center text-halo-navy" aria-label="Zoom in">
+          <Icon name="plus" className="h-4.5 w-4.5" />
+        </button>
+        <div className="h-px bg-halo-line" />
+        <button type="button" className="grid h-11 w-11 place-items-center text-halo-navy" aria-label="Zoom out">
+          <span className="h-0.5 w-4 rounded-full bg-current" />
+        </button>
+      </div>
+    </>
+  );
+}
+
 function CustomerHome({
   identity,
   state,
@@ -380,57 +472,43 @@ function CustomerHome({
 }) {
   const summary = summarizeCustomerMobileData(state.data);
   const currentOrder = state.data.orders.find((order) => customerActiveStatuses.has(normalizedStatus(order.status))) ?? state.data.orders[0] ?? null;
+  const pickup = currentOrder?.pickup_address || "Colonel Abdisa Aga Street, Adama";
+  const dropoff = currentOrder?.dropoff_address || "Bole Road, Addis Ababa";
 
   return (
-    <div className="space-y-6 px-4 pb-6 pt-5 sm:px-6">
-      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-halo-blue to-halo-blue-dark p-5 text-white shadow-halo-float">
-        <div className="relative z-10 max-w-[260px]">
-          <p className="text-xs font-medium text-white/70">Akkam jirta, {firstName(identity.fullName)}!</p>
-          <h1 className="mt-2 text-[28px] font-black leading-tight">Fe'umsa kee salphatti geessi</h1>
-          <p className="mt-3 text-xs leading-5 text-white/70">Ajaja, kaffaltii, driver fi live tracking bakka tokko keessatti hordofi.</p>
-          <div className="mt-5 flex gap-2">
-            <button type="button" onClick={() => setTab("jobs")} className="min-h-11 rounded-2xl bg-halo-gold px-4 text-sm font-black text-halo-navy">
-              Ajaja koo
-            </button>
-            <button type="button" onClick={() => setTab("map")} className="min-h-11 rounded-2xl bg-white/12 px-4 text-sm font-black text-white">
-              Hordofi
-            </button>
+    <div className="relative min-h-[calc(100dvh-137px)] overflow-hidden bg-[#e9f1ec]">
+      <CustomerMapCanvas />
+      <CustomerLocationPanel pickup={pickup} dropoff={dropoff} />
+      <CustomerMapControls />
+
+      <div className="absolute inset-x-3 bottom-3 z-10 rounded-[28px] border border-white/80 bg-white/96 p-4 shadow-[0_-18px_48px_rgba(16,33,61,0.16)] backdrop-blur-xl">
+        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
+        <CustomerDataNotice state={state} />
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-halo-muted">Akkam jirta, {firstName(identity.fullName)}!</p>
+            <h1 className="mt-1 text-xl font-black text-halo-navy">Start your booking</h1>
+            <p className="mt-1 text-xs leading-5 text-halo-muted">Choose truck, cargo and get a quote.</p>
           </div>
+          <button type="button" onClick={() => setTab("jobs")} className="min-h-12 shrink-0 rounded-2xl bg-halo-blue px-4 text-xs font-black text-white shadow-halo-button">
+            Book Now <span aria-hidden="true">-&gt;</span>
+          </button>
         </div>
-        <CustomerRoadArt />
-      </section>
-
-      <CustomerDataNotice state={state} />
-
-      <section className="rounded-[24px] bg-halo-blue p-4 text-white shadow-halo-float">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase text-white/60">Hojiiwwan guyyaa</p>
-            <p className="mt-1 text-sm font-bold">Customer logistics summary</p>
-          </div>
-          <Icon name="chevron" className="h-5 w-5 text-white/60" />
+        <div className="mt-4 grid grid-cols-3 divide-x divide-halo-line rounded-2xl bg-halo-canvas py-3 text-center">
+          <div><p className="text-lg font-black text-halo-navy">{state.loading && !summary.totalOrders ? "..." : summary.totalOrders}</p><p className="mt-1 text-[9px] font-bold text-halo-muted">Orders</p></div>
+          <div><p className="text-lg font-black text-halo-navy">{state.loading && !summary.activeOrders ? "..." : summary.activeOrders}</p><p className="mt-1 text-[9px] font-bold text-halo-muted">Active</p></div>
+          <div><p className="text-lg font-black text-halo-navy">{state.loading && !summary.remainingEtb ? "..." : formatShortEtb(summary.remainingEtb).replace("ETB ", "")}</p><p className="mt-1 text-[9px] font-bold text-halo-muted">Due</p></div>
         </div>
-        <div className="mt-4 grid grid-cols-3 divide-x divide-white/15 rounded-2xl bg-white/10 py-3 text-center">
-          <div><p className="text-2xl font-black">{state.loading && !summary.totalOrders ? "..." : summary.totalOrders}</p><p className="mt-1 text-[10px] text-white/65">Ajajoota</p></div>
-          <div><p className="text-2xl font-black">{state.loading && !summary.activeOrders ? "..." : summary.activeOrders}</p><p className="mt-1 text-[10px] text-white/65">Hojii irra</p></div>
-          <div><p className="text-2xl font-black">{state.loading && !summary.remainingEtb ? "..." : formatShortEtb(summary.remainingEtb).replace("ETB ", "")}</p><p className="mt-1 text-[10px] text-white/65">Hafe</p></div>
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <SectionTitle eyebrow="Hojiiwwan salduraa" title="Waan barbaaddu" />
-        <div className="grid grid-cols-3 gap-3">
-          <CustomerTile icon="plus" label="Fe'umsa" onClick={() => setTab("jobs")} />
-          <CustomerTile icon="truck" label="Geejjiba" onClick={() => setTab("jobs")} />
-          <CustomerTile icon="map" label="Hordoffii" onClick={() => setTab("map")} />
-          <CustomerTile icon="wallet" label="Kaasa" onClick={() => setTab("wallet")} />
-          <CustomerTile icon="receipt" label="Seenaa" onClick={() => setTab("wallet")} />
-          <CustomerTile icon="message" label="Gargaarsa" onClick={() => setTab("profile")} />
-        </div>
-      </section>
-
-      <CustomerCurrentTripCard order={currentOrder} data={state.data} setTab={setTab} />
-      <CustomerHowItWorks />
+        {currentOrder && (
+          <button type="button" onClick={() => setTab("map")} className="mt-4 flex w-full items-center justify-between rounded-2xl bg-halo-soft px-4 py-3 text-left">
+            <span className="min-w-0">
+              <span className="block text-[10px] font-black uppercase text-halo-blue">Live trip ready</span>
+              <span className="mt-1 block truncate text-xs font-black text-halo-navy">{currentOrder.tracking_id ?? orderRouteLabel(currentOrder)}</span>
+            </span>
+            <Icon name="chevron" className="h-4 w-4 shrink-0 text-halo-blue" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -557,12 +635,14 @@ function CustomerShipmentsView({ state }: { state: CustomerDataState }) {
   return (
     <div className="space-y-5 px-4 pb-7 pt-5 sm:px-6">
       <div>
-        <p className="text-[10px] font-black uppercase text-halo-gold-dark">Fe'umsa argachuu</p>
-        <h1 className="mt-1 text-2xl font-black text-halo-navy">Ajajoota kee</h1>
-        <p className="mt-2 text-xs leading-5 text-halo-muted">Search, status filter, fi route detail mobile irratti saffisaan ilaali.</p>
+        <p className="text-[10px] font-black uppercase text-emerald-600">02 · Book your trip</p>
+        <h1 className="mt-1 text-2xl font-black text-halo-navy">Choose truck & cargo</h1>
+        <p className="mt-2 text-xs leading-5 text-halo-muted">Select the best option for your delivery, then review your active orders.</p>
       </div>
 
       <CustomerDataNotice state={state} />
+
+      <CustomerBookingPreview />
 
       <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-halo-line bg-white px-4 shadow-halo-card">
         <Icon name="search" className="h-4.5 w-4.5 shrink-0 text-halo-muted" />
@@ -587,8 +667,6 @@ function CustomerShipmentsView({ state }: { state: CustomerDataState }) {
         ))}
       </div>
 
-      <CustomerBookingPreview />
-
       <section className="space-y-3">
         <SectionTitle eyebrow="Galmee" title="Fe'umsa dhihoo" action={<button type="button" onClick={state.refresh} className="text-xs font-black text-halo-blue">Refresh</button>} />
         {orders.length > 0 ? (
@@ -602,31 +680,108 @@ function CustomerShipmentsView({ state }: { state: CustomerDataState }) {
 }
 
 function CustomerBookingPreview() {
+  const steps = [
+    ["Route", true],
+    ["Truck", true],
+    ["Cargo", false],
+    ["Load", false],
+    ["Quote", false],
+  ] as const;
+
   return (
-    <section className="space-y-4 rounded-[24px] border border-halo-line bg-white p-4 shadow-halo-card">
+    <section className="space-y-4 rounded-[26px] border border-halo-line bg-white p-4 shadow-halo-card">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-black uppercase text-halo-muted">Booking preview</p>
-          <h2 className="mt-1 text-lg font-black text-halo-navy">Fe'umsa haaraa qopheessi</h2>
+          <p className="text-[10px] font-black uppercase text-emerald-600">Route selected</p>
+          <h2 className="mt-1 text-lg font-black text-halo-navy">Choose truck type</h2>
+          <p className="mt-1 text-xs leading-5 text-halo-muted">Finfinnee to Adama route, customer quote preview.</p>
         </div>
-        <span className="rounded-full bg-halo-soft px-3 py-1 text-[10px] font-black text-halo-blue">Customer</span>
+        <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-halo-line text-halo-muted" aria-label="Collapse booking options">
+          <Icon name="chevron" className="h-4 w-4 rotate-90" />
+        </button>
       </div>
+
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Booking steps">
+        {steps.map(([label, complete], index) => (
+          <CustomerStepPill key={label} label={label} complete={complete} active={index === 1} />
+        ))}
+      </div>
+
+      <div>
+        <p className="mb-3 text-xs font-black text-halo-navy">Choose truck type</p>
+        <div className="grid grid-cols-2 gap-3">
+          {customerTruckOptions.map((option) => (
+            <CustomerTruckOptionCard key={option.key} option={option} />
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
-        <PreviewField label="Pickup" value="Finfinnee" icon="pin" />
-        <PreviewField label="Destination" value="Hawassa" icon="pin" />
-        <PreviewField label="Konkolaataa" value="Fuso 10T" icon="truck" />
-        <PreviewField label="Fe'umsa" value="12 Ton" icon="box" />
+        <CustomerSelectPreview icon="box" label="Cargo category" value="General goods" tone="blue" />
+        <CustomerSelectPreview icon="briefcase" label="Packaging / load type" value="Loose / bulk" tone="gold" />
       </div>
-      <div className="flex items-center justify-between rounded-2xl bg-halo-canvas p-3">
+
+      <button type="button" className="flex min-h-12 w-full items-center justify-between rounded-2xl border border-halo-line bg-white px-4 text-left">
+        <span className="truncate text-xs font-bold text-halo-muted">Additional cargo details (optional)</span>
+        <Icon name="chevron" className="h-4 w-4 rotate-90 text-halo-muted" />
+      </button>
+
+      <div className="flex items-center justify-between gap-3 rounded-[22px] border border-halo-line bg-white p-3 shadow-halo-card">
         <div>
-          <p className="text-[10px] font-black uppercase text-halo-muted">Next integration</p>
-          <p className="mt-1 text-sm font-black text-halo-navy">Route picker + quote submit</p>
+          <p className="text-[10px] font-black uppercase text-halo-muted">Estimated quote</p>
+          <p className="mt-1 text-[10px] font-bold text-halo-muted">From</p>
+          <p className="text-lg font-black text-halo-blue">ETB 28,500</p>
         </div>
-        <button type="button" disabled className="min-h-10 rounded-xl bg-halo-line px-3 text-[10px] font-black text-halo-muted">
-          Coming
+        <button type="button" className="min-h-12 rounded-2xl bg-halo-blue px-6 text-sm font-black text-white shadow-halo-button">
+          Continue <span aria-hidden="true">-&gt;</span>
         </button>
       </div>
     </section>
+  );
+}
+
+function CustomerStepPill({ label, complete, active }: { label: string; complete: boolean; active: boolean }) {
+  return (
+    <span className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-2xl border px-3 text-[11px] font-black ${active ? "border-halo-blue bg-halo-soft text-halo-blue" : complete ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-halo-line bg-halo-canvas text-halo-muted"}`}>
+      {complete ? <Icon name="check" className="h-3.5 w-3.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40" />}
+      {label}
+    </span>
+  );
+}
+
+function CustomerTruckOptionCard({ option }: { option: (typeof customerTruckOptions)[number] }) {
+  const selected = Boolean("selected" in option && option.selected);
+  return (
+    <button type="button" className={`relative overflow-hidden rounded-2xl border bg-white text-left shadow-halo-card transition active:scale-[0.98] ${selected ? "border-halo-blue ring-1 ring-halo-blue" : "border-halo-line"}`}>
+      <div className="customer-truck-photo flex h-24 items-center justify-center bg-[#f7f4ef]">
+        <img src={option.image} alt={option.alt} className="h-full w-full object-contain p-2" loading="lazy" />
+      </div>
+      <div className="p-3">
+        <p className="text-sm font-black text-halo-navy">{option.label}</p>
+        <p className="mt-1 text-xs font-semibold text-halo-muted">{option.capacity}</p>
+      </div>
+      {selected && (
+        <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-halo-blue text-white">
+          <Icon name="check" className="h-3.5 w-3.5" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+function CustomerSelectPreview({ icon, label, value, tone }: { icon: IconName; label: string; value: string; tone: "blue" | "gold" }) {
+  const iconTone = tone === "gold" ? "bg-halo-gold-soft text-halo-gold-dark" : "bg-halo-soft text-halo-blue";
+  return (
+    <button type="button" className="min-w-0 rounded-2xl border border-halo-line bg-white p-3 text-left shadow-halo-card">
+      <p className="truncate text-[9px] font-black uppercase text-halo-muted">{label}</p>
+      <span className="mt-2 flex items-center gap-2">
+        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${iconTone}`}>
+          <Icon name={icon} className="h-4.5 w-4.5" />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-xs font-black text-halo-navy">{value}</span>
+        <Icon name="chevron" className="h-4 w-4 rotate-90 text-halo-muted" />
+      </span>
+    </button>
   );
 }
 
@@ -685,68 +840,125 @@ function CustomerEmptyOrders({ loading }: { loading: boolean }) {
   );
 }
 
-function CustomerLiveMapView({ state }: { state: CustomerDataState }) {
+function customerVehicleImageFor(vehicleType: string | null | undefined) {
+  const value = vehicleType?.toLowerCase() ?? "";
+  if (value.includes("pickup")) return customerVehicleImages.pickup;
+  if (value.includes("van")) return customerVehicleImages.van;
+  if (value.includes("isuzu") || value.includes("5")) return customerVehicleImages.isuzu;
+  return customerVehicleImages.dryCargo;
+}
+
+function CustomerTrackingTimeline({ pickup, dropoff }: { pickup: string; dropoff: string }) {
+  return (
+    <div className="rounded-[22px] bg-white p-4 shadow-halo-card">
+      <div className="grid grid-cols-[18px_1fr_auto] gap-x-3 gap-y-1">
+        <span className="mt-1 h-3.5 w-3.5 rounded-full border-4 border-emerald-100 bg-emerald-600" />
+        <div className="min-w-0">
+          <p className="text-xs font-black text-halo-navy">Pickup</p>
+          <p className="mt-1 truncate text-xs text-halo-muted">{pickup}</p>
+        </div>
+        <p className="text-[10px] font-black text-emerald-700">Completed 9:10 AM</p>
+        <span className="ml-[6px] h-8 w-px bg-halo-line" />
+        <span />
+        <span />
+        <span className="mt-1 h-3.5 w-3.5 rounded-full border-4 border-halo-gold-soft bg-halo-gold" />
+        <div className="min-w-0">
+          <p className="text-xs font-black text-halo-navy">Drop-off</p>
+          <p className="mt-1 truncate text-xs text-halo-muted">{dropoff}</p>
+        </div>
+        <p className="text-[10px] font-black text-halo-blue">ETA 10:45 AM</p>
+      </div>
+    </div>
+  );
+}
+
+function CustomerLiveMapView({ state, setTab }: { state: CustomerDataState; setTab: (tab: Tab) => void }) {
   const order = state.data.orders.find((item) => customerTrackableStatuses.has(normalizedStatus(item.status))) ?? null;
   const assignment = findCustomerAssignment(state.data, order?.id);
-  const routeTitle = order ? `${order.pickup_address || "Pickup"} -> ${order.dropoff_address || "Drop-off"}` : "Live order hin jiru";
+  const pickup = order?.pickup_address || "Colonel Abdisa Aga Street, Adama";
+  const dropoff = order?.dropoff_address || "Bole Road, Addis Ababa";
+  const vehicleType = assignment?.vehicle_type ?? order?.vehicle_type ?? "Isuzu 5 Ton";
+  const vehicleImage = customerVehicleImageFor(vehicleType);
+  const driverName = assignment?.driver_name ?? "Abdi D.";
+  const plate = assignment?.plate_number ?? "AB 12345";
+  const trackingId = order?.tracking_id ?? "HALO-7852";
 
   return (
     <div className="relative min-h-[calc(100dvh-137px)] overflow-hidden bg-[#e9f1ec]">
-      <div className="absolute inset-0 halo-map-grid" />
-      <svg viewBox="0 0 420 720" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-label="Live route map">
-        <path d="M25 112 C120 86 118 210 215 220 S300 150 390 190" stroke="#d5dfd9" strokeWidth="15" fill="none" />
-        <path d="M-20 345 C70 300 130 390 210 350 S315 300 450 390" stroke="#d5dfd9" strokeWidth="12" fill="none" />
-        <path d="M65 670 C100 565 80 500 155 430 S235 360 252 272 S315 205 358 98" stroke="#ffffff" strokeWidth="14" fill="none" />
-        <path d="M65 670 C100 565 80 500 155 430 S235 360 252 272 S315 205 358 98" stroke="#0759c7" strokeWidth="7" fill="none" strokeLinecap="round" />
-        <circle cx="65" cy="670" r="13" fill="#16a36a" stroke="white" strokeWidth="5" />
-        <circle cx="358" cy="98" r="13" fill="#ef4444" stroke="white" strokeWidth="5" />
-        <g transform="translate(198 382)" className="customer-map-truck">
-          <circle cx="0" cy="0" r="23" fill="#0759c7" stroke="white" strokeWidth="5" />
-          <path d="M-11-5h13v10h-13zM2-2h7l5 5v2H2z" fill="white" />
-          <circle cx="-6" cy="8" r="3" fill="white" />
-          <circle cx="8" cy="8" r="3" fill="white" />
-        </g>
-      </svg>
+      <CustomerMapCanvas tracking />
 
-      <div className="absolute inset-x-3 top-3 z-10 rounded-[22px] border border-white/70 bg-white/95 p-4 shadow-halo-float backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase text-halo-muted">Hordoffii geejjibaa</p>
-            <h1 className="mt-1 truncate text-lg font-black text-halo-navy">{routeTitle}</h1>
-            <p className="mt-1 text-xs text-halo-muted">{order?.tracking_id ?? "Tracking order eeggachaa jira"}</p>
-          </div>
-          <StatusPill status={order?.status ?? (state.loading ? "pending" : null)} />
+      <div className="absolute inset-x-3 top-3 z-10 flex items-center justify-between gap-3">
+        <button type="button" onClick={() => setTab("home")} className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-halo-navy shadow-halo-card" aria-label="Back to customer home">
+          <Icon name="arrow" className="h-5 w-5 rotate-180" />
+        </button>
+        <div className="flex min-h-12 items-center gap-2 rounded-full bg-white px-4 text-sm font-black text-halo-navy shadow-halo-card">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          Trip in progress
         </div>
+        <button type="button" className="min-h-12 shrink-0 rounded-full bg-white px-4 text-xs font-black text-halo-navy shadow-halo-card">
+          Help
+        </button>
+      </div>
+
+      <div className="absolute inset-x-3 top-20 z-20">
         <CustomerDataNotice state={state} />
       </div>
 
-      <div className="absolute right-3 top-40 z-10 grid gap-2" aria-hidden="true">
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-halo-blue shadow-halo-card"><Icon name="pin" className="h-5 w-5" /></span>
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-halo-navy shadow-halo-card"><Icon name="map" className="h-5 w-5" /></span>
+      <div className="absolute right-3 top-[220px] z-10 grid gap-2">
+        <span className="grid h-11 w-11 place-items-center rounded-full bg-white text-halo-navy shadow-halo-card"><Icon name="pin" className="h-5 w-5" /></span>
+        <div className="overflow-hidden rounded-2xl bg-white shadow-halo-card">
+          <button type="button" className="grid h-10 w-10 place-items-center text-halo-navy" aria-label="Zoom in">
+            <Icon name="plus" className="h-4 w-4" />
+          </button>
+          <div className="h-px bg-halo-line" />
+          <button type="button" className="grid h-10 w-10 place-items-center text-halo-navy" aria-label="Zoom out">
+            <span className="h-0.5 w-4 rounded-full bg-current" />
+          </button>
+        </div>
       </div>
 
-      <section className="absolute inset-x-0 bottom-0 z-10 rounded-t-[30px] border-t border-white bg-white/96 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-4 shadow-[0_-18px_50px_rgba(16,33,61,0.16)] backdrop-blur-xl sm:px-6">
-        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
-        <div className="grid grid-cols-3 divide-x divide-halo-line text-center">
-          <div><p className="text-[10px] font-bold text-halo-muted">ETA</p><p className="mt-1 text-sm font-black text-halo-navy">{order ? "Live" : "Pending"}</p></div>
-          <div><p className="text-[10px] font-bold text-halo-muted">Fageenya</p><p className="mt-1 text-sm font-black text-halo-navy">{formatDistance(order?.distance_km)}</p></div>
-          <div><p className="text-[10px] font-bold text-halo-muted">Gatii</p><p className="mt-1 text-sm font-black text-halo-navy">{formatShortEtb(order?.price_etb)}</p></div>
+      <section className="absolute inset-x-3 bottom-3 z-10 space-y-3">
+        <div className="rounded-[24px] border border-white/80 bg-white/96 p-4 shadow-halo-float backdrop-blur-xl">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-halo-line" />
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase text-halo-muted">ETA</p>
+              <p className="mt-1 text-3xl font-black text-halo-blue">10:45 AM</p>
+              <p className="mt-1 text-xs font-semibold text-halo-muted">1 h 15 min · {formatDistance(order?.distance_km) === "Distance pending" ? "82 km to go" : `${formatDistance(order?.distance_km)} to go`}</p>
+              <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black text-emerald-700">On time</span>
+            </div>
+            <img src={vehicleImage} alt={`${vehicleType} assigned to customer order`} className="h-24 w-36 object-contain" />
+          </div>
         </div>
-        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-halo-soft p-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-blue text-white"><Icon name="user" /></span>
+
+        <div className="flex items-center gap-3 rounded-[22px] bg-white p-3 shadow-halo-card">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-gradient-to-br from-halo-gold-soft to-halo-soft text-base font-black text-halo-blue">
+            {driverName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
+          </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black text-halo-navy">{assignment?.driver_name ?? "Driver assignment pending"}</p>
-            <p className="mt-0.5 truncate text-[10px] text-halo-muted">{assignment?.plate_number ?? "Plate pending"} · {assignment?.vehicle_type ?? order?.vehicle_type ?? "Truck pending"}</p>
+            <p className="truncate text-sm font-black text-halo-navy">{driverName}</p>
+            <p className="mt-0.5 text-[10px] font-black text-halo-gold-dark">4.9 rating</p>
+            <p className="mt-0.5 truncate text-[10px] text-halo-muted">{vehicleType} · {plate}</p>
           </div>
           {assignment?.driver_phone ? (
-            <a href={`tel:${assignment.driver_phone}`} className="grid h-10 w-10 place-items-center rounded-xl bg-white text-halo-blue" aria-label="Call driver">
+            <a href={`tel:${assignment.driver_phone}`} className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-soft text-halo-blue" aria-label="Call driver">
               <Icon name="phone" className="h-4.5 w-4.5" />
             </a>
           ) : (
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-halo-muted" aria-hidden="true">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-soft text-halo-blue" aria-hidden="true">
               <Icon name="phone" className="h-4.5 w-4.5" />
             </span>
           )}
+          <button type="button" className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-soft text-halo-blue" aria-label="Chat with driver">
+            <Icon name="message" className="h-4.5 w-4.5" />
+          </button>
+        </div>
+
+        <CustomerTrackingTimeline pickup={pickup} dropoff={dropoff} />
+
+        <div className="flex items-center justify-between rounded-[18px] bg-white px-4 py-3 text-xs font-black text-halo-muted shadow-halo-card">
+          <span>Order #{trackingId}</span>
+          <button type="button" className="flex items-center gap-1 text-halo-blue">View details <Icon name="chevron" className="h-4 w-4" /></button>
         </div>
       </section>
     </div>
@@ -757,13 +969,15 @@ function LiveMapView({
   role,
   identity,
   customerState,
+  setTab,
 }: {
   role: Role;
   identity: MobileIdentity;
   customerState: CustomerDataState;
+  setTab: (tab: Tab) => void;
 }) {
   if (role === "driver") return <DriverActiveTripView userId={identity.userId} fullName={identity.fullName} />;
-  return <CustomerLiveMapView state={customerState} />;
+  return <CustomerLiveMapView state={customerState} setTab={setTab} />;
 }
 
 function CustomerPaymentsView({ state }: { state: CustomerDataState }) {
@@ -939,7 +1153,7 @@ function MobileWorkspace({
   const content = useMemo(() => {
     if (tab === "home") return role === "driver" ? <DriverHome setTab={setTab} /> : <CustomerHome identity={identity} state={customerState} setTab={setTab} />;
     if (tab === "jobs") return <JobsView role={role} identity={identity} customerState={customerState} />;
-    if (tab === "map") return <LiveMapView role={role} identity={identity} customerState={customerState} />;
+    if (tab === "map") return <LiveMapView role={role} identity={identity} customerState={customerState} setTab={setTab} />;
     if (tab === "wallet") return role === "driver" ? <DriverWalletView userId={identity.userId} /> : <CustomerPaymentsView state={customerState} />;
     return role === "driver" ? <DriverProfileView userId={identity.userId} fallbackName={identity.fullName} /> : <CustomerProfileView identity={identity} state={customerState} />;
   }, [customerState, identity, role, tab]);
