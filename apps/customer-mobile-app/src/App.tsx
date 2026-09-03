@@ -1,4 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
+import type { CustomerIdentity } from "./auth/CustomerAuthBoundary";
+import { CustomerOrdersPage, CustomerProfilePage } from "./CustomerDataPages";
 
 type Tab = "home" | "orders" | "track" | "payments" | "profile";
 type IconName = "home" | "orders" | "track" | "payments" | "profile" | "pin" | "arrow" | "truck" | "box" | "shield" | "clock";
@@ -165,17 +167,15 @@ function BookingSheet({ pickup, dropoff, onClose }: { pickup: string; dropoff: s
   );
 }
 
-function EmptyPage({ tab, onHome }: { tab: Exclude<Tab, "home">; onHome: () => void }) {
+function EmptyPage({ tab, onHome }: { tab: "track" | "payments"; onHome: () => void }) {
   const content = {
-    orders: { icon: "orders" as IconName, eyebrow: "CUSTOMER ORDERS", title: "Ajajni amma hin jiru", body: "Ajaja haaraa Home irraa jalqabi. App haaraan Customer data yeroo backend integration xumuramu qofa agarsiisa." },
-    track: { icon: "track" as IconName, eyebrow: "LIVE TRACKING", title: "Geejjibni live hin jiru", body: "Fake driver, ETA ykn route hin agarsiifamu. Active trip dhugaa yeroo backend irraa argamu asitti mul'ata." },
-    payments: { icon: "payments" as IconName, eyebrow: "PAYMENTS", title: "Kaffaltiin hin fe'amne", body: "Payment history fi verification existing secure backend waliin yeroo walitti hidhamu asitti mul'ata." },
-    profile: { icon: "profile" as IconName, eyebrow: "PROFILE", title: "Customer account connect godhi", body: "Identity fi account details fake data malee existing Customer authorization irraa fe'amuu qabu." },
+    track: { icon: "track" as IconName, eyebrow: "LIVE TRACKING", title: "Geejjibni live hin jiru", body: "Fake driver, ETA ykn route hin agarsiifamu. Active trip dhugaa yeroo tracking integration xumuramu asitti mul'ata." },
+    payments: { icon: "payments" as IconName, eyebrow: "PAYMENTS", title: "Kaffaltiin amma hin fe'amne", body: "Payment history fi verification slice itti aanu keessatti existing secure backend waliin walitti hidhamu." },
   }[tab];
 
   return (
     <main className="standard-page">
-      <header className="standard-header"><HaloLogo/><span className="status-badge">Standalone</span></header>
+      <header className="standard-header"><HaloLogo/><span className="status-badge">Customer</span></header>
       <section className="empty-card">
         <span className="empty-icon"><Icon name={content.icon} size={30}/></span>
         <small>{content.eyebrow}</small>
@@ -210,24 +210,33 @@ function BottomNav({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
   );
 }
 
-export default function App() {
+export default function App({ identity }: { identity: CustomerIdentity }) {
   const [tab, setTab] = useState<Tab>("home");
   const [bookingOpen, setBookingOpen] = useState(false);
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
   const routeLabel = useMemo(() => pickup && dropoff ? `${pickup} → ${dropoff}` : "Route not selected", [pickup, dropoff]);
 
+  let content: ReactNode;
+  if (tab === "home") {
+    content = (
+      <main className="home-page">
+        <header className="home-brand"><HaloLogo/><span title={routeLabel}><Icon name="clock" size={16}/> New booking</span></header>
+        <MapSurface pickup={pickup} dropoff={dropoff} onPickup={setPickup} onDropoff={setDropoff} onBook={() => setBookingOpen(true)}/>
+      </main>
+    );
+  } else if (tab === "orders") {
+    content = <CustomerOrdersPage userId={identity.userId} onHome={() => setTab("home")}/>;
+  } else if (tab === "profile") {
+    content = <CustomerProfilePage userId={identity.userId}/>;
+  } else {
+    content = <EmptyPage tab={tab} onHome={() => setTab("home")}/>;
+  }
+
   return (
     <div className="customer-app-shell">
       <div className="phone-stage">
-        {tab === "home" ? (
-          <main className="home-page">
-            <header className="home-brand"><HaloLogo/><span title={routeLabel}><Icon name="clock" size={16}/> New booking</span></header>
-            <MapSurface pickup={pickup} dropoff={dropoff} onPickup={setPickup} onDropoff={setDropoff} onBook={() => setBookingOpen(true)}/>
-          </main>
-        ) : (
-          <EmptyPage tab={tab} onHome={() => setTab("home")}/>
-        )}
+        {content}
         {!bookingOpen && <BottomNav tab={tab} setTab={setTab}/>} 
         {bookingOpen && <BookingSheet pickup={pickup} dropoff={dropoff} onClose={() => setBookingOpen(false)}/>} 
       </div>

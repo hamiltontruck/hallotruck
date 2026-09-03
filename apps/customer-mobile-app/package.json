@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit --pretty false",
-    "test": "node -e \"require('fs').rmSync('.test-dist',{recursive:true,force:true})\" && tsc -p tsconfig.policy.json && node --test tests/customer-access-policy.test.mjs",
+    "test": "node -e \"require('fs').rmSync('.test-dist',{recursive:true,force:true})\" && tsc -p tsconfig.policy.json && node --test tests/*.test.mjs",
     "test:ci": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
