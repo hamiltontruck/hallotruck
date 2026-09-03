@@ -1,0 +1,314 @@
+/*
+ * HALO Customer mobile v4 consistency pass.
+ * Phone-only visual normalization for Orders, Payments, Profile and Tracking.
+ * No routing, authorization, data, payment, order or desktop behavior changes.
+ */
+@media (max-width: 639px) {
+  /* Shared page rhythm outside the map-first Home and Tracking canvases. */
+  .customer-portal-mobile.customer-view-orders .customer-content,
+  .customer-portal-mobile.customer-view-payments .customer-content,
+  .customer-portal-mobile.customer-view-profile .customer-content {
+    padding: 0.72rem 0.78rem calc(4.8rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .customer-portal-mobile.customer-view-orders .customer-section-intro,
+  .customer-portal-mobile.customer-view-payments .customer-section-intro,
+  .customer-portal-mobile.customer-view-profile .customer-section-intro {
+    padding: 0.88rem 0.82rem 0.15rem !important;
+  }
+
+  .customer-portal-mobile .customer-section-intro h1,
+  .customer-portal-mobile .customer-overview-heading h2,
+  .customer-portal-mobile .customer-profile-card__identity h2 {
+    color: var(--customer-v4-navy) !important;
+    letter-spacing: -0.025em !important;
+  }
+
+  .customer-portal-mobile .customer-section-intro h1 {
+    font-size: 1.22rem !important;
+    line-height: 1.42rem !important;
+  }
+
+  .customer-portal-mobile .customer-section-intro > p:last-child,
+  .customer-portal-mobile .customer-empty-state p,
+  .customer-portal-mobile .customer-profile-card__identity p:last-child {
+    color: var(--customer-v4-muted) !important;
+    font-size: 0.72rem !important;
+    line-height: 1.16rem !important;
+  }
+
+  /* Shared cards and internal spacing. */
+  .customer-portal-mobile .customer-orders-overview,
+  .customer-portal-mobile .customer-order-card,
+  .customer-portal-mobile .customer-profile-card,
+  .customer-portal-mobile .customer-empty-state,
+  .customer-portal-mobile .customer-payment-history,
+  .customer-portal-mobile .customer-proof {
+    border-color: var(--customer-v4-line) !important;
+    background: #fff !important;
+  }
+
+  .customer-portal-mobile .customer-orders-overview,
+  .customer-portal-mobile .customer-profile-card {
+    padding: 0.88rem !important;
+  }
+
+  .customer-portal-mobile .customer-orders-list {
+    margin-top: 0.72rem !important;
+  }
+
+  .customer-portal-mobile .customer-order-card__top {
+    gap: 0.58rem !important;
+  }
+
+  .customer-portal-mobile .customer-order-card__tracking {
+    color: var(--customer-v4-muted) !important;
+    font-size: 0.64rem !important;
+  }
+
+  .customer-portal-mobile .customer-order-card__route {
+    color: var(--customer-v4-navy) !important;
+  }
+
+  .customer-portal-mobile .customer-order-card__stats,
+  .customer-portal-mobile .customer-kpis,
+  .customer-portal-mobile .customer-profile-values {
+    gap: 0.48rem !important;
+  }
+
+  .customer-portal-mobile .customer-summary-value,
+  .customer-portal-mobile .customer-info,
+  .customer-portal-mobile .customer-profile-value,
+  .customer-portal-mobile .customer-profile-progress {
+    padding: 0.72rem !important;
+  }
+
+  .customer-portal-mobile .customer-summary-value p,
+  .customer-portal-mobile .customer-info p,
+  .customer-portal-mobile .customer-profile-value p,
+  .customer-portal-mobile .customer-profile-progress > div:first-child span {
+    color: var(--customer-v4-muted) !important;
+    font-size: 0.6rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.055em !important;
+  }
+
+  .customer-portal-mobile .customer-summary-value strong,
+  .customer-portal-mobile .customer-info strong,
+  .customer-portal-mobile .customer-profile-value strong {
+    color: var(--customer-v4-navy) !important;
+    font-size: 0.82rem !important;
+    line-height: 1.05rem !important;
+  }
+
+  /* Status and payment chips. */
+  .customer-portal-mobile .customer-status,
+  .customer-portal-mobile .customer-payment-state,
+  .customer-portal-mobile .customer-delivery-complete {
+    border-radius: 999px !important;
+    font-size: 0.61rem !important;
+    font-weight: 850 !important;
+  }
+
+  .customer-portal-mobile .customer-status--cancelled,
+  .customer-portal-mobile .customer-cancellation-record {
+    border-color: #f2c8bd !important;
+    background: #fff7f5 !important;
+    color: #a4472d !important;
+  }
+
+  .customer-portal-mobile .customer-payment-state {
+    border: 1px solid var(--customer-v4-line) !important;
+    background: #f8fbff !important;
+    color: var(--customer-v4-muted) !important;
+  }
+
+  .customer-portal-mobile .customer-delivery-complete {
+    background: #eaf8f2 !important;
+    color: var(--customer-v4-success) !important;
+  }
+
+  /* Primary, secondary and destructive actions share one v4 control system. */
+  .customer-portal-mobile .customer-order-card__actions {
+    gap: 0.46rem !important;
+  }
+
+  .customer-portal-mobile .customer-order-card__actions > button,
+  .customer-portal-mobile .customer-order-card__actions > span,
+  .customer-portal-mobile .customer-profile-edit,
+  .customer-portal-mobile .customer-proof button {
+    min-height: 2.68rem !important;
+    border-radius: 0.82rem !important;
+    padding: 0.62rem 0.7rem !important;
+    font-size: 0.66rem !important;
+    font-weight: 850 !important;
+  }
+
+  .customer-portal-mobile .customer-order-card__actions .is-details,
+  .customer-portal-mobile .customer-order-card__actions .is-secondary,
+  .customer-portal-mobile .customer-profile-edit,
+  .customer-portal-mobile .customer-proof button {
+    border: 1px solid #cfdced !important;
+    background: #f8fbff !important;
+    color: var(--customer-v4-blue) !important;
+    box-shadow: none !important;
+  }
+
+  .customer-portal-mobile .customer-order-card__actions .is-cancel,
+  .customer-portal-mobile .customer-live-page__cancel-order {
+    border: 1px solid #f0c2b6 !important;
+    background: #fff7f5 !important;
+    color: #a4472d !important;
+    box-shadow: none !important;
+  }
+
+  .customer-portal-mobile button:focus-visible,
+  .customer-portal-mobile a:focus-visible,
+  .customer-portal-mobile select:focus-visible,
+  .customer-portal-mobile input:focus-visible,
+  .customer-portal-mobile textarea:focus-visible {
+    outline: 2px solid var(--customer-v4-blue) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Payments: rows and evidence controls use the same white/soft-blue language. */
+  .customer-portal-mobile .customer-payment-history,
+  .customer-portal-mobile .customer-proof {
+    overflow: hidden !important;
+  }
+
+  .customer-portal-mobile .customer-payment-row {
+    gap: 0.28rem !important;
+    border-color: var(--customer-v4-line) !important;
+    background: #fff !important;
+    color: var(--customer-v4-muted) !important;
+  }
+
+  .customer-portal-mobile .customer-proof > div {
+    gap: 0.42rem !important;
+  }
+
+  /* Profile: remove the old green/gold form treatment and keep the v4 blue system. */
+  .customer-portal-mobile .customer-avatar {
+    border-radius: 0.88rem !important;
+  }
+
+  .customer-portal-mobile .customer-profile-card__header,
+  .customer-portal-mobile .customer-profile-card__identity {
+    gap: 0.62rem !important;
+  }
+
+  .customer-portal-mobile .customer-company-card {
+    margin-top: 0.6rem !important;
+    border: 1px solid #d7e5f8 !important;
+    border-left: 3px solid var(--customer-v4-blue) !important;
+    border-radius: 0.82rem !important;
+    background: #f3f8ff !important;
+    color: var(--customer-v4-navy) !important;
+  }
+
+  .customer-portal-mobile .customer-company-card span {
+    color: var(--customer-v4-muted) !important;
+  }
+
+  .customer-portal-mobile .customer-profile-form {
+    margin-top: 0.82rem !important;
+    border-color: var(--customer-v4-line) !important;
+    padding-top: 0.82rem !important;
+  }
+
+  .customer-portal-mobile .customer-profile-form__grid {
+    gap: 0.68rem !important;
+  }
+
+  .customer-portal-mobile .customer-profile-field {
+    color: var(--customer-v4-navy) !important;
+    font-size: 0.7rem !important;
+    font-weight: 800 !important;
+  }
+
+  .customer-portal-mobile .customer-profile-field input,
+  .customer-portal-mobile .customer-profile-field select {
+    min-height: 2.78rem !important;
+    margin-top: 0.34rem !important;
+    border: 1px solid #d0d9e6 !important;
+    border-radius: 0.78rem !important;
+    background: #fff !important;
+    color: var(--customer-v4-navy) !important;
+    padding: 0.68rem 0.74rem !important;
+    font-size: 0.82rem !important;
+    box-shadow: none !important;
+  }
+
+  .customer-portal-mobile .customer-profile-field input:focus,
+  .customer-portal-mobile .customer-profile-field select:focus {
+    border-color: var(--customer-v4-blue) !important;
+    box-shadow: 0 0 0 3px rgb(7 89 199 / 0.12) !important;
+  }
+
+  .customer-portal-mobile .customer-profile-save {
+    min-height: 2.9rem !important;
+    margin-top: 0.82rem !important;
+    border: 0 !important;
+    border-radius: 0.82rem !important;
+    background: var(--customer-v4-blue) !important;
+    color: #fff !important;
+    font-size: 0.8rem !important;
+    font-weight: 850 !important;
+    box-shadow: 0 10px 22px rgb(7 89 199 / 0.18) !important;
+  }
+
+  .customer-portal-mobile .customer-profile-save:disabled {
+    background: #d0d5dd !important;
+    box-shadow: none !important;
+  }
+
+  /* Tracking: preserve map-first layout while locking v4 color and control states. */
+  .customer-portal-mobile .customer-live-page__header h1,
+  .customer-portal-mobile .customer-live-page__driver h2,
+  .customer-portal-mobile .customer-live-page__route strong {
+    color: var(--customer-v4-navy) !important;
+  }
+
+  .customer-portal-mobile .customer-live-page__driver p,
+  .customer-portal-mobile .customer-live-page__driver small,
+  .customer-portal-mobile .customer-live-page__route small {
+    color: var(--customer-v4-muted) !important;
+  }
+
+  .customer-portal-mobile .customer-live-page__avatar {
+    background: var(--customer-v4-soft) !important;
+    color: var(--customer-v4-blue) !important;
+  }
+
+  .customer-portal-mobile .customer-live-page__driver > a {
+    border-color: #c9dcff !important;
+    background: #f3f8ff !important;
+    color: var(--customer-v4-blue) !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .customer-portal-mobile.customer-view-orders .customer-content,
+  .customer-portal-mobile.customer-view-payments .customer-content,
+  .customer-portal-mobile.customer-view-profile .customer-content {
+    padding-right: 0.58rem !important;
+    padding-left: 0.58rem !important;
+  }
+
+  .customer-portal-mobile .customer-orders-overview,
+  .customer-portal-mobile .customer-profile-card {
+    padding: 0.72rem !important;
+  }
+
+  .customer-portal-mobile .customer-profile-values,
+  .customer-portal-mobile .customer-order-card__stats {
+    gap: 0.38rem !important;
+  }
+
+  .customer-portal-mobile .customer-summary-value,
+  .customer-portal-mobile .customer-info,
+  .customer-portal-mobile .customer-profile-value {
+    padding: 0.62rem !important;
+  }
+}
