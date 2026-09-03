@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { CustomerIdentity } from "./auth/CustomerAuthBoundary";
 import { CustomerOrdersPage, CustomerProfilePage } from "./CustomerDataPages";
 import { CustomerPaymentsPage } from "./CustomerPaymentsPage";
+import { CustomerTrackingPage } from "./CustomerTrackingPage";
 
 type Tab = "home" | "orders" | "track" | "payments" | "profile";
 type IconName = "home" | "orders" | "track" | "payments" | "profile" | "pin" | "arrow" | "truck" | "box" | "shield" | "clock";
@@ -228,6 +229,8 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
     );
   } else if (tab === "orders") {
     content = <CustomerOrdersPage userId={identity.userId} onHome={() => setTab("home")}/>;
+  } else if (tab === "track") {
+    content = <CustomerTrackingPage userId={identity.userId} onHome={() => setTab("home")}/>;
   } else if (tab === "payments") {
     content = <CustomerPaymentsPage userId={identity.userId} onHome={() => setTab("home")}/>;
   } else if (tab === "profile") {
