@@ -15,6 +15,7 @@ import "./styles/customer-mobile-v4.css";
 import "./styles/customer-mobile-v4-consistency.css";
 import "./styles/customer-mobile-v4-full-map-home.css";
 import "./styles/customer-mobile-v4-booking-step.css";
+import "./styles/customer-mobile-v4-home-viewport-fix.css";
 import "./styles/admin-order-cleanup.css";
 import "./styles/shared-portal-logo.css";
 
