@@ -5,10 +5,16 @@ import path from "node:path";
 
 const css = await readFile(path.join(process.cwd(), "src/styles/customer-mobile-reference-redesign.css"), "utf8");
 const main = await readFile(path.join(process.cwd(), "src/main.tsx"), "utf8");
+const page = await readFile(path.join(process.cwd(), "src/pages/CustomerMapHome.tsx"), "utf8");
 
 test("Customer reference redesign is mobile-only and loaded after prior customer overrides", () => {
   assert.match(css, /@media \(max-width: 639px\)/);
   assert.match(main, /customer-mobile-header\.css[\s\S]*customer-mobile-reference-redesign\.css/);
+});
+
+test("Customer booking sheet stays expanded on initial render without an auto-collapse hook", () => {
+  assert.match(page, /sheetExpanded, setSheetExpanded\] = useState\(true\)/);
+  assert.doesNotMatch(main, /customer-mobile-home-reference/);
 });
 
 test("Customer Home uses a full-map mobile booking surface", () => {
