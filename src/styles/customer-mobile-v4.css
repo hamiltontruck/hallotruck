@@ -1,0 +1,279 @@
+/*
+ * HALO Customer mobile v4 visual layer.
+ *
+ * The dedicated /mobile/ workspace already uses the HALO blue/gold v4 system.
+ * This file applies the same visual language to the root-web Customer portal on
+ * phone widths only, without changing routing, authorization, data behavior or
+ * desktop presentation.
+ */
+@media (max-width: 639px) {
+  .customer-portal-mobile {
+    --customer-v4-blue: #0759c7;
+    --customer-v4-blue-dark: #063b84;
+    --customer-v4-navy: #10213d;
+    --customer-v4-gold: #f5b400;
+    --customer-v4-gold-dark: #9a6700;
+    --customer-v4-canvas: #f5f8fd;
+    --customer-v4-soft: #eef5ff;
+    --customer-v4-line: #e2e9f3;
+    --customer-v4-muted: #66758c;
+    --customer-v4-success: #167a57;
+    min-height: 100dvh;
+    background: var(--customer-v4-canvas) !important;
+    color: var(--customer-v4-navy);
+  }
+
+  .customer-portal-mobile .customer-main,
+  .customer-portal-mobile .customer-map-home {
+    background: var(--customer-v4-canvas) !important;
+    color: var(--customer-v4-navy) !important;
+  }
+
+  /* Shared v4 header treatment for Customer pages that render the root-web header. */
+  .customer-portal-mobile .customer-main-header {
+    border-bottom: 1px solid var(--customer-v4-line) !important;
+    background: rgb(255 255 255 / 0.96) !important;
+    color: var(--customer-v4-navy) !important;
+    box-shadow: 0 10px 30px rgb(16 33 61 / 0.06) !important;
+    backdrop-filter: blur(18px);
+  }
+
+  .customer-portal-mobile .customer-main-header::after {
+    display: none !important;
+  }
+
+  .customer-portal-mobile .customer-header-inner {
+    min-height: 4.5rem !important;
+    padding: 0.7rem 1rem !important;
+  }
+
+  .customer-portal-mobile .customer-brand p:first-child {
+    color: var(--customer-v4-blue) !important;
+    letter-spacing: -0.02em;
+  }
+
+  .customer-portal-mobile .customer-brand .text-amber {
+    color: var(--customer-v4-gold) !important;
+  }
+
+  .customer-portal-mobile .customer-brand p:last-child {
+    color: var(--customer-v4-muted) !important;
+  }
+
+  .customer-portal-mobile .customer-header-actions select,
+  .customer-portal-mobile .customer-sign-out {
+    min-height: 2.75rem;
+    border: 1px solid var(--customer-v4-line) !important;
+    border-radius: 0.9rem !important;
+    background: #fff !important;
+    color: var(--customer-v4-navy) !important;
+    box-shadow: none !important;
+  }
+
+  .customer-portal-mobile .customer-new-order,
+  .customer-portal-mobile .customer-overview-heading > button,
+  .customer-portal-mobile .customer-empty-state button,
+  .customer-portal-mobile .customer-order-card__actions .is-primary,
+  .customer-portal-mobile .customer-order-card__actions .is-payment {
+    border: 0 !important;
+    border-radius: 0.95rem !important;
+    background: var(--customer-v4-blue) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 22px rgb(7 89 199 / 0.18) !important;
+  }
+
+  /* Keep every Customer phone page on the same canvas/card language. */
+  .customer-portal-mobile .customer-content,
+  .customer-portal-mobile .customer-section-intro {
+    background: transparent !important;
+  }
+
+  .customer-portal-mobile .customer-section-intro {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .customer-portal-mobile .customer-eyebrow,
+  .customer-portal-mobile .customer-dashboard-nav__eyebrow {
+    color: var(--customer-v4-gold-dark) !important;
+  }
+
+  .customer-portal-mobile .customer-orders-overview,
+  .customer-portal-mobile .customer-order-card,
+  .customer-portal-mobile .customer-profile-card,
+  .customer-portal-mobile .customer-empty-state,
+  .customer-portal-mobile .customer-payment-history,
+  .customer-portal-mobile .customer-proof {
+    border: 1px solid var(--customer-v4-line) !important;
+    border-radius: 1.5rem !important;
+    background: #fff !important;
+    box-shadow: 0 12px 32px rgb(16 33 61 / 0.07) !important;
+  }
+
+  .customer-portal-mobile .customer-summary-value,
+  .customer-portal-mobile .customer-info,
+  .customer-portal-mobile .customer-profile-value,
+  .customer-portal-mobile .customer-profile-progress {
+    border: 1px solid #e7edf6 !important;
+    border-radius: 1rem !important;
+    background: #f7faff !important;
+  }
+
+  .customer-portal-mobile .customer-summary-value p,
+  .customer-portal-mobile .customer-info p,
+  .customer-portal-mobile .customer-profile-value p,
+  .customer-portal-mobile .customer-payment-row,
+  .customer-portal-mobile .customer-profile-card__identity p:last-child {
+    color: var(--customer-v4-muted) !important;
+  }
+
+  .customer-portal-mobile .customer-avatar {
+    background: var(--customer-v4-blue) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 24px rgb(7 89 199 / 0.18);
+  }
+
+  .customer-portal-mobile .customer-order-filters button {
+    border-color: var(--customer-v4-line) !important;
+    background: #fff !important;
+    color: var(--customer-v4-muted) !important;
+  }
+
+  .customer-portal-mobile .customer-order-filters button.is-active {
+    border-color: var(--customer-v4-blue) !important;
+    background: var(--customer-v4-blue) !important;
+    color: #fff !important;
+  }
+
+  .customer-portal-mobile .customer-status--in_transit,
+  .customer-portal-mobile .customer-status--accepted,
+  .customer-portal-mobile .customer-status--assigned,
+  .customer-portal-mobile .customer-status--delivered {
+    background: #eaf8f2 !important;
+    color: var(--customer-v4-success) !important;
+  }
+
+  .customer-portal-mobile .customer-profile-progress__track {
+    background: #e5ebf4 !important;
+  }
+
+  .customer-portal-mobile .customer-profile-progress__track span {
+    background: linear-gradient(90deg, var(--customer-v4-blue), var(--customer-v4-gold)) !important;
+  }
+
+  /* Booking/map sheet uses the same white, rounded, elevated v4 surface. */
+  .customer-portal-mobile .customer-map-home__sheet {
+    border: 1px solid var(--customer-v4-line) !important;
+    border-radius: 1.75rem 1.75rem 0 0 !important;
+    background: rgb(255 255 255 / 0.98) !important;
+    box-shadow: 0 -16px 40px rgb(16 33 61 / 0.12) !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__sheet input,
+  .customer-portal-mobile .customer-map-home__sheet select,
+  .customer-portal-mobile .customer-map-home__sheet textarea {
+    border-color: var(--customer-v4-line) !important;
+    border-radius: 1rem !important;
+    background: #fff !important;
+    color: var(--customer-v4-navy) !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__sheet input:focus,
+  .customer-portal-mobile .customer-map-home__sheet select:focus,
+  .customer-portal-mobile .customer-map-home__sheet textarea:focus {
+    border-color: var(--customer-v4-blue) !important;
+    outline: 3px solid rgb(7 89 199 / 0.12) !important;
+    outline-offset: 1px;
+  }
+
+  /* Bottom nav mirrors the dedicated mobile app: white chrome, blue active state, gold underline. */
+  .customer-portal-mobile .customer-dashboard-nav,
+  .customer-portal-mobile .customer-map-home .customer-dashboard-nav {
+    border-top: 1px solid var(--customer-v4-line) !important;
+    background: rgb(255 255 255 / 0.98) !important;
+    box-shadow: 0 -10px 30px rgb(16 33 61 / 0.08) !important;
+    backdrop-filter: blur(18px);
+  }
+
+  .customer-portal-mobile .customer-dashboard-nav__inner,
+  .customer-portal-mobile .customer-map-home .customer-dashboard-nav__inner {
+    min-height: 4.3rem !important;
+  }
+
+  .customer-portal-mobile .customer-dashboard-nav__item,
+  .customer-portal-mobile .customer-map-home .customer-dashboard-nav__item {
+    position: relative;
+    min-height: 4.3rem !important;
+    gap: 0.25rem !important;
+    background: transparent !important;
+    color: var(--customer-v4-muted) !important;
+    font-size: 0.62rem !important;
+    font-weight: 750 !important;
+    box-shadow: none !important;
+  }
+
+  .customer-portal-mobile .customer-dashboard-nav__item.is-active,
+  .customer-portal-mobile .customer-map-home .customer-dashboard-nav__item.is-active {
+    color: var(--customer-v4-blue) !important;
+    box-shadow: none !important;
+  }
+
+  .customer-portal-mobile .customer-dashboard-nav__item.is-active::after {
+    position: absolute;
+    bottom: 0.28rem;
+    left: 50%;
+    width: 1.45rem;
+    height: 0.2rem;
+    border-radius: 9999px;
+    background: var(--customer-v4-gold);
+    content: "";
+    transform: translateX(-50%);
+  }
+
+  .customer-portal-mobile .customer-dashboard-nav__icon {
+    display: grid;
+    width: 1.9rem;
+    height: 1.9rem;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: transparent;
+    color: currentColor;
+    font-size: 0;
+  }
+
+  .customer-portal-mobile .customer-dashboard-nav__item.is-active .customer-dashboard-nav__icon {
+    background: var(--customer-v4-soft);
+  }
+
+  .customer-portal-mobile .customer-dashboard-nav__icon svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    stroke: currentColor;
+  }
+
+  .customer-portal-mobile .customer-dashboard-nav__item:focus-visible {
+    outline: 2px solid var(--customer-v4-blue) !important;
+    outline-offset: -3px !important;
+  }
+
+  .customer-view-home,
+  .customer-view-profile,
+  .customer-view-orders,
+  .customer-view-track,
+  .customer-view-payments {
+    padding-bottom: calc(4.3rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .customer-portal-mobile .customer-map-home__sheet {
+    bottom: calc(4.3rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .customer-portal-mobile .customer-dashboard-nav__item,
+  .customer-portal-mobile .customer-map-home .customer-dashboard-nav__item {
+    padding-right: 0.05rem !important;
+    padding-left: 0.05rem !important;
+    font-size: 0.56rem !important;
+  }
+}
