@@ -54,8 +54,22 @@
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child label { font-size: 0.46rem !important; line-height: 0.58rem !important; }
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child input { min-height: 1.45rem !important; padding: 0.1rem 0.12rem !important; font-size: 0.62rem !important; line-height: 0.78rem !important; }
 
-  /* Right-side controls remain unchanged. */
-  .customer-view-home .customer-map-home__map > .customer-quote-map > .customer-quote-map__status { top: max(4.2rem, calc(env(safe-area-inset-top) + 4.2rem)) !important; right: max(4.4rem, calc(env(safe-area-inset-right) + 4.4rem)) !important; left: auto !important; width: max-content !important; }
+  /* My Location only: remove the wide status banner and keep the pill at the right edge. */
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .customer-quote-map__status {
+    position: fixed !important;
+    top: max(4.2rem, calc(env(safe-area-inset-top) + 4.2rem)) !important;
+    right: max(4.4rem, calc(env(safe-area-inset-right) + 4.4rem)) !important;
+    left: auto !important;
+    width: max-content !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .customer-view-home .customer-quote-map__status-copy { display: none !important; }
+  .customer-view-home .customer-quote-map__actions { width: auto !important; margin: 0 !important; }
   .customer-view-home .customer-quote-map__actions button:first-child { min-height: 1.85rem !important; padding: 0.32rem 0.58rem !important; font-size: 0.54rem !important; }
   .customer-view-home .customer-map-home__map .maplibregl-ctrl-top-right { top: max(6.35rem, calc(env(safe-area-inset-top) + 6.35rem)) !important; right: max(0.8rem, calc(env(safe-area-inset-right) + 0.55rem)) !important; }
 
