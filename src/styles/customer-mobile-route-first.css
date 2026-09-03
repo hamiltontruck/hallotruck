@@ -1,0 +1,20 @@
+@media (max-width: 639px) {
+  .customer-map-home__map > .customer-quote-map > .customer-quote-map__status:has(.customer-quote-map__actions button:only-child) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .customer-quote-map__actions:has(button:only-child) {
+    display: flex;
+    width: auto;
+    justify-self: end;
+    justify-content: flex-end;
+  }
+
+  .customer-quote-map__actions button:only-child {
+    width: auto;
+    min-width: 0;
+    flex: 0 0 auto;
+    padding: 0.45rem 0.75rem;
+  }
+}

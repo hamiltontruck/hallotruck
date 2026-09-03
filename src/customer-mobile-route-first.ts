@@ -1,3 +1,5 @@
+import "./styles/customer-mobile-route-first.css";
+
 const MOBILE_CUSTOMER_QUERY = "(max-width: 639px)";
 
 let initialized = false;
