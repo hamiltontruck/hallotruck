@@ -7,7 +7,7 @@ import "./styles.css";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <CustomerAuthBoundary>
-      {() => <App />}
+      {(identity) => <App identity={identity} />}
     </CustomerAuthBoundary>
   </StrictMode>,
 );
