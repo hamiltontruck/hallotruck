@@ -15,8 +15,9 @@ test("Customer phone surfaces load the HALO v4 visual layer after existing custo
   assert.match(css, /--customer-v4-gold:\s*#f5b400/);
 });
 
-test("Customer v4 bottom navigation remains mobile-safe and preserves the five existing routes", () => {
-  assert.match(css, /padding-bottom:\s*calc\(4\.65rem \+ env\(safe-area-inset-bottom\)\)/);
+test("Customer v4 bottom navigation remains compact, mobile-safe and preserves the five existing routes", () => {
+  assert.match(css, /min-height:\s*4\.3rem\s*!important/);
+  assert.match(css, /padding-bottom:\s*calc\(4\.3rem \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(css, /customer-dashboard-nav__item\.is-active::after/);
   assert.match(nav, /to:\s*"\/customer"/);
   assert.match(nav, /to:\s*"\/customer\/orders"/);

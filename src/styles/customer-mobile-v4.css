@@ -197,13 +197,13 @@
 
   .customer-portal-mobile .customer-dashboard-nav__inner,
   .customer-portal-mobile .customer-map-home .customer-dashboard-nav__inner {
-    min-height: 4.65rem !important;
+    min-height: 4.3rem !important;
   }
 
   .customer-portal-mobile .customer-dashboard-nav__item,
   .customer-portal-mobile .customer-map-home .customer-dashboard-nav__item {
     position: relative;
-    min-height: 4.65rem !important;
+    min-height: 4.3rem !important;
     gap: 0.25rem !important;
     background: transparent !important;
     color: var(--customer-v4-muted) !important;
@@ -220,7 +220,7 @@
 
   .customer-portal-mobile .customer-dashboard-nav__item.is-active::after {
     position: absolute;
-    bottom: 0.35rem;
+    bottom: 0.28rem;
     left: 50%;
     width: 1.45rem;
     height: 0.2rem;
@@ -232,8 +232,8 @@
 
   .customer-portal-mobile .customer-dashboard-nav__icon {
     display: grid;
-    width: 2rem;
-    height: 2rem;
+    width: 1.9rem;
+    height: 1.9rem;
     place-items: center;
     border-radius: 0.75rem;
     background: transparent;
@@ -246,8 +246,8 @@
   }
 
   .customer-portal-mobile .customer-dashboard-nav__icon svg {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.2rem;
+    height: 1.2rem;
     stroke: currentColor;
   }
 
@@ -261,11 +261,11 @@
   .customer-view-orders,
   .customer-view-track,
   .customer-view-payments {
-    padding-bottom: calc(4.65rem + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(4.3rem + env(safe-area-inset-bottom)) !important;
   }
 
   .customer-portal-mobile .customer-map-home__sheet {
-    bottom: calc(4.65rem + env(safe-area-inset-bottom)) !important;
+    bottom: calc(4.3rem + env(safe-area-inset-bottom)) !important;
   }
 }
 
