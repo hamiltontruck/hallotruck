@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   loadCustomerTrackingData,
   type CustomerLiveTrip,
@@ -212,7 +212,7 @@ export function CustomerTrackingPage({ userId, onHome }: { userId: string; onHom
   const assignment = state.data.assignments.find((item) => item.order_id === selectedOrder.id);
   const liveTrip = state.data.liveTrips.find((item) => item.order_id === selectedOrder.id);
   const activeCount = state.data.orders.length;
-  const selector = useMemo(() => state.data.orders.map((order) => ({ id: order.id, label: order.tracking_id || labelStatus(order.status) })), [state.data.orders]);
+  const selector = state.data.orders.map((order) => ({ id: order.id, label: order.tracking_id || labelStatus(order.status) }));
 
   return (
     <main style={pageStyle}>
