@@ -71,10 +71,10 @@ const primaryButtonStyle = {
 
 function friendlyLoginError(message: string | undefined) {
   const value = message?.toLowerCase() ?? "";
-  if (value.includes("invalid login credentials")) return "Email ykn password sirrii miti.";
-  if (value.includes("email not confirmed")) return "Email kee dura mirkaneessi; sana booda deebi'ii seeni.";
-  if (value.includes("failed to fetch") || value.includes("network")) return "Server bira ga'uun hin danda'amne. Internet kee ilaali.";
-  return "Amma seenuun hin danda'amne. Irra deebi'ii yaali.";
+  if (value.includes("invalid login credentials")) return "The email or password is incorrect.";
+  if (value.includes("email not confirmed")) return "Confirm your email before signing in.";
+  if (value.includes("failed to fetch") || value.includes("network")) return "The server could not be reached. Check your internet connection.";
+  return "Sign-in is temporarily unavailable. Please try again.";
 }
 
 function Screen({ children }: { children: ReactNode }) {
@@ -98,9 +98,9 @@ function Screen({ children }: { children: ReactNode }) {
 function Brand() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-      <div style={{ width: "54px", height: "54px", display: "grid", placeItems: "center", borderRadius: "18px", background: "#0759c7", color: "#fff", fontWeight: 950, fontSize: "22px" }}>H</div>
+      <div style={{ width: "54px", height: "54px", display: "grid", placeItems: "center", borderRadius: "18px", background: "#10213d", color: "#f5b400", fontWeight: 950, fontSize: "22px" }}>H</div>
       <div>
-        <div style={{ color: "#0759c7", fontSize: "25px", fontWeight: 950, lineHeight: 1 }}>HALO</div>
+        <div style={{ color: "#10213d", fontSize: "24px", fontWeight: 950, lineHeight: 1 }}>HALLO<span style={{ color: "#d68e25" }}>TRUCK</span></div>
         <div style={{ marginTop: "4px", color: "#66758c", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em" }}>Customer Mobile</div>
       </div>
     </div>
@@ -132,9 +132,9 @@ function Login({ busy, error, onSubmit }: {
       <section style={panelStyle}>
         <Brand />
         <p style={{ margin: 0, color: "#9a6700", fontSize: "10px", fontWeight: 900, letterSpacing: ".16em" }}>CUSTOMER ONLY</p>
-        <h1 style={{ margin: "8px 0 0", fontSize: "26px", lineHeight: 1.15 }}>Account kee seeni</h1>
+        <h1 style={{ margin: "8px 0 0", fontSize: "26px", lineHeight: 1.15 }}>Sign in to your account</h1>
         <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>
-          App kun Customer database role qofa bana. Driver, Admin, CEO fi Partner account fail-closed ta'a.
+          This app opens only for the Customer database role. Driver, Admin, CEO and Partner accounts fail closed.
         </p>
 
         {error && <div role="alert" style={{ marginTop: "18px", border: "1px solid #fecaca", borderRadius: "14px", background: "#fef2f2", padding: "12px", color: "#b91c1c", fontSize: "13px" }}>{error}</div>}
@@ -149,12 +149,12 @@ function Login({ busy, error, onSubmit }: {
             <input style={inputStyle} type="password" autoComplete="current-password" required minLength={10} disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} />
           </label>
           <button type="submit" disabled={busy} style={{ ...primaryButtonStyle, opacity: busy ? .6 : 1 }}>
-            {busy ? "Account mirkaneessaa jira…" : "SEENI"}
+            {busy ? "Verifying account…" : "SIGN IN"}
           </button>
         </form>
 
         <p style={{ margin: "18px 0 0", color: "#66758c", fontSize: "11px", lineHeight: 1.6 }}>
-          Authorization `profiles.role` database irraa mirkanaa'a. User metadata, app metadata ykn role filannoo UI hin amanamu.
+          Authorization is verified from the database `profiles.role`. User metadata, app metadata and a UI-selected role are never trusted.
         </p>
       </section>
     </Screen>
@@ -175,8 +175,8 @@ function AccessState({ eyebrow, title, description, onSignOut, onRetry }: {
         <p style={{ margin: 0, color: "#0759c7", fontSize: "10px", fontWeight: 900, letterSpacing: ".14em" }}>{eyebrow}</p>
         <h1 style={{ margin: "10px 0 0", fontSize: "24px" }}>{title}</h1>
         <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>{description}</p>
-        {onRetry && <button type="button" onClick={() => void onRetry()} style={{ ...primaryButtonStyle, marginTop: "20px" }}>Irra deebi'ii mirkaneessi</button>}
-        <button type="button" onClick={() => void onSignOut()} style={{ ...primaryButtonStyle, marginTop: "10px", background: "#fff", color: "#10213d", border: "1px solid #d8e2ef" }}>Account keessaa ba'i</button>
+        {onRetry && <button type="button" onClick={() => void onRetry()} style={{ ...primaryButtonStyle, marginTop: "20px" }}>Retry verification</button>}
+        <button type="button" onClick={() => void onSignOut()} style={{ ...primaryButtonStyle, marginTop: "10px", background: "#fff", color: "#10213d", border: "1px solid #d8e2ef" }}>Sign out</button>
       </section>
     </Screen>
   );
@@ -224,7 +224,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       setState({ kind: "missing-profile" });
     } catch {
       if (requestId !== requestIdRef.current) return;
-      setState({ kind: "load-error", message: "Database profile kee mirkaneessuun hin danda'amne. Internet ilaaliitii irra deebi'i." });
+      setState({ kind: "load-error", message: "The database profile could not be verified. Check your connection and try again." });
     }
   }, []);
 
@@ -296,14 +296,14 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   }
 
   if (state.kind === "configuration-error") {
-    return <AccessState eyebrow="CONFIGURATION REQUIRED" title="Customer login hin qophoofne" description="VITE_SUPABASE_URL fi VITE_SUPABASE_ANON_KEY build environment keessatti kaa'i. Service-role key gonkumaa app keessatti hin galchin." onSignOut={async () => undefined} />;
+    return <AccessState eyebrow="CONFIGURATION REQUIRED" title="Customer login is not configured" description="Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the build environment. Never expose a service-role key in this app." onSignOut={async () => undefined} />;
   }
   if (state.kind === "booting") {
-    return <Screen><section style={{ ...panelStyle, textAlign: "center" }}><Brand/><div style={{ width: "38px", height: "38px", margin: "12px auto", border: "4px solid #e4edf8", borderTopColor: "#0759c7", borderRadius: "50%" }}/><strong role="status">Customer account mirkaneessaa jira…</strong></section></Screen>;
+    return <Screen><section style={{ ...panelStyle, textAlign: "center" }}><Brand/><div style={{ width: "38px", height: "38px", margin: "12px auto", border: "4px solid #e4edf8", borderTopColor: "#0759c7", borderRadius: "50%" }}/><strong role="status">Verifying Customer account…</strong></section></Screen>;
   }
   if (state.kind === "signed-out") return <Login busy={authenticating} error={state.error} onSubmit={signIn} />;
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
-  if (state.kind === "unsupported-role") return <AccessState eyebrow="ACCESS DENIED" title="Customer account qofa" description="Account kun Customer database role miti. Driver, Admin, CEO fi Partner workspace app kana keessatti hin banamu." onSignOut={signOut} />;
-  if (state.kind === "missing-profile") return <AccessState eyebrow="PROFILE MISSING" title="Database profile hin argamne" description="Auth account jiraatus profiles row hin argamne. Authorization guess hin godhamu." onSignOut={signOut} onRetry={retryProfile} />;
-  return <AccessState eyebrow="SECURE CONNECTION ERROR" title="Role mirkaneessuun hin danda'amne" description={state.message} onSignOut={signOut} onRetry={retryProfile} />;
+  if (state.kind === "unsupported-role") return <AccessState eyebrow="ACCESS DENIED" title="Customer account required" description="This account does not have the Customer database role. Driver, Admin, CEO and Partner workspaces cannot open this app." onSignOut={signOut} />;
+  if (state.kind === "missing-profile") return <AccessState eyebrow="PROFILE MISSING" title="Database profile not found" description="An auth account exists, but no profile row was returned. Authorization is never guessed." onSignOut={signOut} onRetry={retryProfile} />;
+  return <AccessState eyebrow="SECURE CONNECTION ERROR" title="Role verification failed" description={state.message} onSignOut={signOut} onRetry={retryProfile} />;
 }
