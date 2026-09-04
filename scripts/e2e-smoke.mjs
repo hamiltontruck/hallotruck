@@ -138,7 +138,7 @@ try {
     marker: "customer-signup",
   });
   const customerSignup = await withProfile((profile) => dumpDom(chrome, customerSignupUrl, profile));
-  assertContains(customerSignup, ["data-e2e-view=\"customer-signup\"", "autocomplete=\"name\"", "autocomplete=\"tel\"", "autocomplete=\"new-password\"", "minlength=\"10\""], "Customer signup");
+  assertContains(customerSignup, ["data-e2e-view=\"customer-signup\"", "autocomplete=\"name\"", "autocomplete=\"tel\"", "autocomplete=\"new-password\"", "inputmode=\"numeric\"", "pattern=\"[0-9]{6}\"", "minlength=\"6\"", "maxlength=\"6\""], "Customer signup");
 
   const mobileDriverLogin = await withProfile((profile) => dumpDom(chrome, `${baseUrl}#/driver/login`, profile));
   assertContains(mobileDriverLogin, ["Driver login", "Sign in", "New driver? Create an account", "autocomplete=\"email\"", "autocomplete=\"current-password\""], "Mobile driver login");
@@ -160,7 +160,10 @@ try {
     "autocomplete=\"tel\"",
     "autocomplete=\"email\"",
     "autocomplete=\"new-password\"",
-    "minlength=\"10\"",
+    "inputmode=\"numeric\"",
+    "pattern=\"[0-9]{6}\"",
+    "minlength=\"6\"",
+    "maxlength=\"6\"",
     "Create account &amp; continue to documents",
   ], "Driver signup");
 
