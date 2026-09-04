@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles.css";
 import "./customer-v4.css";
+import "./driver-v4.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
