@@ -1,0 +1,35 @@
+.real-booking-map { background: #dfe9f5; }
+.real-booking-map::before { display: none; }
+.booking-map-canvas { position: absolute; inset: 0; }
+.real-booking-map .maplibregl-map { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.real-booking-map .maplibregl-ctrl-bottom-left { bottom: 8.8rem; left: 0.45rem; }
+.real-booking-map .maplibregl-ctrl-attrib { max-width: 180px; font-size: 9px; }
+.real-route-card { overflow: visible; }
+.booking-place-field { position: relative; min-width: 0; }
+.booking-place-field label { display: grid; gap: 0.28rem; }
+.booking-place-message { display: block; margin-top: 0.18rem; color: #66758c; font-size: 0.52rem; line-height: 1.3; }
+.booking-place-error { color: #b42318; }
+.booking-place-results { position: absolute; z-index: 60; top: calc(100% + 0.35rem); right: -0.1rem; left: -0.1rem; max-height: 13.5rem; overflow-y: auto; border: 1px solid #dbe4ef; border-radius: 0.9rem; background: #fff; padding: 0.25rem; box-shadow: 0 14px 32px rgb(16 33 61 / 0.18); }
+.booking-place-results button { display: grid; grid-template-columns: 1.65rem minmax(0, 1fr); width: 100%; min-height: 2.9rem; align-items: center; gap: 0.5rem; border: 0; border-radius: 0.7rem; background: transparent; padding: 0.42rem 0.5rem; color: #10213d; text-align: left; }
+.booking-place-results button + button { border-top: 1px solid #edf1f6; }
+.booking-place-results button:active { background: #eef5ff; }
+.booking-place-results button > span:last-child { overflow: hidden; font-size: 0.64rem; font-weight: 700; line-height: 1.35; text-overflow: ellipsis; }
+.place-result-pin { display: grid; width: 1.45rem; height: 1.45rem; place-items: center; border: 2px solid #fff; border-radius: 999px; color: #fff; font-size: 0.55rem; font-weight: 950; box-shadow: 0 3px 9px rgb(16 33 61 / 0.18); }
+.place-result-pin.pickup { background: #22a06b; }
+.place-result-pin.dropoff { background: #f5b400; color: #6d4900; }
+.booking-map-marker { display: grid; width: 2rem; height: 2rem; place-items: center; border: 3px solid #fff; border-radius: 50% 50% 50% 0; color: #fff; box-shadow: 0 6px 18px rgb(16 33 61 / 0.28); transform: rotate(-45deg); }
+.booking-map-marker span { font-size: 0.65rem; font-weight: 950; transform: rotate(45deg); }
+.booking-map-marker-pickup { background: #22a06b; }
+.booking-map-marker-dropoff { background: #f5b400; color: #5b3d00; }
+.real-location-button { top: calc(max(0.75rem, env(safe-area-inset-top)) + 12.1rem); }
+.real-location-button:disabled { opacity: 0.62; }
+.real-route-summary { position: absolute; z-index: 10; top: calc(max(0.75rem, env(safe-area-inset-top)) + 12.05rem); left: 0.8rem; display: grid; gap: 0.08rem; border: 1px solid rgb(16 33 61 / 0.08); border-radius: 0.8rem; background: rgb(255 255 255 / 0.96); padding: 0.52rem 0.65rem; box-shadow: 0 8px 18px rgb(16 33 61 / 0.12); backdrop-filter: blur(14px); }
+.real-route-summary strong { color: #0759c7; font-size: 0.72rem; }
+.real-route-summary span { color: #66758c; font-size: 0.49rem; font-weight: 750; }
+.booking-map-message { position: absolute; z-index: 20; right: 0.8rem; bottom: 9.05rem; left: 0.8rem; border: 1px solid rgb(7 89 199 / 0.14); border-radius: 0.8rem; background: rgb(255 255 255 / 0.96); padding: 0.55rem 0.65rem; color: #10213d; font-size: 0.57rem; font-weight: 700; line-height: 1.4; box-shadow: 0 8px 18px rgb(16 33 61 / 0.12); }
+.real-start-sheet button:disabled { background: #a8b4c2; box-shadow: none; cursor: not-allowed; }
+@media (max-width: 359px) {
+  .real-location-button { top: calc(max(0.65rem, env(safe-area-inset-top)) + 11.7rem); padding: 0.56rem 0.66rem; }
+  .real-route-summary { top: calc(max(0.65rem, env(safe-area-inset-top)) + 11.7rem); max-width: 12rem; }
+  .booking-place-results { max-height: 11rem; }
+}
