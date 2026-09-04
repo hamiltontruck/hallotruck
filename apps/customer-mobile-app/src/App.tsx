@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CustomerIdentity } from "./auth/CustomerAuthBoundary";
 import { CustomerBookingMap } from "./CustomerBookingMap";
 import { CustomerOrdersPage, CustomerProfilePage } from "./CustomerDataPages";
@@ -6,12 +6,14 @@ import { CustomerPaymentsPage } from "./CustomerPaymentsPage";
 import { CustomerTrackingPage } from "./CustomerTrackingPage";
 import {
   loadCustomerQuotePreview,
+  loadCustomerRoutePreview,
   type CustomerPlaceOption,
   type CustomerQuotePreview,
+  type CustomerRoutePreview,
 } from "./customer-quote.service";
 
 type Tab = "home" | "orders" | "track" | "payments" | "profile";
-type IconName = "home" | "orders" | "track" | "payments" | "profile" | "pin" | "arrow" | "truck" | "box" | "shield" | "clock";
+type IconName = "home" | "orders" | "track" | "payments" | "profile" | "arrow" | "box" | "clock";
 
 type TruckOption = {
   key: string;
@@ -34,11 +36,8 @@ const ICONS: Record<IconName, ReactNode> = {
   track: <><path d="m3 6 5-3 8 3 5-3v15l-5 3-8-3-5 3Z"/><path d="M8 3v15M16 6v15"/></>,
   payments: <><path d="M4 7h16v12H4z"/><path d="M4 10h16M15 14h3"/></>,
   profile: <><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></>,
-  pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
   arrow: <><path d="M5 12h14M13 6l6 6-6 6"/></>,
-  truck: <><path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></>,
   box: <><path d="m4 7 8-4 8 4-8 4Z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></>,
-  shield: <><path d="M12 3 5 6v5c0 4.8 3 8 7 10 4-2 7-5.2 7-10V6Z"/><path d="m9 12 2 2 4-4"/></>,
   clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
 };
 
@@ -52,8 +51,8 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
 
 function HaloLogo() {
   return (
-    <div className="halo-logo" aria-label="HALO Smart Logistics">
-      <div className="halo-wordmark">HAL<span className="halo-pin-o"><span /></span></div>
+    <div className="halo-logo" aria-label="HALLOTRUCK Customer Mobile">
+      <div className="halo-wordmark">HALLO<span style={{ color: "var(--gold)", marginLeft: ".08em" }}>TRUCK</span></div>
       <div className="halo-brand-copy"><strong>Customer</strong><small>Smart Logistics</small></div>
     </div>
   );
@@ -84,19 +83,30 @@ function formatQuoteEtb(amount: number) {
 function BookingSheet({
   pickup,
   dropoff,
+  pickupPlace,
+  dropoffPlace,
   userId,
+  selectedTruck,
+  routePreview,
+  routeLoading,
+  routeError,
+  onTruckChange,
   onClose,
-  onQuote,
-  onInvalidateQuote,
+  onRouteResolved,
 }: {
   pickup: string;
   dropoff: string;
+  pickupPlace: CustomerPlaceOption | null;
+  dropoffPlace: CustomerPlaceOption | null;
   userId: string;
+  selectedTruck: string;
+  routePreview: CustomerRoutePreview | null;
+  routeLoading: boolean;
+  routeError: string;
+  onTruckChange: (truckKey: string) => void;
   onClose: () => void;
-  onQuote: (quote: CustomerQuotePreview) => void;
-  onInvalidateQuote: () => void;
+  onRouteResolved: (route: CustomerRoutePreview) => void;
 }) {
-  const [selectedTruck, setSelectedTruck] = useState("dry-cargo");
   const [cargo, setCargo] = useState("General goods");
   const [loadType, setLoadType] = useState("Loose / bulk");
   const [cargoQuantity, setCargoQuantity] = useState("");
@@ -104,44 +114,49 @@ function BookingSheet({
   const [quote, setQuote] = useState<CustomerQuotePreview | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState("");
-  const routeReady = Boolean(pickup.trim() && dropoff.trim());
   const truck = TRUCKS.find((item) => item.key === selectedTruck) ?? TRUCKS[0];
   const rawCargoAmount = Number(cargoQuantity);
   const cargoTons = Number.isFinite(rawCargoAmount) && rawCargoAmount > 0
     ? (cargoUnit === "quintal" ? rawCargoAmount / 10 : rawCargoAmount)
     : 0;
   const cargoReady = cargoTons > 0 && cargoTons <= truck.maxTons;
-  const quoteReady = Boolean(quote);
+  const routeReady = Boolean(routePreview && !routeLoading && !routeError);
+
+  useEffect(() => {
+    setQuote(null);
+    setQuoteError("");
+  }, [pickupPlace, dropoffPlace, selectedTruck]);
 
   async function calculateQuote() {
-    if (!routeReady) {
-      setQuoteError("Pickup fi drop-off sirriitti galchi.");
+    if (!pickupPlace || !dropoffPlace || !routeReady) {
+      setQuoteError("Choose a valid pickup and drop-off route first.");
       return;
     }
     if (!cargoTons) {
-      setQuoteError("Baay'ina fe'umsaa zeeroo caalu galchi.");
+      setQuoteError("Enter a load amount greater than zero.");
       return;
     }
     if (cargoTons > truck.maxTons) {
-      setQuoteError(`Fe'umsi ${truck.label} capacity ${truck.maxTons} Ton caala.`);
+      setQuoteError(`The load exceeds ${truck.label} capacity of ${truck.maxTons} Ton.`);
       return;
     }
 
     setQuoteLoading(true);
     setQuoteError("");
     setQuote(null);
-    onInvalidateQuote();
     try {
       const result = await loadCustomerQuotePreview(userId, {
         pickupQuery: pickup,
         dropoffQuery: dropoff,
+        pickupPlace,
+        dropoffPlace,
         vehicleType: truck.label,
         cargoTons,
       });
       setQuote(result);
-      onQuote(result);
+      onRouteResolved(result);
     } catch (error) {
-      setQuoteError(error instanceof Error ? error.message : "Quote fe'uun hin danda'amne.");
+      setQuoteError(error instanceof Error ? error.message : "Quote could not be calculated.");
     } finally {
       setQuoteLoading(false);
     }
@@ -150,7 +165,6 @@ function BookingSheet({
   function invalidateQuote() {
     setQuote(null);
     setQuoteError("");
-    onInvalidateQuote();
   }
 
   return (
@@ -162,19 +176,29 @@ function BookingSheet({
       </div>
 
       <div className="booking-body">
-        <p className="booking-subtitle">Select the best option for your delivery.</p>
+        <p className="booking-subtitle">Select the best vehicle and load details for your delivery.</p>
         <div className="step-row" aria-label="Booking progress">
           <span className={routeReady ? "done" : ""}>✓ Route</span>
           <span className="active">✓ Truck</span>
           <span>Cargo</span>
           <span className={cargoReady ? "done" : ""}>Load</span>
-          <span className={quoteReady ? "done" : ""}>Quote</span>
+          <span className={quote ? "done" : ""}>Quote</span>
         </div>
+
+        {routePreview && (
+          <div style={{ margin: "0 0 14px", border: "1px solid #dce6f2", borderRadius: 16, background: "#f8fbff", padding: 12, color: "#10213d", fontSize: 11, lineHeight: 1.55 }}>
+            <small style={{ color: "#9a6700", fontWeight: 900 }}>AUTO ROUTE</small>
+            <strong style={{ display: "block", marginTop: 3, fontSize: 12 }}>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong>
+            <span style={{ display: "block", marginTop: 4 }}>{routePreview.distance_km.toFixed(1)} km · {Math.round(routePreview.duration_minutes)} min · {truck.label}</span>
+          </div>
+        )}
+        {routeLoading && <p style={{ margin: "0 0 12px", color: "#66758c", fontSize: 11, fontWeight: 750 }}>Recalculating the HGV route for {truck.label}…</p>}
+        {routeError && <p role="alert" style={{ margin: "0 0 12px", color: "#b42318", fontSize: 11, fontWeight: 800 }}>{routeError}</p>}
 
         <h2>Choose truck type</h2>
         <div className="truck-grid">
           {TRUCKS.map((option) => (
-            <button type="button" key={option.key} className={`truck-card ${selectedTruck === option.key ? "selected" : ""}`} onClick={() => { setSelectedTruck(option.key); invalidateQuote(); }}>
+            <button type="button" key={option.key} className={`truck-card ${selectedTruck === option.key ? "selected" : ""}`} onClick={() => { onTruckChange(option.key); invalidateQuote(); }}>
               <div className="truck-art-wrap"><TruckArtwork body={option.body}/></div>
               <strong>{option.label}</strong>
               <small>{option.capacity}</small>
@@ -205,36 +229,12 @@ function BookingSheet({
         )}
 
         <div className="quote-panel">
-          <div><small>Estimated quote</small><strong>{quote ? formatQuoteEtb(quote.total_quote_etb) : "—"}</strong><span>{quote ? "Current Admin-managed transport rate." : "Real HGV route + existing secure pricing RPC."}</span></div>
+          <div><small>Estimated quote</small><strong>{quote ? formatQuoteEtb(quote.total_quote_etb) : "—"}</strong><span>{quote ? "Current Admin-managed transport rate." : "Automatic HGV distance + existing secure pricing RPC."}</span></div>
           <button type="button" onClick={() => void calculateQuote()} disabled={quoteLoading || !routeReady || !cargoReady}>{quoteLoading ? "Calculating…" : "Calculate Quote"} <Icon name="arrow" size={18}/></button>
         </div>
-        <p style={{ margin: "10px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>Order creation amma hin banamne. Slice kun quote preview read-only qofa dha.</p>
+        <p style={{ margin: "10px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>Order creation is not enabled yet. This screen remains a read-only quote preview.</p>
       </div>
     </section>
-  );
-}
-
-function EmptyPage({ tab, onHome }: { tab: "track" | "payments"; onHome: () => void }) {
-  const content = {
-    track: { icon: "track" as IconName, eyebrow: "LIVE TRACKING", title: "Geejjibni live hin jiru", body: "Fake driver, ETA ykn route hin agarsiifamu. Active trip dhugaa yeroo tracking integration xumuramu asitti mul'ata." },
-    payments: { icon: "payments" as IconName, eyebrow: "PAYMENTS", title: "Kaffaltiin amma hin fe'amne", body: "Payment history fi verification slice itti aanu keessatti existing secure backend waliin walitti hidhamu." },
-  }[tab];
-
-  return (
-    <main className="standard-page">
-      <header className="standard-header"><HaloLogo/><span className="status-badge">Customer</span></header>
-      <section className="empty-card">
-        <span className="empty-icon"><Icon name={content.icon} size={30}/></span>
-        <small>{content.eyebrow}</small>
-        <h1>{content.title}</h1>
-        <p>{content.body}</p>
-        <button type="button" onClick={onHome}>Home irraa jalqabi</button>
-      </section>
-      <section className="trust-card">
-        <span><Icon name="shield" size={22}/></span>
-        <div><strong>Customer-only boundary</strong><small>Portal, Driver, Admin fi Partner UI irraa adda.</small></div>
-      </section>
-    </main>
   );
 }
 
@@ -264,7 +264,45 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
   const [dropoff, setDropoff] = useState("");
   const [pickupPlace, setPickupPlace] = useState<CustomerPlaceOption | null>(null);
   const [dropoffPlace, setDropoffPlace] = useState<CustomerPlaceOption | null>(null);
-  const [routePreview, setRoutePreview] = useState<CustomerQuotePreview | null>(null);
+  const [selectedTruck, setSelectedTruck] = useState("dry-cargo");
+  const [routePreview, setRoutePreview] = useState<CustomerRoutePreview | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeError, setRouteError] = useState("");
+  const truck = TRUCKS.find((item) => item.key === selectedTruck) ?? TRUCKS[0];
+
+  useEffect(() => {
+    if (!pickupPlace || !dropoffPlace) {
+      setRoutePreview(null);
+      setRouteLoading(false);
+      setRouteError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    setRoutePreview(null);
+    setRouteLoading(true);
+    setRouteError("");
+
+    void loadCustomerRoutePreview(identity.userId, {
+      pickup: pickupPlace,
+      dropoff: dropoffPlace,
+      vehicleType: truck.label,
+      signal: controller.signal,
+    })
+      .then((route) => {
+        if (!controller.signal.aborted) setRoutePreview(route);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted || (error as Error).name === "AbortError") return;
+        setRouteError(error instanceof Error ? error.message : "Truck route could not be calculated.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRouteLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [dropoffPlace, identity.userId, pickupPlace, truck.label]);
+
   const routeLabel = useMemo(() => routePreview
     ? `${routePreview.pickup_label} → ${routePreview.dropoff_label} · ${routePreview.distance_km.toFixed(1)} km`
     : pickup && dropoff ? `${pickup} → ${dropoff}` : "Route not selected", [dropoff, pickup, routePreview]);
@@ -272,50 +310,71 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
   function changePickup(value: string) {
     setPickup(value);
     if (pickupPlace?.label !== value) setPickupPlace(null);
-    setRoutePreview(null);
   }
 
   function changeDropoff(value: string) {
     setDropoff(value);
     if (dropoffPlace?.label !== value) setDropoffPlace(null);
-    setRoutePreview(null);
   }
 
   function selectPickup(place: CustomerPlaceOption) {
     setPickup(place.label);
     setPickupPlace(place);
-    setRoutePreview(null);
   }
 
   function selectDropoff(place: CustomerPlaceOption) {
     setDropoff(place.label);
     setDropoffPlace(place);
-    setRoutePreview(null);
   }
 
-  function acceptQuote(quote: CustomerQuotePreview) {
-    setPickup(quote.pickup_label);
-    setDropoff(quote.dropoff_label);
-    setPickupPlace({ label: quote.pickup_label, coordinates: quote.pickup });
-    setDropoffPlace({ label: quote.dropoff_label, coordinates: quote.dropoff });
-    setRoutePreview(quote);
+  function swapPlaces() {
+    if (!pickupPlace || !dropoffPlace) return;
+    const nextPickup = dropoffPlace;
+    const nextDropoff = pickupPlace;
+    setPickup(nextPickup.label);
+    setDropoff(nextDropoff.label);
+    setPickupPlace(nextPickup);
+    setDropoffPlace(nextDropoff);
+  }
+
+  function resetRoute() {
+    setPickup("");
+    setDropoff("");
+    setPickupPlace(null);
+    setDropoffPlace(null);
+    setRoutePreview(null);
+    setRouteError("");
+  }
+
+  function acceptRoute(route: CustomerRoutePreview) {
+    setPickup(route.pickup_label);
+    setDropoff(route.dropoff_label);
+    setPickupPlace({ label: route.pickup_label, coordinates: route.pickup });
+    setDropoffPlace({ label: route.dropoff_label, coordinates: route.dropoff });
+    setRoutePreview(route);
+    setRouteError("");
   }
 
   let content: ReactNode;
   if (tab === "home") {
     content = (
       <main className="home-page">
-        <header className="home-brand"><HaloLogo/><span title={routeLabel}><Icon name="clock" size={16}/> {routePreview ? "HGV route ready" : "New booking"}</span></header>
+        <header className="home-brand"><HaloLogo/><span title={routeLabel}><Icon name="clock" size={16}/> {routeLoading ? "Finding route" : routePreview ? `${routePreview.distance_km.toFixed(1)} km` : "New booking"}</span></header>
         <CustomerBookingMap
           pickup={pickup}
           dropoff={dropoff}
           pickupPlace={pickupPlace}
           dropoffPlace={dropoffPlace}
           routePreview={routePreview}
+          routeLoading={routeLoading}
+          routeError={routeError}
+          vehicleType={truck.label}
           onPickupChange={changePickup}
           onDropoffChange={changeDropoff}
           onPickupSelect={selectPickup}
           onDropoffSelect={selectDropoff}
+          onSwap={swapPlaces}
+          onReset={resetRoute}
           onBook={() => setBookingOpen(true)}
         />
       </main>
@@ -326,10 +385,8 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
     content = <CustomerTrackingPage userId={identity.userId} onHome={() => setTab("home")}/>;
   } else if (tab === "payments") {
     content = <CustomerPaymentsPage userId={identity.userId} onHome={() => setTab("home")}/>;
-  } else if (tab === "profile") {
-    content = <CustomerProfilePage userId={identity.userId}/>;
   } else {
-    content = <EmptyPage tab={tab} onHome={() => setTab("home")}/>;
+    content = <CustomerProfilePage userId={identity.userId}/>;
   }
 
   return (
@@ -341,10 +398,16 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
           <BookingSheet
             pickup={pickup}
             dropoff={dropoff}
+            pickupPlace={pickupPlace}
+            dropoffPlace={dropoffPlace}
             userId={identity.userId}
+            selectedTruck={selectedTruck}
+            routePreview={routePreview}
+            routeLoading={routeLoading}
+            routeError={routeError}
+            onTruckChange={setSelectedTruck}
             onClose={() => setBookingOpen(false)}
-            onQuote={acceptQuote}
-            onInvalidateQuote={() => setRoutePreview(null)}
+            onRouteResolved={acceptRoute}
           />
         )}
       </div>
