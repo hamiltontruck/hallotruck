@@ -48,9 +48,9 @@
   }
 
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div { padding: 0.02rem 0 0.02rem 1rem !important; }
-  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div { margin-top: 0.1rem !important; padding-top: 0.24rem !important; }
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div { margin-top: 0 !important; padding-top: 0.02rem !important; }
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div::before { left: 0.08rem !important; top: 1.34rem !important; width: 0.5rem !important; height: 0.5rem !important; }
-  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div::before { top: 1.58rem !important; }
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child > div + div::before { top: 1.34rem !important; }
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child label { font-size: 0.46rem !important; line-height: 0.58rem !important; }
   .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child input { min-height: 1.45rem !important; padding: 0.1rem 0.12rem !important; font-size: 0.62rem !important; line-height: 0.78rem !important; }
 
