@@ -5,7 +5,7 @@ import type { CustomerLiveTrip } from "./customer-tracking.service";
 
 const mapTilerKey = (import.meta.env.VITE_MAPTILER_KEY as string | undefined)?.trim();
 const mapStyle = mapTilerKey
-  ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${encodeURIComponent(mapTilerKey)}`
+  ? `https://api.maptiler.com/maps/basic-v2/style.json?key=${encodeURIComponent(mapTilerKey)}`
   : "https://tiles.openfreemap.org/styles/liberty";
 
 function validCoordinate(lng: number | null | undefined, lat: number | null | undefined) {
@@ -34,18 +34,18 @@ function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: num
     element.style.width = "20px";
     element.style.height = "20px";
     element.style.borderRadius = "50%";
-    element.style.background = "#0759c7";
+    element.style.background = "#10213d";
   } else if (kind === "dropoff") {
     element.style.width = "20px";
     element.style.height = "20px";
     element.style.borderRadius = "50%";
-    element.style.background = "#f5b400";
+    element.style.background = "#d68e25";
   } else {
     element.style.width = "34px";
     element.style.height = "34px";
     element.style.borderRadius = "12px";
     element.style.background = "#10213d";
-    element.style.color = "#fff";
+    element.style.color = "#f5b400";
     element.style.fontSize = "17px";
     element.style.fontWeight = "900";
     element.innerHTML = '<span data-truck-arrow aria-hidden="true">➤</span>';
@@ -146,7 +146,7 @@ export function CustomerTrackingMap({ trip }: { trip: CustomerLiveTrip | undefin
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 15px 12px" }}>
         <div>
-          <small style={{ display: "block", color: "#0759c7", fontSize: 10, fontWeight: 900, letterSpacing: ".08em" }}>REAL MAP</small>
+          <small style={{ display: "block", color: "#9a6700", fontSize: 10, fontWeight: 900, letterSpacing: ".08em" }}>REAL MAP</small>
           <strong style={{ display: "block", marginTop: 4, color: "#10213d", fontSize: 15 }}>Pickup → Drop-off → Truck</strong>
         </div>
         <span style={{ borderRadius: 999, background: hasTruck ? "#ecfdf3" : "#fff7ed", padding: "6px 9px", color: hasTruck ? "#027a48" : "#b54708", fontSize: 10, fontWeight: 900 }}>
@@ -156,12 +156,12 @@ export function CustomerTrackingMap({ trip }: { trip: CustomerLiveTrip | undefin
       <div ref={containerRef} style={{ width: "100%", height: 310, background: "#dfe9f5" }} />
       {!hasEndpoints && (
         <p style={{ margin: 0, padding: "10px 14px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>
-          Pickup/drop-off coordinates secure live-trip RPC irraa yeroo argaman map irratti mul'atu.
+          Pickup and drop-off markers appear when the secure live-trip RPC returns their coordinates.
         </p>
       )}
       <div aria-label="Map legend" style={{ display: "flex", flexWrap: "wrap", gap: 12, padding: "11px 14px 13px", color: "#68778d", fontSize: 10, fontWeight: 800 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 9, height: 9, borderRadius: 999, background: "#0759c7" }} /> Pickup</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 9, height: 9, borderRadius: 999, background: "#f5b400" }} /> Drop-off</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 9, height: 9, borderRadius: 999, background: "#10213d" }} /> Pickup</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 9, height: 9, borderRadius: 999, background: "#d68e25" }} /> Drop-off</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 9, height: 9, borderRadius: 3, background: "#10213d" }} /> Truck</span>
       </div>
     </section>
