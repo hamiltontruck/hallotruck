@@ -1,9 +1,14 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { CustomerIdentity } from "./auth/CustomerAuthBoundary";
+import { CustomerBookingMap } from "./CustomerBookingMap";
 import { CustomerOrdersPage, CustomerProfilePage } from "./CustomerDataPages";
 import { CustomerPaymentsPage } from "./CustomerPaymentsPage";
 import { CustomerTrackingPage } from "./CustomerTrackingPage";
-import { loadCustomerQuotePreview, type CustomerQuotePreview } from "./customer-quote.service";
+import {
+  loadCustomerQuotePreview,
+  type CustomerPlaceOption,
+  type CustomerQuotePreview,
+} from "./customer-quote.service";
 
 type Tab = "home" | "orders" | "track" | "payments" | "profile";
 type IconName = "home" | "orders" | "track" | "payments" | "profile" | "pin" | "arrow" | "truck" | "box" | "shield" | "clock";
@@ -72,58 +77,25 @@ function TruckArtwork({ body }: { body: TruckOption["body"] }) {
   );
 }
 
-function MapSurface({ pickup, dropoff, onPickup, onDropoff, onBook }: {
-  pickup: string;
-  dropoff: string;
-  onPickup: (value: string) => void;
-  onDropoff: (value: string) => void;
-  onBook: () => void;
-}) {
-  return (
-    <section className="map-surface" aria-label="Booking map preview">
-      <div className="map-water map-water-a" />
-      <div className="map-water map-water-b" />
-      <div className="map-road map-road-one" />
-      <div className="map-road map-road-two" />
-      <div className="map-road map-road-three" />
-      <span className="map-label map-label-ethiopia">ETHIOPIA</span>
-      <span className="map-label map-label-addis">Addis Ababa</span>
-      <span className="map-label map-label-adama">Adama</span>
-      <span className="map-dot map-dot-addis" />
-      <span className="map-dot map-dot-adama" />
-
-      <div className="route-card">
-        <label>
-          <span><i className="route-dot route-dot-green" /> PICKUP PLACE</span>
-          <input value={pickup} onChange={(event) => onPickup(event.target.value)} placeholder="Bakka fe'umsaa galchi" />
-        </label>
-        <div className="route-divider" />
-        <label>
-          <span><i className="route-dot route-dot-gold" /> DROP-OFF PLACE</span>
-          <input value={dropoff} onChange={(event) => onDropoff(event.target.value)} placeholder="Bakka geessuu galchi" />
-        </label>
-      </div>
-
-      <button type="button" className="my-location"><Icon name="pin" size={16}/> My Location</button>
-      <div className="map-zoom" aria-hidden="true"><span>+</span><span>−</span></div>
-
-      <div className="start-sheet">
-        <span className="sheet-handle" />
-        <div>
-          <strong>Start your booking</strong>
-          <small>Choose route, cargo and truck to continue.</small>
-        </div>
-        <button type="button" onClick={onBook}>Book Now <Icon name="arrow" size={17}/></button>
-      </div>
-    </section>
-  );
-}
-
 function formatQuoteEtb(amount: number) {
   return `ETB ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount)}`;
 }
 
-function BookingSheet({ pickup, dropoff, userId, onClose }: { pickup: string; dropoff: string; userId: string; onClose: () => void }) {
+function BookingSheet({
+  pickup,
+  dropoff,
+  userId,
+  onClose,
+  onQuote,
+  onInvalidateQuote,
+}: {
+  pickup: string;
+  dropoff: string;
+  userId: string;
+  onClose: () => void;
+  onQuote: (quote: CustomerQuotePreview) => void;
+  onInvalidateQuote: () => void;
+}) {
   const [selectedTruck, setSelectedTruck] = useState("dry-cargo");
   const [cargo, setCargo] = useState("General goods");
   const [loadType, setLoadType] = useState("Loose / bulk");
@@ -158,6 +130,7 @@ function BookingSheet({ pickup, dropoff, userId, onClose }: { pickup: string; dr
     setQuoteLoading(true);
     setQuoteError("");
     setQuote(null);
+    onInvalidateQuote();
     try {
       const result = await loadCustomerQuotePreview(userId, {
         pickupQuery: pickup,
@@ -166,6 +139,7 @@ function BookingSheet({ pickup, dropoff, userId, onClose }: { pickup: string; dr
         cargoTons,
       });
       setQuote(result);
+      onQuote(result);
     } catch (error) {
       setQuoteError(error instanceof Error ? error.message : "Quote fe'uun hin danda'amne.");
     } finally {
@@ -176,6 +150,7 @@ function BookingSheet({ pickup, dropoff, userId, onClose }: { pickup: string; dr
   function invalidateQuote() {
     setQuote(null);
     setQuoteError("");
+    onInvalidateQuote();
   }
 
   return (
@@ -287,14 +262,62 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
-  const routeLabel = useMemo(() => pickup && dropoff ? `${pickup} → ${dropoff}` : "Route not selected", [pickup, dropoff]);
+  const [pickupPlace, setPickupPlace] = useState<CustomerPlaceOption | null>(null);
+  const [dropoffPlace, setDropoffPlace] = useState<CustomerPlaceOption | null>(null);
+  const [routePreview, setRoutePreview] = useState<CustomerQuotePreview | null>(null);
+  const routeLabel = useMemo(() => routePreview
+    ? `${routePreview.pickup_label} → ${routePreview.dropoff_label} · ${routePreview.distance_km.toFixed(1)} km`
+    : pickup && dropoff ? `${pickup} → ${dropoff}` : "Route not selected", [dropoff, pickup, routePreview]);
+
+  function changePickup(value: string) {
+    setPickup(value);
+    if (pickupPlace?.label !== value) setPickupPlace(null);
+    setRoutePreview(null);
+  }
+
+  function changeDropoff(value: string) {
+    setDropoff(value);
+    if (dropoffPlace?.label !== value) setDropoffPlace(null);
+    setRoutePreview(null);
+  }
+
+  function selectPickup(place: CustomerPlaceOption) {
+    setPickup(place.label);
+    setPickupPlace(place);
+    setRoutePreview(null);
+  }
+
+  function selectDropoff(place: CustomerPlaceOption) {
+    setDropoff(place.label);
+    setDropoffPlace(place);
+    setRoutePreview(null);
+  }
+
+  function acceptQuote(quote: CustomerQuotePreview) {
+    setPickup(quote.pickup_label);
+    setDropoff(quote.dropoff_label);
+    setPickupPlace({ label: quote.pickup_label, coordinates: quote.pickup });
+    setDropoffPlace({ label: quote.dropoff_label, coordinates: quote.dropoff });
+    setRoutePreview(quote);
+  }
 
   let content: ReactNode;
   if (tab === "home") {
     content = (
       <main className="home-page">
-        <header className="home-brand"><HaloLogo/><span title={routeLabel}><Icon name="clock" size={16}/> New booking</span></header>
-        <MapSurface pickup={pickup} dropoff={dropoff} onPickup={setPickup} onDropoff={setDropoff} onBook={() => setBookingOpen(true)}/>
+        <header className="home-brand"><HaloLogo/><span title={routeLabel}><Icon name="clock" size={16}/> {routePreview ? "HGV route ready" : "New booking"}</span></header>
+        <CustomerBookingMap
+          pickup={pickup}
+          dropoff={dropoff}
+          pickupPlace={pickupPlace}
+          dropoffPlace={dropoffPlace}
+          routePreview={routePreview}
+          onPickupChange={changePickup}
+          onDropoffChange={changeDropoff}
+          onPickupSelect={selectPickup}
+          onDropoffSelect={selectDropoff}
+          onBook={() => setBookingOpen(true)}
+        />
       </main>
     );
   } else if (tab === "orders") {
@@ -314,7 +337,16 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
       <div className="phone-stage">
         {content}
         {!bookingOpen && <BottomNav tab={tab} setTab={setTab}/>} 
-        {bookingOpen && <BookingSheet pickup={pickup} dropoff={dropoff} userId={identity.userId} onClose={() => setBookingOpen(false)}/>} 
+        {bookingOpen && (
+          <BookingSheet
+            pickup={pickup}
+            dropoff={dropoff}
+            userId={identity.userId}
+            onClose={() => setBookingOpen(false)}
+            onQuote={acceptQuote}
+            onInvalidateQuote={() => setRoutePreview(null)}
+          />
+        )}
       </div>
     </div>
   );
