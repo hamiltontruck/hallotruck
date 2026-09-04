@@ -22,7 +22,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -31,20 +30,15 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             apps/mobile-app/package-lock.json
-
       - name: Install
         run: npm ci
-
       - name: Lint
         run: npm run lint
-
       - name: Business regression tests
         run: npm run test:regression
-
       - name: Block deploy when production migrations are behind
         if: github.event_name != 'pull_request'
         run: node scripts/verify-production-migration-parity.mjs
-
       - name: Build
         run: npm run build
         env:
@@ -55,18 +49,14 @@ jobs:
           VITE_POSTHOG_PROJECT_TOKEN: ${{ vars.VITE_POSTHOG_PROJECT_TOKEN }}
           VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
           VITE_RELEASE_SHA: ${{ github.sha }}
-
       - name: Browser E2E smoke tests
         run: npm run test:e2e-smoke
-
       - name: Install mobile dependencies
         working-directory: apps/mobile-app
         run: npm ci --no-audit --no-fund
-
       - name: Test mobile app
         working-directory: apps/mobile-app
         run: npm test
-
       - name: Build mobile app
         working-directory: apps/mobile-app
         run: npm run build
@@ -74,26 +64,21 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
-
       - name: Driver document preview browser smoke
         working-directory: apps/mobile-app
         run: npm run test:document-preview-smoke
-
       - name: Publish mobile app into Pages artifact
         run: |
           rm -rf dist/mobile
           mkdir -p dist/mobile
           cp -R apps/mobile-app/dist/. dist/mobile/
           printf '%s\n' "${GITHUB_SHA}" > dist/mobile/release.txt
-
       - name: Install Customer mobile dependencies
         working-directory: apps/customer-mobile-app
         run: npm install --no-audit --no-fund
-
       - name: Test Customer mobile app
         working-directory: apps/customer-mobile-app
         run: npm test
-
       - name: Build Customer mobile app
         working-directory: apps/customer-mobile-app
         run: npm run build
@@ -102,29 +87,41 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
           VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
-
       - name: Publish Customer mobile app into Pages artifact
         run: |
           rm -rf dist/customer-mobile
           mkdir -p dist/customer-mobile
           cp -R apps/customer-mobile-app/dist/. dist/customer-mobile/
           printf '%s\n' "${GITHUB_SHA}" > dist/customer-mobile/release.txt
-
+      - name: Install standalone Driver mobile dependencies
+        working-directory: apps/driver-mobile-app
+        run: npm install --no-audit --no-fund
+      - name: Build standalone Driver mobile app
+        working-directory: apps/driver-mobile-app
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
+          VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
+      - name: Publish standalone Driver mobile app
+        run: |
+          rm -rf dist/driver-mobile
+          mkdir -p dist/driver-mobile
+          cp -R apps/driver-mobile-app/dist/. dist/driver-mobile/
+          printf '%s\n' "${GITHUB_SHA}" > dist/driver-mobile/release.txt
       - name: Validate combined Pages artifact
         run: node scripts/verify-pages-artifact.mjs
-
       - name: Configure Pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
         with:
           enablement: true
-
       - name: Upload site
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
-
   deploy:
     if: github.event_name != 'pull_request'
     environment:
