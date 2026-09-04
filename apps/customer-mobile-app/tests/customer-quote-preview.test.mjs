@@ -33,6 +33,7 @@ test("Booking quote requires automatic route, load and truck capacity", () => {
   assert.match(app, /pickupPlace,/);
   assert.match(app, /dropoffPlace,/);
   assert.match(app, /disabled=\{quoteLoading \|\| !routeReady \|\| !cargoReady\}/);
-  assert.match(app, /Automatic HGV distance \+ existing secure pricing RPC/);
+  assert.match(app, /Birr calculates automatically from the secure pricing RPC/);
+  assert.match(app, /Enter the load amount to calculate Birr automatically/);
   assert.match(app, /Current Admin-managed transport rate/);
 });
