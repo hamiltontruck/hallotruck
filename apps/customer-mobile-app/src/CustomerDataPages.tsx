@@ -6,6 +6,7 @@ import {
   type CustomerMobileData,
   type CustomerMobileOrder,
 } from "./customer-data.service";
+import { customerSupabase } from "./auth/customer-supabase";
 
 type DataState =
   | { kind: "loading" }
@@ -152,6 +153,28 @@ function ProfileRow({ label, value }: { label: string; value: string | null | un
 
 export function CustomerProfilePage({ userId }: { userId: string }) {
   const { state, reload } = useCustomerData(userId);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
+
+  async function signOutCustomer() {
+    if (signingOut) return;
+    const client = customerSupabase;
+    if (!client) {
+      setSignOutError("Customer session client hin qophoofne.");
+      return;
+    }
+
+    setSigningOut(true);
+    setSignOutError("");
+    try {
+      const { error } = await client.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      setSignOutError(error instanceof Error ? error.message : "Account keessaa ba'uun hin danda'amne.");
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   if (state.kind === "loading") {
     return <main style={pageStyle}><HaloHeader right="Secure RPC"/><StatusCard title="Profile fe'aa jira…" body="Customer profile secure customer_get_profile RPC irraa fe'amaa jira."/></main>;
@@ -183,6 +206,10 @@ export function CustomerProfilePage({ userId }: { userId: string }) {
         <ProfileRow label="Joined" value={joined}/>
       </section>
       <button type="button" onClick={() => void reload()} style={{ marginTop: 14, minHeight: 46, width: "100%", border: "1px solid #d8e2ef", borderRadius: 15, background: "#fff", color: "#10213d", fontWeight: 900 }}>Profile refresh</button>
+      {signOutError && <p role="alert" style={{ margin: "12px 4px 0", color: "#b42318", fontSize: 11, fontWeight: 800 }}>{signOutError}</p>}
+      <button type="button" onClick={() => void signOutCustomer()} disabled={signingOut} aria-busy={signingOut} style={{ marginTop: 10, minHeight: 46, width: "100%", border: "1px solid #f0c8c4", borderRadius: 15, background: "#fff", color: "#b42318", fontWeight: 900, opacity: signingOut ? .65 : 1 }}>
+        {signingOut ? "Account keessaa bahaa jira…" : "Account keessaa ba'i"}
+      </button>
       <p style={{ margin: "14px 4px 0", color: "#68778d", fontSize: 11, lineHeight: 1.6 }}>Read-only slice: profile editing hin dabalamu. Data existing Customer backend/RLS fi secure RPC irraa qofa dhufa.</p>
     </main>
   );
