@@ -11,6 +11,7 @@ import {
   requireValidEmail,
   requireValidEthiopianPhone,
 } from "../domain/contact-validation";
+import { isValidNewRolePassword, ROLE_PIN_ERROR } from "../domain/password-recovery";
 
 type Feedback = {
   kind: "error" | "success";
@@ -127,6 +128,7 @@ export function CustomerLogin({
 
       if (mode === "signup") {
         if (!fullName.trim()) throw new Error("Enter your full name.");
+        if (!isValidNewRolePassword(password)) throw new Error(ROLE_PIN_ERROR);
         const normalizedPhone = requireValidEthiopianPhone(phone);
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
@@ -254,7 +256,7 @@ export function CustomerLogin({
               <Field label={t("common.phone")} value={phone} onChange={setPhone} type="tel" inputMode="tel" autoComplete="tel" placeholder="09xxxxxxxx" maxLength={17} />
             </>}
             <Field label={resetMode ? resetCopy.email : t("common.email")} value={email} onChange={setEmail} type="email" autoComplete="email" maxLength={254} />
-            {!resetMode && <Field label={t("common.password")} value={password} onChange={setPassword} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={10} />}
+            {!resetMode && <Field label={t("common.password")} value={password} onChange={setPassword} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} inputMode={mode === "signup" ? "numeric" : undefined} pattern={mode === "signup" ? "[0-9]{6}" : undefined} minLength={mode === "signup" ? 6 : undefined} maxLength={mode === "signup" ? 6 : undefined} />}
           </div>
 
           <button disabled={busy || !online} className="mt-6 w-full bg-emerald-700 py-4 font-semibold text-white disabled:opacity-50">
@@ -287,6 +289,7 @@ function Field({
   inputMode,
   autoComplete,
   placeholder,
+  pattern,
   minLength,
   maxLength,
 }: {
@@ -297,8 +300,9 @@ function Field({
   inputMode?: "text" | "tel" | "email" | "numeric" | "decimal" | "search" | "url" | "none";
   autoComplete?: string;
   placeholder?: string;
+  pattern?: string;
   minLength?: number;
   maxLength?: number;
 }) {
-  return <label className="block text-sm">{label}<input required type={type} inputMode={inputMode} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} placeholder={placeholder} minLength={minLength} maxLength={maxLength} className="mt-2 w-full border border-line px-4 py-3 outline-none focus:border-emerald-700" /></label>;
+  return <label className="block text-sm">{label}<input required type={type} inputMode={inputMode} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} placeholder={placeholder} pattern={pattern} minLength={minLength} maxLength={maxLength} className="mt-2 w-full border border-line px-4 py-3 outline-none focus:border-emerald-700" /></label>;
 }
