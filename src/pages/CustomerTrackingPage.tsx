@@ -8,6 +8,7 @@ import {
   type CustomerDriverAssignment,
   type CustomerOrder,
 } from "../services/customer.service";
+import { supabase } from "../services/supabase.client";
 
 const copy: Record<HalloLanguage, {
   eyebrow: string;
@@ -27,6 +28,11 @@ const copy: Record<HalloLanguage, {
   cancelledAt: string;
   cancelOrder: string;
   retry: string;
+  tripInProgress: string;
+  assignedTruck: string;
+  truckPlate: string;
+  capacity: string;
+  truckPhoto: string;
 }> = {
   en: {
     eyebrow: "LIVE CARGO TRACKING",
@@ -46,6 +52,11 @@ const copy: Record<HalloLanguage, {
     cancelledAt: "Cancelled",
     cancelOrder: "Cancel this order",
     retry: "Retry tracking",
+    tripInProgress: "Trip in progress",
+    assignedTruck: "Assigned truck",
+    truckPlate: "Plate",
+    capacity: "Capacity",
+    truckPhoto: "Assigned truck photo",
   },
   om: {
     eyebrow: "HORDOFFII FEʼUMSAA LIVE",
@@ -65,6 +76,11 @@ const copy: Record<HalloLanguage, {
     cancelledAt: "Yeroo dhiifame",
     cancelOrder: "Ajaja kana dhiisi",
     retry: "Hordoffii irra deebiʼii yaali",
+    tripInProgress: "Trip hojii irra jira",
+    assignedTruck: "Truck ramadame",
+    truckPlate: "Lakkoofsa gabatee",
+    capacity: "Dandeettii",
+    truckPhoto: "Suuraa truck ramadamee",
   },
   am: {
     eyebrow: "ቀጥታ የጭነት ክትትል",
@@ -84,6 +100,11 @@ const copy: Record<HalloLanguage, {
     cancelledAt: "የተሰረዘበት ጊዜ",
     cancelOrder: "ይህን ትዕዛዝ ሰርዝ",
     retry: "ክትትሉን እንደገና ሞክር",
+    tripInProgress: "ጉዞ በሂደት ላይ",
+    assignedTruck: "የተመደበ መኪና",
+    truckPlate: "ሰሌዳ",
+    capacity: "አቅም",
+    truckPhoto: "የተመደበ መኪና ፎቶ",
   },
 };
 
@@ -93,6 +114,7 @@ export function CustomerTrackingPage() {
   const t = copy[language];
   const [order, setOrder] = useState<CustomerOrder | null>(null);
   const [assignment, setAssignment] = useState<CustomerDriverAssignment | null>(null);
+  const [truckPhotoUrl, setTruckPhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -124,6 +146,24 @@ export function CustomerTrackingPage() {
       window.clearInterval(channel);
     };
   }, [orderId, retryKey, t.loadError, t.notFound]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const path = assignment?.truck_photo_path;
+    if (!path) {
+      setTruckPhotoUrl(null);
+      return;
+    }
+
+    void supabase.storage
+      .from("driver-verification")
+      .createSignedUrl(path, 3600)
+      .then(({ data, error: photoError }) => {
+        if (!cancelled) setTruckPhotoUrl(photoError ? null : data?.signedUrl ?? null);
+      });
+
+    return () => { cancelled = true; };
+  }, [assignment?.truck_photo_path]);
 
   useEffect(() => {
     if (!cancelOpen) return;
@@ -171,6 +211,24 @@ export function CustomerTrackingPage() {
 
         {order && (
           <>
+            {assignment && order.status !== "cancelled" && (
+              <article className="customer-live-page__truck-card">
+                <div className="customer-live-page__truck-photo">
+                  {truckPhotoUrl ? (
+                    <img src={truckPhotoUrl} alt={t.truckPhoto} onError={() => setTruckPhotoUrl(null)} />
+                  ) : (
+                    <span aria-hidden="true">🚚</span>
+                  )}
+                </div>
+                <div className="customer-live-page__truck-copy">
+                  <small>{t.assignedTruck}</small>
+                  <h2>{assignment.vehicle_type ?? order.vehicle_type}</h2>
+                  <p>{t.truckPlate}: {assignment.plate_number ?? "—"} · {t.capacity}: {assignment.capacity_tons == null ? "—" : `${assignment.capacity_tons} ton`}</p>
+                </div>
+                <span className={`customer-live-page__truck-state${trackable ? " is-live" : ""}`}>{trackable ? t.tripInProgress : t.assignedTruck}</span>
+              </article>
+            )}
+
             {assignment && order.status !== "cancelled" && (
               <article className="customer-live-page__driver">
                 <div className="customer-live-page__avatar">{initials}</div>
