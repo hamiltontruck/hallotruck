@@ -12,8 +12,9 @@ test("Customer Home uses a real map with place search and location selection", (
   assert.match(map, /reverseCustomerPlace\(coordinates\)/);
   assert.match(map, /map\.on\("click"/);
   assert.match(map, /navigator\.geolocation\.getCurrentPosition/);
-  assert.match(map, /booking-map-marker-pickup/);
-  assert.match(map, /booking-map-marker-dropoff/);
+  assert.match(map, /booking-map-marker-\$\{kind\}/);
+  assert.match(map, /updateMarker\(pickupMarkerRef\.current, map, pickupCoordinates, "pickup"\)/);
+  assert.match(map, /updateMarker\(dropoffMarkerRef\.current, map, dropoffCoordinates, "dropoff"\)/);
   assert.match(app, /<CustomerBookingMap/);
 });
 
