@@ -1,0 +1,6 @@
+/* Customer Portal portrait only — prevent iOS Safari auto-zoom when booking inputs receive focus. */
+@media (orientation: portrait) and (max-width: 639px) {
+  .customer-view-home .customer-map-home__map > .customer-quote-map > .grid:first-child input {
+    font-size: 16px !important;
+  }
+}
