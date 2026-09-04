@@ -32,7 +32,8 @@ export function validateEmailAddress(value: string) {
 
   if (!domain || domain.length > 253 || domain.startsWith(".") || domain.endsWith(".") || domain.includes("..")) return null;
   const labels = domain.split(".");
-  if (labels.length < 2 || !EMAIL_TLD_PATTERN.test(labels.at(-1) ?? "")) return null;
+  const topLevelDomain = labels[labels.length - 1] ?? "";
+  if (labels.length < 2 || !EMAIL_TLD_PATTERN.test(topLevelDomain)) return null;
   if (labels.some((label) => !EMAIL_DOMAIN_LABEL_PATTERN.test(label))) return null;
 
   return email;
