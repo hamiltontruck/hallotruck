@@ -146,7 +146,7 @@ function Login({ busy, error, onSubmit }: {
           </label>
           <label style={{ fontSize: "13px", fontWeight: 800 }}>
             Password
-            <input style={inputStyle} type="password" autoComplete="current-password" required minLength={10} disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} />
+            <input style={inputStyle} type="password" autoComplete="current-password" required disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} />
           </label>
           <button type="submit" disabled={busy} style={{ ...primaryButtonStyle, opacity: busy ? .6 : 1 }}>
             {busy ? "Verifying account…" : "SIGN IN"}
@@ -305,5 +305,6 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
   if (state.kind === "unsupported-role") return <AccessState eyebrow="ACCESS DENIED" title="Customer account required" description="This account does not have the Customer database role. Driver, Admin, CEO and Partner workspaces cannot open this app." onSignOut={signOut} />;
   if (state.kind === "missing-profile") return <AccessState eyebrow="PROFILE MISSING" title="Database profile not found" description="An auth account exists, but no profile row was returned. Authorization is never guessed." onSignOut={signOut} onRetry={retryProfile} />;
-  return <AccessState eyebrow="SECURE CONNECTION ERROR" title="Role verification failed" description={state.message} onSignOut={signOut} onRetry={retryProfile} />;
+  if (state.kind === "load-error") return <AccessState eyebrow="SECURE CONNECTION ERROR" title="Role verification failed" description={state.message} onSignOut={signOut} onRetry={retryProfile} />;
+  return null;
 }

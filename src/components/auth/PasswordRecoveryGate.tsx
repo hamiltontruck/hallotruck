@@ -2,8 +2,11 @@ import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { supabase } from "../../services/supabase.client";
 import {
   isPasswordRecoveryLocation,
+  isValidNewRolePassword,
   MIN_RECOVERY_PASSWORD_LENGTH,
   recoveryLoginHash,
+  ROLE_PIN_ERROR,
+  usesSixDigitPin,
   type RecoveryPortal,
 } from "../../domain/password-recovery";
 import { LanguageSwitcher, useLanguage } from "../../i18n/LanguageProvider";
@@ -21,28 +24,37 @@ export function PasswordRecoveryGate({ children, fixture }: { children: ReactNod
   const c = passwordRecoveryCopy[language];
   const [recovering, setRecovering] = useState(() => fixture?.recovering ?? isPasswordRecoveryLocation(window.location.href));
   const [portal, setPortal] = useState<RecoveryPortal>(fixture?.portal ?? "account");
+  const [portalResolved, setPortalResolved] = useState(() => Boolean(fixture?.portal) || !(fixture?.recovering ?? isPasswordRecoveryLocation(window.location.href)));
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const pinRecovery = usesSixDigitPin(portal);
 
   useEffect(() => {
     if (fixture) return;
 
+    const resolvePortal = async (user: Parameters<typeof resolveRecoveryPortal>[0]) => {
+      setPortal(await resolveRecoveryPortal(user));
+      setPortalResolved(true);
+    };
+
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" && session?.user) {
         setRecovering(true);
+        setPortalResolved(false);
         setSuccess(false);
         setError("");
-        void resolveRecoveryPortal(session.user).then(setPortal);
+        void resolvePortal(session.user);
       }
     });
 
     if (isPasswordRecoveryLocation(window.location.href)) {
       setRecovering(true);
+      setPortalResolved(false);
       void supabase.auth.getUser().then(({ data: userData }) => {
-        if (userData.user) void resolveRecoveryPortal(userData.user).then(setPortal);
+        if (userData.user) void resolvePortal(userData.user);
       });
     }
 
@@ -53,7 +65,13 @@ export function PasswordRecoveryGate({ children, fixture }: { children: ReactNod
     event.preventDefault();
     setError("");
 
-    if (password.length < MIN_RECOVERY_PASSWORD_LENGTH) {
+    if (!portalResolved) return;
+    if (pinRecovery) {
+      if (!isValidNewRolePassword(password)) {
+        setError(ROLE_PIN_ERROR);
+        return;
+      }
+    } else if (password.length < MIN_RECOVERY_PASSWORD_LENGTH) {
       setError(c.tooShort);
       return;
     }
@@ -130,7 +148,10 @@ export function PasswordRecoveryGate({ children, fixture }: { children: ReactNod
             <label className="mt-7 mb-2 block text-xs font-semibold">{c.newPassword}</label>
             <input
               required
-              minLength={MIN_RECOVERY_PASSWORD_LENGTH}
+              inputMode={pinRecovery ? "numeric" : undefined}
+              pattern={pinRecovery ? "[0-9]{6}" : undefined}
+              minLength={pinRecovery ? 6 : MIN_RECOVERY_PASSWORD_LENGTH}
+              maxLength={pinRecovery ? 6 : undefined}
               type="password"
               autoComplete="new-password"
               value={password}
@@ -140,14 +161,17 @@ export function PasswordRecoveryGate({ children, fixture }: { children: ReactNod
             <label className="mt-5 mb-2 block text-xs font-semibold">{c.confirmPassword}</label>
             <input
               required
-              minLength={MIN_RECOVERY_PASSWORD_LENGTH}
+              inputMode={pinRecovery ? "numeric" : undefined}
+              pattern={pinRecovery ? "[0-9]{6}" : undefined}
+              minLength={pinRecovery ? 6 : MIN_RECOVERY_PASSWORD_LENGTH}
+              maxLength={pinRecovery ? 6 : undefined}
               type="password"
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               className="w-full border border-asphalt/20 px-4 py-3 outline-none focus:border-amber"
             />
-            <button disabled={saving} className="mt-7 w-full bg-asphalt px-3 py-4 font-semibold text-white disabled:opacity-60">
+            <button disabled={saving || !portalResolved} className="mt-7 w-full bg-asphalt px-3 py-4 font-semibold text-white disabled:opacity-60">
               {saving ? c.updating : c.update}
             </button>
           </form>

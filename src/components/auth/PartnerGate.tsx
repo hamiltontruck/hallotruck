@@ -95,7 +95,7 @@ export function PartnerGate({ children }: { children: ReactNode }) {
           <label className="mb-2 mt-7 block text-xs font-semibold">Email address</label>
           <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="w-full border border-asphalt/20 px-4 py-3 outline-none focus:border-amber" />
           <label className="mb-2 mt-5 block text-xs font-semibold">Password</label>
-          <input required minLength={6} type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full border border-asphalt/20 px-4 py-3 outline-none focus:border-amber" />
+          <input required type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full border border-asphalt/20 px-4 py-3 outline-none focus:border-amber" />
           <button disabled={busy} className="mt-7 w-full bg-asphalt py-4 font-semibold text-white disabled:opacity-50">{busy ? "Signing in…" : "Open partner workspace"}</button>
           <Link to="/" className="mt-5 block text-center text-xs font-semibold text-amber-dim">Back to main portal</Link>
         </form>

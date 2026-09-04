@@ -144,7 +144,6 @@ export function MobileLogin({ busy, error, onSubmit }: MobileLoginProps) {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
-                minLength={10}
                 required
                 disabled={busy}
                 className="mt-2 min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-base outline-none transition focus:border-halo-blue focus:ring-4 focus:ring-halo-soft disabled:opacity-60"

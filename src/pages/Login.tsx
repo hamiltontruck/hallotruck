@@ -11,6 +11,7 @@ import {
   requireValidEmail,
   requireValidEthiopianPhone,
 } from "../domain/contact-validation";
+import { isValidNewRolePassword, ROLE_PIN_ERROR } from "../domain/password-recovery";
 
 export function Login({
   passwordResetRequester = requestPasswordResetEmail,
@@ -71,6 +72,7 @@ export function Login({
 
       if (mode === "signup") {
         if (!fullName.trim()) throw new Error(t("driver.error.namePhone"));
+        if (!isValidNewRolePassword(password)) throw new Error(ROLE_PIN_ERROR);
         const normalizedPhone = requireValidEthiopianPhone(phone);
 
         const { data, error: signupError } = await supabase.auth.signUp({
@@ -162,7 +164,7 @@ export function Login({
 
           {!resetMode && <label className="block">
             <span className="font-body text-sm text-asphalt">{t("common.password")}</span>
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} required />
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1 w-full border border-line px-4 py-3 font-body outline-none focus:border-route" inputMode={mode === "signup" ? "numeric" : undefined} pattern={mode === "signup" ? "[0-9]{6}" : undefined} minLength={mode === "signup" ? 6 : undefined} maxLength={mode === "signup" ? 6 : undefined} autoComplete={mode === "login" ? "current-password" : "new-password"} required />
           </label>}
 
           <button type="submit" disabled={busy} className="w-full bg-route text-bone font-display font-semibold px-6 py-3 disabled:opacity-50">
