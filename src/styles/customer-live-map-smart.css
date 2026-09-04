@@ -1,1 +1,175 @@
 .customer-live-page__map-shell{overflow:hidden;border:1px solid rgb(29 34 42/.1);border-radius:1.35rem;background:#fff;padding:.75rem;box-shadow:0 18px 45px rgb(29 34 42/.1)}.customer-live-map{position:relative}.customer-live-map__timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem;margin-bottom:.65rem}.customer-live-map__step{position:relative;display:grid;justify-items:center;gap:.25rem;color:#8a9098;font-size:.62rem;text-align:center}.customer-live-map__step:after{position:absolute;top:.78rem;left:58%;width:84%;height:2px;background:#ddd9cf;content:""}.customer-live-map__step:last-child:after{display:none}.customer-live-map__step span{position:relative;z-index:1;display:grid;width:1.65rem;height:1.65rem;place-items:center;border:2px solid #ddd9cf;border-radius:999px;background:#fff;font-size:.62rem;font-weight:900}.customer-live-map__step.is-active span,.customer-live-map__step.is-done span{border-color:#087f5b;background:#087f5b;color:#fff}.customer-live-map__step.is-done:after{background:#087f5b}.customer-live-map>.grid{gap:.45rem!important}.customer-live-map>.grid>div{border:0!important;border-radius:.85rem!important;background:#f5f2ea!important;padding:.65rem!important}.customer-live-map>.grid>div p:first-child{font-size:.55rem!important;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.customer-live-map>.grid>div p:last-child{font-size:.75rem!important;font-weight:900!important}.customer-live-map__canvas{height:min(48vh,25rem)!important;overflow:hidden;border:0!important;border-radius:1.05rem!important;box-shadow:inset 0 0 0 1px rgb(29 34 42/.08)}.customer-live-map__canvas .maplibregl-ctrl-group{overflow:hidden;border:0;border-radius:.75rem;box-shadow:0 8px 24px rgb(29 34 42/.15)}.customer-live-map__open-page{display:flex;min-height:2.8rem;align-items:center;justify-content:center;margin-top:.75rem;border-radius:.85rem;background:#1d222a;color:#fff;font-size:.72rem;font-weight:900;text-decoration:none}.customer-live-map .bg-emerald-700{background:#087f5b}.customer-live-map .shadow-lg{box-shadow:0 0 0 6px rgb(8 127 91/.16),0 10px 25px rgb(29 34 42/.28)}@media(max-width:639px){.customer-live-page__map-shell{border-radius:1rem;padding:.55rem}.customer-live-map__canvas{height:42vh!important;min-height:17rem}.customer-live-map__timeline{gap:.15rem}.customer-live-map__step small{font-size:.52rem}.customer-live-map>.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.customer-live-map>p{line-height:1rem}}
+
+.customer-live-endpoint-marker {
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 5px 16px rgb(16 24 40 / 0.28);
+}
+
+.customer-live-endpoint-marker.is-pickup { background: #f2a01f; }
+.customer-live-endpoint-marker.is-dropoff { background: #22a865; }
+
+.customer-live-truck-marker {
+  position: relative;
+  display: grid;
+  width: 3.45rem;
+  height: 4rem;
+  place-items: center;
+  pointer-events: none;
+  transition: transform 0.8s cubic-bezier(.2,.8,.2,1);
+  will-change: transform;
+}
+
+.customer-live-truck-marker__pulse {
+  position: absolute;
+  width: 2.7rem;
+  height: 2.7rem;
+  border: 1px solid rgb(20 99 255 / 0.22);
+  border-radius: 999px;
+  background: rgb(20 99 255 / 0.12);
+  animation: customer-live-truck-pulse 1.9s ease-out infinite;
+}
+
+.customer-live-truck-marker__bearing {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 2.8rem;
+  height: 3.45rem;
+  place-items: center;
+  transform-origin: center;
+  transition: transform 0.35s ease;
+  filter: drop-shadow(0 7px 7px rgb(16 24 40 / 0.25));
+}
+
+.customer-live-truck-marker__bearing svg {
+  width: 2.25rem;
+  height: 3.35rem;
+}
+
+.customer-live-truck-marker__heading {
+  position: absolute;
+  right: -0.55rem;
+  bottom: -0.18rem;
+  z-index: 3;
+  min-width: 2rem;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #172033;
+  padding: 0.16rem 0.32rem;
+  color: #fff;
+  font-size: 0.48rem;
+  font-weight: 900;
+  line-height: 0.62rem;
+  text-align: center;
+}
+
+@keyframes customer-live-truck-pulse {
+  0% { opacity: 0.7; transform: scale(0.72); }
+  70%, 100% { opacity: 0; transform: scale(1.35); }
+}
+
+.customer-live-page__truck-card {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  overflow: hidden;
+  border: 1px solid rgb(16 24 40 / 0.09);
+  border-radius: 1.15rem;
+  background: #fff;
+  padding: 0.72rem;
+  box-shadow: 0 10px 30px rgb(16 24 40 / 0.08);
+}
+
+.customer-live-page__truck-photo {
+  display: grid;
+  width: 6rem;
+  height: 4.4rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0.9rem;
+  background: linear-gradient(145deg, #edf3fb, #f8fafc);
+}
+
+.customer-live-page__truck-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.customer-live-page__truck-photo span {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 6px 8px rgb(16 24 40 / 0.14));
+}
+
+.customer-live-page__truck-copy {
+  min-width: 0;
+}
+
+.customer-live-page__truck-copy small {
+  color: #1463ff;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customer-live-page__truck-copy h2 {
+  overflow: hidden;
+  margin: 0.18rem 0 0;
+  color: #172033;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.15rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-live-page__truck-copy p {
+  overflow: hidden;
+  margin: 0.22rem 0 0;
+  color: #667085;
+  font-size: 0.66rem;
+  line-height: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-live-page__truck-state {
+  border-radius: 999px;
+  background: #f2f4f7;
+  padding: 0.38rem 0.58rem;
+  color: #475467;
+  font-size: 0.55rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.customer-live-page__truck-state.is-live {
+  background: #eafaf1;
+  color: #087f5b;
+}
+
+@media (max-width: 639px) {
+  .customer-live-page__truck-card {
+    order: 19;
+    grid-template-columns: 5rem minmax(0, 1fr);
+    gap: 0.65rem;
+    border-radius: 1rem;
+    padding: 0.58rem;
+  }
+
+  .customer-live-page__truck-photo {
+    width: 5rem;
+    height: 3.85rem;
+  }
+
+  .customer-live-page__truck-state {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: -0.2rem;
+  }
+}
