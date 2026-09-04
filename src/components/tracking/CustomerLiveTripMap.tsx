@@ -59,6 +59,52 @@ function timelinePosition(status: string | undefined) {
   return 0;
 }
 
+function normalizedHeading(heading: number | null | undefined) {
+  const value = Number(heading);
+  if (!Number.isFinite(value)) return 0;
+  return ((value % 360) + 360) % 360;
+}
+
+function createEndpointMarker(kind: "pickup" | "dropoff") {
+  const element = document.createElement("div");
+  element.className = `customer-live-endpoint-marker is-${kind}`;
+  element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : "Drop-off location");
+  return new maplibregl.Marker({ element, anchor: "center" });
+}
+
+function createTruckMarker(heading: number | null | undefined) {
+  const element = document.createElement("div");
+  element.className = "customer-live-truck-marker";
+  element.setAttribute("aria-label", "Live truck location");
+  element.innerHTML = `
+    <span class="customer-live-truck-marker__pulse" aria-hidden="true"></span>
+    <span class="customer-live-truck-marker__bearing" data-truck-bearing aria-hidden="true">
+      <svg viewBox="0 0 30 46" focusable="false" aria-hidden="true">
+        <path d="M10 2h10l3 8v23l-3 9H10l-3-9V10l3-8Z" fill="#ffffff" stroke="#172033" stroke-width="1.7"/>
+        <path d="M10.5 7h9l1.8 6H8.7l1.8-6Z" fill="#9fd2ff"/>
+        <path d="M9 17h12v14H9z" fill="#f4f6f8"/>
+        <path d="M10.5 34h9l-1.2 4h-6.6l-1.2-4Z" fill="#d8dde5"/>
+        <circle cx="7" cy="15" r="2" fill="#172033"/>
+        <circle cx="23" cy="15" r="2" fill="#172033"/>
+        <circle cx="7" cy="32" r="2" fill="#172033"/>
+        <circle cx="23" cy="32" r="2" fill="#172033"/>
+      </svg>
+    </span>
+    <span class="customer-live-truck-marker__heading" data-truck-heading>${Math.round(normalizedHeading(heading))}°</span>
+  `;
+  const marker = new maplibregl.Marker({ element, anchor: "center" });
+  applyTruckHeading(marker, heading);
+  return marker;
+}
+
+function applyTruckHeading(marker: maplibregl.Marker, heading: number | null | undefined) {
+  const bearing = marker.getElement().querySelector<HTMLElement>("[data-truck-bearing]");
+  const label = marker.getElement().querySelector<HTMLElement>("[data-truck-heading]");
+  const value = normalizedHeading(heading);
+  if (bearing) bearing.style.transform = `rotate(${value}deg)`;
+  if (label) label.textContent = `${Math.round(value)}°`;
+}
+
 export function CustomerLiveTripMap({
   orderId,
   totalDistanceKm,
@@ -74,6 +120,7 @@ export function CustomerLiveTripMap({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const truckMarker = useRef<maplibregl.Marker | null>(null);
   const endpointMarkers = useRef<maplibregl.Marker[]>([]);
+  const fittedBounds = useRef(false);
   const [trip, setTrip] = useState<LiveTripRow | null>(null);
   const [remainingKm, setRemainingKm] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
@@ -129,6 +176,7 @@ export function CustomerLiveTripMap({
       truckMarker.current?.remove();
       map.remove();
       mapRef.current = null;
+      fittedBounds.current = false;
     };
   }, []);
 
@@ -145,11 +193,15 @@ export function CustomerLiveTripMap({
         await new Promise<void>((resolve) => activeMap.once("load", () => resolve()));
       }
 
-      endpointMarkers.current.forEach((marker) => marker.remove());
-      endpointMarkers.current = [
-        new maplibregl.Marker({ color: "#1d222a" }).setLngLat(pickup).addTo(activeMap),
-        new maplibregl.Marker({ color: "#d68e25" }).setLngLat(dropoff).addTo(activeMap),
-      ];
+      if (!endpointMarkers.current.length) {
+        endpointMarkers.current = [
+          createEndpointMarker("pickup").setLngLat(pickup).addTo(activeMap),
+          createEndpointMarker("dropoff").setLngLat(dropoff).addTo(activeMap),
+        ];
+      } else {
+        endpointMarkers.current[0]?.setLngLat(pickup);
+        endpointMarkers.current[1]?.setLngLat(dropoff);
+      }
 
       const route = await fetchRoute(pickup, dropoff);
       const sourceId = "customer-live-route";
@@ -165,22 +217,23 @@ export function CustomerLiveTripMap({
           type: "line",
           source: sourceId,
           layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": "#d68e25", "line-width": 5, "line-opacity": 0.8 },
+          paint: { "line-color": "#1463ff", "line-width": 6, "line-opacity": 0.92 },
         });
       }
 
-      const bounds = new maplibregl.LngLatBounds(pickup, pickup).extend(dropoff);
-      if (truck) bounds.extend(truck);
-      activeMap.fitBounds(bounds, { padding: 55, maxZoom: 12 });
+      if (!fittedBounds.current) {
+        const bounds = new maplibregl.LngLatBounds(pickup, pickup).extend(dropoff);
+        if (truck) bounds.extend(truck);
+        activeMap.fitBounds(bounds, { padding: 55, maxZoom: 12 });
+        fittedBounds.current = true;
+      }
 
       if (truck) {
         if (!truckMarker.current) {
-          const element = document.createElement("div");
-          element.className = "grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-emerald-700 font-mono text-[10px] font-bold text-white shadow-lg";
-          element.textContent = "TRK";
-          truckMarker.current = new maplibregl.Marker({ element }).setLngLat(truck).addTo(activeMap);
+          truckMarker.current = createTruckMarker(trip.heading).setLngLat(truck).addTo(activeMap);
         } else {
           truckMarker.current.setLngLat(truck);
+          applyTruckHeading(truckMarker.current, trip.heading);
         }
 
         const remaining = await fetchRoute(truck, dropoff);
@@ -240,7 +293,7 @@ export function CustomerLiveTripMap({
       <div ref={container} className="customer-live-map__canvas mt-4 h-72 w-full border border-line bg-bone" />
       <p className={`mt-2 text-[11px] ${gpsFresh ? "text-emerald-800" : "text-steel"}`}>
         {gpsFresh
-          ? "Live GPS is active and refreshes every 8 seconds. Orange line = road route · TRK = latest driver location."
+          ? "Live GPS refreshes every 8 seconds. Blue line = road route · truck icon = live driver position and heading."
           : hasTruckLocation
             ? "Live GPS is paused. The map, remaining distance and ETA use the last known driver location."
             : "Waiting for the driver to share the first GPS location."}
