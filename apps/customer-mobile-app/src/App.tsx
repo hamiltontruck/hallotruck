@@ -162,6 +162,49 @@ function BookingSheet({
     }
   }
 
+  useEffect(() => {
+    setQuote(null);
+    setQuoteError("");
+
+    if (!pickupPlace || !dropoffPlace || !routeReady || cargoTons <= 0) {
+      setQuoteLoading(false);
+      return;
+    }
+
+    if (cargoTons > truck.maxTons) {
+      setQuoteLoading(false);
+      setQuoteError(`The load exceeds ${truck.label} capacity of ${truck.maxTons} Ton.`);
+      return;
+    }
+
+    let active = true;
+    setQuoteLoading(true);
+    const timer = window.setTimeout(() => {
+      void loadCustomerQuotePreview(userId, {
+        pickupQuery: pickup,
+        dropoffQuery: dropoff,
+        pickupPlace,
+        dropoffPlace,
+        vehicleType: truck.label,
+        cargoTons,
+      })
+        .then((result) => {
+          if (active) setQuote(result);
+        })
+        .catch((error: unknown) => {
+          if (active) setQuoteError(error instanceof Error ? error.message : "Quote could not be calculated.");
+        })
+        .finally(() => {
+          if (active) setQuoteLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [cargoTons, dropoff, dropoffPlace, pickup, pickupPlace, routeReady, truck.label, truck.maxTons, userId]);
+
   function invalidateQuote() {
     setQuote(null);
     setQuoteError("");
@@ -229,8 +272,8 @@ function BookingSheet({
         )}
 
         <div className="quote-panel">
-          <div><small>Estimated quote</small><strong>{quote ? formatQuoteEtb(quote.total_quote_etb) : "—"}</strong><span>{quote ? "Current Admin-managed transport rate." : "Automatic HGV distance + existing secure pricing RPC."}</span></div>
-          <button type="button" onClick={() => void calculateQuote()} disabled={quoteLoading || !routeReady || !cargoReady}>{quoteLoading ? "Calculating…" : "Calculate Quote"} <Icon name="arrow" size={18}/></button>
+          <div><small>Estimated quote</small><strong>{quote ? formatQuoteEtb(quote.total_quote_etb) : quoteLoading ? "Calculating…" : "—"}</strong><span>{quote ? "Current Admin-managed transport rate." : cargoTons > 0 ? "Birr calculates automatically from the secure pricing RPC." : "Enter the load amount to calculate Birr automatically."}</span></div>
+          <button type="button" onClick={() => void calculateQuote()} disabled={quoteLoading || !routeReady || !cargoReady}>{quoteLoading ? "Calculating…" : quote ? "Refresh Quote" : "Calculate Quote"} <Icon name="arrow" size={18}/></button>
         </div>
         <p style={{ margin: "10px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>Order creation is not enabled yet. This screen remains a read-only quote preview.</p>
       </div>
