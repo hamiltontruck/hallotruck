@@ -8,7 +8,7 @@ const authBoundary = fs.readFileSync(new URL("../src/auth/CustomerAuthBoundary.t
 test("Customer Profile exposes a visible sign-out action", () => {
   assert.match(profilePage, /customerSupabase/);
   assert.match(profilePage, /client\.auth\.signOut\(\)/);
-  assert.match(profilePage, /Account keessaa ba'i/);
+  assert.match(profilePage, /Sign out/);
   assert.match(profilePage, /disabled=\{signingOut\}/);
   assert.match(profilePage, /aria-busy=\{signingOut\}/);
 });
