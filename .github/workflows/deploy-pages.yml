@@ -86,6 +86,30 @@ jobs:
           cp -R apps/mobile-app/dist/. dist/mobile/
           printf '%s\n' "${GITHUB_SHA}" > dist/mobile/release.txt
 
+      - name: Install Customer mobile dependencies
+        working-directory: apps/customer-mobile-app
+        run: npm install --no-audit --no-fund
+
+      - name: Test Customer mobile app
+        working-directory: apps/customer-mobile-app
+        run: npm test
+
+      - name: Build Customer mobile app
+        working-directory: apps/customer-mobile-app
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_FUNCTIONS_URL: ${{ secrets.VITE_SUPABASE_FUNCTIONS_URL }}
+          VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
+
+      - name: Publish Customer mobile app into Pages artifact
+        run: |
+          rm -rf dist/customer-mobile
+          mkdir -p dist/customer-mobile
+          cp -R apps/customer-mobile-app/dist/. dist/customer-mobile/
+          printf '%s\n' "${GITHUB_SHA}" > dist/customer-mobile/release.txt
+
       - name: Validate combined Pages artifact
         run: node scripts/verify-pages-artifact.mjs
 
