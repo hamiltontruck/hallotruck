@@ -19,11 +19,24 @@ type GeocodeFeature = {
   center?: [number, number];
 };
 
+type OperatingBounds = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+};
+
 const mapTilerKey = (import.meta.env.VITE_MAPTILER_KEY as string | undefined)?.trim() ?? "";
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ?? "";
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ?? "";
 const functionsUrl = ((import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string | undefined)?.trim()
   || (supabaseUrl ? `${supabaseUrl}/functions/v1` : "")).replace(/\/$/, "");
+
+const HALLO_OPERATING_BOUNDS: readonly OperatingBounds[] = [
+  { west: 32.8, south: 3.0, east: 48.1, north: 15.2 },
+  { west: 41.6, south: 10.8, east: 43.6, north: 12.9 },
+  { west: 40.8, south: -1.9, east: 51.7, north: 12.3 },
+];
 
 function finitePositive(value: unknown, label: string) {
   const number = Number(value);
@@ -35,6 +48,16 @@ function isCoordinate(value: unknown): value is [number, number] {
   return Array.isArray(value)
     && value.length === 2
     && value.every((part) => Number.isFinite(Number(part)));
+}
+
+function isHalloOperatingCoordinate(coordinates: [number, number]) {
+  const [longitude, latitude] = coordinates;
+  return HALLO_OPERATING_BOUNDS.some(({ west, south, east, north }) => (
+    longitude >= west
+    && longitude <= east
+    && latitude >= south
+    && latitude <= north
+  ));
 }
 
 async function requireCustomerSession(userId: string) {
@@ -55,15 +78,22 @@ async function geocodePlace(query: string): Promise<{ label: string; coordinates
 
   const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
   url.searchParams.set("key", mapTilerKey);
-  url.searchParams.set("limit", "1");
+  url.searchParams.set("limit", "6");
   url.searchParams.set("language", "om,en");
   url.searchParams.set("autocomplete", "false");
+  url.searchParams.set("country", "et,dj,so");
 
   const response = await fetch(url);
   if (!response.ok) throw new Error("Place search is temporarily unavailable.");
   const payload = await response.json() as { features?: GeocodeFeature[] };
-  const feature = payload.features?.find((item) => isCoordinate(item.center));
-  if (!feature || !isCoordinate(feature.center)) throw new Error(`Bakka "${clean}" hin argamne.`);
+  const feature = payload.features?.find((item) => {
+    if (!isCoordinate(item.center)) return false;
+    const coordinates: [number, number] = [Number(item.center[0]), Number(item.center[1])];
+    return isHalloOperatingCoordinate(coordinates);
+  });
+  if (!feature || !isCoordinate(feature.center)) {
+    throw new Error(`Bakka "${clean}" HALLO Ethiopia–Djibouti–Somalia corridor keessatti hin argamne.`);
+  }
 
   return {
     label: feature.place_name ?? feature.text ?? clean,
