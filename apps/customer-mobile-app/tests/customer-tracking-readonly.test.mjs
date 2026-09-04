@@ -36,5 +36,5 @@ test("tracking slice is read-only and does not invent ETA", () => {
   assert.doesNotMatch(service, /\.update\(/);
   assert.doesNotMatch(service, /\.delete\(/);
   assert.doesNotMatch(service, /service_role/i);
-  assert.match(page, /ETA ykn route hin tilmaamamu/);
+  assert.match(page, /ETA and route are not invented here/);
 });

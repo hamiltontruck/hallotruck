@@ -1,3 +1,4 @@
+import type { Session } from "@supabase/supabase-js";
 import { customerSupabase } from "./auth/customer-supabase";
 
 export type CustomerPlaceOption = {
@@ -5,16 +6,19 @@ export type CustomerPlaceOption = {
   coordinates: [number, number];
 };
 
-export type CustomerQuotePreview = {
+export type CustomerRoutePreview = {
   pickup_label: string;
   dropoff_label: string;
   pickup: [number, number];
   dropoff: [number, number];
   vehicle_type: string;
-  cargo_tons: number;
   distance_km: number;
   duration_minutes: number;
   route_coordinates: [number, number][];
+};
+
+export type CustomerQuotePreview = CustomerRoutePreview & {
+  cargo_tons: number;
   total_quote_etb: number;
   pricing_formula: "ton_km" | "legacy";
 };
@@ -74,6 +78,10 @@ export function isHalloOperatingCoordinate(coordinates: [number, number]) {
   ));
 }
 
+function validSelectedPlace(place: CustomerPlaceOption | null | undefined) {
+  return Boolean(place?.label.trim() && isCoordinate(place.coordinates) && isHalloOperatingCoordinate(place.coordinates));
+}
+
 function featureToPlace(feature: GeocodeFeature): CustomerPlaceOption | null {
   if (!isCoordinate(feature.center)) return null;
   const coordinates: [number, number] = [Number(feature.center[0]), Number(feature.center[1])];
@@ -86,14 +94,16 @@ function featureToPlace(feature: GeocodeFeature): CustomerPlaceOption | null {
 async function fetchGeocodeFeatures(query: string, autocomplete: boolean, signal?: AbortSignal) {
   const clean = query.trim();
   if (clean.length < 2) return [] as GeocodeFeature[];
-  if (!mapTilerKey) throw new Error("Map key is not configured for place search.");
+  if (!mapTilerKey) throw new Error("Map search is not configured.");
 
   const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
   url.searchParams.set("key", mapTilerKey);
   url.searchParams.set("limit", "6");
-  url.searchParams.set("language", "om,en");
+  url.searchParams.set("language", "en");
   url.searchParams.set("autocomplete", autocomplete ? "true" : "false");
   url.searchParams.set("country", "et,dj,so");
+  url.searchParams.set("types", [...NON_ROUTABLE_PLACE_TYPES].join(","));
+  url.searchParams.set("excludeTypes", "true");
 
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error("Place search is temporarily unavailable.");
@@ -113,7 +123,7 @@ export async function searchCustomerPlaces(query: string, signal?: AbortSignal):
 
 export async function reverseCustomerPlace(coordinates: [number, number], signal?: AbortSignal): Promise<CustomerPlaceOption> {
   if (!isHalloOperatingCoordinate(coordinates)) {
-    throw new Error("Bakki filatame HALLO Ethiopia–Djibouti–Somalia corridor keessaa ala jira.");
+    throw new Error("The selected place is outside the HALLO Ethiopia–Djibouti–Somalia operating corridor.");
   }
   if (!mapTilerKey) {
     return { label: `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`, coordinates };
@@ -122,9 +132,9 @@ export async function reverseCustomerPlace(coordinates: [number, number], signal
   const url = new URL(`https://api.maptiler.com/geocoding/${coordinates[0]},${coordinates[1]}.json`);
   url.searchParams.set("key", mapTilerKey);
   url.searchParams.set("limit", "1");
-  url.searchParams.set("language", "om,en");
+  url.searchParams.set("language", "en");
   const response = await fetch(url, { signal });
-  if (!response.ok) throw new Error("Bakka kana maqaan adda baasuun hin danda'amne.");
+  if (!response.ok) throw new Error("This map position could not be resolved to a place name.");
   const payload = await response.json() as { features?: GeocodeFeature[] };
   const label = payload.features?.[0]?.place_name ?? payload.features?.[0]?.text
     ?? `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`;
@@ -144,61 +154,104 @@ async function requireCustomerSession(userId: string) {
 
 async function geocodePlace(query: string): Promise<CustomerPlaceOption> {
   const clean = query.trim();
-  if (clean.length < 2) throw new Error("Pickup fi drop-off sirriitti galchi.");
+  if (clean.length < 2) throw new Error("Choose both pickup and drop-off places.");
   const features = await fetchGeocodeFeatures(clean, false);
   const place = features.map(featureToPlace).find((item): item is CustomerPlaceOption => item !== null);
   if (!place) {
-    throw new Error(`Bakka "${clean}" HALLO Ethiopia–Djibouti–Somalia corridor keessatti hin argamne.`);
+    throw new Error(`"${clean}" was not found inside the HALLO Ethiopia–Djibouti–Somalia operating corridor.`);
   }
   return place;
 }
 
-export async function loadCustomerQuotePreview(userId: string, input: {
-  pickupQuery: string;
-  dropoffQuery: string;
+async function requestHgvRoute(session: Session, input: {
+  pickup: CustomerPlaceOption;
+  dropoff: CustomerPlaceOption;
   vehicleType: string;
-  cargoTons: number;
-}): Promise<CustomerQuotePreview> {
-  const cargoTons = finitePositive(input.cargoTons, "Cargo weight");
-  const { client, session } = await requireCustomerSession(userId);
+  signal?: AbortSignal;
+}): Promise<CustomerRoutePreview> {
   if (!functionsUrl || !supabaseAnonKey) throw new Error("Customer routing backend is not configured.");
+  if (!validSelectedPlace(input.pickup) || !validSelectedPlace(input.dropoff)) {
+    throw new Error("Pickup and drop-off must be valid HALLO operating-corridor places.");
+  }
 
-  const [pickup, dropoff] = await Promise.all([
-    geocodePlace(input.pickupQuery),
-    geocodePlace(input.dropoffQuery),
-  ]);
-
-  const routeResponse = await fetch(`${functionsUrl}/quote-route`, {
+  const response = await fetch(`${functionsUrl}/quote-route`, {
     method: "POST",
+    signal: input.signal,
     headers: {
       Authorization: `Bearer ${session.access_token}`,
       apikey: supabaseAnonKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      pickup: pickup.coordinates,
-      dropoff: dropoff.coordinates,
+      pickup: input.pickup.coordinates,
+      dropoff: input.dropoff.coordinates,
       vehicleType: input.vehicleType,
     }),
   });
-  const routePayload = await routeResponse.json().catch(() => null) as Record<string, unknown> | null;
-  if (!routeResponse.ok) {
-    throw new Error(typeof routePayload?.error === "string" ? routePayload.error : "Truck route could not be calculated.");
+  const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+  if (!response.ok) {
+    throw new Error(typeof payload?.error === "string" ? payload.error : "Truck route could not be calculated.");
   }
 
-  const distanceKm = finitePositive(routePayload?.distanceKm, "Route distance");
-  const durationMinutes = finitePositive(routePayload?.durationMinutes, "Route duration");
-  const routeCoordinates = routePayload?.coordinates;
+  const distanceKm = finitePositive(payload?.distanceKm, "Route distance");
+  const durationMinutes = finitePositive(payload?.durationMinutes, "Route duration");
+  const coordinates = payload?.coordinates;
   if (
-    routePayload?.provider !== "openrouteservice"
-    || routePayload?.profile !== "driving-hgv"
-    || !isRouteCoordinates(routeCoordinates)
+    payload?.provider !== "openrouteservice"
+    || payload?.profile !== "driving-hgv"
+    || !isRouteCoordinates(coordinates)
   ) {
-    throw new Error("Truck routing returned an invalid route profile.");
+    throw new Error("Truck routing returned an invalid HGV route.");
   }
+
+  return {
+    pickup_label: input.pickup.label,
+    dropoff_label: input.dropoff.label,
+    pickup: input.pickup.coordinates,
+    dropoff: input.dropoff.coordinates,
+    vehicle_type: String(payload.requestedVehicleType ?? input.vehicleType),
+    distance_km: distanceKm,
+    duration_minutes: durationMinutes,
+    route_coordinates: coordinates,
+  };
+}
+
+export async function loadCustomerRoutePreview(userId: string, input: {
+  pickup: CustomerPlaceOption;
+  dropoff: CustomerPlaceOption;
+  vehicleType: string;
+  signal?: AbortSignal;
+}): Promise<CustomerRoutePreview> {
+  const { session } = await requireCustomerSession(userId);
+  return requestHgvRoute(session, input);
+}
+
+export async function loadCustomerQuotePreview(userId: string, input: {
+  pickupQuery: string;
+  dropoffQuery: string;
+  pickupPlace?: CustomerPlaceOption | null;
+  dropoffPlace?: CustomerPlaceOption | null;
+  vehicleType: string;
+  cargoTons: number;
+}): Promise<CustomerQuotePreview> {
+  const cargoTons = finitePositive(input.cargoTons, "Cargo weight");
+  const { client, session } = await requireCustomerSession(userId);
+
+  const pickup = validSelectedPlace(input.pickupPlace)
+    ? input.pickupPlace as CustomerPlaceOption
+    : await geocodePlace(input.pickupQuery);
+  const dropoff = validSelectedPlace(input.dropoffPlace)
+    ? input.dropoffPlace as CustomerPlaceOption
+    : await geocodePlace(input.dropoffQuery);
+
+  const route = await requestHgvRoute(session, {
+    pickup,
+    dropoff,
+    vehicleType: input.vehicleType,
+  });
 
   const { data, error } = await client.rpc("calculate_transport_quote_v2", {
-    p_distance_km: distanceKm,
+    p_distance_km: route.distance_km,
     p_vehicle_type: input.vehicleType,
     p_cargo_tons: cargoTons,
   });
@@ -207,15 +260,10 @@ export async function loadCustomerQuotePreview(userId: string, input: {
   if (!row) throw new Error("Quote calculation returned no result.");
 
   return {
-    pickup_label: pickup.label,
-    dropoff_label: dropoff.label,
-    pickup: pickup.coordinates,
-    dropoff: dropoff.coordinates,
-    vehicle_type: String(row.vehicle_type ?? input.vehicleType),
+    ...route,
+    vehicle_type: String(row.vehicle_type ?? route.vehicle_type),
     cargo_tons: finitePositive(row.cargo_tons ?? cargoTons, "Quoted cargo weight"),
-    distance_km: finitePositive(row.distance_km ?? distanceKm, "Quoted distance"),
-    duration_minutes: durationMinutes,
-    route_coordinates: routeCoordinates,
+    distance_km: finitePositive(row.distance_km ?? route.distance_km, "Quoted distance"),
     total_quote_etb: finitePositive(row.total_quote_etb, "Quote total"),
     pricing_formula: row.pricing_formula === "ton_km" ? "ton_km" : "legacy",
   };
