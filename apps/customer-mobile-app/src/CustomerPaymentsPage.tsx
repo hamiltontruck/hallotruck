@@ -32,10 +32,10 @@ function Header({ count }: { count: number | null }) {
   return (
     <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18 }}>
       <div>
-        <div style={{ color: "#0759c7", fontWeight: 950, fontSize: 24, letterSpacing: "-.04em" }}>HALO</div>
+        <div style={{ color: "#10213d", fontWeight: 950, fontSize: 23, letterSpacing: "-.045em" }}>HALLO<span style={{ color: "#d68e25" }}>TRUCK</span></div>
         <div style={{ color: "#68778d", marginTop: 2, fontSize: 10, fontWeight: 850, letterSpacing: ".09em", textTransform: "uppercase" }}>Customer Payments</div>
       </div>
-      <span style={{ borderRadius: 999, background: "#eaf2ff", color: "#0759c7", padding: "7px 10px", fontSize: 11, fontWeight: 900 }}>
+      <span style={{ borderRadius: 999, background: "#fff7e8", color: "#9a6700", padding: "7px 10px", fontSize: 11, fontWeight: 900 }}>
         {count === null ? "Secure DB" : `${count} Records`}
       </span>
     </header>
@@ -45,11 +45,11 @@ function Header({ count }: { count: number | null }) {
 function StatusCard({ title, body, action, onAction }: { title: string; body: string; action?: string; onAction?: () => void }) {
   return (
     <section style={{ ...cardStyle, marginTop: 34, textAlign: "center", padding: "28px 20px" }}>
-      <div style={{ width: 48, height: 48, margin: "0 auto", display: "grid", placeItems: "center", borderRadius: 16, background: "#edf5ff", color: "#0759c7", fontSize: 22, fontWeight: 950 }}>₿</div>
+      <div style={{ width: 48, height: 48, margin: "0 auto", display: "grid", placeItems: "center", borderRadius: 16, background: "#fff7e8", color: "#9a6700", fontSize: 22, fontWeight: 950 }}>₿</div>
       <h1 style={{ margin: "16px 0 0", fontSize: 22 }}>{title}</h1>
       <p style={{ margin: "10px 0 0", color: "#68778d", fontSize: 13, lineHeight: 1.7 }}>{body}</p>
       {action && onAction && (
-        <button type="button" onClick={onAction} style={{ marginTop: 18, minHeight: 46, width: "100%", border: 0, borderRadius: 15, background: "#0759c7", color: "#fff", fontWeight: 900 }}>
+        <button type="button" onClick={onAction} style={{ marginTop: 18, minHeight: 46, width: "100%", border: 0, borderRadius: 15, background: "#10213d", color: "#fff", fontWeight: 900 }}>
           {action}
         </button>
       )}
@@ -77,7 +77,7 @@ function PaymentCard({
       const url = await createCustomerPaymentReceiptUrl(userId, payment.receipt_path);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (error) {
-      setReceiptError(error instanceof Error ? error.message : "Receipt banuun hin danda'amne.");
+      setReceiptError(error instanceof Error ? error.message : "Receipt could not be opened.");
     } finally {
       setReceiptBusy(false);
     }
@@ -90,7 +90,7 @@ function PaymentCard({
           <small style={{ color: "#68778d", fontWeight: 850 }}>ORDER</small>
           <strong style={{ display: "block", marginTop: 4, overflowWrap: "anywhere" }}>{trackingId}</strong>
         </div>
-        <span style={{ flex: "0 0 auto", borderRadius: 999, background: "#edf5ff", color: "#0759c7", padding: "6px 9px", fontSize: 11, fontWeight: 900 }}>
+        <span style={{ flex: "0 0 auto", borderRadius: 999, background: "#fff7e8", color: "#9a6700", padding: "6px 9px", fontSize: 11, fontWeight: 900 }}>
           {formatOrderStatus(payment.event)}
         </span>
       </div>
@@ -111,9 +111,9 @@ function PaymentCard({
           type="button"
           onClick={() => void openReceipt()}
           disabled={receiptBusy}
-          style={{ marginTop: 14, minHeight: 42, width: "100%", border: "1px solid #cddcf0", borderRadius: 13, background: "#fff", color: "#0759c7", fontWeight: 900 }}
+          style={{ marginTop: 14, minHeight: 42, width: "100%", border: "1px solid #cddcf0", borderRadius: 13, background: "#fff", color: "#10213d", fontWeight: 900 }}
         >
-          {receiptBusy ? "Receipt qopheessaa jira…" : "Receipt bani"}
+          {receiptBusy ? "Preparing receipt…" : "Open receipt"}
         </button>
       )}
       {receiptError && <p role="alert" style={{ margin: "10px 0 0", color: "#b42318", fontSize: 11 }}>{receiptError}</p>}
@@ -129,7 +129,7 @@ export function CustomerPaymentsPage({ userId, onHome }: { userId: string; onHom
     try {
       setState({ kind: "ready", data: await loadCustomerMobileData(userId) });
     } catch (error) {
-      setState({ kind: "error", message: error instanceof Error ? error.message : "Payment data fe'uun hin danda'amne." });
+      setState({ kind: "error", message: error instanceof Error ? error.message : "Payment data could not be loaded." });
     }
   }, [userId]);
 
@@ -140,7 +140,7 @@ export function CustomerPaymentsPage({ userId, onHome }: { userId: string; onHom
         if (active) setState({ kind: "ready", data });
       })
       .catch((error: unknown) => {
-        if (active) setState({ kind: "error", message: error instanceof Error ? error.message : "Payment data fe'uun hin danda'amne." });
+        if (active) setState({ kind: "error", message: error instanceof Error ? error.message : "Payment data could not be loaded." });
       });
     return () => {
       active = false;
@@ -154,29 +154,29 @@ export function CustomerPaymentsPage({ userId, onHome }: { userId: string; onHom
   }, [state]);
 
   if (state.kind === "loading") {
-    return <main style={pageStyle}><Header count={null}/><StatusCard title="Payments fe'aa jira…" body="Signed-in Customer order IDs irraa payment ledger records existing RLS jalatti fe'amaa jiru."/></main>;
+    return <main style={pageStyle}><Header count={null}/><StatusCard title="Loading payments…" body="Payment ledger records are loading only after this Customer's order IDs are resolved under existing RLS."/></main>;
   }
 
   if (state.kind === "error") {
-    return <main style={pageStyle}><Header count={null}/><StatusCard title="Payments fe'uun hin danda'amne" body={state.message} action="Irra deebi'ii yaali" onAction={() => void load()}/></main>;
+    return <main style={pageStyle}><Header count={null}/><StatusCard title="Payments could not be loaded" body={state.message} action="Try again" onAction={() => void load()}/></main>;
   }
 
   if (!state.data.orders.length) {
-    return <main style={pageStyle}><Header count={0}/><StatusCard title="Payment history hin jiru" body="Account kanaaf order hin jiru; kanaaf payment record dhugaa hin jiru." action="Home irraa jalqabi" onAction={onHome}/></main>;
+    return <main style={pageStyle}><Header count={0}/><StatusCard title="No payment history" body="This account has no orders, so there are no real payment records to display." action="Go to Home" onAction={onHome}/></main>;
   }
 
   if (!state.data.payments.length) {
-    return <main style={pageStyle}><Header count={0}/><StatusCard title="Payment record amma hin jiru" body="Orders jiru, garuu payment ledger keessatti Customer kanaaf record hin argamne. Fake payment hin agarsiifamu." action="Refresh" onAction={() => void load()}/></main>;
+    return <main style={pageStyle}><Header count={0}/><StatusCard title="No payment records yet" body="Orders exist, but the payment ledger currently has no records for this Customer. No payment is fabricated." action="Refresh" onAction={() => void load()}/></main>;
   }
 
   return (
     <main style={pageStyle}>
       <Header count={count}/>
-      <section style={{ ...cardStyle, marginBottom: 14, background: "linear-gradient(135deg,#0759c7,#083f8d)", color: "#fff", border: 0 }}>
-        <small style={{ color: "rgba(255,255,255,.7)", fontWeight: 900 }}>PAYMENT HISTORY</small>
-        <h1 style={{ margin: "6px 0 0", fontSize: 24 }}>Kaffaltii kee</h1>
+      <section style={{ ...cardStyle, marginBottom: 14, background: "linear-gradient(135deg,#10213d,#26364d)", color: "#fff", border: 0 }}>
+        <small style={{ color: "#f5b400", fontWeight: 900 }}>PAYMENT HISTORY</small>
+        <h1 style={{ margin: "6px 0 0", fontSize: 24 }}>Your payments</h1>
         <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,.78)", fontSize: 12, lineHeight: 1.6 }}>
-          Event fi amount akka database ledger keessatti galmaa'eetti agarsiifama. App kun balance ykn finance history hin jijjiiru.
+          Events and amounts are shown exactly as recorded in the database ledger. This app does not calculate a fake balance or alter finance history.
         </p>
       </section>
 
@@ -196,7 +196,7 @@ export function CustomerPaymentsPage({ userId, onHome }: { userId: string; onHom
       </section>
 
       <p style={{ margin: "14px 4px 0", color: "#68778d", fontSize: 11, lineHeight: 1.6 }}>
-        Read-only: payment submission, verification, refund, release fi ledger mutation hojii slice kana keessatti hin jiru.
+        Read-only: payment submission, verification, refund, release and ledger mutation are not included in this screen.
       </p>
     </main>
   );
