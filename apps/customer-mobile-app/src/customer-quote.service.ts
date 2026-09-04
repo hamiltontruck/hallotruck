@@ -1,5 +1,10 @@
 import { customerSupabase } from "./auth/customer-supabase";
 
+export type CustomerPlaceOption = {
+  label: string;
+  coordinates: [number, number];
+};
+
 export type CustomerQuotePreview = {
   pickup_label: string;
   dropoff_label: string;
@@ -9,14 +14,17 @@ export type CustomerQuotePreview = {
   cargo_tons: number;
   distance_km: number;
   duration_minutes: number;
+  route_coordinates: [number, number][];
   total_quote_etb: number;
   pricing_formula: "ton_km" | "legacy";
 };
 
 type GeocodeFeature = {
+  id?: string;
   place_name?: string;
   text?: string;
   center?: [number, number];
+  place_type?: string[];
 };
 
 type OperatingBounds = {
@@ -38,6 +46,8 @@ const HALLO_OPERATING_BOUNDS: readonly OperatingBounds[] = [
   { west: 40.8, south: -1.9, east: 51.7, north: 12.3 },
 ];
 
+const NON_ROUTABLE_PLACE_TYPES = new Set(["continental_marine", "country", "major_landform"]);
+
 function finitePositive(value: unknown, label: string) {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) throw new Error(`${label} is invalid.`);
@@ -50,7 +60,11 @@ function isCoordinate(value: unknown): value is [number, number] {
     && value.every((part) => Number.isFinite(Number(part)));
 }
 
-function isHalloOperatingCoordinate(coordinates: [number, number]) {
+function isRouteCoordinates(value: unknown): value is [number, number][] {
+  return Array.isArray(value) && value.length >= 2 && value.every(isCoordinate);
+}
+
+export function isHalloOperatingCoordinate(coordinates: [number, number]) {
   const [longitude, latitude] = coordinates;
   return HALLO_OPERATING_BOUNDS.some(({ west, south, east, north }) => (
     longitude >= west
@@ -58,6 +72,63 @@ function isHalloOperatingCoordinate(coordinates: [number, number]) {
     && latitude >= south
     && latitude <= north
   ));
+}
+
+function featureToPlace(feature: GeocodeFeature): CustomerPlaceOption | null {
+  if (!isCoordinate(feature.center)) return null;
+  const coordinates: [number, number] = [Number(feature.center[0]), Number(feature.center[1])];
+  if (!isHalloOperatingCoordinate(coordinates)) return null;
+  if (feature.place_type?.some((type) => NON_ROUTABLE_PLACE_TYPES.has(type))) return null;
+  const label = (feature.place_name ?? feature.text ?? "").trim();
+  return label ? { label, coordinates } : null;
+}
+
+async function fetchGeocodeFeatures(query: string, autocomplete: boolean, signal?: AbortSignal) {
+  const clean = query.trim();
+  if (clean.length < 2) return [] as GeocodeFeature[];
+  if (!mapTilerKey) throw new Error("Map key is not configured for place search.");
+
+  const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
+  url.searchParams.set("key", mapTilerKey);
+  url.searchParams.set("limit", "6");
+  url.searchParams.set("language", "om,en");
+  url.searchParams.set("autocomplete", autocomplete ? "true" : "false");
+  url.searchParams.set("country", "et,dj,so");
+
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error("Place search is temporarily unavailable.");
+  const payload = await response.json() as { features?: GeocodeFeature[] };
+  return payload.features ?? [];
+}
+
+export async function searchCustomerPlaces(query: string, signal?: AbortSignal): Promise<CustomerPlaceOption[]> {
+  const features = await fetchGeocodeFeatures(query, true, signal);
+  const unique = new Map<string, CustomerPlaceOption>();
+  for (const feature of features) {
+    const place = featureToPlace(feature);
+    if (place && !unique.has(place.label)) unique.set(place.label, place);
+  }
+  return [...unique.values()];
+}
+
+export async function reverseCustomerPlace(coordinates: [number, number], signal?: AbortSignal): Promise<CustomerPlaceOption> {
+  if (!isHalloOperatingCoordinate(coordinates)) {
+    throw new Error("Bakki filatame HALLO Ethiopia–Djibouti–Somalia corridor keessaa ala jira.");
+  }
+  if (!mapTilerKey) {
+    return { label: `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`, coordinates };
+  }
+
+  const url = new URL(`https://api.maptiler.com/geocoding/${coordinates[0]},${coordinates[1]}.json`);
+  url.searchParams.set("key", mapTilerKey);
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("language", "om,en");
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error("Bakka kana maqaan adda baasuun hin danda'amne.");
+  const payload = await response.json() as { features?: GeocodeFeature[] };
+  const label = payload.features?.[0]?.place_name ?? payload.features?.[0]?.text
+    ?? `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`;
+  return { label, coordinates };
 }
 
 async function requireCustomerSession(userId: string) {
@@ -71,34 +142,15 @@ async function requireCustomerSession(userId: string) {
   return { client, session: data.session };
 }
 
-async function geocodePlace(query: string): Promise<{ label: string; coordinates: [number, number] }> {
+async function geocodePlace(query: string): Promise<CustomerPlaceOption> {
   const clean = query.trim();
   if (clean.length < 2) throw new Error("Pickup fi drop-off sirriitti galchi.");
-  if (!mapTilerKey) throw new Error("Map key is not configured for place search.");
-
-  const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
-  url.searchParams.set("key", mapTilerKey);
-  url.searchParams.set("limit", "6");
-  url.searchParams.set("language", "om,en");
-  url.searchParams.set("autocomplete", "false");
-  url.searchParams.set("country", "et,dj,so");
-
-  const response = await fetch(url);
-  if (!response.ok) throw new Error("Place search is temporarily unavailable.");
-  const payload = await response.json() as { features?: GeocodeFeature[] };
-  const feature = payload.features?.find((item) => {
-    if (!isCoordinate(item.center)) return false;
-    const coordinates: [number, number] = [Number(item.center[0]), Number(item.center[1])];
-    return isHalloOperatingCoordinate(coordinates);
-  });
-  if (!feature || !isCoordinate(feature.center)) {
+  const features = await fetchGeocodeFeatures(clean, false);
+  const place = features.map(featureToPlace).find((item): item is CustomerPlaceOption => item !== null);
+  if (!place) {
     throw new Error(`Bakka "${clean}" HALLO Ethiopia–Djibouti–Somalia corridor keessatti hin argamne.`);
   }
-
-  return {
-    label: feature.place_name ?? feature.text ?? clean,
-    coordinates: [Number(feature.center[0]), Number(feature.center[1])],
-  };
+  return place;
 }
 
 export async function loadCustomerQuotePreview(userId: string, input: {
@@ -136,7 +188,12 @@ export async function loadCustomerQuotePreview(userId: string, input: {
 
   const distanceKm = finitePositive(routePayload?.distanceKm, "Route distance");
   const durationMinutes = finitePositive(routePayload?.durationMinutes, "Route duration");
-  if (routePayload?.provider !== "openrouteservice" || routePayload?.profile !== "driving-hgv") {
+  const routeCoordinates = routePayload?.coordinates;
+  if (
+    routePayload?.provider !== "openrouteservice"
+    || routePayload?.profile !== "driving-hgv"
+    || !isRouteCoordinates(routeCoordinates)
+  ) {
     throw new Error("Truck routing returned an invalid route profile.");
   }
 
@@ -158,6 +215,7 @@ export async function loadCustomerQuotePreview(userId: string, input: {
     cargo_tons: finitePositive(row.cargo_tons ?? cargoTons, "Quoted cargo weight"),
     distance_km: finitePositive(row.distance_km ?? distanceKm, "Quoted distance"),
     duration_minutes: durationMinutes,
+    route_coordinates: routeCoordinates,
     total_quote_etb: finitePositive(row.total_quote_etb, "Quote total"),
     pricing_formula: row.pricing_formula === "ton_km" ? "ton_km" : "legacy",
   };
