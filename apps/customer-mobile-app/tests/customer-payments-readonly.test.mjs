@@ -30,6 +30,6 @@ test("payment history is read-only and receipt access uses a short-lived signed 
 });
 
 test("Payments UI does not invent verified balance calculations", () => {
-  assert.match(paymentsPage, /Event fi amount akka database ledger keessatti galmaa'eetti agarsiifama/);
+  assert.match(paymentsPage, /Events and amounts are shown exactly as recorded in the database ledger/);
   assert.doesNotMatch(paymentsPage, /verifiedPaid|balanceToPay|releasedGross|heldEscrow/);
 });
