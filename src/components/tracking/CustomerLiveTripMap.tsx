@@ -183,10 +183,11 @@ export function CustomerLiveTripMap({
   useEffect(() => {
     const currentMap = mapRef.current;
     if (!currentMap || !trip) return;
+    const currentTrip = trip;
     const activeMap: maplibregl.Map = currentMap;
-    const pickup: [number, number] = [trip.pickup_lng, trip.pickup_lat];
-    const dropoff: [number, number] = [trip.dropoff_lng, trip.dropoff_lat];
-    const truck = trip.truck_lng != null && trip.truck_lat != null ? [trip.truck_lng, trip.truck_lat] as [number, number] : null;
+    const pickup: [number, number] = [currentTrip.pickup_lng, currentTrip.pickup_lat];
+    const dropoff: [number, number] = [currentTrip.dropoff_lng, currentTrip.dropoff_lat];
+    const truck = currentTrip.truck_lng != null && currentTrip.truck_lat != null ? [currentTrip.truck_lng, currentTrip.truck_lat] as [number, number] : null;
 
     async function render() {
       if (!activeMap.isStyleLoaded()) {
@@ -230,10 +231,10 @@ export function CustomerLiveTripMap({
 
       if (truck) {
         if (!truckMarker.current) {
-          truckMarker.current = createTruckMarker(trip.heading).setLngLat(truck).addTo(activeMap);
+          truckMarker.current = createTruckMarker(currentTrip.heading).setLngLat(truck).addTo(activeMap);
         } else {
           truckMarker.current.setLngLat(truck);
-          applyTruckHeading(truckMarker.current, trip.heading);
+          applyTruckHeading(truckMarker.current, currentTrip.heading);
         }
 
         const remaining = await fetchRoute(truck, dropoff);
