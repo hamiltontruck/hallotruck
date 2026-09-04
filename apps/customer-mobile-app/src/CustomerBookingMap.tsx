@@ -211,6 +211,7 @@ export function CustomerBookingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
+    const activeMap = map;
 
     function syncMarker(
       current: Marker | null,
@@ -232,7 +233,7 @@ export function CustomerBookingMap({
         draggable: true,
       })
         .setLngLat(place.coordinates)
-        .addTo(map);
+        .addTo(activeMap);
 
       marker.on("dragend", () => {
         const position = marker.getLngLat();
