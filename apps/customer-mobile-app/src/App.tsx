@@ -3,6 +3,7 @@ import type { CustomerIdentity } from "./auth/CustomerAuthBoundary";
 import { CustomerOrdersPage, CustomerProfilePage } from "./CustomerDataPages";
 import { CustomerPaymentsPage } from "./CustomerPaymentsPage";
 import { CustomerTrackingPage } from "./CustomerTrackingPage";
+import { loadCustomerQuotePreview, type CustomerQuotePreview } from "./customer-quote.service";
 
 type Tab = "home" | "orders" | "track" | "payments" | "profile";
 type IconName = "home" | "orders" | "track" | "payments" | "profile" | "pin" | "arrow" | "truck" | "box" | "shield" | "clock";
@@ -11,14 +12,15 @@ type TruckOption = {
   key: string;
   label: string;
   capacity: string;
+  maxTons: number;
   body: "pickup" | "van" | "box" | "dry";
 };
 
 const TRUCKS: TruckOption[] = [
-  { key: "pickup", label: "Pickup", capacity: "Max load: 3 Ton", body: "pickup" },
-  { key: "van", label: "Van", capacity: "Max load: 5 Ton", body: "van" },
-  { key: "isuzu", label: "Isuzu 5 Ton", capacity: "Max load: 5 Ton", body: "box" },
-  { key: "dry-cargo", label: "Dry Cargo", capacity: "Max load: 10 Ton", body: "dry" },
+  { key: "pickup", label: "Pickup", capacity: "Max load: 3 Ton", maxTons: 3, body: "pickup" },
+  { key: "van", label: "Van", capacity: "Max load: 5 Ton", maxTons: 5, body: "van" },
+  { key: "isuzu", label: "Isuzu 5 Ton", capacity: "Max load: 5 Ton", maxTons: 5, body: "box" },
+  { key: "dry-cargo", label: "Dry Cargo", capacity: "Max load: 10 Ton", maxTons: 10, body: "dry" },
 ];
 
 const ICONS: Record<IconName, ReactNode> = {
@@ -117,11 +119,64 @@ function MapSurface({ pickup, dropoff, onPickup, onDropoff, onBook }: {
   );
 }
 
-function BookingSheet({ pickup, dropoff, onClose }: { pickup: string; dropoff: string; onClose: () => void }) {
+function formatQuoteEtb(amount: number) {
+  return `ETB ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount)}`;
+}
+
+function BookingSheet({ pickup, dropoff, userId, onClose }: { pickup: string; dropoff: string; userId: string; onClose: () => void }) {
   const [selectedTruck, setSelectedTruck] = useState("dry-cargo");
   const [cargo, setCargo] = useState("General goods");
   const [loadType, setLoadType] = useState("Loose / bulk");
+  const [cargoQuantity, setCargoQuantity] = useState("");
+  const [cargoUnit, setCargoUnit] = useState<"ton" | "quintal">("ton");
+  const [quote, setQuote] = useState<CustomerQuotePreview | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState("");
   const routeReady = Boolean(pickup.trim() && dropoff.trim());
+  const truck = TRUCKS.find((item) => item.key === selectedTruck) ?? TRUCKS[0];
+  const rawCargoAmount = Number(cargoQuantity);
+  const cargoTons = Number.isFinite(rawCargoAmount) && rawCargoAmount > 0
+    ? (cargoUnit === "quintal" ? rawCargoAmount / 10 : rawCargoAmount)
+    : 0;
+  const cargoReady = cargoTons > 0 && cargoTons <= truck.maxTons;
+  const quoteReady = Boolean(quote);
+
+  async function calculateQuote() {
+    if (!routeReady) {
+      setQuoteError("Pickup fi drop-off sirriitti galchi.");
+      return;
+    }
+    if (!cargoTons) {
+      setQuoteError("Baay'ina fe'umsaa zeeroo caalu galchi.");
+      return;
+    }
+    if (cargoTons > truck.maxTons) {
+      setQuoteError(`Fe'umsi ${truck.label} capacity ${truck.maxTons} Ton caala.`);
+      return;
+    }
+
+    setQuoteLoading(true);
+    setQuoteError("");
+    setQuote(null);
+    try {
+      const result = await loadCustomerQuotePreview(userId, {
+        pickupQuery: pickup,
+        dropoffQuery: dropoff,
+        vehicleType: truck.label,
+        cargoTons,
+      });
+      setQuote(result);
+    } catch (error) {
+      setQuoteError(error instanceof Error ? error.message : "Quote fe'uun hin danda'amne.");
+    } finally {
+      setQuoteLoading(false);
+    }
+  }
+
+  function invalidateQuote() {
+    setQuote(null);
+    setQuoteError("");
+  }
 
   return (
     <section className="booking-screen" aria-label="Choose truck and cargo">
@@ -137,33 +192,48 @@ function BookingSheet({ pickup, dropoff, onClose }: { pickup: string; dropoff: s
           <span className={routeReady ? "done" : ""}>✓ Route</span>
           <span className="active">✓ Truck</span>
           <span>Cargo</span>
-          <span>Load</span>
-          <span>Quote</span>
+          <span className={cargoReady ? "done" : ""}>Load</span>
+          <span className={quoteReady ? "done" : ""}>Quote</span>
         </div>
 
         <h2>Choose truck type</h2>
         <div className="truck-grid">
-          {TRUCKS.map((truck) => (
-            <button type="button" key={truck.key} className={`truck-card ${selectedTruck === truck.key ? "selected" : ""}`} onClick={() => setSelectedTruck(truck.key)}>
-              <div className="truck-art-wrap"><TruckArtwork body={truck.body}/></div>
-              <strong>{truck.label}</strong>
-              <small>{truck.capacity}</small>
-              {selectedTruck === truck.key && <span className="truck-check">✓</span>}
+          {TRUCKS.map((option) => (
+            <button type="button" key={option.key} className={`truck-card ${selectedTruck === option.key ? "selected" : ""}`} onClick={() => { setSelectedTruck(option.key); invalidateQuote(); }}>
+              <div className="truck-art-wrap"><TruckArtwork body={option.body}/></div>
+              <strong>{option.label}</strong>
+              <small>{option.capacity}</small>
+              {selectedTruck === option.key && <span className="truck-check">✓</span>}
             </button>
           ))}
         </div>
 
         <div className="cargo-grid">
-          <label><span>Cargo category</span><select value={cargo} onChange={(event) => setCargo(event.target.value)}><option>General goods</option><option>Food &amp; beverage</option><option>Construction material</option><option>Other cargo</option></select></label>
-          <label><span>Packaging / load type</span><select value={loadType} onChange={(event) => setLoadType(event.target.value)}><option>Loose / bulk</option><option>Boxed</option><option>Palletized</option><option>Bagged</option></select></label>
+          <label><span>Cargo category</span><select value={cargo} onChange={(event) => { setCargo(event.target.value); invalidateQuote(); }}><option>General goods</option><option>Food &amp; beverage</option><option>Construction material</option><option>Other cargo</option></select></label>
+          <label><span>Packaging / load type</span><select value={loadType} onChange={(event) => { setLoadType(event.target.value); invalidateQuote(); }}><option>Loose / bulk</option><option>Boxed</option><option>Palletized</option><option>Bagged</option></select></label>
+        </div>
+
+        <div className="cargo-grid">
+          <label><span>Load amount</span><input type="number" min="0" step="0.1" inputMode="decimal" value={cargoQuantity} onChange={(event) => { setCargoQuantity(event.target.value); invalidateQuote(); }} placeholder="e.g. 5" /></label>
+          <label><span>Unit</span><select value={cargoUnit} onChange={(event) => { setCargoUnit(event.target.value as "ton" | "quintal"); invalidateQuote(); }}><option value="ton">Ton</option><option value="quintal">Quintal</option></select></label>
         </div>
 
         <button type="button" className="details-row">Additional cargo details <span>⌄</span></button>
 
+        {quoteError && <p role="alert" style={{ margin: "0 0 12px", color: "#b42318", fontSize: 12, fontWeight: 700 }}>{quoteError}</p>}
+
+        {quote && (
+          <div style={{ margin: "0 0 12px", border: "1px solid #dce6f2", borderRadius: 16, background: "#f8fbff", padding: 12, color: "#10213d", fontSize: 11, lineHeight: 1.55 }}>
+            <strong style={{ display: "block", fontSize: 12 }}>{quote.pickup_label} → {quote.dropoff_label}</strong>
+            <span style={{ display: "block", marginTop: 4 }}>{quote.distance_km.toFixed(1)} km · {Math.round(quote.duration_minutes)} min · {quote.cargo_tons.toFixed(1)} Ton · {quote.vehicle_type}</span>
+          </div>
+        )}
+
         <div className="quote-panel">
-          <div><small>Estimated quote</small><strong>—</strong><span>Pricing backend not connected in this UI-only slice.</span></div>
-          <button type="button" disabled>Continue <Icon name="arrow" size={18}/></button>
+          <div><small>Estimated quote</small><strong>{quote ? formatQuoteEtb(quote.total_quote_etb) : "—"}</strong><span>{quote ? "Current Admin-managed transport rate." : "Real HGV route + existing secure pricing RPC."}</span></div>
+          <button type="button" onClick={() => void calculateQuote()} disabled={quoteLoading || !routeReady || !cargoReady}>{quoteLoading ? "Calculating…" : "Calculate Quote"} <Icon name="arrow" size={18}/></button>
         </div>
+        <p style={{ margin: "10px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>Order creation amma hin banamne. Slice kun quote preview read-only qofa dha.</p>
       </div>
     </section>
   );
@@ -244,7 +314,7 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
       <div className="phone-stage">
         {content}
         {!bookingOpen && <BottomNav tab={tab} setTab={setTab}/>} 
-        {bookingOpen && <BookingSheet pickup={pickup} dropoff={dropoff} onClose={() => setBookingOpen(false)}/>} 
+        {bookingOpen && <BookingSheet pickup={pickup} dropoff={dropoff} userId={identity.userId} onClose={() => setBookingOpen(false)}/>} 
       </div>
     </div>
   );
