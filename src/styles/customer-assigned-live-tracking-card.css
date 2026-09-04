@@ -1,0 +1,73 @@
+/* Customer Portal — assigned-driver live tracking presentation only. Existing data/GPS flow is unchanged. */
+@media (max-width: 639px) {
+  .customer-live-page__content {
+    gap: 0.55rem;
+  }
+
+  .customer-live-page__map-shell {
+    order: 10 !important;
+    margin: 0 0.75rem;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 1.15rem !important;
+    background: #fff;
+    box-shadow: 0 12px 30px rgb(16 24 40 / 0.10) !important;
+  }
+
+  .customer-live-page__map-shell .customer-live-map__canvas {
+    height: 48vh !important;
+    min-height: 20rem !important;
+    border-radius: 1.15rem 1.15rem 0 0 !important;
+  }
+
+  .customer-live-page__map-shell .customer-live-map > .grid {
+    margin: -3.2rem 0.65rem 0.55rem !important;
+    border-radius: 0.95rem !important;
+  }
+
+  .customer-live-page__truck-card {
+    order: 11 !important;
+    grid-template-columns: minmax(0, 1fr) 7.2rem !important;
+    min-height: 6.5rem;
+    margin: 0 0.75rem !important;
+    padding: 0.7rem 0.72rem !important;
+  }
+
+  .customer-live-page__truck-copy {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .customer-live-page__truck-photo {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: 7.2rem !important;
+    height: 5.3rem !important;
+    border-radius: 0.8rem !important;
+  }
+
+  .customer-live-page__truck-state {
+    grid-column: 1 !important;
+    grid-row: 2;
+    justify-self: start;
+    margin: 0 !important;
+  }
+
+  .customer-live-page__driver {
+    order: 12 !important;
+    margin: 0 0.75rem !important;
+    border-radius: 1rem !important;
+  }
+
+  .customer-live-page__route {
+    order: 13 !important;
+    margin: 0 0.75rem !important;
+    border-radius: 1rem !important;
+  }
+
+  .customer-live-page__cancel-order {
+    order: 14 !important;
+    margin-inline: 0.75rem !important;
+  }
+}
