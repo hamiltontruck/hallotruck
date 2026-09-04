@@ -20,6 +20,7 @@ import "./styles/customer-mobile-v4-final-shapes.css";
 import "./styles/customer-mobile-v4-landscape.css";
 import "./styles/customer-live-tracking-reference-polish.css";
 import "./styles/customer-assigned-live-tracking-card.css";
+import "./styles/customer-mobile-ios-focus-zoom-fix.css";
 import "./styles/admin-order-cleanup.css";
 import "./styles/shared-portal-logo.css";
 
