@@ -21,6 +21,7 @@ import "./styles/customer-mobile-v4-landscape.css";
 import "./styles/customer-live-tracking-reference-polish.css";
 import "./styles/customer-assigned-live-tracking-card.css";
 import "./styles/customer-mobile-ios-focus-zoom-fix.css";
+import "./styles/customer-driver-chat.css";
 import "./styles/admin-order-cleanup.css";
 import "./styles/shared-portal-logo.css";
 
@@ -29,24 +30,5 @@ Sentry.init({
   enabled: import.meta.env.PROD,
   sendDefaultPii: false,
 });
-
 initializeAnalytics();
-
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <Sentry.ErrorBoundary
-      fallback={() => (
-        <main className="grid min-h-screen place-items-center bg-asphalt p-6 text-white">
-          <section className="w-full max-w-lg border border-white/10 bg-white/5 p-7 text-center">
-            <p className="font-mono text-[10px] tracking-[.2em] text-amber">HALLOTRUCK RECOVERY</p>
-            <h1 className="mt-4 font-display text-2xl font-bold">This workspace could not be displayed.</h1>
-            <p className="mt-3 text-sm leading-6 text-white/60">The error was recorded securely. Reload the latest version and try again.</p>
-            <button type="button" onClick={() => window.location.reload()} className="mt-6 min-h-12 bg-amber px-5 py-3 text-sm font-semibold text-asphalt">Reload workspace</button>
-          </section>
-        </main>
-      )}
-    >
-      <App />
-    </Sentry.ErrorBoundary>
-  </React.StrictMode>,
-);
+ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><Sentry.ErrorBoundary fallback={()=><main className="grid min-h-screen place-items-center bg-asphalt p-6 text-white"><section className="w-full max-w-lg border border-white/10 bg-white/5 p-7 text-center"><p className="font-mono text-[10px] tracking-[.2em] text-amber">HALLOTRUCK RECOVERY</p><h1 className="mt-4 font-display text-2xl font-bold">This workspace could not be displayed.</h1><p className="mt-3 text-sm leading-6 text-white/60">The error was recorded securely. Reload the latest version and try again.</p><button type="button" onClick={()=>window.location.reload()} className="mt-6 min-h-12 bg-amber px-5 py-3 text-sm font-semibold text-asphalt">Reload workspace</button></section></main>}><App /></Sentry.ErrorBoundary></React.StrictMode>);
