@@ -111,6 +111,8 @@ function BookingSheet({
   const [loadType, setLoadType] = useState("Loose / bulk");
   const [cargoQuantity, setCargoQuantity] = useState("");
   const [cargoUnit, setCargoUnit] = useState<"ton" | "quintal">("ton");
+  const [cargoDetailsOpen, setCargoDetailsOpen] = useState(false);
+  const [cargoNotes, setCargoNotes] = useState("");
   const [quote, setQuote] = useState<CustomerQuotePreview | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState("");
@@ -215,7 +217,7 @@ function BookingSheet({
       <div className="booking-topbar">
         <button type="button" className="round-button" onClick={onClose} aria-label="Back">‹</button>
         <div><small>02 · BOOK YOUR TRIP</small><strong>Choose truck &amp; cargo</strong></div>
-        <button type="button" className="round-button" aria-label="More">•••</button>
+        <span aria-hidden="true" style={{ width: "2.45rem", height: "2.45rem" }} />
       </div>
 
       <div className="booking-body">
@@ -223,7 +225,7 @@ function BookingSheet({
         <div className="step-row" aria-label="Booking progress">
           <span className={routeReady ? "done" : ""}>✓ Route</span>
           <span className="active">✓ Truck</span>
-          <span>Cargo</span>
+          <span className={cargo && loadType ? "done" : ""}>Cargo</span>
           <span className={cargoReady ? "done" : ""}>Load</span>
           <span className={quote ? "done" : ""}>Quote</span>
         </div>
@@ -251,8 +253,8 @@ function BookingSheet({
         </div>
 
         <div className="cargo-grid">
-          <label><span>Cargo category</span><select value={cargo} onChange={(event) => { setCargo(event.target.value); invalidateQuote(); }}><option>General goods</option><option>Food &amp; beverage</option><option>Construction material</option><option>Other cargo</option></select></label>
-          <label><span>Packaging / load type</span><select value={loadType} onChange={(event) => { setLoadType(event.target.value); invalidateQuote(); }}><option>Loose / bulk</option><option>Boxed</option><option>Palletized</option><option>Bagged</option></select></label>
+          <label><span>Cargo category</span><select value={cargo} onChange={(event) => setCargo(event.target.value)}><option>General goods</option><option>Food &amp; beverage</option><option>Construction material</option><option>Other cargo</option></select></label>
+          <label><span>Packaging / load type</span><select value={loadType} onChange={(event) => setLoadType(event.target.value)}><option>Loose / bulk</option><option>Boxed</option><option>Palletized</option><option>Bagged</option></select></label>
         </div>
 
         <div className="cargo-grid">
@@ -260,7 +262,39 @@ function BookingSheet({
           <label><span>Unit</span><select value={cargoUnit} onChange={(event) => { setCargoUnit(event.target.value as "ton" | "quintal"); invalidateQuote(); }}><option value="ton">Ton</option><option value="quintal">Quintal</option></select></label>
         </div>
 
-        <button type="button" className="details-row">Additional cargo details <span>⌄</span></button>
+        <button
+          type="button"
+          className="details-row"
+          aria-expanded={cargoDetailsOpen}
+          aria-controls="customer-cargo-details"
+          onClick={() => setCargoDetailsOpen((open) => !open)}
+        >
+          <span style={{ display: "grid", gap: 2, textAlign: "left" }}>
+            <strong style={{ fontSize: 11 }}>Additional cargo details</strong>
+            <small style={{ color: "#7a8798", fontSize: 9 }}>{cargoNotes.trim() ? "Details added" : "Optional"}</small>
+          </span>
+          <span aria-hidden="true" style={{ transition: "transform 160ms ease", transform: cargoDetailsOpen ? "rotate(180deg)" : "rotate(0deg)" }}>⌄</span>
+        </button>
+
+        {cargoDetailsOpen && (
+          <div id="customer-cargo-details" style={{ margin: "-2px 0 12px", border: "1px solid #e2e9f3", borderRadius: 14, background: "#fff", padding: 10 }}>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ color: "#66758c", fontSize: 10, fontWeight: 850 }}>Notes / handling instructions</span>
+              <textarea
+                value={cargoNotes}
+                maxLength={500}
+                rows={4}
+                onChange={(event) => setCargoNotes(event.target.value)}
+                placeholder="Product name, handling instructions, quantity details…"
+                style={{ width: "100%", resize: "vertical", border: "1px solid #dce6f2", borderRadius: 12, outline: 0, background: "#fbfcfe", padding: 10, color: "#10213d", font: "inherit", fontSize: 11, lineHeight: 1.45 }}
+              />
+            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 6, color: "#7a8798", fontSize: 9 }}>
+              <span>Optional; does not change the transport quote.</span>
+              <span>{cargoNotes.length}/500</span>
+            </div>
+          </div>
+        )}
 
         {quoteError && <p role="alert" style={{ margin: "0 0 12px", color: "#b42318", fontSize: 12, fontWeight: 700 }}>{quoteError}</p>}
 
@@ -268,6 +302,7 @@ function BookingSheet({
           <div style={{ margin: "0 0 12px", border: "1px solid #dce6f2", borderRadius: 16, background: "#f8fbff", padding: 12, color: "#10213d", fontSize: 11, lineHeight: 1.55 }}>
             <strong style={{ display: "block", fontSize: 12 }}>{quote.pickup_label} → {quote.dropoff_label}</strong>
             <span style={{ display: "block", marginTop: 4 }}>{quote.distance_km.toFixed(1)} km · {Math.round(quote.duration_minutes)} min · {quote.cargo_tons.toFixed(1)} Ton · {quote.vehicle_type}</span>
+            <span style={{ display: "block", marginTop: 4, color: "#66758c" }}>{cargo} · {loadType}{cargoNotes.trim() ? " · Additional handling details added" : ""}</span>
           </div>
         )}
 
