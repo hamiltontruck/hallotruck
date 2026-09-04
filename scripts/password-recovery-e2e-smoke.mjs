@@ -169,14 +169,15 @@ async function verifyNewPassword() {
   }, React.createElement("p", null, "Hidden application")), "recovery"));
   await wait(300);
   const passwordInputs = document.querySelectorAll('input[type="password"]');
-  setInput(passwordInputs[0], "SecurePass123!");
-  setInput(passwordInputs[1], "SecurePass123!");
+  setInput(passwordInputs[0], "123456");
+  setInput(passwordInputs[1], "123456");
   await wait(50);
   document.querySelector("form").requestSubmit();
   await wait(300);
   return {
-    updated: updatedPassword === "SecurePass123!" && document.body.textContent.includes("Password updated successfully"),
+    updated: updatedPassword === "123456" && document.body.textContent.includes("Password updated successfully"),
     roleRoute: document.body.textContent.includes("Continue to Driver login"),
+    sixDigitInputs: passwordInputs[0].inputMode === "numeric" && passwordInputs[0].pattern === "[0-9]{6}" && passwordInputs[0].minLength === 6 && passwordInputs[0].maxLength === 6,
     noOverflow: !hasOverflow(),
   };
 }
@@ -194,6 +195,7 @@ document.documentElement.dataset.driverSent = String(driver.sent);
 document.documentElement.dataset.driverOverflow = String(!driver.noOverflow);
 document.documentElement.dataset.recoveryUpdated = String(recovery.updated);
 document.documentElement.dataset.recoveryRoleRoute = String(recovery.roleRoute);
+document.documentElement.dataset.recoverySixDigitInputs = String(recovery.sixDigitInputs);
 document.documentElement.dataset.recoveryOverflow = String(!recovery.noOverflow);
 document.documentElement.dataset.ready = "true";
 `;
@@ -243,12 +245,13 @@ try {
       'data-driver-overflow="false"',
       'data-recovery-updated="true"',
       'data-recovery-role-route="true"',
+      'data-recovery-six-digit-inputs="true"',
       'data-recovery-overflow="false"',
       "Password updated successfully",
       "Continue to Driver login",
     ], label);
   }
-  console.log("Customer and Driver password recovery browser smoke passed at 320px, 360px, 390px and 412px with role-aware completion and no horizontal overflow.");
+  console.log("Customer and Driver password recovery browser smoke passed at 320px, 360px, 390px and 412px with six-digit Driver PIN recovery, role-aware completion and no horizontal overflow.");
 } catch (error) {
   if (previewOutput.trim()) console.error(previewOutput.trim());
   throw error;
