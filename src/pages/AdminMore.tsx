@@ -25,6 +25,7 @@ const groups = [
     title: "Enterprise",
     links: [
       ["Executive intelligence", "/admin/intelligence"],
+      ["HALLO AI Assistant", "/admin/ai-assistant"],
       ["Partner onboarding", "/admin/partners"],
       ["Partner job dispatch", "/admin/partner-dispatch"],
     ],

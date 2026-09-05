@@ -6,6 +6,7 @@ import { AdminDriverChatLauncher } from "./AdminDriverChatLauncher";
 
 const links = [
   { to: "/admin", label: "Overview", icon: "▦" },
+  { to: "/admin/ai-assistant", label: "AI Assistant", icon: "AI" },
   { to: "/admin/intelligence", label: "Intelligence", icon: "⌕" },
   { to: "/admin/finance", label: "Finance Dashboard V3", icon: "FIN" },
   { to: "/admin/partner-finance", label: "Partner finance", icon: "P%" },
