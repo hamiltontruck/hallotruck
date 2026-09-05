@@ -75,12 +75,14 @@ test("Admin live tracking does not expose a Customer-only details route", () => 
 test("tracking headers do not claim a live GPS state before transit starts", () => {
   const panel = readFileSync(path.join(process.cwd(), "src/components/admin/AdminLiveTripsPanel.tsx"), "utf8");
   const customerPage = readFileSync(path.join(process.cwd(), "src/pages/CustomerTrackingPage.tsx"), "utf8");
+  const customerPortal = readFileSync(path.join(process.cwd(), "src/pages/CustomerPortal.tsx"), "utf8");
 
   assert.match(panel, /\{activeOrders\.length\} ACTIVE/);
   assert.match(panel, /selected\.status === "in_transit" \? "TRIP ACTIVE" : "ASSIGNED"/);
   assert.doesNotMatch(panel, /\{activeOrders\.length\} LIVE/);
   assert.match(customerPage, /order\?\.status==="in_transit"\?"In transit"/);
   assert.doesNotMatch(customerPage, />● Live</);
+  assert.match(customerPortal, /trackingOrder\.status === "in_transit" \? c\.liveTrip : c\.assigned/);
 });
 
 test("driver compliance disabled actions explain approval and active-trip locks", () => {
