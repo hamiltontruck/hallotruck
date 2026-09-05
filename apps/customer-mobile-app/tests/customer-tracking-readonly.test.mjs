@@ -18,10 +18,11 @@ test("assignment cards are filtered back to the Customer active order ids", () =
   assert.match(service, /\.filter\(\(assignment\) => allowedOrderIds\.has\(assignment\.order_id\)\)/);
 });
 
-test("live GPS uses the secured live-trip RPC and validates returned order id", () => {
+test("live GPS uses the secured live-trip RPC and freshness-aware snapshot UI", () => {
   assert.match(service, /\.rpc\("customer_get_live_trip", \{ p_order_id: order\.id \}\)/);
   assert.match(service, /row\.order_id !== order\.id/);
-  assert.match(page, /LIVE GPS SNAPSHOT/);
+  assert.match(page, /GPS SNAPSHOT/);
+  assert.match(page, /classifyTrackingFreshness\(hasGps \? trip\?\.recorded_at : null\)/);
   assert.match(page, /8000/);
 });
 
@@ -31,10 +32,11 @@ test("Track tab receives verified Customer identity", () => {
   assert.match(app, /<CustomerTrackingPage userId=\{identity\.userId\}/);
 });
 
-test("tracking slice is read-only and does not invent ETA", () => {
+test("tracking slice is read-only and does not invent ETA or stale-live state", () => {
   assert.doesNotMatch(service, /\.insert\(/);
   assert.doesNotMatch(service, /\.update\(/);
   assert.doesNotMatch(service, /\.delete\(/);
   assert.doesNotMatch(service, /service_role/i);
-  assert.match(page, /ETA and route are not invented here/);
+  assert.doesNotMatch(page, /Estimated ETA|remainingSeconds|router\.project-osrm/);
+  assert.match(page, /STALE or OFFLINE coordinates are historical last-known data, never a current\/live position/);
 });
