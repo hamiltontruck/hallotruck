@@ -395,7 +395,7 @@ export function CustomerPortal({ defaultFilter = "all" }: { defaultFilter?: Orde
           </div>}
       </section>
 
-      {trackingOrder && <div className="customer-modal customer-tracking-modal" role="dialog" aria-modal="true"><div className="customer-tracking-sheet"><div className="customer-sheet-header"><div><p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">{c.liveTrip}</p><h2 className="mt-2 font-display text-2xl font-bold">{trackingOrder.tracking_id}</h2><p className="mt-2 text-sm text-steel">{trackingOrder.pickup_address} → {trackingOrder.dropoff_address}</p></div><button type="button" onClick={() => setTrackingOrder(null)} aria-label="Close">×</button></div><div className="customer-tracking-body"><CustomerLiveTripMap orderId={trackingOrder.id} totalDistanceKm={trackingOrder.distance_km} /></div></div></div>}
+      {trackingOrder && <div className="customer-modal customer-tracking-modal" role="dialog" aria-modal="true"><div className="customer-tracking-sheet"><div className="customer-sheet-header"><div><p className="font-mono text-[10px] tracking-[.2em] text-emerald-700">{trackingOrder.status === "in_transit" ? c.liveTrip : c.assigned}</p><h2 className="mt-2 font-display text-2xl font-bold">{trackingOrder.tracking_id}</h2><p className="mt-2 text-sm text-steel">{trackingOrder.pickup_address} → {trackingOrder.dropoff_address}</p></div><button type="button" onClick={() => setTrackingOrder(null)} aria-label="Close">×</button></div><div className="customer-tracking-body"><CustomerLiveTripMap orderId={trackingOrder.id} totalDistanceKm={trackingOrder.distance_km} /></div></div></div>}
 
       {showOrder && <div className="customer-modal customer-order-modal" role="dialog" aria-modal="true" aria-labelledby="new-order-title"><form onSubmit={create} className="customer-order-sheet">
         <header className="customer-order-sheet__header"><div><p className="customer-eyebrow">{c.smartQuote}</p><h2 id="new-order-title">{c.newTransport}</h2></div><button type="button" onClick={() => setShowOrder(false)} aria-label="Close new order">×</button></header>
@@ -420,3 +420,4 @@ function Info({ label, value }: { label: string; value: string }) {
 function SummaryValue({ label, value }: { label: string; value: string }) {
   return <div className="customer-summary-value"><p>{label}</p><strong>{value}</strong></div>;
 }
+
