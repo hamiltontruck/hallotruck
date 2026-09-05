@@ -125,6 +125,7 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
           <CommandLink to="/admin/driver-compliance" title="Driver control" detail="Approve & monitor" />
           <CommandLink to="/admin/fleet-maintenance" title="Fleet control" detail="Readiness & service" />
           <CommandLink to="/admin/partners" title="Partner control" detail="Onboard & review" />
+          <CommandLink to="/admin/ai-assistant" title="AI Assistant" detail="Plan & summarize" />
         </div>
       </section>
 
@@ -191,9 +192,10 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
             </div>
           </QueueCard>
 
-          <QueueCard id="modules" title="Control modules" count={7} actionTo="/admin/intelligence">
+          <QueueCard id="modules" title="Control modules" count={8} actionTo="/admin/intelligence">
             <div className="grid gap-2 p-4 sm:p-5">
               <ModuleLink to="/admin/intelligence" title="Reports & global search" detail="Cross-workspace search, trends, routes and smart signals" />
+              <ModuleLink to="/admin/ai-assistant" title="HALLO AI Assistant" detail="Read-only planning, summaries and leadership support" />
               <ModuleLink to="/admin/payment-review" title="Finance review" detail="Payments, escrow, released, refunds and evidence" />
               <ModuleLink to="/admin/driver-compliance" title="Driver compliance" detail="Documents, approvals and expiry risk" />
               <ModuleLink to="/admin/driver-commission" title="Commission control" detail="Settlements and HALLO commission" />
