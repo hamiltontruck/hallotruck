@@ -2,6 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import {
+  classifyTrackingFreshness,
+  TRACKING_LIVE_MAX_AGE_MS,
+  TRACKING_OFFLINE_AFTER_MS,
+} from "../../src/domain/tracking-freshness";
 
 function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
@@ -11,6 +16,7 @@ const activeTrip = source("src/pages/ActiveTrip.tsx");
 const gpsControl = source("src/components/driver/DriverActiveTripGpsControl.tsx");
 const routeControl = source("src/components/driver/DriverActiveTripRoute.tsx");
 const offlineService = source("src/services/offline.service.ts");
+const trackingMap = source("src/components/tracking/CustomerLiveTripMap.tsx");
 const browserSmoke = source("scripts/driver-active-trip-gps-e2e-smoke.mjs");
 
 test("offline GPS delivery distinguishes queued positions from server-confirmed pings", () => {
@@ -76,6 +82,30 @@ test("Active Trip route ignores stale requests and preserves latest order owners
   assert.match(routeControl, /return \(\) => \{\s+requestIdRef\.current \+= 1/);
   assert.match(routeControl, /services\.getNavigation\(orderId\)/);
   assert.match(routeControl, /setCurrentStepIndex\(0\)/);
+});
+
+test("tracking freshness classifies fresh, stale and offline pings at deterministic boundaries", () => {
+  const now = Date.parse("2026-09-05T18:00:00Z");
+  const atAge = (ageMs: number) => new Date(now - ageMs).toISOString();
+
+  assert.equal(classifyTrackingFreshness(atAge(30_000), now), "LIVE");
+  assert.equal(classifyTrackingFreshness(atAge(TRACKING_LIVE_MAX_AGE_MS), now), "LIVE");
+  assert.equal(classifyTrackingFreshness(atAge(TRACKING_LIVE_MAX_AGE_MS + 1), now), "STALE");
+  assert.equal(classifyTrackingFreshness(atAge(TRACKING_OFFLINE_AFTER_MS), now), "STALE");
+  assert.equal(classifyTrackingFreshness(atAge(TRACKING_OFFLINE_AFTER_MS + 1), now), "OFFLINE");
+  assert.equal(classifyTrackingFreshness(null, now), "OFFLINE");
+  assert.equal(classifyTrackingFreshness("not-a-date", now), "OFFLINE");
+  assert.equal(classifyTrackingFreshness(new Date(now + 1).toISOString(), now), "OFFLINE");
+});
+
+test("shared admin/customer tracking map never presents stale coordinates as live", () => {
+  assert.match(trackingMap, /supabase\.rpc\("customer_get_live_trip", \{ p_order_id: orderId \}\)/);
+  assert.match(trackingMap, /data-tracking-freshness=\{gpsFreshness\}/);
+  assert.match(trackingMap, /STALE — the truck marker is the last known driver location, not a current\/live position/);
+  assert.match(trackingMap, /OFFLINE — the truck marker is retained only as the last known location, not a current\/live position/);
+  assert.match(trackingMap, /Last GPS update:/);
+  assert.match(trackingMap, /pulse\.style\.display = freshness === "LIVE" \? "" : "none"/);
+  assert.match(trackingMap, /if \(gpsFreshness === "LIVE"\)[\s\S]*fetchRoute\(truck, dropoff\)/);
 });
 
 test("active-trip browser smoke covers GPS recovery, route retry and mobile overflow", () => {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { classifyTrackingFreshness, type TrackingFreshness } from "../../domain/tracking-freshness";
 import { supabase } from "../../services/supabase.client";
 
 interface LiveTripRow {
@@ -27,7 +28,6 @@ interface RouteResult {
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
 const style = `https://api.maptiler.com/maps/basic-v2/style.json?key=${mapTilerKey ?? ""}`;
 const timelineSteps = ["Assigned", "Pickup", "On route", "Delivered"] as const;
-const LIVE_GPS_FRESH_MS = 2 * 60 * 1000;
 
 async function fetchRoute(from: [number, number], to: [number, number]): Promise<RouteResult | null> {
   const url = `https://router.project-osrm.org/route/v1/driving/${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson&steps=false`;
@@ -45,7 +45,9 @@ function formatDuration(seconds: number) {
 }
 
 function formatGpsAge(recordedAt: string) {
-  const ageSeconds = Math.max(0, Math.round((Date.now() - new Date(recordedAt).getTime()) / 1000));
+  const recordedAtMs = new Date(recordedAt).getTime();
+  if (!Number.isFinite(recordedAtMs)) return "unknown age";
+  const ageSeconds = Math.max(0, Math.round((Date.now() - recordedAtMs) / 1000));
   if (ageSeconds < 60) return `${ageSeconds}s ago`;
   const ageMinutes = Math.round(ageSeconds / 60);
   if (ageMinutes < 60) return `${ageMinutes}m ago`;
@@ -72,10 +74,9 @@ function createEndpointMarker(kind: "pickup" | "dropoff") {
   return new maplibregl.Marker({ element, anchor: "center" });
 }
 
-function createTruckMarker(heading: number | null | undefined) {
+function createTruckMarker(heading: number | null | undefined, freshness: TrackingFreshness) {
   const element = document.createElement("div");
   element.className = "customer-live-truck-marker";
-  element.setAttribute("aria-label", "Live truck location");
   element.innerHTML = `
     <span class="customer-live-truck-marker__pulse" aria-hidden="true"></span>
     <span class="customer-live-truck-marker__bearing" data-truck-bearing aria-hidden="true">
@@ -94,6 +95,7 @@ function createTruckMarker(heading: number | null | undefined) {
   `;
   const marker = new maplibregl.Marker({ element, anchor: "center" });
   applyTruckHeading(marker, heading);
+  applyTruckFreshness(marker, freshness);
   return marker;
 }
 
@@ -103,6 +105,17 @@ function applyTruckHeading(marker: maplibregl.Marker, heading: number | null | u
   const value = normalizedHeading(heading);
   if (bearing) bearing.style.transform = `rotate(${value}deg)`;
   if (label) label.textContent = `${Math.round(value)}°`;
+}
+
+function applyTruckFreshness(marker: maplibregl.Marker, freshness: TrackingFreshness) {
+  const element = marker.getElement();
+  const pulse = element.querySelector<HTMLElement>(".customer-live-truck-marker__pulse");
+  element.dataset.trackingFreshness = freshness;
+  element.setAttribute(
+    "aria-label",
+    freshness === "LIVE" ? "Live truck location" : `Last known truck location, GPS ${freshness.toLowerCase()}`,
+  );
+  if (pulse) pulse.style.display = freshness === "LIVE" ? "" : "none";
 }
 
 export function CustomerLiveTripMap({
@@ -127,23 +140,23 @@ export function CustomerLiveTripMap({
   const [error, setError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
 
-  const progress = useMemo(() => {
-    const total = Number(totalDistanceKm ?? 0);
-    if (!total || remainingKm == null) return null;
-    return Math.min(100, Math.max(0, Math.round((1 - remainingKm / total) * 100)));
-  }, [remainingKm, totalDistanceKm]);
-
   const activeStep = timelinePosition(trip?.status);
   const hasTruckLocation = trip?.truck_lng != null && trip?.truck_lat != null;
-  const gpsAgeMs = trip?.recorded_at ? Date.now() - new Date(trip.recorded_at).getTime() : null;
-  const gpsFresh = hasTruckLocation && gpsAgeMs !== null && gpsAgeMs >= 0 && gpsAgeMs <= LIVE_GPS_FRESH_MS;
+  const gpsFreshness = classifyTrackingFreshness(hasTruckLocation ? trip?.recorded_at : null);
+  const gpsLive = hasTruckLocation && gpsFreshness === "LIVE";
   const speedValue = !hasTruckLocation
-    ? "Waiting for GPS"
-    : !gpsFresh
-      ? "GPS paused"
-      : trip?.speed_kmh != null
-        ? `${Math.round(Number(trip.speed_kmh))} km/h`
-        : "Location received";
+    ? "OFFLINE · waiting for GPS"
+    : gpsLive
+      ? trip?.speed_kmh != null
+        ? `LIVE · ${Math.round(Number(trip.speed_kmh))} km/h`
+        : "LIVE · location received"
+      : `${gpsFreshness} · last known`;
+
+  const progress = useMemo(() => {
+    const total = Number(totalDistanceKm ?? 0);
+    if (!gpsLive || !total || remainingKm == null) return null;
+    return Math.min(100, Math.max(0, Math.round((1 - remainingKm / total) * 100)));
+  }, [gpsLive, remainingKm, totalDistanceKm]);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,16 +244,22 @@ export function CustomerLiveTripMap({
 
       if (truck) {
         if (!truckMarker.current) {
-          truckMarker.current = createTruckMarker(currentTrip.heading).setLngLat(truck).addTo(activeMap);
+          truckMarker.current = createTruckMarker(currentTrip.heading, gpsFreshness).setLngLat(truck).addTo(activeMap);
         } else {
           truckMarker.current.setLngLat(truck);
           applyTruckHeading(truckMarker.current, currentTrip.heading);
+          applyTruckFreshness(truckMarker.current, gpsFreshness);
         }
 
-        const remaining = await fetchRoute(truck, dropoff);
-        if (remaining) {
-          setRemainingKm(Number((remaining.distance / 1000).toFixed(1)));
-          setRemainingSeconds(remaining.duration);
+        if (gpsFreshness === "LIVE") {
+          const remaining = await fetchRoute(truck, dropoff);
+          if (remaining) {
+            setRemainingKm(Number((remaining.distance / 1000).toFixed(1)));
+            setRemainingSeconds(remaining.duration);
+          }
+        } else {
+          setRemainingKm(null);
+          setRemainingSeconds(null);
         }
       } else {
         truckMarker.current?.remove();
@@ -251,12 +270,12 @@ export function CustomerLiveTripMap({
     }
 
     void render();
-  }, [trip]);
+  }, [trip, gpsFreshness]);
 
   if (!mapTilerKey) return <p className="border border-route/30 bg-route/5 p-4 text-sm text-route">Map key is not configured.</p>;
 
   return (
-    <div className="customer-live-map">
+    <div className="customer-live-map" data-tracking-freshness={gpsFreshness}>
       {error && (
         <div className="mb-3 flex flex-col gap-3 border border-route/30 bg-route/5 p-3 text-xs text-route min-[390px]:flex-row min-[390px]:items-center min-[390px]:justify-between">
           <p role="alert" className="min-w-0 break-words">{error}</p>
@@ -282,8 +301,8 @@ export function CustomerLiveTripMap({
       <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
         <Metric label="Trip status" value={trip?.status?.replace("_", " ") ?? "Loading"} />
         <Metric label="Truck GPS" value={speedValue} />
-        <Metric label="Remaining" value={remainingKm != null ? `${remainingKm} km` : "Waiting for GPS"} />
-        <Metric label="ETA" value={remainingSeconds != null ? formatDuration(remainingSeconds) : "Waiting for GPS"} />
+        <Metric label="Remaining" value={gpsLive && remainingKm != null ? `${remainingKm} km` : hasTruckLocation ? "Last known only" : "Waiting for GPS"} />
+        <Metric label="ETA" value={gpsLive && remainingSeconds != null ? formatDuration(remainingSeconds) : hasTruckLocation ? "Last known only" : "Waiting for GPS"} />
       </div>
       {progress != null && (
         <div className="mt-4">
@@ -292,12 +311,14 @@ export function CustomerLiveTripMap({
         </div>
       )}
       <div ref={container} className="customer-live-map__canvas mt-4 h-72 w-full border border-line bg-bone" />
-      <p className={`mt-2 text-[11px] ${gpsFresh ? "text-emerald-800" : "text-steel"}`}>
-        {gpsFresh
-          ? "Live GPS refreshes every 8 seconds. Blue line = road route · truck icon = live driver position and heading."
-          : hasTruckLocation
-            ? "Live GPS is paused. The map, remaining distance and ETA use the last known driver location."
-            : "Waiting for the driver to share the first GPS location."}
+      <p className={`mt-2 text-[11px] ${gpsFreshness === "LIVE" ? "text-emerald-800" : "text-steel"}`}>
+        {gpsFreshness === "LIVE"
+          ? "LIVE — GPS is current. Blue line = road route · truck icon = current driver position and heading."
+          : gpsFreshness === "STALE"
+            ? "STALE — the truck marker is the last known driver location, not a current/live position."
+            : hasTruckLocation
+              ? "OFFLINE — the truck marker is retained only as the last known location, not a current/live position."
+              : "OFFLINE — waiting for the driver to share the first GPS location."}
       </p>
       {trip?.recorded_at && (
         <p className="mt-1 text-[11px] text-steel">
