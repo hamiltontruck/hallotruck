@@ -1,13 +1,24 @@
 package com.hallo.logistics.tracking
 
 import com.hallo.logistics.HalloSupabase
-import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.functions.functions
 import kotlinx.serialization.Serializable
 
-@Serializable data class TrackingPingParams(val p_order_id: String, val p_latitude: Double, val p_longitude: Double, val p_accuracy_m: Double? = null, val p_heading: Double? = null)
+@Serializable data class TrackingPingRequest(
+    val orderId: String,
+    val lng: Double,
+    val lat: Double,
+    val heading: Double? = null,
+    val speedKmh: Double? = null,
+    val accuracyM: Double? = null,
+    val recordedAt: String? = null,
+    val androidDeviceId: String? = null,
+)
+
 class TrackingRemoteDataSource {
-    suspend fun record(params: TrackingPingParams) {
-        require(params.p_latitude in -90.0..90.0 && params.p_longitude in -180.0..180.0)
-        HalloSupabase.client.postgrest.rpc("record_driver_tracking_ping", params)
+    suspend fun record(request: TrackingPingRequest) {
+        require(request.lat in -90.0..90.0 && request.lng in -180.0..180.0)
+        // Authenticated Edge Function validates the JWT, then invokes record_driver_tracking_ping server-side.
+        HalloSupabase.client.functions.invoke("tracking", body = request)
     }
 }
