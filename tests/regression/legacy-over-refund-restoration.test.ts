@@ -17,6 +17,14 @@ const externalRefundGuardMigration = readFileSync(
   path.join(root, "supabase", "migrations", "20260902065200_restrict_legacy_restoration_to_external_refunds.sql"),
   "utf8",
 );
+const correctionsMigration = readFileSync(
+  path.join(root, "supabase", "migrations", "20260827101439_immutable_financial_corrections.sql"),
+  "utf8",
+);
+const referenceIntegrityMigration = readFileSync(
+  path.join(root, "supabase", "migrations", "20260830022800_harden_payment_reference_integrity.sql"),
+  "utf8",
+);
 const paymentControl = readFileSync(
   path.join(root, "src", "components", "admin", "AdminPaymentCollectionControl.tsx"),
   "utf8",
@@ -33,6 +41,49 @@ const restorationForm = readFileSync(
   path.join(root, "src", "components", "admin", "LegacyRefundRestorationForm.tsx"),
   "utf8",
 );
+
+const issue248Entries = [
+  { amount_etb: 25_150, event: "refunded" },
+  { amount_etb: 2_150, event: "released" },
+  { amount_etb: 23_000, event: "released" },
+  { amount_etb: 30_000, event: "refunded" },
+];
+
+test("refund > verified funds is rejected and remains visible as an anomaly", () => {
+  const summary = calculatePaymentSummary(25_150, [
+    { amount_etb: 25_150, event: "released" },
+    { amount_etb: 55_150, event: "refunded" },
+  ]);
+
+  assert.equal(summary.rawVerified, -30_000);
+  assert.equal(summary.ledgerAnomaly, 30_000);
+  assert.equal(summary.verifiedPaid, 0);
+  assert.match(anomalyGuardMigration, /Refund exceeds effective verified funds/i);
+  assert.match(anomalyGuardMigration, /new\.amount_etb > greatest\(0, v_effective_verified\) \+ 0\.005/i);
+});
+
+test("duplicate refund is blocked by source, request and external-reference integrity guards", () => {
+  assert.match(correctionsMigration, /where correction\.request_key = p_request_key[\s\S]*already processed/i);
+  assert.match(correctionsMigration, /where correction\.source_payment_id = p_payment_id[\s\S]*v_remaining := greatest/i);
+  assert.match(correctionsMigration, /Payment has already been fully corrected/i);
+  assert.match(referenceIntegrityMigration, /payments_reference_integrity_guard/i);
+  assert.match(referenceIntegrityMigration, /Transaction ID is already assigned to another payment for this provider/i);
+});
+
+test("partial refund preserves the unreversed verified balance", () => {
+  const summary = calculatePaymentSummary(25_150, [
+    { amount_etb: 25_150, event: "released" },
+    { amount_etb: 10_000, event: "refunded" },
+  ]);
+
+  assert.equal(summary.refunded, 10_000);
+  assert.equal(summary.rawVerified, 15_150);
+  assert.equal(summary.verifiedPaid, 15_150);
+  assert.equal(summary.balanceToPay, 10_000);
+  assert.equal(summary.ledgerAnomaly, 0);
+  assert.match(correctionsMigration, /v_type = 'partial_refund' and v_amount >= v_remaining/i);
+  assert.match(correctionsMigration, /Partial refund must be less than the remaining payment amount/i);
+});
 
 test("legacy restoration neutralizes only the excess-refund anomaly", () => {
   const before = calculatePaymentSummary(100_000, [
@@ -55,12 +106,7 @@ test("legacy restoration neutralizes only the excess-refund anomaly", () => {
 });
 
 test("Issue 248 target arithmetic restores ETB 30,000 without inventing paid funds", () => {
-  const restored = calculatePaymentSummary(25_150, [
-    { amount_etb: 25_150, event: "refunded" },
-    { amount_etb: 2_150, event: "released" },
-    { amount_etb: 23_000, event: "released" },
-    { amount_etb: 30_000, event: "refunded" },
-  ], 30_000);
+  const restored = calculatePaymentSummary(25_150, issue248Entries, 30_000);
 
   assert.equal(restored.releasedGross, 25_150);
   assert.equal(restored.refunded, 55_150);
@@ -68,6 +114,32 @@ test("Issue 248 target arithmetic restores ETB 30,000 without inventing paid fun
   assert.equal(restored.rawVerified, 0);
   assert.equal(restored.ledgerAnomaly, 0);
   assert.equal(restored.balanceToPay, 25_150);
+  assert.equal(restored.customerCredit, 0);
+});
+
+test("legacy over-refund restoration cannot be applied twice", () => {
+  assert.match(restorationMigration, /where correction\.source_payment_id = p_refund_payment_id[\s\S]*legacy_refund_restoration/i);
+  assert.match(restorationMigration, /v_source_remaining := greatest\(round\(v_source_amount - v_source_restored, 2\), 0\)/i);
+  assert.match(restorationMigration, /This legacy refund has already been fully restored/i);
+  assert.match(restorationMigration, /Restoration request was already processed/i);
+  assert.match(restorationMigration, /Restoration exceeds the current ledger anomaly/i);
+  assert.match(restorationMigration, /Restoration exceeds the remaining legacy refund amount/i);
+});
+
+test("admin payment integrity predicate becomes clean after the corrected target restoration", () => {
+  const before = calculatePaymentSummary(25_150, issue248Entries);
+  const corrected = calculatePaymentSummary(25_150, issue248Entries, 30_000);
+  const isIntegrityIssue = (rawVerified: number, initiated: number, invoice: number) =>
+    rawVerified < 0
+    || rawVerified > invoice + 0.005
+    || initiated + Math.max(0, rawVerified) > invoice + 0.005;
+
+  assert.equal(isIntegrityIssue(before.rawVerified, before.initiated, before.invoiceTotal), true);
+  assert.equal(isIntegrityIssue(corrected.rawVerified, corrected.initiated, corrected.invoiceTotal), false);
+  assert.match(restorationMigration, /create or replace function public\.admin_payment_integrity_report\(\)/i);
+  assert.match(restorationMigration, /private\.legacy_refund_restoration_total\(payment_order\.id\)::numeric as restored_total/i);
+  assert.match(restorationMigration, /released_total \+ totals\.held_total - totals\.refunded_total \+ totals\.restored_total as raw_verified/i);
+  assert.match(restorationMigration, /where calc\.raw_verified < 0[\s\S]*calc\.raw_verified > calc\.invoice_total \+ 0\.005/i);
 });
 
 test("restoration never rewrites payment history or emits commissionable payment rows", () => {
