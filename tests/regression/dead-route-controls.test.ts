@@ -76,6 +76,7 @@ test("tracking headers do not claim a live GPS state before transit starts", () 
   const panel = readFileSync(path.join(process.cwd(), "src/components/admin/AdminLiveTripsPanel.tsx"), "utf8");
   const customerPage = readFileSync(path.join(process.cwd(), "src/pages/CustomerTrackingPage.tsx"), "utf8");
   const customerPortal = readFileSync(path.join(process.cwd(), "src/pages/CustomerPortal.tsx"), "utf8");
+  const customerLiveOrders = readFileSync(path.join(process.cwd(), "src/pages/CustomerLiveOrders.tsx"), "utf8");
 
   assert.match(panel, /\{activeOrders\.length\} ACTIVE/);
   assert.match(panel, /selected\.status === "in_transit" \? "TRIP ACTIVE" : "ASSIGNED"/);
@@ -83,6 +84,7 @@ test("tracking headers do not claim a live GPS state before transit starts", () 
   assert.match(customerPage, /order\?\.status==="in_transit"\?"In transit"/);
   assert.doesNotMatch(customerPage, />● Live</);
   assert.match(customerPortal, /trackingOrder\.status === "in_transit" \? c\.liveTrip : c\.assigned/);
+  assert.match(customerLiveOrders, /assignment && order\.status === "in_transit"/);
 });
 
 test("driver compliance disabled actions explain approval and active-trip locks", () => {
