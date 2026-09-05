@@ -1,13 +1,21 @@
 package com.hallo.logistics.data.remote
 
 import com.hallo.logistics.HalloSupabase
-import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.Serializable
 
-@Serializable data class MobileDeviceUpsert(val user_id: String, val platform: String = "android", val push_token: String)
+@Serializable data class RegisterAndroidDeviceParams(
+    val p_android_device_id: String,
+    val p_fcm_token: String?,
+    val p_app_version: String,
+)
+
 class MobileDeviceRemoteDataSource {
-    suspend fun register(userId: String, pushToken: String) {
-        // RLS remains authoritative; never register a token for an unauthenticated/other user.
-        HalloSupabase.client.from("mobile_devices").upsert(MobileDeviceUpsert(userId, push_token = pushToken))
+    suspend fun register(androidDeviceId: String, fcmToken: String?, appVersion: String) {
+        // Uses the existing SECURITY DEFINER contract; direct table writes are intentionally not granted to authenticated clients.
+        HalloSupabase.client.postgrest.rpc(
+            "register_android_device",
+            RegisterAndroidDeviceParams(androidDeviceId, fcmToken, appVersion),
+        )
     }
 }
