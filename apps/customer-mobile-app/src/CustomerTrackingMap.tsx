@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import maplibregl, { type LngLatLike, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { CustomerLiveTrip } from "./customer-tracking.service";
+import { classifyTrackingFreshness, type TrackingFreshness } from "./tracking-freshness";
 
 const mapTilerKey = (import.meta.env.VITE_MAPTILER_KEY as string | undefined)?.trim();
 const mapStyle = mapTilerKey
@@ -21,7 +22,16 @@ function applyTruckHeading(element: HTMLElement, heading?: number | null) {
     : "";
 }
 
-function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: number | null) {
+function applyTruckFreshness(element: HTMLElement, freshness: TrackingFreshness) {
+  element.dataset.trackingFreshness = freshness;
+  element.setAttribute(
+    "aria-label",
+    freshness === "LIVE" ? "Live truck location" : `Last known truck location, GPS ${freshness.toLowerCase()}`,
+  );
+  element.style.opacity = freshness === "LIVE" ? "1" : ".68";
+}
+
+function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: number | null, freshness: TrackingFreshness = "OFFLINE") {
   const element = document.createElement("div");
   element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : kind === "dropoff" ? "Drop-off location" : "Truck location");
   element.style.display = "grid";
@@ -50,6 +60,7 @@ function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: num
     element.style.fontWeight = "900";
     element.innerHTML = '<span data-truck-arrow aria-hidden="true">➤</span>';
     applyTruckHeading(element, heading);
+    applyTruckFreshness(element, freshness);
   }
 
   return element;
@@ -61,14 +72,18 @@ function setMarker(
   position: LngLatLike,
   kind: "pickup" | "dropoff" | "truck",
   heading?: number | null,
+  freshness: TrackingFreshness = "OFFLINE",
 ) {
   if (current) {
     current.setLngLat(position);
-    if (kind === "truck") applyTruckHeading(current.getElement(), heading);
+    if (kind === "truck") {
+      applyTruckHeading(current.getElement(), heading);
+      applyTruckFreshness(current.getElement(), freshness);
+    }
     return current;
   }
 
-  return new maplibregl.Marker({ element: createMarkerElement(kind, heading), anchor: "center" })
+  return new maplibregl.Marker({ element: createMarkerElement(kind, heading, freshness), anchor: "center" })
     .setLngLat(position)
     .addTo(map);
 }
@@ -114,6 +129,7 @@ export function CustomerTrackingMap({ trip }: { trip: CustomerLiveTrip | undefin
     const truck = validCoordinate(trip.truck_lng, trip.truck_lat)
       ? [Number(trip.truck_lng), Number(trip.truck_lat)] as [number, number]
       : null;
+    const trackingFreshness = classifyTrackingFreshness(truck ? trip.recorded_at : null);
 
     if (pickup) pickupMarkerRef.current = setMarker(pickupMarkerRef.current, map, pickup, "pickup");
     else { pickupMarkerRef.current?.remove(); pickupMarkerRef.current = null; }
@@ -121,7 +137,7 @@ export function CustomerTrackingMap({ trip }: { trip: CustomerLiveTrip | undefin
     if (dropoff) dropoffMarkerRef.current = setMarker(dropoffMarkerRef.current, map, dropoff, "dropoff");
     else { dropoffMarkerRef.current?.remove(); dropoffMarkerRef.current = null; }
 
-    if (truck) truckMarkerRef.current = setMarker(truckMarkerRef.current, map, truck, "truck", trip.heading);
+    if (truck) truckMarkerRef.current = setMarker(truckMarkerRef.current, map, truck, "truck", trip.heading, trackingFreshness);
     else { truckMarkerRef.current?.remove(); truckMarkerRef.current = null; }
 
     const points = [pickup, dropoff, truck].filter((point): point is [number, number] => point !== null);
@@ -138,10 +154,14 @@ export function CustomerTrackingMap({ trip }: { trip: CustomerLiveTrip | undefin
     trip && validCoordinate(trip.pickup_lng, trip.pickup_lat) && validCoordinate(trip.dropoff_lng, trip.dropoff_lat),
   );
   const hasTruck = Boolean(trip && validCoordinate(trip.truck_lng, trip.truck_lat));
+  const trackingFreshness = classifyTrackingFreshness(hasTruck ? trip?.recorded_at : null);
+  const badgeText = trackingFreshness === "LIVE" ? "GPS LIVE" : trackingFreshness === "STALE" ? "GPS STALE" : "GPS OFFLINE";
+  const badgeLive = trackingFreshness === "LIVE";
 
   return (
     <section
-      aria-label="Live trip map"
+      aria-label="Trip tracking map"
+      data-tracking-freshness={trackingFreshness}
       style={{ marginTop: 14, overflow: "hidden", border: "1px solid #dfe7f1", borderRadius: 22, background: "#fff", boxShadow: "0 10px 30px rgba(16,33,61,.06)" }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 15px 12px" }}>
@@ -149,14 +169,19 @@ export function CustomerTrackingMap({ trip }: { trip: CustomerLiveTrip | undefin
           <small style={{ display: "block", color: "#9a6700", fontSize: 10, fontWeight: 900, letterSpacing: ".08em" }}>REAL MAP</small>
           <strong style={{ display: "block", marginTop: 4, color: "#10213d", fontSize: 15 }}>Pickup → Drop-off → Truck</strong>
         </div>
-        <span style={{ borderRadius: 999, background: hasTruck ? "#ecfdf3" : "#fff7ed", padding: "6px 9px", color: hasTruck ? "#027a48" : "#b54708", fontSize: 10, fontWeight: 900 }}>
-          {hasTruck ? "GPS LIVE" : "WAITING GPS"}
+        <span style={{ borderRadius: 999, background: badgeLive ? "#ecfdf3" : "#fff7ed", padding: "6px 9px", color: badgeLive ? "#027a48" : "#b54708", fontSize: 10, fontWeight: 900 }}>
+          {badgeText}
         </span>
       </div>
       <div ref={containerRef} style={{ width: "100%", height: 310, background: "#dfe9f5" }} />
       {!hasEndpoints && (
         <p style={{ margin: 0, padding: "10px 14px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>
           Pickup and drop-off markers appear when the secure live-trip RPC returns their coordinates.
+        </p>
+      )}
+      {hasTruck && trackingFreshness !== "LIVE" && (
+        <p style={{ margin: 0, padding: "10px 14px 0", color: "#b54708", fontSize: 10, lineHeight: 1.5, fontWeight: 800 }}>
+          {trackingFreshness} — truck marker is the last known location, not a current/live position.
         </p>
       )}
       <div aria-label="Map legend" style={{ display: "flex", flexWrap: "wrap", gap: 12, padding: "11px 14px 13px", color: "#68778d", fontSize: 10, fontWeight: 800 }}>

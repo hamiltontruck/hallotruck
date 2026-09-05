@@ -7,6 +7,7 @@ import {
   type CustomerTrackingOrder,
 } from "./customer-tracking.service";
 import { CustomerTrackingMap } from "./CustomerTrackingMap";
+import { classifyTrackingFreshness } from "./tracking-freshness";
 
 type TrackingState =
   | { kind: "loading" }
@@ -41,7 +42,15 @@ function formatRecordedAt(value: string | null | undefined) {
   if (!value) return "Waiting for GPS update";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  });
 }
 
 function Header({ right }: { right: string }) {
@@ -139,30 +148,39 @@ function DriverCard({ assignment }: { assignment: CustomerTrackingAssignment | u
 
 function LivePositionCard({ trip }: { trip: CustomerLiveTrip | undefined }) {
   const hasGps = trip?.truck_lat != null && trip?.truck_lng != null;
+  const freshness = classifyTrackingFreshness(hasGps ? trip?.recorded_at : null);
+  const gpsLive = hasGps && freshness === "LIVE";
+  const snapshotTitle = !hasGps
+    ? "Waiting for GPS update"
+    : gpsLive
+      ? "Live truck location"
+      : `${freshness} · last known location`;
+
   return (
     <>
       <CustomerTrackingMap trip={trip} />
-      <section style={{ ...cardStyle, marginTop: 14 }}>
+      <section data-tracking-freshness={freshness} style={{ ...cardStyle, marginTop: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <div><small style={{ color: "#9a6700", fontWeight: 900 }}>LIVE GPS SNAPSHOT</small><h2 style={{ margin: "5px 0 0", fontSize: 19 }}>{hasGps ? "Truck location received" : "Waiting for GPS update"}</h2></div>
-          <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 999, background: hasGps ? "#12b76a" : "#f5b400", boxShadow: hasGps ? "0 0 0 6px rgba(18,183,106,.12)" : "0 0 0 6px rgba(245,180,0,.12)" }} />
+          <div><small style={{ color: "#9a6700", fontWeight: 900 }}>GPS SNAPSHOT</small><h2 style={{ margin: "5px 0 0", fontSize: 19 }}>{snapshotTitle}</h2></div>
+          <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 999, background: gpsLive ? "#12b76a" : "#f5b400", boxShadow: gpsLive ? "0 0 0 6px rgba(18,183,106,.12)" : "0 0 0 6px rgba(245,180,0,.12)" }} />
         </div>
 
         <div style={{ marginTop: 15, borderRadius: 18, background: "linear-gradient(145deg,#fff8e8,#f8fafc)", padding: 15 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div><small style={{ color: "#68778d" }}>Truck latitude</small><strong style={{ display: "block", marginTop: 3 }}>{formatCoordinate(trip?.truck_lat)}</strong></div>
-            <div><small style={{ color: "#68778d" }}>Truck longitude</small><strong style={{ display: "block", marginTop: 3 }}>{formatCoordinate(trip?.truck_lng)}</strong></div>
-            <div><small style={{ color: "#68778d" }}>Speed</small><strong style={{ display: "block", marginTop: 3 }}>{trip?.speed_kmh == null ? "—" : `${Math.round(Number(trip.speed_kmh))} km/h`}</strong></div>
-            <div><small style={{ color: "#68778d" }}>Heading</small><strong style={{ display: "block", marginTop: 3 }}>{trip?.heading == null ? "—" : `${Math.round(Number(trip.heading))}°`}</strong></div>
+            <div><small style={{ color: "#68778d" }}>Last reported truck latitude</small><strong style={{ display: "block", marginTop: 3 }}>{formatCoordinate(trip?.truck_lat)}</strong></div>
+            <div><small style={{ color: "#68778d" }}>Last reported truck longitude</small><strong style={{ display: "block", marginTop: 3 }}>{formatCoordinate(trip?.truck_lng)}</strong></div>
+            <div><small style={{ color: "#68778d" }}>Last reported speed</small><strong style={{ display: "block", marginTop: 3 }}>{trip?.speed_kmh == null ? "—" : `${Math.round(Number(trip.speed_kmh))} km/h`}</strong></div>
+            <div><small style={{ color: "#68778d" }}>Last reported heading</small><strong style={{ display: "block", marginTop: 3 }}>{trip?.heading == null ? "—" : `${Math.round(Number(trip.heading))}°`}</strong></div>
           </div>
-          <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid #e7dcc6" }}><small style={{ color: "#68778d" }}>Last GPS record</small><strong style={{ display: "block", marginTop: 3, fontSize: 12 }}>{formatRecordedAt(trip?.recorded_at)}</strong></div>
+          <div style={{ marginTop: 13, paddingTop: 12, borderTop: "1px solid #e7dcc6" }}><small style={{ color: "#68778d" }}>Tracking status</small><strong style={{ display: "block", marginTop: 3, fontSize: 12 }}>{freshness}</strong></div>
+          <div style={{ marginTop: 10 }}><small style={{ color: "#68778d" }}>Last GPS update</small><strong style={{ display: "block", marginTop: 3, fontSize: 12 }}>{formatRecordedAt(trip?.recorded_at)}</strong></div>
         </div>
 
         <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 11 }}>
           <div style={{ borderRadius: 14, background: "#f8fafc", padding: 11 }}><span style={{ color: "#68778d" }}>Pickup GPS</span><strong style={{ display: "block", marginTop: 4 }}>{formatCoordinate(trip?.pickup_lat)}, {formatCoordinate(trip?.pickup_lng)}</strong></div>
           <div style={{ borderRadius: 14, background: "#f8fafc", padding: 11 }}><span style={{ color: "#68778d" }}>Drop-off GPS</span><strong style={{ display: "block", marginTop: 4 }}>{formatCoordinate(trip?.dropoff_lat)}, {formatCoordinate(trip?.dropoff_lng)}</strong></div>
         </div>
-        <p style={{ margin: "12px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>ETA and route are not invented here. This is only the GPS snapshot returned by the existing secured live-trip RPC.</p>
+        <p style={{ margin: "12px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>This is the GPS snapshot returned by the existing secured live-trip RPC. STALE or OFFLINE coordinates are historical last-known data, never a current/live position.</p>
       </section>
     </>
   );
@@ -207,7 +225,7 @@ export function CustomerTrackingPage({ userId, onHome }: { userId: string; onHom
   }, [reload, userId]);
 
   if (state.kind === "loading") {
-    return <main style={pageStyle}><Header right="Live"/><section style={{ ...cardStyle, marginTop: 34, textAlign: "center", padding: "28px 20px" }}><h1 style={{ margin: 0, fontSize: 21 }}>Loading tracking…</h1><p style={{ color: "#68778d", fontSize: 12, lineHeight: 1.6 }}>Customer order, driver assignment and live GPS are loading from the secure backend.</p></section></main>;
+    return <main style={pageStyle}><Header right="Loading"/><section style={{ ...cardStyle, marginTop: 34, textAlign: "center", padding: "28px 20px" }}><h1 style={{ margin: 0, fontSize: 21 }}>Loading tracking…</h1><p style={{ color: "#68778d", fontSize: 12, lineHeight: 1.6 }}>Customer order, driver assignment and GPS snapshot are loading from the secure backend.</p></section></main>;
   }
   if (state.kind === "error") return <ErrorState message={state.message} onRetry={() => void reload()} />;
   if (!state.data.orders.length) return <EmptyState onHome={onHome} />;
@@ -232,7 +250,7 @@ export function CustomerTrackingPage({ userId, onHome }: { userId: string; onHom
       <RouteCard order={selectedOrder} />
       <DriverCard assignment={assignment} />
       <LivePositionCard trip={liveTrip} />
-      <button type="button" onClick={() => void reload(false)} style={{ marginTop: 14, width: "100%", minHeight: 46, border: "1px solid #d8e2ef", borderRadius: 15, background: "#fff", color: "#10213d", fontWeight: 900 }}>Refresh live tracking</button>
+      <button type="button" onClick={() => void reload(false)} style={{ marginTop: 14, width: "100%", minHeight: 46, border: "1px solid #d8e2ef", borderRadius: 15, background: "#fff", color: "#10213d", fontWeight: 900 }}>Refresh tracking</button>
     </main>
   );
 }
