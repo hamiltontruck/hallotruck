@@ -2,6 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  DELIVERY_PROOF_REQUIRED_RELEASED_AT,
+  TRIP_PAYMENT_RESULT_REQUIRED_RELEASED_AT,
+  classifyDeliveryReconciliation,
+} from "../../src/domain/delivery-reconciliation";
 
 const migration = await readFile(
   path.join(
@@ -29,6 +34,24 @@ const evidenceRemoval = await readFile(
     process.cwd(),
     "supabase/migrations/20260828203000_remove_customer_driver_payment_evidence_requirement.sql",
   ),
+  "utf8",
+);
+const proofGuard = await readFile(
+  path.join(
+    process.cwd(),
+    "supabase/migrations/20260816_enforce_delivery_proof_before_delivered.sql",
+  ),
+  "utf8",
+);
+const deliveryReconciliationGuard = await readFile(
+  path.join(
+    process.cwd(),
+    "supabase/migrations/20260905190000_enforce_delivery_reconciliation_completion.sql",
+  ),
+  "utf8",
+);
+const adminDeliveryReconciliation = await readFile(
+  path.join(process.cwd(), "src/components/admin/AdminDeliveryReconciliationPanel.tsx"),
   "utf8",
 );
 const customer = await readFile(
@@ -168,4 +191,86 @@ test("follow-up migrations do not modify Partner finance foundations", () => {
       protectedObject,
     );
   }
+});
+
+test("delivery reconciliation release boundaries are explicit and stable", () => {
+  assert.equal(DELIVERY_PROOF_REQUIRED_RELEASED_AT, "2026-08-16T18:17:11.000Z");
+  assert.equal(TRIP_PAYMENT_RESULT_REQUIRED_RELEASED_AT, "2026-08-28T18:15:40.000Z");
+  assert.match(proofGuard, /orders_require_delivery_proof_before_delivered/);
+  assert.match(proofGuard, /Direct completion is disabled/);
+});
+
+test("HT-2026-455351 proof and payment gaps classify as legitimate legacy history", () => {
+  const classification = classifyDeliveryReconciliation({
+    deliveredAt: "2026-08-07T22:04:28.582771Z",
+    hasProof: false,
+    hasTripPaymentResult: false,
+  });
+  assert.equal(classification.currentWorkflowDefect, false);
+  assert.equal(classification.legitimateLegacy, true);
+  assert.deepEqual(classification.indicators, [
+    "delivered_without_proof",
+    "delivered_without_trip_payment_result",
+    "legitimate_legacy_delivered_record",
+  ]);
+});
+
+test("pre-payment-release proof-complete deliveries remain legitimate legacy results gaps", () => {
+  const classification = classifyDeliveryReconciliation({
+    deliveredAt: "2026-08-26T17:01:15.142270Z",
+    hasProof: true,
+    hasTripPaymentResult: false,
+  });
+  assert.equal(classification.currentWorkflowDefect, false);
+  assert.equal(classification.legitimateLegacy, true);
+  assert.deepEqual(classification.indicators, [
+    "delivered_without_trip_payment_result",
+    "legitimate_legacy_delivered_record",
+  ]);
+});
+
+test("post-release delivery gaps fail classification as current workflow defects", () => {
+  const missing = classifyDeliveryReconciliation({
+    deliveredAt: "2026-09-04T15:19:14.805393Z",
+    hasProof: false,
+    hasTripPaymentResult: false,
+  });
+  assert.equal(missing.currentWorkflowDefect, true);
+  assert.equal(missing.legitimateLegacy, false);
+
+  const complete = classifyDeliveryReconciliation({
+    deliveredAt: "2026-09-04T15:19:14.805393Z",
+    hasProof: true,
+    hasTripPaymentResult: true,
+  });
+  assert.equal(complete.currentWorkflowDefect, false);
+  assert.deepEqual(complete.indicators, []);
+});
+
+test("Finish Trip keeps delivery proof before trip payment result in one RPC", () => {
+  const start = migration.indexOf("create or replace function public.driver_finish_trip");
+  const end = migration.indexOf("revoke all on function public.driver_finish_trip", start);
+  assert.ok(start >= 0 && end > start);
+  const finishTrip = migration.slice(start, end);
+  const proofCall = finishTrip.indexOf("submit_delivery_proof");
+  const paymentCall = finishTrip.indexOf("driver_record_trip_payment_result");
+  assert.ok(proofCall >= 0 && paymentCall > proofCall);
+});
+
+test("future delivered transitions require proof and trip payment result at transaction end", () => {
+  assert.match(deliveryReconciliationGuard, /create constraint trigger orders_require_delivery_reconciliation_on_completion/i);
+  assert.match(deliveryReconciliationGuard, /after insert or update of status on public\.orders/i);
+  assert.match(deliveryReconciliationGuard, /deferrable initially deferred/i);
+  assert.match(deliveryReconciliationGuard, /public\.delivery_proofs/);
+  assert.match(deliveryReconciliationGuard, /public\.driver_trip_payment_results/);
+  assert.match(deliveryReconciliationGuard, /old\.status is not distinct from new\.status/i);
+  assert.doesNotMatch(deliveryReconciliationGuard, /insert\s+into\s+public\.(delivery_proofs|driver_trip_payment_results)/i);
+  assert.doesNotMatch(deliveryReconciliationGuard, /update\s+public\.orders/i);
+});
+
+test("Admin delivery reconciliation shows the required anomaly labels", () => {
+  assert.match(adminDeliveryReconciliation, /Delivered without proof/);
+  assert.match(adminDeliveryReconciliation, /Delivered without trip payment result/);
+  assert.match(adminDeliveryReconciliation, /Legitimate legacy delivered record/);
+  assert.match(adminDeliveryReconciliation, /no proof or payment result is synthesized or backfilled/i);
 });

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminDeliveryReconciliationPanel } from "../components/admin/AdminDeliveryReconciliationPanel";
 import { AdminPaymentLedgerAnomalyPanel } from "../components/admin/AdminPaymentLedgerAnomalyPanel";
+import { TRIP_PAYMENT_RESULT_REQUIRED_RELEASED_AT } from "../domain/delivery-reconciliation";
 import { useLanguage, type SupportedLanguage } from "../i18n/LanguageProvider";
 import { supabase } from "../services/supabase.client";
 import { AdminPaymentReview } from "./AdminPaymentReview";
@@ -118,6 +120,7 @@ function AdminUnreportedDeliveredPayments() {
         .eq("status", "delivered")
         .eq("payment_status", "unpaid")
         .eq("payment_terms", "pay_driver_on_delivery")
+        .gte("delivered_at", TRIP_PAYMENT_RESULT_REQUIRED_RELEASED_AT)
         .order("delivered_at", { ascending: false })
         .limit(200);
 
@@ -128,7 +131,7 @@ function AdminUnreportedDeliveredPayments() {
 
       const [paymentResult, driverResult] = await Promise.all([
         candidateIds.length
-          ? supabase.from("payments").select("order_id").in("order_id", candidateIds)
+          ? supabase.from("driver_trip_payment_results").select("order_id").in("order_id", candidateIds)
           : Promise.resolve({ data: [], error: null }),
         driverIds.length
           ? supabase.from("profiles").select("id,full_name,phone").in("id", driverIds)
@@ -154,7 +157,7 @@ function AdminUnreportedDeliveredPayments() {
     const channel = supabase
       .channel("admin-unreported-delivered-payments")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => void load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "driver_trip_payment_results" }, () => void load())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [load]);
@@ -218,6 +221,7 @@ export function AdminPaymentWorkspace() {
   return (
     <>
       <AdminPaymentLedgerAnomalyPanel />
+      <AdminDeliveryReconciliationPanel />
       <AdminUnreportedDeliveredPayments />
       <AdminPaymentReview />
     </>
