@@ -230,7 +230,7 @@ function LiveOrderCard({
   labels: (typeof copy)[HalloLanguage];
   primary?: boolean;
 }) {
-  const gpsReady = Boolean(assignment && ["accepted", "in_transit"].includes(order.status));
+  const gpsReady = Boolean(assignment && order.status === "in_transit");
   const paymentLabel = order.selected_payment_method === "bank_telebirr" ? "Bank / Telebirr" : "Cash";
   const statusLabel = labels.statuses[order.status] ?? order.status.replace(/_/g, " ");
 
@@ -267,3 +267,4 @@ function LiveOrderCard({
     </article>
   );
 }
+
