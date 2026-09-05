@@ -1,37 +1,7 @@
-# HALLO Logistics Android
+# HALLO Native Android
 
-Initial native Android driver application built with Kotlin, Jetpack Compose, Material 3 and the existing HALLO Supabase backend.
+Phase 2 converts the existing `android/` application from Compose to Kotlin + XML/ViewBinding and establishes MVVM/session/backend/tracking foundations.
 
-## Included
-- Supabase Auth configuration through Gradle properties
-- Driver email/password login
-- Role-safe driver-only session gate
-- Dashboard shell with Jobs, Active Trip, Wallet, Documents and Profile tabs
-- Empty production-safe states; no sample operational data
-- Unit tests and Android CI debug APK build
+Backend authority remains HALLO Supabase: Auth, PostgreSQL, RLS, RPCs, Edge Functions, Storage and Realtime. Android uses only public/anon configuration plus the authenticated user session. Never add service-role keys, OpenAI keys, privileged credentials, fake GPS, or client-side replacements for server business rules.
 
-## Local configuration
-Create or edit `~/.gradle/gradle.properties` and add:
-
-```properties
-SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_ANON_KEY=YOUR_ANON_KEY
-```
-
-Do not commit real keys. The anon key is intended for client apps, but database access must remain protected by Supabase RLS.
-
-## Android Studio
-1. Open the `android` folder as the project.
-2. Use JDK 17.
-3. Sync Gradle.
-4. Connect an Android device with USB debugging.
-5. Run the `app` configuration.
-
-## Command line
-
-```bash
-gradle -p android testDebugUnitTest
-gradle -p android assembleDebug
-```
-
-The debug APK is generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
+UI destinations in Phase 2 are navigation/shell foundations only. Feature implementation belongs to later phases.
