@@ -85,7 +85,7 @@ export function AdminLiveTripsPanel({ orders, trucks, drivers }: AdminLiveTripsP
             <div className="border-b border-asphalt/10 p-5 sm:px-6">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-display text-lg font-semibold">Active trips</h2>
-                <span className="rounded-full bg-emerald-50 px-3 py-1.5 font-mono text-[10px] font-semibold text-emerald-700">{activeOrders.length} LIVE</span>
+                <span className="rounded-full bg-emerald-50 px-3 py-1.5 font-mono text-[10px] font-semibold text-emerald-700">{activeOrders.length} ACTIVE</span>
               </div>
               <p className="mt-1 text-xs text-steel">Select a shipment to follow GPS, status and financial split.</p>
             </div>
@@ -149,10 +149,13 @@ export function AdminLiveTripsPanel({ orders, trucks, drivers }: AdminLiveTripsP
 
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">LIVE OPERATIONS MAP</p>
+                    <p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">OPERATIONS TRACKING MAP</p>
                     <p className="mt-1 text-xs text-steel">Latest GPS, remaining distance, speed, ETA and trip progress.</p>
                   </div>
-                  <span className="flex items-center gap-2 text-[10px] font-semibold text-emerald-700"><i className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" /> TRACKING</span>
+                  <span className="flex items-center gap-2 text-[10px] font-semibold text-emerald-700">
+                    <i className={`h-2.5 w-2.5 rounded-full bg-emerald-500 ${selected.status === "in_transit" ? "animate-pulse" : ""}`} />
+                    {selected.status === "in_transit" ? "TRIP ACTIVE" : "ASSIGNED"}
+                  </span>
                 </div>
 
                 <CustomerLiveTripMap
@@ -258,3 +261,4 @@ function FinanceMetric({
     </div>
   );
 }
+

@@ -72,6 +72,17 @@ test("Admin live tracking does not expose a Customer-only details route", () => 
   assert.match(customerPage, /setRetryKey\(\(key\) => key \+ 1\)/);
 });
 
+test("tracking headers do not claim a live GPS state before transit starts", () => {
+  const panel = readFileSync(path.join(process.cwd(), "src/components/admin/AdminLiveTripsPanel.tsx"), "utf8");
+  const customerPage = readFileSync(path.join(process.cwd(), "src/pages/CustomerTrackingPage.tsx"), "utf8");
+
+  assert.match(panel, /\{activeOrders\.length\} ACTIVE/);
+  assert.match(panel, /selected\.status === "in_transit" \? "TRIP ACTIVE" : "ASSIGNED"/);
+  assert.doesNotMatch(panel, /\{activeOrders\.length\} LIVE/);
+  assert.match(customerPage, /order\?\.status==="in_transit"\?"In transit"/);
+  assert.doesNotMatch(customerPage, />● Live</);
+});
+
 test("driver compliance disabled actions explain approval and active-trip locks", () => {
   const source = readFileSync(path.join(process.cwd(), "src/pages/AdminDriverCompliance.tsx"), "utf8");
   const packageJson = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
@@ -236,3 +247,4 @@ test("Admin fleet actions explain shared workflow locks", () => {
   assert.match(smoke, /data-admin-action-label/);
   assert.match(smoke, /data-active-trip-guidance/);
 });
+
