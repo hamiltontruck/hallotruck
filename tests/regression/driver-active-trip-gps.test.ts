@@ -18,6 +18,10 @@ const routeControl = source("src/components/driver/DriverActiveTripRoute.tsx");
 const offlineService = source("src/services/offline.service.ts");
 const trackingMap = source("src/components/tracking/CustomerLiveTripMap.tsx");
 const browserSmoke = source("scripts/driver-active-trip-gps-e2e-smoke.mjs");
+const customerMobileTrackingMap = source("apps/customer-mobile-app/src/CustomerTrackingMap.tsx");
+const customerMobileTrackingPage = source("apps/customer-mobile-app/src/CustomerTrackingPage.tsx");
+const customerMobileTrackingService = source("apps/customer-mobile-app/src/customer-tracking.service.ts");
+const customerMobileFreshness = source("apps/customer-mobile-app/src/tracking-freshness.ts");
 
 test("offline GPS delivery distinguishes queued positions from server-confirmed pings", () => {
   assert.match(offlineService, /export type GpsPingDeliveryResult = "sent" \| "queued"/);
@@ -106,6 +110,34 @@ test("shared admin/customer tracking map never presents stale coordinates as liv
   assert.match(trackingMap, /Last GPS update:/);
   assert.match(trackingMap, /pulse\.style\.display = freshness === "LIVE" \? "" : "none"/);
   assert.match(trackingMap, /if \(gpsFreshness === "LIVE"\)[\s\S]*fetchRoute\(truck, dropoff\)/);
+});
+
+test("standalone Customer Mobile tracking uses the same freshness boundaries", () => {
+  assert.match(customerMobileFreshness, /TrackingFreshness = "LIVE" \| "STALE" \| "OFFLINE"/);
+  assert.match(customerMobileFreshness, /TRACKING_LIVE_MAX_AGE_MS = 2 \* 60 \* 1000/);
+  assert.match(customerMobileFreshness, /TRACKING_OFFLINE_AFTER_MS = 30 \* 60 \* 1000/);
+  assert.match(customerMobileFreshness, /ageMs <= TRACKING_LIVE_MAX_AGE_MS\) return "LIVE"/);
+  assert.match(customerMobileFreshness, /ageMs <= TRACKING_OFFLINE_AFTER_MS\) return "STALE"/);
+});
+
+test("standalone Customer Mobile never presents stale coordinates as live", () => {
+  assert.match(customerMobileTrackingMap, /classifyTrackingFreshness\(hasTruck \? trip\?\.recorded_at : null\)/);
+  assert.match(customerMobileTrackingMap, /"GPS STALE"/);
+  assert.match(customerMobileTrackingMap, /"GPS OFFLINE"/);
+  assert.doesNotMatch(customerMobileTrackingMap, /hasTruck \? "GPS LIVE"/);
+  assert.match(customerMobileTrackingMap, /last known location, not a current\/live position/);
+  assert.match(customerMobileTrackingPage, /gpsLive = hasGps && freshness === "LIVE"/);
+  assert.match(customerMobileTrackingPage, /Last GPS update/);
+  assert.match(customerMobileTrackingPage, /second: "2-digit"/);
+  assert.match(customerMobileTrackingPage, /timeZoneName: "short"/);
+});
+
+test("standalone Customer Mobile freshness preserves customer ownership isolation", () => {
+  assert.match(customerMobileTrackingService, /client\.auth\.getUser\(\)/);
+  assert.match(customerMobileTrackingService, /auth\.user\.id !== userId/);
+  assert.match(customerMobileTrackingService, /\.eq\("customer_id", userId\)/);
+  assert.match(customerMobileTrackingService, /allowedOrderIds\.has\(assignment\.order_id\)/);
+  assert.match(customerMobileTrackingService, /row\.order_id !== order\.id/);
 });
 
 test("active-trip browser smoke covers GPS recovery, route retry and mobile overflow", () => {
