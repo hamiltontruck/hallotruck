@@ -1,5 +1,6 @@
 export type TrackingFreshness = "LIVE" | "STALE" | "OFFLINE";
 
+// Keep the existing two-minute live window; the 30-minute cutoff matches driver-presence staleness.
 export const TRACKING_LIVE_MAX_AGE_MS = 2 * 60 * 1000;
 export const TRACKING_OFFLINE_AFTER_MS = 30 * 60 * 1000;
 
