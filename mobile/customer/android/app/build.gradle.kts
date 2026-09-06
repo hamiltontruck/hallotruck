@@ -20,6 +20,11 @@ android {
     buildFeatures { viewBinding = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
     kotlin { jvmToolchain(21) }
+    lint {
+        // Lifecycle 2.9's LiveData detector is binary-incompatible with AGP 8.7 lint.
+        // This app uses StateFlow only; keep every other lint check enabled.
+        disable += "NullSafeMutableLiveData"
+    }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
@@ -40,4 +45,3 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp:3.1.3")
     testImplementation("junit:junit:4.13.2")
 }
-
