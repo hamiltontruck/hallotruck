@@ -1,0 +1,12 @@
+package com.hallo.logistics.driver
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable data class DriverProfile(val id:String,val role:String?=null,@SerialName("driver_status") val driverStatus:String?=null,@SerialName("full_name") val fullName:String?=null,val phone:String?=null,@SerialName("vehicle_type") val vehicleType:String?=null,@SerialName("rating_avg") val rating:Double?=null)
+@Serializable data class DriverJob(val id:String,@SerialName("tracking_id") val trackingId:String?=null,@SerialName("pickup_address") val pickup:String?=null,@SerialName("dropoff_address") val dropoff:String?=null,@SerialName("vehicle_type") val vehicleType:String?=null,@SerialName("distance_km") val distanceKm:Double?=null,@SerialName("price_etb") val priceEtb:Double?=null,val status:String?=null)
+@Serializable data class DriverTruck(val id:String,@SerialName("plate_number") val plate:String?=null,@SerialName("vehicle_type") val vehicleType:String?=null,@SerialName("capacity_tons") val capacity:Double?=null,val status:String?=null)
+@Serializable data class DriverDocument(val id:String,@SerialName("document_key") val key:String,@SerialName("truck_id") val truckId:String?=null,@SerialName("file_path") val path:String,val status:String?=null,@SerialName("rejection_reason") val rejectionReason:String?=null)
+@Serializable data class DriverNotification(val id:String,val title:String,val body:String,@SerialName("read_at") val readAt:String?=null,@SerialName("created_at") val createdAt:String?=null)
+@Serializable data class FinancialSummary(@SerialName("completed_trips") val completedTrips:Long=0,@SerialName("gross_earnings") val gross:Double=0.0,@SerialName("commission_charged") val commission:Double=0.0,@SerialName("commission_paid") val paid:Double=0.0,@SerialName("deposit_balance") val deposit:Double=0.0,@SerialName("commission_due") val due:Double=0.0)
+enum class DriverPage { HOME,ONBOARDING,JOBS,TRIP,DELIVERY,WALLET,NOTIFICATIONS,PROFILE }
+data class DriverUiState(val loading:Boolean=true,val busy:Boolean=false,val access:DriverAccess=DriverAccess.SIGNED_OUT,val page:DriverPage=DriverPage.HOME,val message:String="Restoring session…",val profile:DriverProfile?=null,val jobs:List<DriverJob> = emptyList(),val activeTrip:DriverJob?=null,val trucks:List<DriverTruck> = emptyList(),val documents:List<DriverDocument> = emptyList(),val notifications:List<DriverNotification> = emptyList(),val wallet:FinancialSummary?=null)

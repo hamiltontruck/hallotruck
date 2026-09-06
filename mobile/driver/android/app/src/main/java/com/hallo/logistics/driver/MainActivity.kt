@@ -1,0 +1,47 @@
+package com.hallo.logistics.driver
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Bundle
+import android.provider.OpenableColumns
+import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.button.MaterialButton
+import com.hallo.logistics.driver.databinding.ActivityMainBinding
+import com.hallo.logistics.driver.tracking.HalloLocationService
+import io.github.jan.supabase.auth.handleDeeplinks
+import kotlinx.coroutines.launch
+import java.text.NumberFormat
+
+class MainActivity:AppCompatActivity(){
+ private lateinit var b:ActivityMainBinding;private val vm:DriverSessionViewModel by viewModels();private var signup=false;private var pendingKey="";private var pendingTruck:String?=null;private var photo:ByteArray?=null;private var signature:ByteArray?=null
+ private val documentPicker=registerForActivityResult(ActivityResultContracts.GetContent()){it?.let(::readDocument)}
+ private val photoPicker=registerForActivityResult(ActivityResultContracts.GetContent()){u->photo=u?.let(::bytes);b.photoState.text=if(photo!=null)"Delivery photo selected" else "Photo required"}
+ private val signaturePicker=registerForActivityResult(ActivityResultContracts.GetContent()){u->signature=u?.let(::bytes);b.signatureState.text=if(signature!=null)"Signature selected" else "Signature required"}
+ private val locationPermission=registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){r->if(r[Manifest.permission.ACCESS_FINE_LOCATION]==true)startTracking()}
+ override fun onCreate(s:Bundle?){super.onCreate(s);b=ActivityMainBinding.inflate(layoutInflater);setContentView(b.root);if(HalloSupabase.configured)runCatching{HalloSupabase.client.handleDeeplinks(intent)};spinners();listeners();lifecycleScope.launch{repeatOnLifecycle(Lifecycle.State.STARTED){vm.state.collect(::render)}}}
+ override fun onNewIntent(intent:Intent){super.onNewIntent(intent);setIntent(intent);if(HalloSupabase.configured)runCatching{HalloSupabase.client.handleDeeplinks(intent)}}
+ private fun spinners(){b.vehicleType.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("Pickup","Van","Isuzu 5 Ton","Dry Cargo","Refrigerated","Truck 22 Ton","Truck 25 Ton","Truck 30 Ton","Trailer"));b.documentKey.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("driver_photo","license_front","license_back","national_id_front","national_id_back","vehicle_registration","insurance","truck_front","truck_side"));b.paymentResult.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("cash_received","bank_telebirr_confirmed","not_collected"))}
+ private fun listeners(){b.authMode.setOnClickListener{signup=!signup;b.signupFields.visibility=if(signup)View.VISIBLE else View.GONE;b.confirmPin.visibility=if(signup)View.VISIBLE else View.GONE;b.authSubmit.text=if(signup)"Create Driver account" else "Sign in"};b.authSubmit.setOnClickListener{if(signup)vm.signUp(b.fullName.text.toString(),b.phone.text.toString(),b.email.text.toString(),b.pin.text.toString(),b.confirmPin.text.toString())else vm.signIn(b.email.text.toString(),b.pin.text.toString())};b.signOut.setOnClickListener{vm.signOut()};b.refresh.setOnClickListener{vm.refresh()};mapOf(b.navHome to DriverPage.HOME,b.navOnboarding to DriverPage.ONBOARDING,b.navJobs to DriverPage.JOBS,b.navTrip to DriverPage.TRIP,b.navWallet to DriverPage.WALLET,b.navAlerts to DriverPage.NOTIFICATIONS,b.navProfile to DriverPage.PROFILE).forEach{(v,p)->v.setOnClickListener{vm.page(p)}};b.saveVehicle.setOnClickListener{vm.saveVehicle(b.plate.text.toString(),b.vehicleType.selectedItem.toString(),b.capacity.text.toString().toDoubleOrNull()?:0.0)};b.chooseDocument.setOnClickListener{pendingKey=b.documentKey.selectedItem.toString();pendingTruck=if(pendingKey in setOf("vehicle_registration","insurance","truck_front","truck_side"))vm.state.value.trucks.firstOrNull()?.id else null;documentPicker.launch("*/*")};b.startTrip.setOnClickListener{vm.openTrip();requestTracking()};b.startTracking.setOnClickListener{requestTracking()};b.stopTracking.setOnClickListener{stopService(Intent(this,HalloLocationService::class.java))};b.pickPhoto.setOnClickListener{photoPicker.launch("image/*")};b.pickSignature.setOnClickListener{signaturePicker.launch("image/*")};b.finishTrip.setOnClickListener{vm.finish(b.recipient.text.toString(),b.deliveryNote.text.toString(),photo?:byteArrayOf(),"image/jpeg",signature?:byteArrayOf(),b.paymentResult.selectedItem.toString(),b.amount.text.toString().toDoubleOrNull())}}
+ private fun render(s:DriverUiState){b.progress.visibility=if(s.loading||s.busy)View.VISIBLE else View.GONE;b.status.text=s.message;b.authPanel.visibility=if(s.access==DriverAccess.SIGNED_OUT||s.access==DriverAccess.FORBIDDEN)View.VISIBLE else View.GONE;b.driverShell.visibility=if(s.access in setOf(DriverAccess.APPROVED,DriverAccess.ONBOARDING,DriverAccess.REJECTED))View.VISIBLE else View.GONE;b.approvedNav.visibility=if(s.access==DriverAccess.APPROVED)View.VISIBLE else View.GONE;val page=if(s.access==DriverAccess.APPROVED)s.page else DriverPage.ONBOARDING;listOf(b.pageHome,b.pageOnboarding,b.pageJobs,b.pageTrip,b.pageWallet,b.pageAlerts,b.pageProfile).forEach{it.visibility=View.GONE};when(page){DriverPage.HOME->b.pageHome;DriverPage.ONBOARDING->b.pageOnboarding;DriverPage.JOBS->b.pageJobs;DriverPage.TRIP,DriverPage.DELIVERY->b.pageTrip;DriverPage.WALLET->b.pageWallet;DriverPage.NOTIFICATIONS->b.pageAlerts;DriverPage.PROFILE->b.pageProfile}.visibility=View.VISIBLE;b.accessState.text="Verification: ${s.profile?.driverStatus?:"pending"}";b.homeSummary.text="${s.jobs.size} available jobs\nActive trip: ${s.activeTrip?.trackingId?:"None"}\nDocuments: ${s.documents.size}";renderJobs(s);renderTrip(s);renderWallet(s);renderNotes(s);b.profileDetails.text="${s.profile?.fullName.orEmpty()}\n${s.profile?.phone.orEmpty()}\nStatus: ${s.profile?.driverStatus}\nRating: ${s.profile?.rating?:"—"}";b.documentState.text=s.documents.joinToString("\n"){"${it.key}: ${it.status}"}.ifBlank{"Upload 5 driver and 4 vehicle documents"}}
+ private fun renderJobs(s:DriverUiState){b.jobsList.removeAllViews();if(s.activeTrip!=null){b.jobsList.addView(text("Finish ${s.activeTrip.trackingId} before accepting another job"));return};s.jobs.forEach{j->val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};box.addView(text("${j.trackingId}\n${j.pickup} → ${j.dropoff}\n${j.vehicleType} · ${money(j.priceEtb)}"));box.addView(button("Accept job"){lifecycleScope.launch{runCatching{val trucks=DriverRepository().trucks(j.id);val first=trucks.firstOrNull()?:error("No authorized truck is available");vm.claim(j.id,first.id)}}});b.jobsList.addView(box)}}
+ private fun renderTrip(s:DriverUiState){val t=s.activeTrip;b.tripDetails.text=if(t==null)"No active trip" else "${t.trackingId}\n${t.pickup} → ${t.dropoff}\nStatus: ${t.status}";b.startTrip.visibility=if(t?.status=="accepted")View.VISIBLE else View.GONE;b.tripActions.visibility=if(t!=null)View.VISIBLE else View.GONE;b.deliveryPanel.visibility=if(t?.status=="in_transit")View.VISIBLE else View.GONE}
+ private fun renderWallet(s:DriverUiState){val w=s.wallet;b.walletDetails.text=if(w==null)"Wallet unavailable" else "Completed trips: ${w.completedTrips}\nGross: ${money(w.gross)}\nCommission: ${money(w.commission)}\nPaid: ${money(w.paid)}\nDeposit: ${money(w.deposit)}\nDue: ${money(w.due)}"}
+ private fun renderNotes(s:DriverUiState){b.alertsList.removeAllViews();s.notifications.forEach{n->b.alertsList.addView(button("${if(n.readAt==null)"● " else ""}${n.title}\n${n.body}"){vm.markRead(n.id)})};if(s.notifications.isEmpty())b.alertsList.addView(text("No notifications"))}
+ private fun readDocument(uri:Uri){val name=contentResolver.query(uri,null,null,null,null)?.use{c->val i=c.getColumnIndex(OpenableColumns.DISPLAY_NAME);if(c.moveToFirst()&&i>=0)c.getString(i)else"document"}?:"document";val mime=contentResolver.getType(uri)?:"application/octet-stream";vm.uploadDocument(pendingKey,pendingTruck,name,mime,bytes(uri)?:byteArrayOf())}
+ private fun bytes(uri:Uri)=contentResolver.openInputStream(uri)?.use{it.readBytes()}
+ private fun requestTracking(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED)startTracking()else locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.POST_NOTIFICATIONS))}
+ private fun startTracking(){val id=vm.state.value.activeTrip?.id?:return;ContextCompat.startForegroundService(this,Intent(this,HalloLocationService::class.java).putExtra("order_id",id))}
+ private fun text(v:String)=TextView(this).apply{text=v;textSize=15f;setPadding(4,12,4,12)};private fun button(v:String,f:()->Unit)=MaterialButton(this).apply{text=v;setOnClickListener{f()}};private fun money(v:Double?)=if(v==null)"—" else "ETB ${NumberFormat.getIntegerInstance().format(v)}"
+}
