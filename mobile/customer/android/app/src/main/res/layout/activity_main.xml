@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="HALLO Customer" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textStyle="bold" />
+            <ProgressBar android:id="@+id/progress" android:layout_width="32dp" android:layout_height="32dp" />
+        </LinearLayout>
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:accessibilityLiveRegion="polite" android:textColor="#475467" />
+
+        <LinearLayout android:id="@+id/authPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:orientation="vertical">
+            <TextView android:id="@+id/authTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Customer sign in" android:textAppearance="?attr/textAppearanceHeadlineMedium" android:textStyle="bold" />
+            <LinearLayout android:id="@+id/signupFields" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                <EditText android:id="@+id/fullName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Full name" android:autofillHints="name" android:inputType="textPersonName" android:maxLength="120" />
+                <EditText android:id="@+id/phone" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Phone · 09xxxxxxxx" android:autofillHints="phone" android:inputType="phone" android:maxLength="17" />
+            </LinearLayout>
+            <EditText android:id="@+id/email" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Email" android:autofillHints="emailAddress" android:inputType="textEmailAddress" android:maxLength="254" />
+            <EditText android:id="@+id/password" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Password / 6-digit PIN" android:autofillHints="password" android:inputType="textPassword" />
+            <EditText android:id="@+id/confirmPin" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Confirm 6-digit PIN" android:inputType="numberPassword" android:maxLength="6" android:visibility="gone" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/authSubmit" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Sign in" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/authMode" style="@style/Widget.Material3.Button.TextButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Create a Customer account" />
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/customerShell" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" android:visibility="gone">
+            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none">
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/navHome" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Home" />
+                    <Button android:id="@+id/navBook" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Book" />
+                    <Button android:id="@+id/navOrders" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Orders" />
+                    <Button android:id="@+id/navTrack" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Track" />
+                    <Button android:id="@+id/navPayments" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Payments" />
+                    <Button android:id="@+id/navNotifications" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Alerts" />
+                    <Button android:id="@+id/navProfile" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Profile" />
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <LinearLayout android:id="@+id/pageHome" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical">
+                <TextView android:id="@+id/welcome" android:layout_width="match_parent" android:layout_height="wrap_content" android:textAppearance="?attr/textAppearanceHeadlineMedium" android:textStyle="bold" />
+                <TextView android:id="@+id/homeSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/startBooking" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Create delivery order" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/refresh" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Refresh" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/pageBook" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" android:visibility="gone">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Book a truck" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textStyle="bold" />
+                <Spinner android:id="@+id/vehicleType" android:layout_width="match_parent" android:layout_height="52dp" />
+                <EditText android:id="@+id/pickupAddress" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Pickup address" />
+                <EditText android:id="@+id/pickupLatitude" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Pickup latitude" android:inputType="numberDecimal|numberSigned" />
+                <EditText android:id="@+id/pickupLongitude" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Pickup longitude" android:inputType="numberDecimal|numberSigned" />
+                <EditText android:id="@+id/dropoffAddress" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Drop-off address" />
+                <EditText android:id="@+id/dropoffLatitude" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Drop-off latitude" android:inputType="numberDecimal|numberSigned" />
+                <EditText android:id="@+id/dropoffLongitude" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Drop-off longitude" android:inputType="numberDecimal|numberSigned" />
+                <EditText android:id="@+id/distanceKm" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Verified route distance (km)" android:inputType="numberDecimal" />
+                <EditText android:id="@+id/cargoTons" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Cargo weight (tons)" android:inputType="numberDecimal" />
+                <EditText android:id="@+id/cargoDescription" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Cargo description" android:minLines="2" />
+                <Spinner android:id="@+id/paymentMethod" android:layout_width="match_parent" android:layout_height="52dp" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/calculateQuote" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Calculate quote" />
+                <TextView android:id="@+id/quoteResult" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginVertical="12dp" android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/createOrder" android:layout_width="match_parent" android:layout_height="wrap_content" android:enabled="false" android:text="Confirm and create order" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/pageOrders" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="My orders" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textStyle="bold"/><LinearLayout android:id="@+id/ordersList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/></LinearLayout>
+            <LinearLayout android:id="@+id/pageTracking" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Live tracking" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textStyle="bold"/><TextView android:id="@+id/trackingResult" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"/></LinearLayout>
+            <LinearLayout android:id="@+id/pagePayments" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Payment status" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textStyle="bold"/><LinearLayout android:id="@+id/paymentsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/></LinearLayout>
+            <LinearLayout android:id="@+id/pageNotifications" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Notifications" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textStyle="bold"/><LinearLayout android:id="@+id/notificationsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/></LinearLayout>
+            <LinearLayout android:id="@+id/pageProfile" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Customer profile" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textStyle="bold"/><TextView android:id="@+id/profileDetails" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"/><com.google.android.material.button.MaterialButton android:id="@+id/signOut" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Sign out"/></LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
