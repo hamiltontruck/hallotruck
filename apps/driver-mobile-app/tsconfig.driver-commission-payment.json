@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-dist-commission",
+    "rootDir": "src/driver",
+    "declaration": false,
+    "isolatedModules": false
+  },
+  "include": ["src/driver/driver-commission-payment.model.ts"]
+}

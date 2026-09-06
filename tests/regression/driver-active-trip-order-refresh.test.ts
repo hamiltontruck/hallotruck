@@ -7,7 +7,8 @@ const root = process.cwd();
 const boundary = readFileSync(path.join(root, "src/components/driver/DriverActiveTripOrderBoundary.tsx"), "utf8");
 const activeTrip = readFileSync(path.join(root, "src/pages/ActiveTrip.tsx"), "utf8");
 const service = readFileSync(path.join(root, "src/services/driver.service.ts"), "utf8");
-const driverMobileV4 = readFileSync(path.join(root, "apps/driver-mobile-app/src/main.tsx"), "utf8");
+const driverMobileJobs = readFileSync(path.join(root, "apps/driver-mobile-app/src/driver/DriverJobsBoard.tsx"), "utf8");
+const driverMobileJobsService = readFileSync(path.join(root, "apps/driver-mobile-app/src/driver/driver-jobs.service.ts"), "utf8");
 const browserSmoke = readFileSync(path.join(root, "scripts/driver-active-trip-order-e2e-smoke.mjs"), "utf8");
 const regressionRunner = readFileSync(path.join(root, "scripts/run-regression-tests.mjs"), "utf8");
 const packageJson = readFileSync(path.join(root, "package.json"), "utf8");
@@ -75,13 +76,12 @@ test("Active Trip order browser smoke covers retries, stale removal and mobile s
 });
 
 test("Driver Mobile V4 removes Customer-cancelled jobs without requiring manual refresh", () => {
-  assert.match(driverMobileV4, /\.eq\('status','placed'\)\.is\('driver_id',null\)/);
-  assert.match(driverMobileV4, /driver-mobile-v4-orders-\$\{session\.user\.id\}/);
-  assert.match(driverMobileV4, /\.on\('postgres_changes',\{event:'\*',schema:'public',table:'orders'\}/);
-  assert.match(driverMobileV4, /window\.setInterval\(\(\)=>\{void refresh\(\)\},15_000\)/);
-  assert.match(driverMobileV4, /document\.addEventListener\('visibilitychange',syncWhenVisible\)/);
-  assert.match(driverMobileV4, /window\.addEventListener\('focus',syncOnFocus\)/);
-  assert.match(driverMobileV4, /refreshRequest=useRef\(0\)/);
-  assert.match(driverMobileV4, /if\(requestId!==refreshRequest\.current\)return/);
-  assert.match(driverMobileV4, /void supabase\.removeChannel\(channel\)/);
+  assert.match(driverMobileJobsService, /client\.rpc\("get_available_jobs"\)/);
+  assert.doesNotMatch(driverMobileJobsService, /\.eq\(["']status["'],\s*["']placed["']\)\.is\(["']driver_id["'],\s*null\)/);
+  assert.match(driverMobileJobs, /const MARKET_REFRESH_MS = 20_000/);
+  assert.match(driverMobileJobs, /window\.setInterval\(\(\) => void refreshRef\.current\(\), MARKET_REFRESH_MS\)/);
+  assert.match(driverMobileJobs, /subscribeToMyDriverOrders\(userId, \(\) => void refreshRef\.current\(\)\)/);
+  assert.match(driverMobileJobs, /const requestId = \+\+requestIdRef\.current/);
+  assert.match(driverMobileJobs, /requestId !== requestIdRef\.current/);
+  assert.match(driverMobileJobsService, /void client\.removeChannel\(activeChannel\)/);
 });
