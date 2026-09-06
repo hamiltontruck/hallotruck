@@ -17,8 +17,33 @@ test("signup requires the existing exactly six digit driver PIN contract", () =>
   const auth = read("../src/auth.tsx");
 
   assert.match(auth, /!\/\^\\d\{6\}\$\/\.test\(password\)/);
-  assert.match(auth, /pattern=\{mode === 'signup' \? '\[0-9\]\{6\}'/);
-  assert.match(auth, /role: 'driver'/);
+  assert.match(auth, /pattern=\{signup \? "\[0-9\]\{6\}"/);
+  assert.match(auth, /password !== confirmPassword/);
+  assert.match(auth, /role: "driver"/);
+  assert.match(auth, /event\.target\.value\.replace\(\/\\D\/g, ""\)\.slice\(0, 6\)/);
+});
+
+test("signup validates and normalizes HALLO contact contracts before Auth", () => {
+  const auth = read("../src/auth.tsx");
+
+  assert.match(auth, /normalizeEmail\(email\)/);
+  assert.match(auth, /normalizeEthiopianPhone\(phone\)/);
+  assert.match(auth, /\(\?:\\\+251\|251\|0\)\?\[79\]\\d\{8\}/);
+  assert.match(auth, /full_name: normalizedName/);
+  assert.match(auth, /phone: normalizedPhone/);
+  assert.match(auth, /emailRedirectTo: window\.location\.href/);
+});
+
+test("signup has offline, duplicate-submit and accessible feedback guards", () => {
+  const auth = read("../src/auth.tsx");
+
+  assert.match(auth, /if \(busy\) return/);
+  assert.match(auth, /navigator\.onLine/);
+  assert.match(auth, /window\.addEventListener\("online"/);
+  assert.match(auth, /window\.addEventListener\("offline"/);
+  assert.match(auth, /role="alert" aria-live="assertive"/);
+  assert.match(auth, /role="status" aria-live="polite"/);
+  assert.match(auth, /if \(!data\.session\)/);
 });
 
 test("authorization is based on database role and driver status", () => {

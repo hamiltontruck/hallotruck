@@ -1,0 +1,39 @@
+.auth select {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 12px;
+  border: 1px solid #d8dfeb;
+  border-radius: 13px;
+  background: #fff;
+  color: #10213d;
+  outline: none;
+}
+
+.auth select:focus {
+  border-color: #0759c7;
+  box-shadow: 0 0 0 3px #0759c714;
+}
+
+.auth-check {
+  display: flex !important;
+  align-items: center;
+  gap: 9px;
+}
+
+.auth-check input {
+  width: 20px;
+  min-height: 20px;
+  margin: 0;
+}
+
+.link-button {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #0759c7;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+.success { color: #087443; }
