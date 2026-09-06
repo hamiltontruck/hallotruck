@@ -71,6 +71,8 @@ export function Onboarding({ session }: { session: Session }) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [truck, setTruck] = useState<Truck | null>(null);
   const [plate, setPlate] = useState('');
+  const [vehicleType, setVehicleType] = useState('Isuzu 5 Ton');
+  const [capacityTons, setCapacityTons] = useState('5');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -93,13 +95,25 @@ export function Onboarding({ session }: { session: Session }) {
   }
   async function continueToVehicle(event: FormEvent) { event.preventDefault(); setError(''); setNotice(''); setStep('vehicle'); }
   const identityComplete = driverDocuments.every(([key]) => byKey.has(`${key}:`));
+  async function saveVehicle() {
+    if (busy) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const capacity = Number(capacityTons);
+      if (plate.trim().length < 3 || !Number.isFinite(capacity) || capacity < .1 || capacity > 60) throw new Error('Enter a valid plate and capacity between 0.1 and 60 tons.');
+      const { error: saveError } = await supabase.rpc('driver_save_vehicle_profile', { p_plate_number: plate.trim(), p_vehicle_type: vehicleType, p_capacity_tons: capacity });
+      if (saveError) throw new Error(saveError.message);
+      await refresh(); setNotice('Vehicle profile saved. Upload the vehicle documents.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Vehicle profile could not be saved.'); }
+    finally { setBusy(false); }
+  }
   const vehicleBlocked = !truck;
   function submitVehicle() {
     const complete = vehicleDocuments.every(([key]) => byKey.has(`${key}:${truck?.id ?? ''}`));
     setError(complete ? '' : 'Upload all vehicle documents before submitting for verification.');
     setNotice(complete ? 'Vehicle documents submitted for verification.' : '');
   }
-  return <main className="onboarding"><header className="onboarding-head"><span className="mark">H</span><div><b>HALLO DRIVER V4</b><small>ONBOARDING</small></div></header><div className="stepper"><span className={step === 'driver' ? 'active' : ''}>01 Driver Documents</span><span className={step === 'vehicle' ? 'active' : ''}>02 Vehicle Documents</span></div>{error && <p className="error notice-box">{error}</p>}{notice && <p className="success notice-box">{notice}</p>}{step === 'driver' ? <form className="onboarding-panel" onSubmit={continueToVehicle}><h1>Driver Documents</h1>{driverDocuments.map(([key, label]) => <DocumentField key={key} label={label} busy={busy} onChange={(file) => void upload(key, file)} />)}<button className="primary" disabled={busy || !identityComplete}>Continue</button></form> : <section className="onboarding-panel"><h1>Vehicle Documents</h1><label>Plate No<input value={plate} onChange={(event) => setPlate(event.target.value)} disabled={Boolean(truck)} required /></label>{vehicleDocuments.map(([key, label]) => <DocumentField key={key} label={label} busy={busy || vehicleBlocked} onChange={(file) => void upload(key, file)} />)}{vehicleBlocked && <p className="error">Plate No cannot be saved yet. Existing backend path driver_save_vehicle_profile requires plate number, vehicle type, and capacity; this app will not invent either value.</p>}<button className="primary" disabled={busy || vehicleBlocked} onClick={submitVehicle}>Submit for verification</button><button className="secondary" type="button" onClick={() => setStep('driver')}>Back</button></section>}</main>;
+  return <main className="onboarding"><header className="onboarding-head"><span className="mark">H</span><div><b>HALLO DRIVER V4</b><small>ONBOARDING</small></div></header><div className="stepper"><span className={step === 'driver' ? 'active' : ''}>01 Driver Documents</span><span className={step === 'vehicle' ? 'active' : ''}>02 Vehicle Documents</span></div>{error && <p className="error notice-box">{error}</p>}{notice && <p className="success notice-box">{notice}</p>}{step === 'driver' ? <form className="onboarding-panel" onSubmit={continueToVehicle}><h1>Driver Documents</h1>{driverDocuments.map(([key, label]) => <DocumentField key={key} label={label} busy={busy} onChange={(file) => void upload(key, file)} />)}<button className="primary" disabled={busy || !identityComplete}>Continue</button></form> : <section className="onboarding-panel"><h1>Vehicle Documents</h1><label>Plate No<input value={plate} onChange={(event) => setPlate(event.target.value)} disabled={Boolean(truck)} required /></label>{!truck&&<><label>Vehicle type<select value={vehicleType} onChange={(event)=>setVehicleType(event.target.value)}>{['Pickup','Van','Isuzu 5 Ton','Dry Cargo','Refrigerated','Truck 22 Ton','Truck 25 Ton','Truck 30 Ton','Trailer'].map(value=><option key={value}>{value}</option>)}</select></label><label>Capacity tons<input type="number" min="0.1" max="60" step="0.1" value={capacityTons} onChange={(event)=>setCapacityTons(event.target.value)}/></label><button className="primary" type="button" disabled={busy} onClick={()=>void saveVehicle()}>Save vehicle profile</button></>}{vehicleDocuments.map(([key, label]) => <DocumentField key={key} label={label} busy={busy || vehicleBlocked} onChange={(file) => void upload(key, file)} />)}{vehicleBlocked && <p className="notice">Save the vehicle profile before uploading vehicle documents.</p>}<button className="primary" disabled={busy || vehicleBlocked} onClick={submitVehicle}>Submit for verification</button><button className="secondary" type="button" onClick={() => setStep('driver')}>Back</button></section>}</main>;
 }
 
 function DocumentField({ label, busy, onChange }: { label: string; busy: boolean; onChange: (file?: File) => void }) { return <label className="document-field"><span>{label}</span><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy} onChange={(event) => onChange(event.target.files?.[0])} /></label>; }

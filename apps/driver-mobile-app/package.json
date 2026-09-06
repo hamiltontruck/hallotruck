@@ -1,1 +1,16 @@
-{"name":"@hallotruck/driver-mobile-app","private":true,"version":"0.1.0","type":"module","scripts":{"dev":"vite","build":"tsc --noEmit && vite build","preview":"vite preview","typecheck":"tsc --noEmit --pretty false"},"dependencies":{"@supabase/supabase-js":"^2.45.0","react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@types/react":"^19.0.0","@types/react-dom":"^19.0.0","@vitejs/plugin-react":"^6.1.0","typescript":"^5.5.0","vite":"^8.2.2"}}
+{
+  "name": "@hallotruck/driver-mobile-app",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit --pretty false",
+    "test": "node -e \"for(const path of ['.test-dist','.test-dist-active','.test-dist-delivery','.test-dist-wallet','.test-dist-commission','.test-dist-profile','.test-dist-document-upload'])require('fs').rmSync(path,{recursive:true,force:true})\" && tsc -p tsconfig.driver-jobs.json && tsc -p tsconfig.active-trip.json && tsc -p tsconfig.delivery-proof.json && tsc -p tsconfig.driver-wallet.json && tsc -p tsconfig.driver-commission-payment.json && tsc -p tsconfig.driver-profile.json && tsc -p tsconfig.driver-document-upload.json && node --test tests/driver-*.test.mjs",
+    "test:ci": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": { "@supabase/supabase-js": "^2.45.0", "react": "^19.0.0", "react-dom": "^19.0.0" },
+  "devDependencies": { "@tailwindcss/vite": "^4.1.0", "tailwindcss": "^4.1.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@vitejs/plugin-react": "^6.1.0", "typescript": "^5.5.0", "vite": "^8.2.2" }
+}
