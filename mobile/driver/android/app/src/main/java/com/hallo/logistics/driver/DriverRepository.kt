@@ -16,7 +16,7 @@ class DriverRepository {
  suspend fun signOut()=client.auth.signOut()
  fun userId()=client.auth.currentUserOrNull()?.id
  suspend fun profile():DriverProfile{val id=userId()?:error("Driver session expired");val p=client.from("profiles").select(Columns.list("id,role,driver_status,full_name,phone,vehicle_type,rating_avg")){filter{eq("id",id)}}.decodeSingleOrNull<DriverProfile>()?:error("Driver profile not found");if(p.role!="driver"){client.auth.signOut();error("This account is not authorized for HALLO Driver")};return p}
- suspend fun activeTrip():DriverJob?{val id=profile().id;return client.from("orders").select(Columns.list("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,status")){filter{eq("driver_id",id);isIn("status",listOf("accepted","in_transit"))};limit(1)}.decodeList<DriverJob>().firstOrNull()}
+ suspend fun activeTrip():DriverJob?{val id=profile().id;return client.from("orders").select(Columns.list("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,selected_payment_method,status")){filter{eq("driver_id",id);isIn("status",listOf("accepted","in_transit"))};limit(1)}.decodeList<DriverJob>().firstOrNull()}
  suspend fun jobs():List<DriverJob>{profile();return client.postgrest.rpc("get_available_jobs").decodeList()}
  suspend fun trucks(orderId:String):List<DriverTruck>{profile();return client.postgrest.rpc("driver_available_trucks_for_order",buildJsonObject{put("p_order_id",orderId)}).decodeList()}
  suspend fun claim(orderId:String,truckId:String){profile();val ok=client.postgrest.rpc("claim_order_with_truck",buildJsonObject{put("p_order_id",orderId);put("p_truck_id",truckId)}).decodeAs<Boolean>();require(ok){"Job was already taken"}}

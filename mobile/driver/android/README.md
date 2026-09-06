@@ -15,6 +15,10 @@ active-trip GPS via the authenticated `tracking` function, delivery proof,
 wallet, notifications and profile. Customer, Partner, Admin and CEO screens are
 not included.
 
+Production hardening adds explicit truck selection, a durable GPS retry queue,
+exact cash-result validation and the complete 5 identity + 4 vehicle document
+checklist. Server RPCs, RLS and Edge Functions remain authoritative.
+
 ```bash
 gradle testDebugUnitTest lintDebug assembleDebug --no-daemon
 ```
