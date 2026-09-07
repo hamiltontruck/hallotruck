@@ -8,12 +8,28 @@ import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.time.Year
 import java.util.UUID
 
 class CustomerRepository {
     private val client get() = HalloSupabase.client
+    private val json = Json { ignoreUnknownKeys = true }
 
     @Serializable private data class RoleRow(val role: String? = null)
     @Serializable private data class QuoteRow(
@@ -92,9 +108,113 @@ class CustomerRepository {
     suspend fun payments(orderIds: List<String>): List<CustomerPayment> {
         requireCustomer()
         if (orderIds.isEmpty()) return emptyList()
-        return client.from("payments").select(Columns.list("id,order_id,provider,provider_ref,amount_etb,event,created_at")) {
+        return client.from("payments").select(Columns.list("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,created_at")) {
             filter { isIn("order_id", orderIds) }; order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
         }.decodeList()
+    }
+
+    suspend fun assignments(): List<CustomerAssignment> {
+        requireCustomer()
+        return client.postgrest.rpc("customer_driver_assignment_cards").decodeList()
+    }
+
+    suspend fun route(pickupQuery: String, dropoffQuery: String, vehicleType: String): CustomerRoute {
+        requireCustomer()
+        val pickup = geocode(pickupQuery)
+        val dropoff = geocode(dropoffQuery)
+        require(pickup.longitude != dropoff.longitude || pickup.latitude != dropoff.latitude) { "Pickup and drop-off must be different places" }
+        val session = client.auth.currentSessionOrNull() ?: error("Customer session expired")
+        val response = postJson(
+            "${BuildConfig.SUPABASE_URL.trimEnd('/')}/functions/v1/quote-route",
+            buildJsonObject {
+                put("pickup", JsonArray(listOf(JsonPrimitive(pickup.longitude), JsonPrimitive(pickup.latitude))))
+                put("dropoff", JsonArray(listOf(JsonPrimitive(dropoff.longitude), JsonPrimitive(dropoff.latitude))))
+                put("vehicleType", vehicleType)
+            }.toString(),
+            mapOf("Authorization" to "Bearer ${session.accessToken}", "apikey" to BuildConfig.SUPABASE_PUBLISHABLE_KEY),
+        )
+        val root = json.parseToJsonElement(response).jsonObject
+        val distance = root["distanceKm"]?.jsonPrimitive?.doubleOrNull ?: error("Route distance was not returned")
+        val duration = root["durationMinutes"]?.jsonPrimitive?.doubleOrNull?.toInt() ?: error("Route duration was not returned")
+        val points = root["coordinates"]?.jsonArray?.mapNotNull { element ->
+            val pair = element as? JsonArray ?: return@mapNotNull null
+            val lng = pair.getOrNull(0)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
+            val lat = pair.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
+            lng to lat
+        }.orEmpty()
+        require(distance > 0 && duration > 0 && points.size >= 2) { "Truck routing returned an invalid route" }
+        return CustomerRoute(pickup, dropoff, vehicleType, distance, duration, points)
+    }
+
+    suspend fun signedDriverPhoto(path: String?): String? {
+        val clean = path?.trim().orEmpty()
+        if (clean.isBlank()) return null
+        requireCustomer()
+        val session = client.auth.currentSessionOrNull() ?: error("Customer session expired")
+        val encodedPath = clean.split('/').joinToString("/") { URLEncoder.encode(it, StandardCharsets.UTF_8.name()).replace("+", "%20") }
+        val body = postJson(
+            "${BuildConfig.SUPABASE_URL.trimEnd('/')}/storage/v1/object/sign/driver-verification/$encodedPath",
+            "{\"expiresIn\":300}",
+            mapOf("Authorization" to "Bearer ${session.accessToken}", "apikey" to BuildConfig.SUPABASE_PUBLISHABLE_KEY),
+        )
+        val signed = json.parseToJsonElement(body).jsonObject["signedURL"]?.jsonPrimitive?.contentOrNull
+            ?: json.parseToJsonElement(body).jsonObject["signedUrl"]?.jsonPrimitive?.contentOrNull
+            ?: return null
+        return if (signed.startsWith("http")) signed else "${BuildConfig.SUPABASE_URL.trimEnd('/')}/storage/v1$signed"
+    }
+
+    private suspend fun geocode(query: String): CustomerPlace {
+        val clean = query.trim()
+        require(clean.length >= 2) { "Enter pickup and drop-off places" }
+        require(BuildConfig.MAPTILER_KEY.isNotBlank()) { "Configure MAPTILER_KEY to search places automatically" }
+        val encoded = URLEncoder.encode(clean, StandardCharsets.UTF_8.name())
+        val url = "https://api.maptiler.com/geocoding/$encoded.json?key=${URLEncoder.encode(BuildConfig.MAPTILER_KEY, StandardCharsets.UTF_8.name())}&limit=6&language=en&country=et,dj,so&autocomplete=false"
+        val root = json.parseToJsonElement(get(url)).jsonObject
+        val feature = root["features"]?.jsonArray?.firstOrNull { item ->
+            val center = (item as? JsonObject)?.get("center") as? JsonArray
+            center?.size == 2 && center[0].jsonPrimitive.doubleOrNull != null && center[1].jsonPrimitive.doubleOrNull != null
+        }?.jsonObject ?: error("Place was not found in the HALLO operating region")
+        val center = feature["center"]!!.jsonArray
+        val longitude = center[0].jsonPrimitive.doubleOrNull!!
+        val latitude = center[1].jsonPrimitive.doubleOrNull!!
+        require(isOperatingCoordinate(longitude, latitude)) { "Place is outside the HALLO operating region" }
+        val label = feature["place_name"]?.jsonPrimitive?.contentOrNull ?: feature["text"]?.jsonPrimitive?.contentOrNull ?: clean
+        return CustomerPlace(label, longitude, latitude)
+    }
+
+    private fun isOperatingCoordinate(longitude: Double, latitude: Double): Boolean =
+        (longitude in 32.8..48.1 && latitude in 3.0..15.2) ||
+            (longitude in 41.6..43.6 && latitude in 10.8..12.9) ||
+            (longitude in 40.8..51.7 && latitude in -1.9..12.3)
+
+    private suspend fun get(url: String) = request(url, "GET", null, emptyMap())
+
+    private suspend fun postJson(url: String, body: String, headers: Map<String, String>) = request(url, "POST", body, headers)
+
+    private suspend fun request(url: String, method: String, body: String?, headers: Map<String, String>): String = withContext(Dispatchers.IO) {
+        val connection = URI(url).toURL().openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = method
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 20_000
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("User-Agent", "HALLO-Customer-Android/1")
+            headers.forEach(connection::setRequestProperty)
+            if (body != null) {
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.outputStream.use { it.write(body.toByteArray(StandardCharsets.UTF_8)) }
+            }
+            val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
+            val result = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (connection.responseCode !in 200..299) {
+                val message = runCatching { json.parseToJsonElement(result).jsonObject["error"]?.jsonPrimitive?.contentOrNull }.getOrNull()
+                error(message ?: "Customer network request failed (${connection.responseCode})")
+            }
+            result
+        } finally {
+            connection.disconnect()
+        }
     }
 
     suspend fun notifications(): List<CustomerNotification> {
