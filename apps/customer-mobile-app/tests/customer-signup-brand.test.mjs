@@ -6,7 +6,7 @@ const auth = fs.readFileSync(new URL("../src/auth/CustomerAuthBoundaryV2.tsx", i
 const main = fs.readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
 
 test("Customer Mobile exposes Sign In and below-card Create Account modes", () => {
-  assert.match(auth, /Create a Customer account/);
+  assert.match(auth, /Create Account/);
   assert.match(auth, /Back to Sign in/);
   assert.match(auth, /client\.auth\.signUp/);
   assert.match(auth, /full_name: cleanName/);
