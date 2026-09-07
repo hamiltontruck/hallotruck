@@ -67,13 +67,8 @@ function cacheRoute(route: CustomerRoutePreview, pickup: CustomerPlaceOption, dr
 }
 
 function readCachedRoute(pickup: CustomerPlaceOption, dropoff: CustomerPlaceOption, vehicleType: string) {
-  const key = routeCacheKey(pickup, dropoff, vehicleType);
-  const cached = routeCache.get(key);
-  if (!cached) return null;
-  if (Date.now() - cached.storedAt > ROUTE_CACHE_TTL_MS) {
-    routeCache.delete(key);
-    return null;
-  }
+  const cached = routeCache.get(routeCacheKey(pickup, dropoff, vehicleType));
+  if (!cached || Date.now() - cached.storedAt > ROUTE_CACHE_TTL_MS) return null;
   return cached.route;
 }
 
