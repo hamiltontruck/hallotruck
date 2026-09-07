@@ -1,11 +1,317 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:fitsSystemWindows="true"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
-<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="HALLO Driver" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textStyle="bold"/><ProgressBar android:id="@+id/progress" android:layout_width="32dp" android:layout_height="32dp"/></LinearLayout><TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:accessibilityLiveRegion="polite"/>
-<LinearLayout android:id="@+id/authPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"><LinearLayout android:id="@+id/signupFields" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><EditText android:id="@+id/fullName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Full name"/><EditText android:id="@+id/phone" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Phone" android:inputType="phone"/></LinearLayout><EditText android:id="@+id/email" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Email" android:inputType="textEmailAddress"/><EditText android:id="@+id/pin" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Password / 6-digit signup PIN" android:inputType="numberPassword"/><EditText android:id="@+id/confirmPin" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Confirm PIN" android:inputType="numberPassword" android:maxLength="6" android:visibility="gone"/><com.google.android.material.button.MaterialButton android:id="@+id/authSubmit" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sign in"/><com.google.android.material.button.MaterialButton android:id="@+id/authMode" style="@style/Widget.Material3.Button.TextButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Create Driver account"/></LinearLayout>
-<LinearLayout android:id="@+id/driverShell" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:id="@+id/accessState" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold"/><LinearLayout android:id="@+id/approvedNav" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingTop="4dp" android:paddingBottom="4dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"><com.google.android.material.button.MaterialButton android:id="@+id/navHome" style="@style/Widget.Hallo.DriverNavButton" android:layout_width="0dp" android:layout_height="52dp" android:layout_weight="1" android:layout_marginLeft="2dp" android:layout_marginRight="2dp" android:text="Home"/><com.google.android.material.button.MaterialButton android:id="@+id/navOnboarding" style="@style/Widget.Hallo.DriverNavButton" android:layout_width="0dp" android:layout_height="52dp" android:layout_weight="1" android:layout_marginLeft="2dp" android:layout_marginRight="2dp" android:text="Documents"/><com.google.android.material.button.MaterialButton android:id="@+id/navJobs" style="@style/Widget.Hallo.DriverNavButton" android:layout_width="0dp" android:layout_height="52dp" android:layout_weight="1" android:layout_marginLeft="2dp" android:layout_marginRight="2dp" android:text="Jobs"/><com.google.android.material.button.MaterialButton android:id="@+id/navTrip" style="@style/Widget.Hallo.DriverNavButton" android:layout_width="0dp" android:layout_height="52dp" android:layout_weight="1" android:layout_marginLeft="2dp" android:layout_marginRight="2dp" android:text="Trip"/></LinearLayout><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal"><com.google.android.material.button.MaterialButton android:id="@+id/navWallet" style="@style/Widget.Hallo.DriverNavButton" android:layout_width="0dp" android:layout_height="52dp" android:layout_weight="1" android:layout_marginLeft="2dp" android:layout_marginRight="2dp" android:text="Wallet"/><com.google.android.material.button.MaterialButton android:id="@+id/navAlerts" style="@style/Widget.Hallo.DriverNavButton" android:layout_width="0dp" android:layout_height="52dp" android:layout_weight="1" android:layout_marginLeft="2dp" android:layout_marginRight="2dp" android:text="Alerts"/><com.google.android.material.button.MaterialButton android:id="@+id/navProfile" style="@style/Widget.Hallo.DriverNavButton" android:layout_width="0dp" android:layout_height="52dp" android:layout_weight="1" android:layout_marginLeft="2dp" android:layout_marginRight="2dp" android:text="Profile"/></LinearLayout></LinearLayout>
-<LinearLayout android:id="@+id/pageHome" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Driver Home" android:textAppearance="?attr/textAppearanceHeadlineSmall"/><TextView android:id="@+id/homeSummary" android:layout_width="match_parent" android:layout_height="wrap_content"/><com.google.android.material.button.MaterialButton android:id="@+id/refresh" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Refresh"/></LinearLayout>
-<LinearLayout android:id="@+id/pageOnboarding" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Driver &amp; Vehicle Documents" android:textAppearance="?attr/textAppearanceHeadlineSmall"/><EditText android:id="@+id/plate" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Plate number"/><Spinner android:id="@+id/vehicleType" android:layout_width="match_parent" android:layout_height="52dp"/><EditText android:id="@+id/capacity" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Capacity tons" android:inputType="numberDecimal"/><com.google.android.material.button.MaterialButton android:id="@+id/saveVehicle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Save vehicle profile"/><Spinner android:id="@+id/documentKey" android:layout_width="match_parent" android:layout_height="52dp"/><com.google.android.material.button.MaterialButton android:id="@+id/chooseDocument" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Choose and upload document"/><TextView android:id="@+id/documentState" android:layout_width="match_parent" android:layout_height="wrap_content"/></LinearLayout>
-<LinearLayout android:id="@+id/pageJobs" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Available Jobs" android:textAppearance="?attr/textAppearanceHeadlineSmall"/><LinearLayout android:id="@+id/jobsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/></LinearLayout>
-<LinearLayout android:id="@+id/pageTrip" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Active Trip" android:textAppearance="?attr/textAppearanceHeadlineSmall"/><TextView android:id="@+id/tripDetails" android:layout_width="match_parent" android:layout_height="wrap_content"/><com.google.android.material.button.MaterialButton android:id="@+id/startTrip" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start trip"/><LinearLayout android:id="@+id/tripActions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"><com.google.android.material.button.MaterialButton android:id="@+id/startTracking" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start live GPS"/><com.google.android.material.button.MaterialButton android:id="@+id/stopTracking" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Stop GPS"/></LinearLayout><LinearLayout android:id="@+id/deliveryPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"><EditText android:id="@+id/recipient" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Receiver name"/><EditText android:id="@+id/deliveryNote" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Delivery note"/><com.google.android.material.button.MaterialButton android:id="@+id/pickPhoto" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Choose delivery photo"/><TextView android:id="@+id/photoState" android:layout_width="match_parent" android:layout_height="wrap_content"/><com.google.android.material.button.MaterialButton android:id="@+id/pickSignature" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Choose receiver signature"/><TextView android:id="@+id/signatureState" android:layout_width="match_parent" android:layout_height="wrap_content"/><Spinner android:id="@+id/paymentResult" android:layout_width="match_parent" android:layout_height="52dp"/><EditText android:id="@+id/amount" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Amount collected" android:inputType="numberDecimal"/><com.google.android.material.button.MaterialButton android:id="@+id/finishTrip" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Submit proof &amp; finish trip"/></LinearLayout></LinearLayout>
-<LinearLayout android:id="@+id/pageWallet" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Driver Wallet" android:textAppearance="?attr/textAppearanceHeadlineSmall"/><TextView android:id="@+id/walletDetails" android:layout_width="match_parent" android:layout_height="wrap_content"/></LinearLayout><LinearLayout android:id="@+id/pageAlerts" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Notifications" android:textAppearance="?attr/textAppearanceHeadlineSmall"/><LinearLayout android:id="@+id/alertsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/></LinearLayout><LinearLayout android:id="@+id/pageProfile" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Driver Profile" android:textAppearance="?attr/textAppearanceHeadlineSmall"/><TextView android:id="@+id/profileDetails" android:layout_width="match_parent" android:layout_height="wrap_content"/><com.google.android.material.button.MaterialButton android:id="@+id/signOut" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sign out"/></LinearLayout>
-</LinearLayout></LinearLayout></androidx.core.widget.NestedScrollView>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/hallo_surface"
+    android:fitsSystemWindows="true" android:orientation="vertical">
+    <androidx.core.widget.NestedScrollView android:id="@+id/contentScroll" android:layout_width="match_parent"
+        android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false"
+        android:fillViewport="true" android:overScrollMode="never" android:paddingBottom="24dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:background="@color/hallo_navy" android:gravity="center_vertical" android:minHeight="88dp"
+                android:orientation="horizontal" android:paddingStart="20dp" android:paddingTop="16dp"
+                android:paddingEnd="12dp" android:paddingBottom="16dp">
+                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_marginEnd="12dp"
+                    android:background="@drawable/bg_logo_badge" android:contentDescription="HALLO Smart Logistics"
+                    android:padding="8dp" android:src="@drawable/ic_hallo_truck" app:tint="@color/hallo_gold"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:letterSpacing="0.12"
+                        android:text="HALLO DRIVER" android:textColor="@color/hallo_gold" android:textSize="12sp" android:textStyle="bold"/>
+                    <TextView android:id="@+id/headerTitle" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" android:text="Ready to move" android:textColor="@android:color/white"
+                        android:textSize="22sp" android:textStyle="bold"/>
+                </LinearLayout>
+                <com.google.android.material.button.MaterialButton android:id="@+id/documentsAction" style="@style/Widget.HalloDriver.HeaderButton"
+                    android:layout_width="48dp" android:layout_height="48dp" android:contentDescription="Driver and vehicle documents" android:text="DOC" android:visibility="gone"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/notificationsAction" style="@style/Widget.HalloDriver.HeaderButton"
+                    android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="6dp"
+                    android:contentDescription="Notifications" android:text="ALR" android:visibility="gone"/>
+                <ProgressBar android:id="@+id/progress" android:layout_width="32dp" android:layout_height="32dp"
+                    android:layout_marginStart="8dp" android:indeterminateTint="@color/hallo_gold"/>
+            </LinearLayout>
+            <com.google.android.material.card.MaterialCardView android:id="@+id/statusCard" style="@style/Widget.HalloDriver.StatusCard"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="16dp"
+                android:layout_marginTop="-8dp" android:layout_marginEnd="16dp">
+                <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite" android:padding="14dp" android:textColor="@color/hallo_text" android:textSize="14sp"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout android:id="@+id/authPanel" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="20dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Welcome back"
+                    android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                    android:layout_marginBottom="20dp" android:text="Sign in to manage jobs, trips and earnings."
+                    android:textColor="@color/hallo_text_muted" android:textSize="15sp"/>
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.ContentCard"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                        <LinearLayout android:id="@+id/signupFields" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="vertical" android:visibility="gone">
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Full name">
+                                <com.google.android.material.textfield.TextInputEditText android:id="@+id/fullName"
+                                    android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textPersonName"/>
+                            </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ethiopian mobile number">
+                                <com.google.android.material.textfield.TextInputEditText android:id="@+id/phone"
+                                    android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="phone"/>
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                            android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Email">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/email"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textEmailAddress"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                            android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Password / 6-digit signup PIN" app:endIconMode="password_toggle">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/pin"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberPassword"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/confirmPinLayout" style="@style/Widget.HalloDriver.TextInput"
+                            android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Confirm 6-digit PIN"
+                            android:visibility="gone" app:endIconMode="password_toggle">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/confirmPin"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberPassword" android:maxLength="6"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/authSubmit" style="@style/Widget.HalloDriver.PrimaryButton"
+                            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Sign in"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/authMode" style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                            android:text="Create Driver account" android:textColor="@color/hallo_navy"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/driverShell" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:paddingStart="16dp" android:paddingTop="12dp"
+                android:paddingEnd="16dp" android:paddingBottom="24dp" android:visibility="gone">
+                <TextView android:id="@+id/accessState" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:background="@drawable/bg_status_chip" android:paddingStart="12dp" android:paddingTop="7dp"
+                    android:paddingEnd="12dp" android:paddingBottom="7dp" android:textColor="@color/hallo_success"
+                    android:textSize="13sp" android:textStyle="bold"/>
+
+                <LinearLayout android:id="@+id/pageHome" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                    <TextView style="@style/TextAppearance.HalloDriver.PageTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp" android:text="Driver Home"/>
+                    <TextView style="@style/TextAppearance.HalloDriver.PageSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Your workday at a glance"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
+                        android:orientation="horizontal" android:weightSum="3">
+                        <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.MetricCard"
+                            android:layout_width="0dp" android:layout_height="112dp" android:layout_weight="1">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                                <TextView android:id="@+id/homeAvailableJobs" style="@style/TextAppearance.HalloDriver.MetricValue" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                                <TextView style="@style/TextAppearance.HalloDriver.MetricLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:text="Available&#10;jobs"/>
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                        <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.MetricCard"
+                            android:layout_width="0dp" android:layout_height="112dp" android:layout_marginStart="8dp" android:layout_weight="1">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                                <TextView android:id="@+id/homeActiveTrip" style="@style/TextAppearance.HalloDriver.MetricValue.Small"
+                                    android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:gravity="center" android:maxLines="1"/>
+                                <TextView style="@style/TextAppearance.HalloDriver.MetricLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:text="Active&#10;trip"/>
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                        <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.MetricCard"
+                            android:layout_width="0dp" android:layout_height="112dp" android:layout_marginStart="8dp" android:layout_weight="1">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                                <TextView android:id="@+id/homeDocuments" style="@style/TextAppearance.HalloDriver.MetricValue" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                                <TextView style="@style/TextAppearance.HalloDriver.MetricLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:text="Uploaded&#10;documents"/>
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+                    <TextView android:id="@+id/homeSummary" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone"/>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.DarkCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Current assignment"
+                                android:textColor="@color/hallo_gold" android:textSize="13sp" android:textStyle="bold"/>
+                            <TextView android:id="@+id/homeAssignment" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp" android:lineSpacingExtra="5dp" android:textColor="@android:color/white" android:textSize="16sp"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.ContentCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+                        <TextView android:id="@+id/homeEarnings" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:lineSpacingExtra="5dp" android:padding="18dp" android:textColor="@color/hallo_text" android:textSize="15sp"/>
+                    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.HighlightCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Stay ready"
+                                android:textColor="@color/hallo_navy" android:textSize="18sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                                android:text="Keep documents current and GPS enabled while an active trip is running."
+                                android:textColor="@color/hallo_text_muted" android:textSize="14sp"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/refresh" style="@style/Widget.HalloDriver.SecondaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Refresh driver data"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/pageOnboarding" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:visibility="gone">
+                    <TextView style="@style/TextAppearance.HalloDriver.PageTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp" android:text="Documents"/>
+                    <TextView style="@style/TextAppearance.HalloDriver.PageSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Driver and vehicle verification workspace"/>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.ContentCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                            <TextView style="@style/TextAppearance.HalloDriver.SectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Vehicle profile"/>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Plate number">
+                                <com.google.android.material.textfield.TextInputEditText android:id="@+id/plate" android:layout_width="match_parent"
+                                    android:layout_height="wrap_content" android:inputType="textCapCharacters"/>
+                            </com.google.android.material.textfield.TextInputLayout>
+                            <Spinner android:id="@+id/vehicleType" style="@style/Widget.HalloDriver.Spinner" android:layout_width="match_parent" android:layout_height="56dp"/>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Capacity (tons)">
+                                <com.google.android.material.textfield.TextInputEditText android:id="@+id/capacity" android:layout_width="match_parent"
+                                    android:layout_height="wrap_content" android:inputType="numberDecimal"/>
+                            </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/saveVehicle" style="@style/Widget.HalloDriver.SecondaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Save vehicle profile"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.ContentCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                            <TextView style="@style/TextAppearance.HalloDriver.SectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Upload document"/>
+                            <Spinner android:id="@+id/documentKey" style="@style/Widget.HalloDriver.Spinner" android:layout_width="match_parent" android:layout_height="56dp"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/chooseDocument" style="@style/Widget.HalloDriver.PrimaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Choose and upload document"/>
+                            <TextView android:id="@+id/documentState" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:layout_marginTop="14dp" android:lineSpacingExtra="5dp" android:textColor="@color/hallo_text_muted" android:textSize="14sp"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/pageJobs" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:visibility="gone">
+                    <TextView style="@style/TextAppearance.HalloDriver.PageTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp" android:text="Available Jobs"/>
+                    <TextView style="@style/TextAppearance.HalloDriver.PageSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Choose an authorized truck before accepting"/>
+                    <LinearLayout android:id="@+id/jobsList" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp" android:orientation="vertical"/>
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/pageTrip" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:visibility="gone">
+                    <TextView style="@style/TextAppearance.HalloDriver.PageTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp" android:text="Active Trip"/>
+                    <TextView style="@style/TextAppearance.HalloDriver.PageSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Live route, GPS and delivery completion"/>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.ContentCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                            <TextView android:id="@+id/tripDetails" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:lineSpacingExtra="5dp" android:textColor="@color/hallo_text" android:textSize="16sp"/>
+                            <com.hallo.logistics.driver.LiveTripMapView android:id="@+id/liveTripMap"
+                                android:layout_width="match_parent" android:layout_height="220dp" android:layout_marginTop="14dp"
+                                android:background="@drawable/bg_map"/>
+                            <TextView android:id="@+id/liveMapState" style="@style/TextAppearance.HalloDriver.Helper"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/openNavigation" style="@style/Widget.HalloDriver.SecondaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp"
+                                android:text="Open turn-by-turn navigation"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/startTrip" style="@style/Widget.HalloDriver.PrimaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Start trip"/>
+                            <LinearLayout android:id="@+id/tripActions" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp" android:orientation="vertical">
+                                <com.google.android.material.button.MaterialButton android:id="@+id/startTracking" style="@style/Widget.HalloDriver.PrimaryButton"
+                                    android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start live GPS"/>
+                                <com.google.android.material.button.MaterialButton android:id="@+id/stopTracking" style="@style/Widget.HalloDriver.SecondaryButton"
+                                    android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Stop GPS"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.card.MaterialCardView android:id="@+id/deliveryPanel" style="@style/Widget.HalloDriver.ContentCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                            <TextView style="@style/TextAppearance.HalloDriver.SectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Delivery proof"/>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Receiver name">
+                                <com.google.android.material.textfield.TextInputEditText android:id="@+id/recipient" android:layout_width="match_parent"
+                                    android:layout_height="wrap_content" android:inputType="textPersonName"/>
+                            </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Delivery note">
+                                <com.google.android.material.textfield.TextInputEditText android:id="@+id/deliveryNote" android:layout_width="match_parent"
+                                    android:layout_height="wrap_content" android:inputType="textMultiLine" android:minLines="2"/>
+                            </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/pickPhoto" style="@style/Widget.HalloDriver.SecondaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Choose delivery photo"/>
+                            <TextView android:id="@+id/photoState" style="@style/TextAppearance.HalloDriver.Helper" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/pickSignature" style="@style/Widget.HalloDriver.SecondaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Choose receiver signature"/>
+                            <TextView android:id="@+id/signatureState" style="@style/TextAppearance.HalloDriver.Helper" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                            <Spinner android:id="@+id/paymentResult" style="@style/Widget.HalloDriver.Spinner" android:layout_width="match_parent"
+                                android:layout_height="56dp" android:layout_marginTop="8dp"/>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.HalloDriver.TextInput"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Amount collected (ETB)">
+                                <com.google.android.material.textfield.TextInputEditText android:id="@+id/amount" android:layout_width="match_parent"
+                                    android:layout_height="wrap_content" android:inputType="numberDecimal"/>
+                            </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/finishTrip" style="@style/Widget.HalloDriver.PrimaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                                android:text="Submit proof and finish trip"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/pageWallet" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:visibility="gone">
+                    <TextView style="@style/TextAppearance.HalloDriver.PageTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp" android:text="Driver Wallet"/>
+                    <TextView style="@style/TextAppearance.HalloDriver.PageSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Released earnings, commission and deposit"/>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.DarkCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
+                        <TextView android:id="@+id/walletDetails" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:lineSpacingExtra="8dp" android:padding="20dp" android:textColor="@android:color/white" android:textSize="16sp"/>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/pageAlerts" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:visibility="gone">
+                    <TextView style="@style/TextAppearance.HalloDriver.PageTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp" android:text="Notifications"/>
+                    <TextView style="@style/TextAppearance.HalloDriver.PageSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Job, verification and payment updates"/>
+                    <LinearLayout android:id="@+id/alertsList" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp" android:orientation="vertical"/>
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/pageProfile" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:visibility="gone">
+                    <TextView style="@style/TextAppearance.HalloDriver.PageTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp" android:text="Driver Profile"/>
+                    <TextView style="@style/TextAppearance.HalloDriver.PageSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Account and verification details"/>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.ContentCard"
+                        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                            <TextView android:layout_width="64dp" android:layout_height="64dp" android:background="@drawable/bg_profile_avatar"
+                                android:gravity="center" android:text="HD" android:textColor="@color/hallo_navy" android:textSize="22sp" android:textStyle="bold"/>
+                            <TextView android:id="@+id/profileDetails" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp" android:lineSpacingExtra="6dp" android:textColor="@color/hallo_text" android:textSize="16sp"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/profileDocuments" style="@style/Widget.HalloDriver.SecondaryButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Manage documents"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/signOut" style="@style/Widget.HalloDriver.DangerButton"
+                                android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Sign out"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent" android:layout_height="72dp" android:background="@android:color/white"
+        android:elevation="16dp" android:visibility="gone" app:itemActiveIndicatorStyle="@style/Widget.HalloDriver.BottomNavIndicator"
+        app:itemIconTint="@color/selector_bottom_nav" app:itemTextColor="@color/selector_bottom_nav"
+        app:labelVisibilityMode="labeled" app:menu="@menu/driver_bottom_navigation"/>
+</LinearLayout>

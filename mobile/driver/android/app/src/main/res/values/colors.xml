@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="hallo_gold">#FFB800</color><color name="hallo_gold_soft">#FFF1C2</color>
+    <color name="hallo_navy">#14213D</color><color name="hallo_navy_soft">#EAF0FA</color>
+    <color name="hallo_surface">#F6F7FA</color><color name="hallo_card">#FFFFFF</color>
+    <color name="hallo_text">#182033</color><color name="hallo_text_muted">#667085</color>
+    <color name="hallo_border">#E4E7EC</color><color name="hallo_success">#16794A</color>
+    <color name="hallo_success_soft">#E7F7EF</color><color name="hallo_danger">#B42318</color>
+</resources>
