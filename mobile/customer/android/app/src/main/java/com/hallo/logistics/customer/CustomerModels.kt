@@ -110,5 +110,7 @@ data class CustomerUiState(
     val trackingOrder: CustomerOrder? = null,
     val route: CustomerRoute? = null,
     val driverPhotoUrl: String? = null,
+    val pickupSuggestions: List<CustomerPlace> = emptyList(),
+    val dropoffSuggestions: List<CustomerPlace> = emptyList(),
     val quote: QuoteResult? = null,
 )

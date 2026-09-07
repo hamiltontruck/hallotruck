@@ -163,24 +163,26 @@ class CustomerRepository {
         return if (signed.startsWith("http")) signed else "${BuildConfig.SUPABASE_URL.trimEnd('/')}/storage/v1$signed"
     }
 
-    private suspend fun geocode(query: String): CustomerPlace {
+    suspend fun searchPlaces(query: String): List<CustomerPlace> {
         val clean = query.trim()
-        require(clean.length >= 2) { "Enter pickup and drop-off places" }
+        if (clean.length < 2) return emptyList()
         require(BuildConfig.MAPTILER_KEY.isNotBlank()) { "Configure MAPTILER_KEY to search places automatically" }
         val encoded = URLEncoder.encode(clean, StandardCharsets.UTF_8.name())
-        val url = "https://api.maptiler.com/geocoding/$encoded.json?key=${URLEncoder.encode(BuildConfig.MAPTILER_KEY, StandardCharsets.UTF_8.name())}&limit=6&language=en&country=et,dj,so&autocomplete=false"
+        val url = "https://api.maptiler.com/geocoding/$encoded.json?key=${URLEncoder.encode(BuildConfig.MAPTILER_KEY, StandardCharsets.UTF_8.name())}&limit=6&language=en&country=et,dj,so&autocomplete=true"
         val root = json.parseToJsonElement(get(url)).jsonObject
-        val feature = root["features"]?.jsonArray?.firstOrNull { item ->
-            val center = (item as? JsonObject)?.get("center") as? JsonArray
-            center?.size == 2 && center[0].jsonPrimitive.doubleOrNull != null && center[1].jsonPrimitive.doubleOrNull != null
-        }?.jsonObject ?: error("Place was not found in the HALLO operating region")
-        val center = feature["center"]!!.jsonArray
-        val longitude = center[0].jsonPrimitive.doubleOrNull!!
-        val latitude = center[1].jsonPrimitive.doubleOrNull!!
-        require(isOperatingCoordinate(longitude, latitude)) { "Place is outside the HALLO operating region" }
-        val label = feature["place_name"]?.jsonPrimitive?.contentOrNull ?: feature["text"]?.jsonPrimitive?.contentOrNull ?: clean
-        return CustomerPlace(label, longitude, latitude)
+        return root["features"]?.jsonArray.orEmpty().mapNotNull { item ->
+            val feature = item as? JsonObject ?: return@mapNotNull null
+            val center = feature["center"] as? JsonArray ?: return@mapNotNull null
+            val longitude = center.getOrNull(0)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
+            val latitude = center.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
+            if (!isOperatingCoordinate(longitude, latitude)) return@mapNotNull null
+            val label = feature["place_name"]?.jsonPrimitive?.contentOrNull ?: feature["text"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            CustomerPlace(label, longitude, latitude)
+        }.distinctBy { it.label }.take(6)
     }
+
+    private suspend fun geocode(query: String): CustomerPlace = searchPlaces(query).firstOrNull()
+        ?: error("Place was not found in the HALLO operating region")
 
     private fun isOperatingCoordinate(longitude: Double, latitude: Double): Boolean =
         (longitude in 32.8..48.1 && latitude in 3.0..15.2) ||

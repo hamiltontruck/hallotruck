@@ -6,10 +6,14 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 class CustomerViewModel(private val repository: CustomerRepository = CustomerRepository()) : ViewModel() {
     private val _state = MutableStateFlow(CustomerUiState())
     val state = _state.asStateFlow()
+    private var pickupSearch: Job? = null
+    private var dropoffSearch: Job? = null
 
     init { restoreSession() }
 
@@ -28,6 +32,22 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
     fun signIn(email: String, password: String) = execute("Signing in…") { repository.signIn(email, password); authorizeAndLoad() }
     fun signOut() = execute("Signing out…") { repository.signOut(); signedOut("Signed out") }
     fun show(page: CustomerPage) { _state.value = _state.value.copy(page = page, message = "") }
+    fun bookingInputChanged() { _state.value = _state.value.copy(route = null, quote = null) }
+
+    fun searchPlaces(query: String, pickup: Boolean) {
+        val previous = if (pickup) pickupSearch else dropoffSearch
+        previous?.cancel()
+        if (query.trim().length < 2) {
+            _state.value = if (pickup) _state.value.copy(pickupSuggestions = emptyList()) else _state.value.copy(dropoffSuggestions = emptyList())
+            return
+        }
+        val job = viewModelScope.launch {
+            delay(280)
+            val suggestions = runCatching { repository.searchPlaces(query) }.getOrElse { emptyList() }
+            _state.value = if (pickup) _state.value.copy(pickupSuggestions = suggestions) else _state.value.copy(dropoffSuggestions = suggestions)
+        }
+        if (pickup) pickupSearch = job else dropoffSearch = job
+    }
     fun refresh() = execute("Refreshing…") { authorizeAndLoad(preservePage = true) }
 
     fun calculateQuote(distanceKm: Double, vehicleType: String, cargoTons: Double) = execute("Calculating secure quote…") {
