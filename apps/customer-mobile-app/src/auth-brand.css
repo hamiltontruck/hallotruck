@@ -1,0 +1,10 @@
+/* Shared HALLO auth brand mark. Replaces the temporary letter placeholder without changing auth behavior. */
+[aria-label="HALLO logo"] {
+  color: transparent !important;
+  font-size: 0 !important;
+  background-color: #10213d !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23F5B400' d='M32 7c-11.6 0-21 9.4-21 21 0 15.2 18.3 28.5 19.1 29.1a3.2 3.2 0 0 0 3.8 0C34.7 56.5 53 43.2 53 28 53 16.4 43.6 7 32 7Z'/%3E%3Ccircle cx='32' cy='28' r='12.5' fill='%23fff'/%3E%3Cpath fill='%2310213D' d='M29.3 17h5.4l4.8 22h-5.1l-1.2-6h-2.4l-1.2 6h-5.1l4.8-22Zm2.4 11.5h.6L32 25.3l-.3 3.2Z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 54px 54px !important;
+}
