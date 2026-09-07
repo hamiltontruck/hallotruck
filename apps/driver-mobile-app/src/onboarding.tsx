@@ -23,14 +23,15 @@ const vehicleDocuments: readonly [DocumentKey, string][] = [
   ['truck_side', 'Truck photo side'],
 ];
 const photoKeys = new Set<DocumentKey>(['driver_photo', 'truck_front', 'truck_side']);
-const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
+const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']);
+const uploadAccept = 'image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf';
 
 function cleanName(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^[-.]+|[-.]+$/g, '').slice(-90) || 'document';
 }
 
 async function uploadDocument(userId: string, key: DocumentKey, file: File, truckId: string | null, current?: Document) {
-  if (!file.name || !allowedTypes.has(file.type) || file.size <= 0 || file.size > 10 * 1024 * 1024) throw new Error('Use a JPG, PNG, WebP or PDF file up to 10 MB.');
+  if (!file.name || !allowedTypes.has(file.type) || file.size <= 0 || file.size > 10 * 1024 * 1024) throw new Error('Use a JPG, PNG, WebP, HEIC, HEIF or PDF file up to 10 MB.');
   if (photoKeys.has(key) && !file.type.startsWith('image/')) throw new Error('Photo fields require an image file.');
   const scope = truckId ? `truck-${truckId}` : 'identity';
   const path = `${userId}/${scope}/${key}/${crypto.randomUUID()}-${cleanName(file.name)}`;
@@ -74,6 +75,7 @@ export function Onboarding({ session }: { session: Session }) {
   const [vehicleType, setVehicleType] = useState('Isuzu 5 Ton');
   const [capacityTons, setCapacityTons] = useState('5');
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const byKey = useMemo(() => new Map(documents.map((document) => [`${document.document_key}:${document.truck_id ?? ''}`, document])), [documents]);
@@ -87,7 +89,7 @@ export function Onboarding({ session }: { session: Session }) {
     const existingTruck = trucks.data?.[0] as Truck | undefined;
     setDocuments((docs.data ?? []) as Document[]); setTruck(existingTruck ?? null); setPlate(existingTruck?.plate_number ?? '');
   }
-  useEffect(() => { void refresh().catch((reason: Error) => setError(reason.message)); }, [session.user.id]);
+  useEffect(() => { setLoading(true); void refresh().catch((reason: Error) => setError(reason.message)).finally(() => setLoading(false)); }, [session.user.id]);
   async function upload(key: DocumentKey, file?: File) {
     if (!file) return; setBusy(true); setError(''); setNotice('');
     try { await uploadDocument(session.user.id, key, file, step === 'vehicle' ? truck?.id ?? null : null, byKey.get(`${key}:${step === 'vehicle' ? truck?.id ?? '' : ''}`)); await refresh(); setNotice('Document submitted for review.'); }
@@ -95,6 +97,8 @@ export function Onboarding({ session }: { session: Session }) {
   }
   async function continueToVehicle(event: FormEvent) { event.preventDefault(); setError(''); setNotice(''); setStep('vehicle'); }
   const identityComplete = driverDocuments.every(([key]) => byKey.has(`${key}:`));
+  const vehicleComplete = Boolean(truck) && vehicleDocuments.every(([key]) => byKey.has(`${key}:${truck?.id ?? ''}`));
+  const onboardingComplete = identityComplete && vehicleComplete;
   async function saveVehicle() {
     if (busy) return;
     setBusy(true); setError(''); setNotice('');
@@ -109,11 +113,17 @@ export function Onboarding({ session }: { session: Session }) {
   }
   const vehicleBlocked = !truck;
   function submitVehicle() {
-    const complete = vehicleDocuments.every(([key]) => byKey.has(`${key}:${truck?.id ?? ''}`));
-    setError(complete ? '' : 'Upload all vehicle documents before submitting for verification.');
-    setNotice(complete ? 'Vehicle documents submitted for verification.' : '');
+    if (!vehicleComplete) {
+      setError('Upload all vehicle documents before submitting for verification.');
+      setNotice('');
+      return;
+    }
+    setError('');
+    setNotice('All required documents are submitted. HALLO Admin/CEO review is pending.');
   }
-  return <main className="onboarding"><header className="onboarding-head"><span className="mark">H</span><div><b>HALLO DRIVER V4</b><small>ONBOARDING</small></div></header><div className="stepper"><span className={step === 'driver' ? 'active' : ''}>01 Driver Documents</span><span className={step === 'vehicle' ? 'active' : ''}>02 Vehicle Documents</span></div>{error && <p className="error notice-box">{error}</p>}{notice && <p className="success notice-box">{notice}</p>}{step === 'driver' ? <form className="onboarding-panel" onSubmit={continueToVehicle}><h1>Driver Documents</h1>{driverDocuments.map(([key, label]) => <DocumentField key={key} label={label} busy={busy} onChange={(file) => void upload(key, file)} />)}<button className="primary" disabled={busy || !identityComplete}>Continue</button></form> : <section className="onboarding-panel"><h1>Vehicle Documents</h1><label>Plate No<input value={plate} onChange={(event) => setPlate(event.target.value)} disabled={Boolean(truck)} required /></label>{!truck&&<><label>Vehicle type<select value={vehicleType} onChange={(event)=>setVehicleType(event.target.value)}>{['Pickup','Van','Isuzu 5 Ton','Dry Cargo','Refrigerated','Truck 22 Ton','Truck 25 Ton','Truck 30 Ton','Trailer'].map(value=><option key={value}>{value}</option>)}</select></label><label>Capacity tons<input type="number" min="0.1" max="60" step="0.1" value={capacityTons} onChange={(event)=>setCapacityTons(event.target.value)}/></label><button className="primary" type="button" disabled={busy} onClick={()=>void saveVehicle()}>Save vehicle profile</button></>}{vehicleDocuments.map(([key, label]) => <DocumentField key={key} label={label} busy={busy || vehicleBlocked} onChange={(file) => void upload(key, file)} />)}{vehicleBlocked && <p className="notice">Save the vehicle profile before uploading vehicle documents.</p>}<button className="primary" disabled={busy || vehicleBlocked} onClick={submitVehicle}>Submit for verification</button><button className="secondary" type="button" onClick={() => setStep('driver')}>Back</button></section>}</main>;
+  if (loading) return <div className="splash"><b>Loading Driver onboarding…</b></div>;
+  if (onboardingComplete) return <main className="onboarding"><header className="onboarding-head"><span className="mark">H</span><div><b>HALLO DRIVER V4</b><small>VERIFICATION</small></div></header><section className="onboarding-panel"><h1>Verification pending</h1><p className="notice">Driver and vehicle documents are complete. HALLO Admin/CEO review is required before jobs become available.</p><p className="success notice-box">9 of 9 required documents submitted.</p>{error && <p className="error notice-box">{error}</p>}<button className="secondary" type="button" disabled={busy} onClick={() => { setBusy(true); setError(''); void refresh().catch((reason: Error) => setError(reason.message)).finally(() => setBusy(false)); }}>{busy ? 'Refreshing…' : 'Refresh status'}</button><button className="secondary" type="button" disabled={busy} onClick={() => void supabase.auth.signOut()}>Sign out</button></section></main>;
+  return <main className="onboarding"><header className="onboarding-head"><span className="mark">H</span><div><b>HALLO DRIVER V4</b><small>ONBOARDING</small></div></header><div className="stepper"><span className={step === 'driver' ? 'active' : ''}>01 Driver Documents</span><span className={step === 'vehicle' ? 'active' : ''}>02 Vehicle Documents</span></div>{error && <p className="error notice-box">{error}</p>}{notice && <p className="success notice-box">{notice}</p>}{step === 'driver' ? <form className="onboarding-panel" onSubmit={continueToVehicle}><h1>Driver Documents</h1>{driverDocuments.map(([key, label]) => <DocumentField key={key} label={label} busy={busy} uploaded={byKey.has(`${key}:`)} onChange={(file) => void upload(key, file)} />)}<button className="primary" disabled={busy || !identityComplete}>Continue</button></form> : <section className="onboarding-panel"><h1>Vehicle Documents</h1><label>Plate No<input value={plate} onChange={(event) => setPlate(event.target.value)} disabled={Boolean(truck)} required /></label>{!truck&&<><label>Vehicle type<select value={vehicleType} onChange={(event)=>setVehicleType(event.target.value)}>{['Pickup','Van','Isuzu 5 Ton','Dry Cargo','Refrigerated','Truck 22 Ton','Truck 25 Ton','Truck 30 Ton','Trailer'].map(value=><option key={value}>{value}</option>)}</select></label><label>Capacity tons<input type="number" min="0.1" max="60" step="0.1" value={capacityTons} onChange={(event)=>setCapacityTons(event.target.value)}/></label><button className="primary" type="button" disabled={busy} onClick={()=>void saveVehicle()}>Save vehicle profile</button></>}{vehicleDocuments.map(([key, label]) => <DocumentField key={key} label={label} busy={busy || vehicleBlocked} uploaded={Boolean(truck) && byKey.has(`${key}:${truck?.id ?? ''}`)} onChange={(file) => void upload(key, file)} />)}{vehicleBlocked && <p className="notice">Save the vehicle profile before uploading vehicle documents.</p>}<button className="primary" disabled={busy || vehicleBlocked || !vehicleComplete} onClick={submitVehicle}>Submit for verification</button><button className="secondary" type="button" onClick={() => setStep('driver')}>Back</button></section>}</main>;
 }
 
-function DocumentField({ label, busy, onChange }: { label: string; busy: boolean; onChange: (file?: File) => void }) { return <label className="document-field"><span>{label}</span><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy} onChange={(event) => onChange(event.target.files?.[0])} /></label>; }
+function DocumentField({ label, busy, uploaded, onChange }: { label: string; busy: boolean; uploaded: boolean; onChange: (file?: File) => void }) { return <label className="document-field"><span>{label}{uploaded ? ' ✓ Uploaded' : ''}</span><input type="file" accept={uploadAccept} disabled={busy} onChange={(event) => onChange(event.target.files?.[0])} /></label>; }
