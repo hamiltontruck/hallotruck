@@ -14,7 +14,8 @@ test("Customer booking keeps handling notes explicitly optional", () => {
   assert.match(flow, /\{text\.notes\} <b>\{text\.optional\}<\/b>/);
   assert.match(flow, /\{text\.notesHelp\}/);
   assert.doesNotMatch(flow, /<textarea[\s\S]{0,500}\srequired(?:=|\s|>)/);
-  assert.doesNotMatch(cargo, /"other",\s*\] as const;[\s\S]*CustomerCargoCategory/);
+  const categoryBlock = cargo.match(/CUSTOMER_CARGO_CATEGORIES = \[([\s\S]*?)\] as const;/)?.[1] ?? "";
+  assert.doesNotMatch(categoryBlock, /"other"/);
 });
 
 test("required booking inputs and quote readiness gate Confirm Order", () => {
