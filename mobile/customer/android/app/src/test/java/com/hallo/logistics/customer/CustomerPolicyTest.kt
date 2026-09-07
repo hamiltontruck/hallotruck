@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
 
 class CustomerPolicyTest {
     @Test fun onlyCustomerRoleIsAccepted() {
@@ -28,5 +29,13 @@ class CustomerPolicyTest {
     @Test fun cancellationMatchesExistingBackendLifecycle() {
         listOf("quoted", "placed", "accepted").forEach { assertTrue(CustomerPolicy.canCancel(it)) }
         listOf("in_transit", "delivered", "cancelled", null).forEach { assertFalse(CustomerPolicy.canCancel(it)) }
+    }
+
+    @Test fun trackingNeverLabelsOldOrMissingGpsAsLive() {
+        val now = Instant.parse("2026-09-07T12:00:00Z")
+        assertEquals("LIVE", CustomerPolicy.trackingFreshness("2026-09-07T11:59:20Z", true, now))
+        assertEquals("STALE", CustomerPolicy.trackingFreshness("2026-09-07T11:55:00Z", true, now))
+        assertEquals("OFFLINE", CustomerPolicy.trackingFreshness("2026-09-07T11:00:00Z", true, now))
+        assertEquals("OFFLINE", CustomerPolicy.trackingFreshness(null, false, now))
     }
 }

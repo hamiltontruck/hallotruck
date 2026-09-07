@@ -35,6 +35,18 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
         _state.value = _state.value.copy(busy = false, quote = quote, message = "Quote ready: ETB ${quote.totalEtb.toLong()}")
     }
 
+    fun calculateAutomaticRoute(pickup: String, dropoff: String, vehicleType: String, cargoTons: Double) = execute("Finding places and calculating the truck route…") {
+        require(cargoTons > 0) { "Enter cargo weight" }
+        val route = repository.route(pickup, dropoff, vehicleType)
+        val quote = repository.quote(QuoteInput(route.distanceKm, vehicleType, cargoTons))
+        _state.value = _state.value.copy(
+            busy = false,
+            route = route,
+            quote = quote,
+            message = "Route ready: ${route.distanceKm} km · ${route.durationMinutes} min · ETB ${quote.totalEtb.toLong()}",
+        )
+    }
+
     fun createOrder(input: CreateOrderInput) = execute("Creating order…") {
         val tracking = repository.createOrder(input); authorizeAndLoad(preservePage = true)
         _state.value = _state.value.copy(page = CustomerPage.ORDERS, message = "Order $tracking created")
@@ -47,7 +59,14 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
 
     fun track(order: CustomerOrder) = execute("Loading live tracking…") {
         val live = repository.liveTrip(order.id)
-        _state.value = _state.value.copy(busy = false, page = CustomerPage.TRACKING, liveTrip = live, message = if (live == null) "Driver location is not available yet" else "Tracking updated")
+        val assignment = _state.value.assignments.firstOrNull { it.orderId == order.id }
+        val photo = runCatching { repository.signedDriverPhoto(assignment?.driverPhotoPath) }.getOrNull()
+        _state.value = _state.value.copy(busy = false, page = CustomerPage.TRACKING, trackingOrder = order, liveTrip = live, driverPhotoUrl = photo, message = if (live == null) "Driver location is not available yet" else "Tracking updated")
+    }
+
+    fun refreshTracking() {
+        val order = _state.value.trackingOrder ?: _state.value.orders.firstOrNull { it.status in setOf("accepted", "in_transit") } ?: return
+        track(order)
     }
 
     fun markNotificationRead(item: CustomerNotification) = execute("Updating notification…") {
@@ -59,6 +78,7 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
         val profile = viewModelScope.async { repository.profile() }
         val orders = viewModelScope.async { repository.orders() }
         val notifications = viewModelScope.async { repository.notifications() }
+        val assignments = viewModelScope.async { repository.assignments() }
         val orderRows = orders.await()
         val payments = repository.payments(orderRows.map { it.id })
         _state.value = CustomerUiState(
@@ -66,6 +86,9 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
             page = if (preservePage) _state.value.page else CustomerPage.HOME,
             message = "Customer workspace", profile = profile.await(), orders = orderRows,
             payments = payments, notifications = notifications.await(), quote = _state.value.quote,
+            assignments = assignments.await(), trackingOrder = _state.value.trackingOrder,
+            liveTrip = _state.value.liveTrip, route = _state.value.route,
+            driverPhotoUrl = _state.value.driverPhotoUrl,
         )
     }
 
