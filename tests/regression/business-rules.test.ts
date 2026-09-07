@@ -36,6 +36,7 @@ import {
   isPasswordRecoveryLocation,
   recoveryLoginHash,
   recoveryPortalFromRole,
+  usesSixDigitPin,
 } from "../../src/domain/password-recovery";
 import {
   calculateDriverDepositWallet,
@@ -131,8 +132,16 @@ test("driver collection requires an explicit safe payment choice", () => {
 test("password recovery returns each account role to the correct login", () => {
   assert.equal(recoveryPortalFromRole("customer"), "customer");
   assert.equal(recoveryPortalFromRole("driver"), "driver");
+  assert.equal(recoveryPortalFromRole(" Driver "), "driver");
+  assert.equal(recoveryPortalFromRole("Customer"), "customer");
+  assert.equal(recoveryPortalFromRole("PARTNER"), "partner");
+  assert.equal(recoveryPortalFromRole("CEO"), "admin");
   assert.equal(recoveryPortalFromRole("ceo"), "admin");
   assert.equal(recoveryPortalFromRole("unknown"), "account");
+  assert.equal(usesSixDigitPin("customer"), true);
+  assert.equal(usesSixDigitPin("driver"), true);
+  assert.equal(usesSixDigitPin("partner"), true);
+  assert.equal(usesSixDigitPin("admin"), false);
   assert.equal(recoveryLoginHash("customer"), "#/customer/login");
   assert.equal(recoveryLoginHash("driver"), "#/driver/login");
   assert.equal(recoveryLoginHash("admin"), "#/admin");

@@ -13,6 +13,7 @@ export const passwordRecoveryCopy: Record<HalloLanguage, {
   backDriver: string;
   setTitle: string;
   setDescription: string;
+  setPinDescription: string;
   newPassword: string;
   confirmPassword: string;
   update: string;
@@ -38,6 +39,7 @@ export const passwordRecoveryCopy: Record<HalloLanguage, {
     backDriver: "Back to driver login",
     setTitle: "Set a new password",
     setDescription: "Create a new password of at least 10 characters for your HALLOTRUCK account.",
+    setPinDescription: "Create a new PIN using exactly 6 numeric digits.",
     newPassword: "New password",
     confirmPassword: "Confirm new password",
     update: "Update password",
@@ -63,6 +65,7 @@ export const passwordRecoveryCopy: Record<HalloLanguage, {
     backDriver: "Gara seensa driver deebi'i",
     setTitle: "Jecha iccitii haaraa kaa'i",
     setDescription: "Account HALLOTRUCK keetiif jecha iccitii haaraa qubee 10 ol qabu uumi.",
+    setPinDescription: "PIN haaraa lakkoofsa 6 qofa fayyadamuun uumi.",
     newPassword: "Jecha iccitii haaraa",
     confirmPassword: "Jecha iccitii haaraa mirkaneessi",
     update: "Jecha iccitii haaromsi",
@@ -88,6 +91,7 @@ export const passwordRecoveryCopy: Record<HalloLanguage, {
     backDriver: "ወደ አሽከርካሪ መግቢያ ተመለስ",
     setTitle: "አዲስ የይለፍ ቃል ያዘጋጁ",
     setDescription: "ለHALLOTRUCK መለያዎ ቢያንስ 10 ቁምፊ ያለው አዲስ የይለፍ ቃል ይፍጠሩ።",
+    setPinDescription: "በትክክል 6 የቁጥር አሃዞችን ብቻ በመጠቀም አዲስ PIN ይፍጠሩ።",
     newPassword: "አዲስ የይለፍ ቃል",
     confirmPassword: "አዲስ የይለፍ ቃል ያረጋግጡ",
     update: "የይለፍ ቃል አዘምን",

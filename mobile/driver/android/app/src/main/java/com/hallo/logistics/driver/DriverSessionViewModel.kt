@@ -10,7 +10,7 @@ import kotlinx.coroutines.Job
 class DriverSessionViewModel(private val repo:DriverRepository=DriverRepository()):ViewModel(){
  private var realtimeJob:Job?=null
  private val _state=MutableStateFlow(DriverUiState());val state=_state.asStateFlow();init{restore()}
- private fun work(message:String="Working…",block:suspend()->Unit)=viewModelScope.launch{_state.value=_state.value.copy(busy=true,message=message);runCatching{block()}.onFailure{_state.value=_state.value.copy(busy=false,loading=false,message=it.message?:"Request failed")}}
+ private fun work(message:String="Working…",block:suspend()->Unit)=viewModelScope.launch{_state.value=_state.value.copy(busy=true,message=message);runCatching{block()}.onFailure{_state.value=_state.value.copy(busy=false,loading=false,message=DriverErrorPolicy.safeMessage(it))}}
  fun restore()=work("Restoring Driver session…"){if(!HalloSupabase.configured){_state.value=DriverUiState(false,message="Configure the existing HALLO Supabase project");return@work};if(repo.userId()==null){_state.value=DriverUiState(false,message="Sign in or create a Driver account");return@work};load()}
  fun signIn(email:String,pin:String)=work("Signing in…"){repo.signIn(email,pin);load()}
  fun signUp(name:String,phone:String,email:String,pin:String,confirm:String)=work("Creating Driver account…"){require(pin==confirm){"PIN confirmation does not match"};repo.signUp(name,phone,email,pin);if(repo.userId()!=null)load()else _state.value=DriverUiState(false,message="Confirm your email, then sign in")}

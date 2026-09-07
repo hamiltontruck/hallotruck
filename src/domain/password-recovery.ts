@@ -5,10 +5,11 @@ export const ROLE_PIN_ERROR = "Password must be exactly 6 numeric digits.";
 export type RecoveryPortal = "account" | "admin" | "customer" | "driver" | "partner";
 
 export function recoveryPortalFromRole(role: unknown): RecoveryPortal {
-  if (role === "customer") return "customer";
-  if (role === "driver") return "driver";
-  if (role === "partner") return "partner";
-  if (role === "admin" || role === "ceo") return "admin";
+  const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() : "";
+  if (normalizedRole === "customer") return "customer";
+  if (normalizedRole === "driver") return "driver";
+  if (normalizedRole === "partner") return "partner";
+  if (normalizedRole === "admin" || normalizedRole === "ceo") return "admin";
   return "account";
 }
 

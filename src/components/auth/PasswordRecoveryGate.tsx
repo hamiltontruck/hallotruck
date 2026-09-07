@@ -129,7 +129,7 @@ export function PasswordRecoveryGate({ children, fixture }: { children: ReactNod
           <LanguageSwitcher />
         </div>
         <h1 className="mt-7 font-display text-3xl font-bold">{c.setTitle}</h1>
-        <p className="mt-2 text-sm leading-6 text-steel">{c.setDescription}</p>
+        <p className="mt-2 text-sm leading-6 text-steel">{pinRecovery ? c.setPinDescription : c.setDescription}</p>
 
         {success ? (
           <div className="mt-6">
