@@ -11,6 +11,8 @@ export const allowedVerificationMimeTypes = [
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/heic",
+  "image/heif",
   "application/pdf",
 ] as const;
 
@@ -79,10 +81,10 @@ export function validateVerificationUpload(input: VerificationUploadInput): Veri
   }
   if (!file.name.trim()) throw new Error("Choose a file to upload.");
   if (!allowedMimeTypeSet.has(file.type)) {
-    throw new Error("JPG, PNG, WebP or PDF file qofa galchi.");
+    throw new Error("JPG, PNG, WebP, HEIC, HEIF ykn PDF file qofa galchi.");
   }
   if (photoOnlyDocumentKeys.has(documentKey) && !file.type.startsWith("image/")) {
-    throw new Error("Item kun JPG, PNG ykn WebP photo ta'uu qaba.");
+    throw new Error("Item kun JPG, PNG, WebP, HEIC ykn HEIF photo ta'uu qaba.");
   }
   if (!Number.isFinite(file.size) || file.size <= 0) {
     throw new Error("File duwwaa galchuun hin danda'amu.");
