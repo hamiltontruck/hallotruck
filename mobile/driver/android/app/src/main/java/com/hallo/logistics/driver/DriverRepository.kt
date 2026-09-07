@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.Flow
 class DriverRepository {
  private val client get()=HalloSupabase.client
  suspend fun signUp(name:String,phone:String,email:String,pin:String){require(DriverAccessPolicy.validSignupPin(pin)){"PIN must contain exactly 6 digits"};require(name.trim().length in 2..120);client.auth.signUpWith(Email){this.email=email.trim().lowercase();password=pin;data=buildJsonObject{put("full_name",name.trim());put("phone",phone.trim());put("role","driver")}}}
- suspend fun signIn(email:String,pin:String){require(DriverAccessPolicy.validSignupPin(pin)){"PIN must contain exactly 6 digits"};client.auth.signInWith(Email){this.email=email.trim().lowercase();password=pin}}
+ suspend fun signIn(email:String,pin:String){require(pin.isNotBlank()){"Enter your password"};client.auth.signInWith(Email){this.email=email.trim().lowercase();password=pin}}
  suspend fun signOut()=client.auth.signOut()
  fun userId()=client.auth.currentUserOrNull()?.id
  suspend fun profile():DriverProfile{val id=userId()?:error("Driver session expired");val p=client.from("profiles").select(Columns.list("id,role,driver_status,full_name,phone,vehicle_type,rating_avg")){filter{eq("id",id)}}.decodeSingleOrNull<DriverProfile>()?:error("Driver profile not found");if(p.role!="driver"){client.auth.signOut();error("This account is not authorized for HALLO Driver")};return p}
