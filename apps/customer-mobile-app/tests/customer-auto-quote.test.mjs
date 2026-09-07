@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-const flow = fs.readFileSync(new URL("../src/CustomerBookingFlow.tsx", import.meta.url), "utf8");
-const orderService = fs.readFileSync(new URL("../src/customer-order.service.ts", import.meta.url), "utf8");
+const flow = fs.readFileSync(new URL("../src/CustomerBookingFlowV2.tsx", import.meta.url), "utf8");
+const orderService = fs.readFileSync(new URL("../src/customer-order.service-v2.ts", import.meta.url), "utf8");
 
 test("Customer Mobile automatically calculates ETB after route and valid load are ready", () => {
   assert.match(flow, /window\.setTimeout\(\(\) => \{/);
