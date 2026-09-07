@@ -3,8 +3,8 @@ import fs from "node:fs";
 import test from "node:test";
 
 const quoteService = fs.readFileSync(new URL("../src/customer-quote.service.ts", import.meta.url), "utf8");
-const orderService = fs.readFileSync(new URL("../src/customer-order.service.ts", import.meta.url), "utf8");
-const flow = fs.readFileSync(new URL("../src/CustomerBookingFlow.tsx", import.meta.url), "utf8");
+const orderService = fs.readFileSync(new URL("../src/customer-order.service-v2.ts", import.meta.url), "utf8");
+const flow = fs.readFileSync(new URL("../src/CustomerBookingFlowV2.tsx", import.meta.url), "utf8");
 
 test("Customer route and quote reuse authenticated HGV routing and pricing RPC", () => {
   assert.match(quoteService, /auth\.getSession\(\)/);
