@@ -219,7 +219,7 @@ function AuthForm({
             onClick={() => setMode(mode === "login" ? "signup" : "login")}
             style={{ ...modeLinkStyle, opacity: busy ? .55 : 1 }}
           >
-            {mode === "login" ? "Create a Customer account" : "Back to Sign in"}
+            {mode === "login" ? "Create Account" : "Back to Sign in"}
           </button>
         </div>
       </div>
