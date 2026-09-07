@@ -287,7 +287,7 @@ export function CustomerBookingMap({
       ? coordinates
       : [pickupPlace?.coordinates ?? null, dropoffPlace?.coordinates ?? null]
         .filter((point): point is [number, number] => point !== null);
-    if (points.length) {
+    if (points.length >= 2) {
       const bounds = points.slice(1).reduce(
         (current, point) => current.extend(point),
         new maplibregl.LngLatBounds(points[0], points[0]),
@@ -312,7 +312,6 @@ export function CustomerBookingMap({
           .then((place) => {
             onPickupSelect(place);
             activeFieldRef.current = "dropoff";
-            mapRef.current?.easeTo({ center: coordinates, zoom: 12, duration: 450 });
           })
           .catch((error: unknown) => {
             setMapMessage(error instanceof Error ? error.message : "Your current location could not be read.");
