@@ -6,9 +6,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 class DriverSessionViewModel(private val repo:DriverRepository=DriverRepository()):ViewModel(){
  private var realtimeJob:Job?=null
+ private var liveTripJob:Job?=null
  private val _state=MutableStateFlow(DriverUiState());val state=_state.asStateFlow();init{restore()}
  private fun work(message:String="Working…",block:suspend()->Unit)=viewModelScope.launch{_state.value=_state.value.copy(busy=true,message=message);runCatching{block()}.onFailure{_state.value=_state.value.copy(busy=false,loading=false,message=DriverErrorPolicy.safeMessage(it))}}
  fun restore()=work("Restoring Driver session…"){if(!HalloSupabase.configured){_state.value=DriverUiState(false,message="Configure the existing HALLO Supabase project");return@work};if(repo.userId()==null){_state.value=DriverUiState(false,message="Sign in or create a Driver account");return@work};load()}
@@ -17,8 +19,9 @@ class DriverSessionViewModel(private val repo:DriverRepository=DriverRepository(
  fun signOut()=work{repo.signOut();_state.value=DriverUiState(false,message="Signed out")}
  fun page(page:DriverPage){_state.value=_state.value.copy(page=page)}
  fun refresh()=work("Refreshing…"){load()}
- private suspend fun load(){val p=repo.profile();val access=DriverAccessPolicy.resolve(p.role,p.driverStatus);if(access==DriverAccess.FORBIDDEN){repo.signOut();_state.value=DriverUiState(false,message="Driver access denied");return};val trucks=viewModelScope.async{repo.driverTrucks()};val docs=viewModelScope.async{repo.documents()};val notes=viewModelScope.async{repo.notifications()};val active=if(access==DriverAccess.APPROVED)repo.activeTrip()else null;val jobs=if(access==DriverAccess.APPROVED&&active==null)repo.jobs()else emptyList();val wallet=if(access==DriverAccess.APPROVED)runCatching{repo.wallet()}.getOrNull()else null;_state.value=DriverUiState(false,false,access,if(access==DriverAccess.APPROVED)DriverPage.HOME else DriverPage.ONBOARDING,"Driver data is current",p,jobs,active,trucks.await(),docs.await(),notes.await(),wallet);if(access==DriverAccess.APPROVED)observeAssignedOrders()}
- private fun observeAssignedOrders(){if(realtimeJob?.isActive==true)return;realtimeJob=viewModelScope.launch{repo.assignedOrdersFlow().collect{rows->val active=rows.firstOrNull{it.status in setOf("accepted","in_transit")};_state.value=_state.value.copy(activeTrip=active,message="Active Trip synced live");if(active!=null)_state.value=_state.value.copy(jobs=emptyList())}}}
+ private suspend fun load(){val p=repo.profile();val access=DriverAccessPolicy.resolve(p.role,p.driverStatus);if(access==DriverAccess.FORBIDDEN){repo.signOut();_state.value=DriverUiState(false,message="Driver access denied");return};val trucks=viewModelScope.async{repo.driverTrucks()};val docs=viewModelScope.async{repo.documents()};val notes=viewModelScope.async{repo.notifications()};val active=if(access==DriverAccess.APPROVED)repo.activeTrip()else null;val jobs=if(access==DriverAccess.APPROVED&&active==null)repo.jobs()else emptyList();val wallet=if(access==DriverAccess.APPROVED)runCatching{repo.wallet()}.getOrNull()else null;_state.value=DriverUiState(false,false,access,if(access==DriverAccess.APPROVED)DriverPage.HOME else DriverPage.ONBOARDING,"Driver data is current",p,jobs,active,trucks.await(),docs.await(),notes.await(),wallet);if(access==DriverAccess.APPROVED){observeAssignedOrders();active?.let{observeLiveTrip(it.id)}}}
+ private fun observeAssignedOrders(){if(realtimeJob?.isActive==true)return;realtimeJob=viewModelScope.launch{repo.assignedOrdersFlow().collect{rows->val active=rows.firstOrNull{it.status in setOf("accepted","in_transit")};_state.value=_state.value.copy(activeTrip=active,message="Active Trip synced live");if(active!=null){_state.value=_state.value.copy(jobs=emptyList());observeLiveTrip(active.id)}else{liveTripJob?.cancel();_state.value=_state.value.copy(liveTrip=null)}}}}
+ private fun observeLiveTrip(orderId:String){if(liveTripJob?.isActive==true&&_state.value.liveTrip?.orderId==orderId)return;liveTripJob?.cancel();liveTripJob=viewModelScope.launch{while(true){runCatching{repo.liveTrip(orderId)}.onSuccess{snapshot->_state.value=_state.value.copy(liveTrip=snapshot)};delay(10_000)}}}
  fun claim(orderId:String,truckId:String)=work("Accepting job…"){repo.claim(orderId,truckId);load()}
  fun openTrip(){requireNotNull(_state.value.activeTrip);_state.value=_state.value.copy(page=DriverPage.TRIP,message="Start authorized GPS to begin the trip")}
  fun saveVehicle(plate:String,type:String,capacity:Double)=work("Saving vehicle…"){repo.saveVehicle(plate,type,capacity);load()}

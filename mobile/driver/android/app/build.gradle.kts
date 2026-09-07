@@ -2,7 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id(
 fun escapedProperty(name: String): String = providers.gradleProperty(name).orNull.orEmpty().replace("\\", "\\\\").replace("\"", "\\\"")
 android {
  namespace = "com.hallo.logistics.driver"; compileSdk = 35
- defaultConfig { applicationId = "com.hallo.logistics.driver"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = "0.1.0"; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"; buildConfigField("String", "SUPABASE_URL", "\"${escapedProperty("SUPABASE_URL")}\""); buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${escapedProperty("SUPABASE_PUBLISHABLE_KEY")}\"") }
+ defaultConfig { applicationId = "com.hallo.logistics.driver"; minSdk = 26; targetSdk = 35; versionCode = 4; versionName = "0.4.0"; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"; buildConfigField("String", "SUPABASE_URL", "\"${escapedProperty("SUPABASE_URL")}\""); buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${escapedProperty("SUPABASE_PUBLISHABLE_KEY")}\"") }
  buildFeatures { viewBinding = true; buildConfig = true }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }; kotlin { jvmToolchain(21) }
  lint { disable += "NullSafeMutableLiveData" }

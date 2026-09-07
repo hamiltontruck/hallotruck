@@ -19,7 +19,7 @@ class DriverRepository {
  suspend fun signOut()=client.auth.signOut()
  fun userId()=client.auth.currentUserOrNull()?.id
  suspend fun profile():DriverProfile{val id=userId()?:error("Driver session expired");val p=client.from("profiles").select(Columns.list("id,role,driver_status,full_name,phone,vehicle_type,rating_avg")){filter{eq("id",id)}}.decodeSingleOrNull<DriverProfile>()?:error("Driver profile not found");if(p.role!="driver"){client.auth.signOut();error("This account is not authorized for HALLO Driver")};return p}
- suspend fun activeTrip():DriverJob?{val id=profile().id;return client.from("orders").select(Columns.list("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,selected_payment_method,status")){filter{eq("driver_id",id);isIn("status",listOf("accepted","in_transit"))};limit(1)}.decodeList<DriverJob>().firstOrNull()}
+ suspend fun activeTrip():DriverJob?{val id=profile().id;return client.from("orders").select(Columns.list("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,selected_payment_method,truck_id,status")){filter{eq("driver_id",id);isIn("status",listOf("accepted","in_transit"))};limit(1)}.decodeList<DriverJob>().firstOrNull()}
  @OptIn(SupabaseExperimental::class)
  fun assignedOrdersFlow():Flow<List<DriverJob>> = client.from("orders").selectAsFlow(DriverJob::id)
  suspend fun jobs():List<DriverJob>{profile();return client.postgrest.rpc("get_available_jobs").decodeList()}
@@ -33,5 +33,6 @@ class DriverRepository {
  suspend fun notifications():List<DriverNotification>{profile();return client.postgrest.rpc("my_notifications",buildJsonObject{put("p_limit",100)}).decodeList()}
  suspend fun markRead(id:String){profile();client.postgrest.rpc("mark_notification_read",buildJsonObject{put("p_notification_id",id)})}
  suspend fun wallet():FinancialSummary{val id=profile().id;return client.postgrest.rpc("driver_financial_summary",buildJsonObject{put("p_driver_id",id)}).decodeList<FinancialSummary>().firstOrNull()?:FinancialSummary()}
+ suspend fun liveTrip(orderId:String):LiveTripSnapshot?{profile();return client.postgrest.rpc("customer_get_live_trip",buildJsonObject{put("p_order_id",orderId)}).decodeList<LiveTripSnapshot>().firstOrNull()}
  suspend fun finishTrip(orderId:String,recipient:String,note:String,photoPath:String,signaturePath:String,result:String,amount:Double?){profile();client.postgrest.rpc("driver_finish_trip",buildJsonObject{put("p_order_id",orderId);put("p_recipient_name",recipient.trim());put("p_delivery_note",note.trim());put("p_photo_path",photoPath);put("p_signature_path",signaturePath);put("p_result_type",result);if(amount!=null)put("p_amount_collected",amount)})}
 }

@@ -1,20 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.HalloDriver" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">#F5B400</item>
+        <item name="colorPrimary">@color/hallo_gold</item><item name="colorOnPrimary">@color/hallo_navy</item>
+        <item name="colorSecondary">@color/hallo_navy</item><item name="colorSurface">@color/hallo_surface</item>
+        <item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/hallo_navy</item><item name="android:navigationBarColor">@android:color/white</item>
     </style>
-
-    <style name="Widget.Hallo.DriverNavButton" parent="Widget.Material3.Button.TextButton">
-        <item name="android:minWidth">0dp</item>
-        <item name="android:minHeight">48dp</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:maxLines">1</item>
-        <item name="android:gravity">center</item>
-        <item name="android:paddingStart">4dp</item>
-        <item name="android:paddingEnd">4dp</item>
-        <item name="backgroundTint">@color/driver_nav_background</item>
-        <item name="android:textColor">@color/driver_nav_text</item>
-        <item name="cornerRadius">12dp</item>
-        <item name="rippleColor">?attr/colorPrimaryContainer</item>
+    <style name="Widget.HalloDriver.ContentCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/hallo_card</item><item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">2dp</item><item name="strokeColor">@color/hallo_border</item><item name="strokeWidth">1dp</item>
+    </style>
+    <style name="Widget.HalloDriver.StatusCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/hallo_card</item><item name="cardCornerRadius">14dp</item><item name="cardElevation">4dp</item>
+    </style>
+    <style name="Widget.HalloDriver.MetricCard" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/hallo_card</item><item name="cardCornerRadius">18dp</item>
+        <item name="strokeColor">@color/hallo_border</item><item name="strokeWidth">1dp</item>
+    </style>
+    <style name="Widget.HalloDriver.HighlightCard" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/hallo_gold_soft</item><item name="cardCornerRadius">20dp</item>
+    </style>
+    <style name="Widget.HalloDriver.DarkCard" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/hallo_navy</item><item name="cardCornerRadius">20dp</item>
+    </style>
+    <style name="Widget.HalloDriver.PrimaryButton" parent="Widget.Material3.Button">
+        <item name="android:minHeight">52dp</item><item name="android:textAllCaps">false</item><item name="android:textStyle">bold</item>
+        <item name="backgroundTint">@color/hallo_gold</item><item name="cornerRadius">16dp</item><item name="android:textColor">@color/hallo_navy</item>
+    </style>
+    <style name="Widget.HalloDriver.SecondaryButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">50dp</item><item name="android:textAllCaps">false</item><item name="android:textStyle">bold</item>
+        <item name="cornerRadius">16dp</item><item name="strokeColor">@color/hallo_navy</item><item name="android:textColor">@color/hallo_navy</item>
+    </style>
+    <style name="Widget.HalloDriver.DangerButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">50dp</item><item name="android:textAllCaps">false</item><item name="android:textStyle">bold</item>
+        <item name="cornerRadius">16dp</item><item name="strokeColor">@color/hallo_danger</item><item name="android:textColor">@color/hallo_danger</item>
+    </style>
+    <style name="Widget.HalloDriver.HeaderButton" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minWidth">48dp</item><item name="android:minHeight">48dp</item><item name="android:padding">0dp</item>
+        <item name="android:textSize">10sp</item><item name="android:textStyle">bold</item><item name="android:textColor">@android:color/white</item>
+        <item name="cornerRadius">14dp</item>
+    </style>
+    <style name="Widget.HalloDriver.TextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">14dp</item><item name="boxCornerRadiusTopEnd">14dp</item>
+        <item name="boxCornerRadiusBottomStart">14dp</item><item name="boxCornerRadiusBottomEnd">14dp</item>
+        <item name="boxStrokeColor">@color/hallo_navy</item><item name="android:layout_marginBottom">12dp</item>
+    </style>
+    <style name="Widget.HalloDriver.Spinner" parent="android:style/Widget.Material.Spinner.Underlined">
+        <item name="android:backgroundTint">@color/hallo_navy</item><item name="android:paddingStart">8dp</item><item name="android:paddingEnd">8dp</item>
+    </style>
+    <style name="Widget.HalloDriver.BottomNavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/hallo_gold_soft</item><item name="shapeAppearance">@style/ShapeAppearance.HalloDriver.Pill</item>
+    </style>
+    <style name="ShapeAppearance.HalloDriver.Pill" parent="ShapeAppearance.Material3.Corner.Full"/>
+    <style name="TextAppearance.HalloDriver.PageTitle" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">@color/hallo_text</item><item name="android:textSize">28sp</item><item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.HalloDriver.PageSubtitle" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:layout_marginTop">3dp</item><item name="android:textColor">@color/hallo_text_muted</item><item name="android:textSize">14sp</item>
+    </style>
+    <style name="TextAppearance.HalloDriver.SectionTitle" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:layout_marginBottom">12dp</item><item name="android:textColor">@color/hallo_text</item>
+        <item name="android:textSize">18sp</item><item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.HalloDriver.MetricValue" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">@color/hallo_navy</item><item name="android:textSize">25sp</item><item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.HalloDriver.MetricValue.Small" parent="TextAppearance.HalloDriver.MetricValue"><item name="android:textSize">17sp</item></style>
+    <style name="TextAppearance.HalloDriver.MetricLabel" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:layout_marginTop">5dp</item><item name="android:textColor">@color/hallo_text_muted</item><item name="android:textSize">12sp</item>
+    </style>
+    <style name="TextAppearance.HalloDriver.Helper" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:layout_marginTop">5dp</item><item name="android:textColor">@color/hallo_text_muted</item><item name="android:textSize">12sp</item>
     </style>
 </resources>
