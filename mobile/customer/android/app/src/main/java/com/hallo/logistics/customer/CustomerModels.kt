@@ -34,6 +34,7 @@ import kotlinx.serialization.Serializable
     @SerialName("amount_etb") val amountEtb: Double? = null,
     val event: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("receipt_path") val receiptPath: String? = null,
 )
 
 @Serializable data class CustomerNotification(
@@ -48,10 +49,39 @@ import kotlinx.serialization.Serializable
 @Serializable data class CustomerLiveTrip(
     @SerialName("order_id") val orderId: String,
     val status: String? = null,
+    @SerialName("pickup_lng") val pickupLongitude: Double? = null,
+    @SerialName("pickup_lat") val pickupLatitude: Double? = null,
+    @SerialName("dropoff_lng") val dropoffLongitude: Double? = null,
+    @SerialName("dropoff_lat") val dropoffLatitude: Double? = null,
     @SerialName("truck_lng") val truckLongitude: Double? = null,
     @SerialName("truck_lat") val truckLatitude: Double? = null,
+    val heading: Double? = null,
     @SerialName("speed_kmh") val speedKmh: Double? = null,
     @SerialName("recorded_at") val recordedAt: String? = null,
+)
+
+@Serializable data class CustomerAssignment(
+    @SerialName("order_id") val orderId: String,
+    @SerialName("driver_name") val driverName: String? = null,
+    @SerialName("driver_phone") val driverPhone: String? = null,
+    @SerialName("driver_verified") val driverVerified: Boolean? = null,
+    @SerialName("license_verified") val licenseVerified: Boolean? = null,
+    @SerialName("national_id_verified") val nationalIdVerified: Boolean? = null,
+    @SerialName("plate_number") val plateNumber: String? = null,
+    @SerialName("vehicle_type") val vehicleType: String? = null,
+    @SerialName("capacity_tons") val capacityTons: Double? = null,
+    @SerialName("truck_photo_path") val truckPhotoPath: String? = null,
+    @SerialName("driver_photo_path") val driverPhotoPath: String? = null,
+)
+
+data class CustomerPlace(val label: String, val longitude: Double, val latitude: Double)
+data class CustomerRoute(
+    val pickup: CustomerPlace,
+    val dropoff: CustomerPlace,
+    val vehicleType: String,
+    val distanceKm: Double,
+    val durationMinutes: Int,
+    val coordinates: List<Pair<Double, Double>>,
 )
 
 data class QuoteInput(val distanceKm: Double, val vehicleType: String, val cargoTons: Double)
@@ -76,5 +106,9 @@ data class CustomerUiState(
     val payments: List<CustomerPayment> = emptyList(),
     val notifications: List<CustomerNotification> = emptyList(),
     val liveTrip: CustomerLiveTrip? = null,
+    val assignments: List<CustomerAssignment> = emptyList(),
+    val trackingOrder: CustomerOrder? = null,
+    val route: CustomerRoute? = null,
+    val driverPhotoUrl: String? = null,
     val quote: QuoteResult? = null,
 )

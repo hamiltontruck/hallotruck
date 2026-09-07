@@ -5,6 +5,7 @@ import { CustomerAuthBoundary } from "./auth/CustomerAuthBoundaryV2";
 import "./styles.css";
 import "./auth-brand.css";
 import "./auth-language-compact.css";
+import "./customer-truck-images";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -1,0 +1,9 @@
+<resources>
+    <color name="hallo_navy">#10213D</color>
+    <color name="hallo_gold">#F5B400</color>
+    <color name="hallo_surface">#F4F7FB</color>
+    <color name="hallo_text">#182033</color>
+    <color name="hallo_muted">#68778D</color>
+    <color name="hallo_success">#027A48</color>
+    <color name="hallo_line">#DFE7F1</color>
+</resources>
