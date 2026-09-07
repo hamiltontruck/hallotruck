@@ -51,6 +51,31 @@ const HALLO_OPERATING_BOUNDS: readonly OperatingBounds[] = [
 ];
 
 const NON_ROUTABLE_PLACE_TYPES = new Set(["continental_marine", "country", "major_landform"]);
+const ROUTE_CACHE_TTL_MS = 2 * 60 * 1000;
+const routeCache = new Map<string, { route: CustomerRoutePreview; storedAt: number }>();
+
+function routeCacheKey(pickup: CustomerPlaceOption, dropoff: CustomerPlaceOption, vehicleType: string) {
+  return [
+    pickup.coordinates.join(","),
+    dropoff.coordinates.join(","),
+    vehicleType.trim().toLowerCase(),
+  ].join("|");
+}
+
+function cacheRoute(route: CustomerRoutePreview, pickup: CustomerPlaceOption, dropoff: CustomerPlaceOption, vehicleType: string) {
+  routeCache.set(routeCacheKey(pickup, dropoff, vehicleType), { route, storedAt: Date.now() });
+}
+
+function readCachedRoute(pickup: CustomerPlaceOption, dropoff: CustomerPlaceOption, vehicleType: string) {
+  const key = routeCacheKey(pickup, dropoff, vehicleType);
+  const cached = routeCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.storedAt > ROUTE_CACHE_TTL_MS) {
+    routeCache.delete(key);
+    return null;
+  }
+  return cached.route;
+}
 
 function finitePositive(value: unknown, label: string) {
   const number = Number(value);
@@ -204,7 +229,7 @@ async function requestHgvRoute(session: Session, input: {
     throw new Error("Truck routing returned an invalid HGV route.");
   }
 
-  return {
+  const route = {
     pickup_label: input.pickup.label,
     dropoff_label: input.dropoff.label,
     pickup: input.pickup.coordinates,
@@ -213,7 +238,9 @@ async function requestHgvRoute(session: Session, input: {
     distance_km: distanceKm,
     duration_minutes: durationMinutes,
     route_coordinates: coordinates,
-  };
+  } satisfies CustomerRoutePreview;
+  cacheRoute(route, input.pickup, input.dropoff, input.vehicleType);
+  return route;
 }
 
 export async function loadCustomerRoutePreview(userId: string, input: {
@@ -223,7 +250,8 @@ export async function loadCustomerRoutePreview(userId: string, input: {
   signal?: AbortSignal;
 }): Promise<CustomerRoutePreview> {
   const { session } = await requireCustomerSession(userId);
-  return requestHgvRoute(session, input);
+  const cached = readCachedRoute(input.pickup, input.dropoff, input.vehicleType);
+  return cached ?? requestHgvRoute(session, input);
 }
 
 export async function loadCustomerQuotePreview(userId: string, input: {
@@ -244,7 +272,8 @@ export async function loadCustomerQuotePreview(userId: string, input: {
     ? input.dropoffPlace as CustomerPlaceOption
     : await geocodePlace(input.dropoffQuery);
 
-  const route = await requestHgvRoute(session, {
+  const cachedRoute = readCachedRoute(pickup, dropoff, input.vehicleType);
+  const route = cachedRoute ?? await requestHgvRoute(session, {
     pickup,
     dropoff,
     vehicleType: input.vehicleType,
