@@ -64,6 +64,21 @@ test("onboarding saves vehicles through the existing HALLO RPC", () => {
   assert.match(onboarding, /p_capacity_tons:/);
 });
 
+test("Driver signup documents support mobile camera formats and advance to pending review", () => {
+  const onboarding = read("../src/onboarding.tsx");
+  const uploadModel = read("../src/driver/driver-document-upload.model.ts");
+  const uploadSheet = read("../src/driver/DriverDocumentUploadSheet.tsx");
+
+  for (const source of [onboarding, uploadModel, uploadSheet]) {
+    assert.match(source, /image\/heic/);
+    assert.match(source, /image\/heif/);
+  }
+  assert.match(onboarding, /const onboardingComplete = identityComplete && vehicleComplete/);
+  assert.match(onboarding, /Verification pending/);
+  assert.match(onboarding, /9 of 9 required documents submitted/);
+  assert.match(onboarding, /Admin\/CEO review is required before jobs become available/);
+});
+
 test("all clients target the same configured Supabase project", () => {
   const primary = read("../src/supabase.ts");
   const mobile = read("../src/auth/mobile-supabase.ts");
