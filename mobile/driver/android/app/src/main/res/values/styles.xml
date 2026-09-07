@@ -15,8 +15,6 @@
         <item name="backgroundTint">@color/driver_nav_background</item>
         <item name="android:textColor">@color/driver_nav_text</item>
         <item name="cornerRadius">12dp</item>
-        <item name="insetTop">0dp</item>
-        <item name="insetBottom">0dp</item>
         <item name="rippleColor">?attr/colorPrimaryContainer</item>
     </style>
 </resources>
