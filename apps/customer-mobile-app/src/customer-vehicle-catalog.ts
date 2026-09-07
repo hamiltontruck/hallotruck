@@ -21,6 +21,15 @@ const VEHICLE_LABELS = [
   ["trailer", "Trailer"],
 ] as const;
 
+function customerMobileVehicleImage(sharedImage: string | undefined) {
+  if (!sharedImage) return null;
+  const filename = sharedImage.split("/").pop();
+  if (!filename) return null;
+  // Customer Mobile is deployed at /customer-mobile/ while the repository's
+  // canonical public vehicle assets remain one level up at /vehicles/.
+  return `${import.meta.env.BASE_URL}../vehicles/${filename}`;
+}
+
 export const CUSTOMER_TRUCKS: readonly CustomerTruckOption[] = VEHICLE_LABELS.map(([key, label]) => {
   const capacityTons = vehicleCapacityTons[label.toLowerCase()] ?? 0;
   const presentation = getVehiclePresentation(label);
@@ -28,7 +37,7 @@ export const CUSTOMER_TRUCKS: readonly CustomerTruckOption[] = VEHICLE_LABELS.ma
     key,
     label,
     capacityTons,
-    image: presentation?.image ?? null,
+    image: customerMobileVehicleImage(presentation?.image),
     imageAlt: presentation?.alt ?? `${label} cargo vehicle`,
   };
 });
