@@ -151,7 +151,7 @@ class CustomerRepository {
         if (clean.isBlank()) return null
         requireCustomer()
         val session = client.auth.currentSessionOrNull() ?: error("Customer session expired")
-        val encodedPath = clean.split('/').joinToString("/") { URLEncoder.encode(it, StandardCharsets.UTF_8).replace("+", "%20") }
+        val encodedPath = clean.split('/').joinToString("/") { URLEncoder.encode(it, StandardCharsets.UTF_8.name()).replace("+", "%20") }
         val body = postJson(
             "${BuildConfig.SUPABASE_URL.trimEnd('/')}/storage/v1/object/sign/driver-verification/$encodedPath",
             "{\"expiresIn\":300}",
@@ -167,8 +167,8 @@ class CustomerRepository {
         val clean = query.trim()
         require(clean.length >= 2) { "Enter pickup and drop-off places" }
         require(BuildConfig.MAPTILER_KEY.isNotBlank()) { "Configure MAPTILER_KEY to search places automatically" }
-        val encoded = URLEncoder.encode(clean, StandardCharsets.UTF_8)
-        val url = "https://api.maptiler.com/geocoding/$encoded.json?key=${URLEncoder.encode(BuildConfig.MAPTILER_KEY, StandardCharsets.UTF_8)}&limit=6&language=en&country=et,dj,so&autocomplete=false"
+        val encoded = URLEncoder.encode(clean, StandardCharsets.UTF_8.name())
+        val url = "https://api.maptiler.com/geocoding/$encoded.json?key=${URLEncoder.encode(BuildConfig.MAPTILER_KEY, StandardCharsets.UTF_8.name())}&limit=6&language=en&country=et,dj,so&autocomplete=false"
         val root = json.parseToJsonElement(get(url)).jsonObject
         val feature = root["features"]?.jsonArray?.firstOrNull { item ->
             val center = (item as? JsonObject)?.get("center") as? JsonArray
