@@ -2,29 +2,36 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-const app = fs.readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+const flow = fs.readFileSync(new URL("../src/CustomerBookingFlow.tsx", import.meta.url), "utf8");
 
-test("Customer booking exposes functional optional cargo details", () => {
-  assert.match(app, /const \[cargoDetailsOpen, setCargoDetailsOpen\] = useState\(false\)/);
-  assert.match(app, /const \[cargoNotes, setCargoNotes\] = useState\(""\)/);
-  assert.match(app, /aria-expanded=\{cargoDetailsOpen\}/);
-  assert.match(app, /aria-controls="customer-cargo-details"/);
-  assert.match(app, /onClick=\{\(\) => setCargoDetailsOpen\(\(open\) => !open\)\}/);
-  assert.match(app, /id="customer-cargo-details"/);
-  assert.match(app, /maxLength=\{500\}/);
-  assert.match(app, /Product name, handling instructions, quantity details/);
-  assert.match(app, /Optional; does not change the transport quote/);
+test("Customer booking keeps handling notes explicitly optional", () => {
+  assert.match(flow, /const \[cargoDetailsOpen, setCargoDetailsOpen\] = useState\(false\)/);
+  assert.match(flow, /const \[cargoNotes, setCargoNotes\] = useState\(""\)/);
+  assert.match(flow, /aria-controls="customer-cargo-details"/);
+  assert.match(flow, /id="customer-cargo-details"/);
+  assert.match(flow, /maxLength=\{500\}/);
+  assert.match(flow, /\{text\.notes\} <b>\{text\.optional\}<\/b>/);
+  assert.match(flow, /\{text\.notesHelp\}/);
+  assert.doesNotMatch(flow, /<textarea[\s\S]{0,500}\srequired(?:=|\s|>)/);
 });
 
-test("booking top bar no longer exposes a dead More action", () => {
-  assert.doesNotMatch(app, /aria-label="More"/);
-  assert.match(app, /aria-label="Back"/);
+test("required booking inputs and quote readiness gate Confirm Order", () => {
+  assert.match(flow, /const routeReady = Boolean/);
+  assert.match(flow, /const truckReady = Boolean/);
+  assert.match(flow, /const cargoReady = Boolean/);
+  assert.match(flow, /const loadReady = cargoTons > 0 && cargoTons <= truck\.capacityTons/);
+  assert.match(flow, /const quoteReady = Boolean/);
+  assert.match(flow, /const paymentReady = paymentMethod === "cash" \|\| paymentMethod === "bank_telebirr"/);
+  assert.match(flow, /const isFormReady = routeReady && truckReady && cargoReady && loadReady && quoteReady && paymentReady/);
+  assert.match(flow, /type="number"/);
+  assert.match(flow, /name="customer-payment-method"/);
+  assert.match(flow, /disabled=\{!isFormReady \|\| submitting\}/);
 });
 
-test("cargo details slice remains read-only", () => {
-  assert.doesNotMatch(app, /\.insert\s*\(/);
-  assert.doesNotMatch(app, /\.update\s*\(/);
-  assert.doesNotMatch(app, /\.delete\s*\(/);
-  assert.doesNotMatch(app, /createCustomerCargoOrder/);
-  assert.match(app, /Order creation is not enabled yet/);
+test("mobile cargo choices keep notes optional without bypassing shared validation", () => {
+  assert.match(flow, /BOOKABLE_CARGO_CATEGORIES = CARGO_CATEGORIES\.filter\(\(category\) => category !== "other"\)/);
+  assert.match(flow, /validateCargoDetails\(\{/);
+  assert.match(flow, /PACKAGING_TYPES\.map/);
+  assert.match(flow, /next === "container_20ft" \|\| next === "container_40ft"/);
+  assert.match(flow, /onTruckChange\("trailer"\)/);
 });
