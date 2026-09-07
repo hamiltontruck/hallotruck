@@ -69,6 +69,18 @@ const primaryButtonStyle = {
   cursor: "pointer",
 } as const;
 
+const modeLinkStyle = {
+  border: 0,
+  padding: "10px 14px",
+  background: "transparent",
+  color: "#0759c7",
+  fontSize: "15px",
+  fontWeight: 900,
+  textDecoration: "underline",
+  textUnderlineOffset: "3px",
+  cursor: "pointer",
+} as const;
+
 function friendlyAuthError(message: string | undefined) {
   const value = message?.toLowerCase() ?? "";
   if (value.includes("invalid login credentials")) return "The email or password is incorrect.";
@@ -161,48 +173,56 @@ function AuthForm({
 
   return (
     <Screen>
-      <section style={panelStyle}>
+      <div style={{ width: "min(100%, 430px)", display: "grid", justifyItems: "stretch" }}>
         <Brand />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "20px", padding: "4px", borderRadius: "16px", background: "#f2f6fb" }}>
-          <button type="button" disabled={busy} onClick={() => setMode("login")} style={{ minHeight: "42px", border: 0, borderRadius: "12px", background: mode === "login" ? "#fff" : "transparent", color: "#10213d", fontWeight: 900, boxShadow: mode === "login" ? "0 4px 12px rgba(16,33,61,.08)" : "none" }}>Sign In</button>
-          <button type="button" disabled={busy} onClick={() => setMode("signup")} style={{ minHeight: "42px", border: 0, borderRadius: "12px", background: mode === "signup" ? "#fff" : "transparent", color: "#10213d", fontWeight: 900, boxShadow: mode === "signup" ? "0 4px 12px rgba(16,33,61,.08)" : "none" }}>Create Account</button>
-        </div>
+        <section style={{ ...panelStyle, width: "100%", boxSizing: "border-box" }}>
+          <p style={{ margin: 0, color: "#9a6700", fontSize: "10px", fontWeight: 900, letterSpacing: ".16em" }}>CUSTOMER ONLY</p>
+          <h1 style={{ margin: "8px 0 0", fontSize: "26px", lineHeight: 1.15 }}>{mode === "signup" ? "Create your HALLO account" : "Sign in to your account"}</h1>
+          <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>
+            {mode === "signup" ? "Create a Customer account using your name, Ethiopian phone number, email and password." : "Use your HALLO Customer account to book and track transport."}
+          </p>
 
-        <p style={{ margin: 0, color: "#9a6700", fontSize: "10px", fontWeight: 900, letterSpacing: ".16em" }}>CUSTOMER ONLY</p>
-        <h1 style={{ margin: "8px 0 0", fontSize: "26px", lineHeight: 1.15 }}>{mode === "signup" ? "Create your HALLO account" : "Sign in to your account"}</h1>
-        <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>
-          {mode === "signup" ? "Create a Customer account using your name, Ethiopian phone number, email and password." : "Use your HALLO Customer account to book and track transport."}
-        </p>
+          {error && <div role="alert" style={{ marginTop: "18px", border: "1px solid #fecaca", borderRadius: "14px", background: "#fef2f2", padding: "12px", color: "#b91c1c", fontSize: "13px" }}>{error}</div>}
+          {notice && <div role="status" style={{ marginTop: "18px", border: "1px solid #bbf7d0", borderRadius: "14px", background: "#f0fdf4", padding: "12px", color: "#166534", fontSize: "13px" }}>{notice}</div>}
 
-        {error && <div role="alert" style={{ marginTop: "18px", border: "1px solid #fecaca", borderRadius: "14px", background: "#fef2f2", padding: "12px", color: "#b91c1c", fontSize: "13px" }}>{error}</div>}
-        {notice && <div role="status" style={{ marginTop: "18px", border: "1px solid #bbf7d0", borderRadius: "14px", background: "#f0fdf4", padding: "12px", color: "#166534", fontSize: "13px" }}>{notice}</div>}
+          <form onSubmit={submit} style={{ display: "grid", gap: "16px", marginTop: "22px" }} aria-busy={busy}>
+            {mode === "signup" && (
+              <>
+                <label style={{ fontSize: "13px", fontWeight: 800 }}>
+                  Full name
+                  <input style={inputStyle} type="text" autoComplete="name" required disabled={busy} value={fullName} onChange={(event) => setFullName(event.target.value)} />
+                </label>
+                <label style={{ fontSize: "13px", fontWeight: 800 }}>
+                  Phone
+                  <input style={inputStyle} type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="09XXXXXXXX or +2519XXXXXXXX" value={phone} onChange={(event) => setPhone(event.target.value)} />
+                </label>
+              </>
+            )}
+            <label style={{ fontSize: "13px", fontWeight: 800 }}>
+              Email
+              <input style={inputStyle} type="email" autoComplete="email" inputMode="email" required disabled={busy} value={email} onChange={(event) => setEmail(event.target.value)} />
+            </label>
+            <label style={{ fontSize: "13px", fontWeight: 800 }}>
+              Password
+              <input style={inputStyle} type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} />
+            </label>
+            <button type="submit" disabled={busy} style={{ ...primaryButtonStyle, opacity: busy ? .6 : 1 }}>
+              {busy ? (mode === "signup" ? "CREATING ACCOUNT…" : "VERIFYING ACCOUNT…") : (mode === "signup" ? "CREATE ACCOUNT" : "SIGN IN")}
+            </button>
+          </form>
+        </section>
 
-        <form onSubmit={submit} style={{ display: "grid", gap: "16px", marginTop: "22px" }} aria-busy={busy}>
-          {mode === "signup" && (
-            <>
-              <label style={{ fontSize: "13px", fontWeight: 800 }}>
-                Full name
-                <input style={inputStyle} type="text" autoComplete="name" required disabled={busy} value={fullName} onChange={(event) => setFullName(event.target.value)} />
-              </label>
-              <label style={{ fontSize: "13px", fontWeight: 800 }}>
-                Phone
-                <input style={inputStyle} type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="09XXXXXXXX or +2519XXXXXXXX" value={phone} onChange={(event) => setPhone(event.target.value)} />
-              </label>
-            </>
-          )}
-          <label style={{ fontSize: "13px", fontWeight: 800 }}>
-            Email
-            <input style={inputStyle} type="email" autoComplete="email" inputMode="email" required disabled={busy} value={email} onChange={(event) => setEmail(event.target.value)} />
-          </label>
-          <label style={{ fontSize: "13px", fontWeight: 800 }}>
-            Password
-            <input style={inputStyle} type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} />
-          </label>
-          <button type="submit" disabled={busy} style={{ ...primaryButtonStyle, opacity: busy ? .6 : 1 }}>
-            {busy ? (mode === "signup" ? "CREATING ACCOUNT…" : "VERIFYING ACCOUNT…") : (mode === "signup" ? "CREATE ACCOUNT" : "SIGN IN")}
+        <div style={{ display: "grid", placeItems: "center", marginTop: "18px" }}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setMode(mode === "login" ? "signup" : "login")}
+            style={{ ...modeLinkStyle, opacity: busy ? .55 : 1 }}
+          >
+            {mode === "login" ? "Create a Customer account" : "Back to Sign in"}
           </button>
-        </form>
-      </section>
+        </div>
+      </div>
     </Screen>
   );
 }
