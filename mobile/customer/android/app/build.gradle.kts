@@ -16,6 +16,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SUPABASE_URL", "\"${escapedProperty("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${escapedProperty("SUPABASE_PUBLISHABLE_KEY")}\"")
+        buildConfigField("String", "MAPTILER_KEY", "\"${escapedProperty("MAPTILER_KEY")}\"")
     }
     buildFeatures { viewBinding = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
