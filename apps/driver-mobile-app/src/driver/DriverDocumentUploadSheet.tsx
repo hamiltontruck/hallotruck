@@ -47,7 +47,9 @@ export function DriverDocumentUploadSheet({
   const warning = replacementWarning(currentRecord);
   const photoOnly = photoOnlyDocumentKeys.has(documentKey);
   const supportsExpiry = expiryDocumentKeys.has(documentKey);
-  const accept = photoOnly ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,application/pdf";
+  const accept = photoOnly
+    ? "image/jpeg,image/png,image/webp,image/heic,image/heif"
+    : "image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf";
   const selectedSummary = useMemo(
     () => file ? `${file.name} · ${formatBytes(file.size)}` : null,
     [file],
@@ -119,7 +121,7 @@ export function DriverDocumentUploadSheet({
         />
         <button type="button" onClick={chooseFile} disabled={submitting} className="flex min-h-24 w-full flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-halo-line bg-halo-canvas px-4 text-center transition active:scale-[0.99] disabled:opacity-60">
           <span className="text-sm font-black text-halo-blue">{file ? "File jijjiiri" : photoOnly ? "Kaameraa ykn Gallery bani" : "File filadhu"}</span>
-          <span className="mt-2 break-all text-[10px] leading-4 text-halo-muted">{selectedSummary || (photoOnly ? "JPG, PNG, WebP · max 10 MB" : "JPG, PNG, WebP, PDF · max 10 MB")}</span>
+          <span className="mt-2 break-all text-[10px] leading-4 text-halo-muted">{selectedSummary || (photoOnly ? "JPG, PNG, WebP, HEIC/HEIF · max 10 MB" : "JPG, PNG, WebP, HEIC/HEIF, PDF · max 10 MB")}</span>
         </button>
 
         {supportsExpiry && <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">Expiry date — optional</span><input type="date" value={expiryDate} disabled={submitting} onChange={(event) => setExpiryDate(event.target.value)} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" /></label>}
