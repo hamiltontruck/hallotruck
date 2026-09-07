@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.core.widget.doAfterTextChanged
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.hallo.logistics.customer.databinding.ActivityMainBinding
@@ -32,6 +33,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: CustomerViewModel by viewModels()
     private var signupMode = false
+    private var pickupLabels: List<String> = emptyList()
+    private var dropoffLabels: List<String> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,6 +89,11 @@ class MainActivity : AppCompatActivity() {
             )
         }
         createOrder.setOnClickListener { createCurrentOrder() }
+        pickupAddress.doAfterTextChanged { value -> viewModel.bookingInputChanged(); viewModel.searchPlaces(value?.toString().orEmpty(), true) }
+        dropoffAddress.doAfterTextChanged { value -> viewModel.bookingInputChanged(); viewModel.searchPlaces(value?.toString().orEmpty(), false) }
+        cargoTons.doAfterTextChanged { viewModel.bookingInputChanged() }
+        pickupAddress.setOnItemClickListener { _, _, _, _ -> viewModel.bookingInputChanged() }
+        dropoffAddress.setOnItemClickListener { _, _, _, _ -> viewModel.bookingInputChanged() }
     }
 
     private fun openActiveTracking() {
@@ -127,6 +135,7 @@ class MainActivity : AppCompatActivity() {
         homeActiveOrder.text = active?.let { "${it.trackingId ?: "Active order"}\n${it.pickupAddress.orEmpty()} → ${it.dropoffAddress.orEmpty()}\n${label(it.status)}" } ?: "No active delivery\nCreate an order when you are ready to move cargo."
         homeTrack.visibility = visible(active != null)
         quoteResult.text = state.quote?.let { quote -> state.route?.let { "${it.pickup.label}\n→ ${it.dropoff.label}\n${quote.vehicleType} · ${quote.distanceKm} km · ${it.durationMinutes} min\n${quote.cargoTons} ton · ${money(quote.totalEtb)}" } ?: money(quote.totalEtb) } ?: "Route and quote will appear here."
+        renderPlaceSuggestions(state)
         bookingMap.showRoute(state.route)
         createOrder.isEnabled = state.quote != null && state.route != null && !state.busy
         profileDetails.text = state.profile?.let { "${it.fullName.orEmpty()}\n${it.phone.orEmpty()}\n${it.email.orEmpty()}\n${it.homeAddress.orEmpty()}\n\nCustomer access only · HALLO shared backend" }.orEmpty()
@@ -134,6 +143,21 @@ class MainActivity : AppCompatActivity() {
         renderPayments(state.payments, state.orders)
         renderNotifications(state.notifications)
         renderTracking(state)
+    }
+
+    private fun renderPlaceSuggestions(state: CustomerUiState) {
+        val pickup = state.pickupSuggestions.map { it.label }
+        if (pickup != pickupLabels) {
+            pickupLabels = pickup
+            binding.pickupAddress.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, pickup))
+            if (pickup.isNotEmpty() && binding.pickupAddress.hasFocus()) binding.pickupAddress.showDropDown()
+        }
+        val dropoff = state.dropoffSuggestions.map { it.label }
+        if (dropoff != dropoffLabels) {
+            dropoffLabels = dropoff
+            binding.dropoffAddress.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, dropoff))
+            if (dropoff.isNotEmpty() && binding.dropoffAddress.hasFocus()) binding.dropoffAddress.showDropDown()
+        }
     }
 
     private fun highlightNavigation(page: CustomerPage) {
