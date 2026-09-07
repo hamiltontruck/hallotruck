@@ -1,0 +1,7 @@
+/* Compact auth language selector based on the approved Customer portal pattern. */
+.auth{position:relative}
+.auth>.panel>label:first-child{position:absolute!important;top:24px;right:0;z-index:5;width:132px!important;display:block!important;margin:0!important;gap:0!important;color:transparent!important;font-size:0!important;line-height:0!important}
+.auth>.panel>label:first-child select{display:block!important;width:100%!important;min-height:40px!important;height:40px!important;margin:0!important;padding:0 34px 0 12px!important;border:1px solid #d7e0ec!important;border-radius:12px!important;background-color:rgba(255,255,255,.96)!important;color:#10213d!important;font-size:12px!important;font-weight:850!important;line-height:1!important;box-shadow:0 8px 24px rgba(16,33,61,.08)!important;outline:none!important;cursor:pointer!important}
+.auth>.panel>label:first-child select:focus{border-color:#0759c7!important;box-shadow:0 0 0 3px rgba(7,89,199,.12),0 8px 24px rgba(16,33,61,.08)!important}
+.auth>.panel>label:first-child select:disabled{cursor:wait!important;opacity:.65!important}
+@media(max-width:360px){.auth>.panel>label:first-child{top:18px;width:120px!important}.auth>.panel>label:first-child select{height:38px!important;min-height:38px!important;padding-left:10px!important;font-size:11px!important}}
