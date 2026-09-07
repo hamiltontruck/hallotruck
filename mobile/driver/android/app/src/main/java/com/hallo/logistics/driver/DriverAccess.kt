@@ -8,6 +8,19 @@ object DriverAccessPolicy {
  fun validSignupPin(value: String) = value.length == 6 && value.all(Char::isDigit)
 }
 
+object DriverErrorPolicy {
+ fun safeMessage(error:Throwable):String {
+  val raw=error.message.orEmpty()
+  return when {
+   raw.contains("invalid_credentials",ignoreCase=true)||raw.contains("invalid login credentials",ignoreCase=true)->"Email or password is incorrect"
+   raw.contains("already registered",ignoreCase=true)->"An account already exists for this email"
+   raw.contains("network",ignoreCase=true)||raw.contains("timeout",ignoreCase=true)||raw.contains("unable to resolve host",ignoreCase=true)->"Network unavailable. Check your connection and try again"
+   error is IllegalArgumentException&&raw.isNotBlank()->raw
+   else->"Request failed. Please try again"
+  }
+ }
+}
+
 object DriverDocumentPolicy {
  val identityKeys=setOf("driver_photo","license_front","license_back","national_id_front","national_id_back")
  val vehicleKeys=setOf("vehicle_registration","insurance","truck_front","truck_side")
