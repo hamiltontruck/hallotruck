@@ -5,11 +5,11 @@ main>div[style*="430px"]>section>label:first-child select{display:block!importan
 main>div[style*="430px"]>section>label:first-child select:focus{border-color:#0759c7!important;box-shadow:0 0 0 3px rgba(7,89,199,.12),0 8px 24px rgba(16,33,61,.08)!important}
 main>div[style*="430px"]>section>label:first-child select:disabled{cursor:wait!important;opacity:.65!important}
 
-/* Keep the signed-out card compact: remove the redundant Customer-only intro block. */
-main>div[style*="430px"]>section>label:first-child+p,
-main>div[style*="430px"]>section>label:first-child+p+h1,
-main>div[style*="430px"]>section>label:first-child+p+h1+p{display:none!important}
-main>div[style*="430px"]>section>label:first-child+p+h1+p+form{margin-top:0!important}
+/* Signed-out login only: remove the redundant Customer intro regardless of label DOM ordering. */
+main>div[style*="430px"]>section>p:first-of-type,
+main>div[style*="430px"]>section>h1:first-of-type,
+main>div[style*="430px"]>section>p:nth-of-type(2){display:none!important}
+main>div[style*="430px"]>section>form{margin-top:0!important}
 
 /* Access/error/boot states keep the same top-right language placement. */
 main>section[style*="430px"]{position:relative!important;box-sizing:border-box!important;padding-top:76px!important}
