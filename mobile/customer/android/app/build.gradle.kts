@@ -4,6 +4,28 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val generatedHalloResources = layout.buildDirectory.dir("generated/halloBrandResources")
+val prepareHalloResources by tasks.registering(Copy::class) {
+    into(generatedHalloResources)
+    from(rootProject.file("../../../apps/customer-mobile-app/src/hallo-logistics-logo.webp")) {
+        into("drawable-nodpi")
+        rename { "hallo_logistics_logo.webp" }
+    }
+    val vehicleAssets = mapOf(
+        "cab-over-box-truck-5-ton.webp" to "truck_isuzu_5.webp",
+        "dry-cargo-truck-10-ton.webp" to "truck_10_ton.webp",
+        "cargo-truck-22-ton.webp" to "truck_22_ton.webp",
+        "cargo-truck-25-ton.webp" to "truck_25_ton.webp",
+        "cargo-truck-30-ton.webp" to "truck_30_ton.webp",
+    )
+    vehicleAssets.forEach { (source, target) ->
+        from(rootProject.file("../../../public/vehicles/$source")) {
+            into("drawable-nodpi")
+            rename { target }
+        }
+    }
+}
+
 fun escapedProperty(name: String): String = providers.gradleProperty(name).orNull.orEmpty()
     .replace("\\", "\\\\").replace("\"", "\\\"")
 
@@ -19,6 +41,7 @@ android {
         buildConfigField("String", "MAPTILER_KEY", "\"${escapedProperty("MAPTILER_KEY")}\"")
     }
     buildFeatures { viewBinding = true; buildConfig = true }
+    sourceSets.getByName("main").res.srcDir(generatedHalloResources)
     compileOptions { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
     kotlin { jvmToolchain(21) }
     lint {
@@ -28,6 +51,8 @@ android {
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
+
+tasks.named("preBuild").configure { dependsOn(prepareHalloResources) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.16.0")

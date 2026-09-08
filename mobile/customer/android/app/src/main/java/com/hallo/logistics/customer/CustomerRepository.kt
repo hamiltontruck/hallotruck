@@ -240,6 +240,8 @@ class CustomerRepository {
     suspend fun createOrder(input: CreateOrderInput): String {
         val id = requireCustomer(); val customer = profile()
         require(input.quoteEtb > 0 && input.distanceKm > 0 && input.cargoTons > 0) { "Calculate a valid quote first" }
+        require(input.cargoQuantity > 0 && input.cargoUnit in setOf("ton", "quintal")) { "Enter a valid cargo quantity and unit" }
+        require(input.cargoCategory.isNotBlank() && input.packagingType.isNotBlank()) { "Choose cargo category and packaging" }
         require(input.pickupAddress.length >= 2 && input.dropoffAddress.length >= 2) { "Enter pickup and drop-off addresses" }
         require(input.pickupLatitude.isFinite() && input.pickupLatitude in -90.0..90.0 && input.pickupLongitude.isFinite() && input.pickupLongitude in -180.0..180.0) { "Pickup coordinates are invalid" }
         require(input.dropoffLatitude.isFinite() && input.dropoffLatitude in -90.0..90.0 && input.dropoffLongitude.isFinite() && input.dropoffLongitude in -180.0..180.0) { "Drop-off coordinates are invalid" }
@@ -252,7 +254,9 @@ class CustomerRepository {
             tracking, id, customer.fullName ?: "Customer", customer.phone.orEmpty(), input.pickupAddress,
             "POINT(${input.pickupLongitude} ${input.pickupLatitude})", input.dropoffAddress,
             "POINT(${input.dropoffLongitude} ${input.dropoffLatitude})", input.vehicleType, input.distanceKm,
-            input.cargoTons, cargoDescription = input.cargoDescription, priceEtb = verifiedQuote.totalEtb,
+            input.cargoQuantity, cargoUnit = input.cargoUnit, cargoCategory = input.cargoCategory,
+            packagingType = input.packagingType, cargoDescription = input.cargoDescription,
+            priceEtb = verifiedQuote.totalEtb,
             selectedPaymentMethod = input.paymentMethod,
         )) { select(Columns.list("id,tracking_id")) }.decodeSingle<CreatedOrder>()
         return row.trackingId

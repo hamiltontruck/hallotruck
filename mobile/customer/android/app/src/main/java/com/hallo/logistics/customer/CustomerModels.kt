@@ -90,7 +90,9 @@ data class CreateOrderInput(
     val pickupAddress: String, val pickupLongitude: Double, val pickupLatitude: Double,
     val dropoffAddress: String, val dropoffLongitude: Double, val dropoffLatitude: Double,
     val vehicleType: String, val distanceKm: Double, val cargoTons: Double,
-    val cargoDescription: String, val paymentMethod: String, val quoteEtb: Double,
+    val cargoQuantity: Double, val cargoUnit: String, val cargoCategory: String,
+    val packagingType: String, val cargoDescription: String,
+    val paymentMethod: String, val quoteEtb: Double,
 )
 
 enum class CustomerPage { HOME, BOOK, ORDERS, TRACKING, PAYMENTS, NOTIFICATIONS, PROFILE }
