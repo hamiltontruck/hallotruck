@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.hallo.logistics.customer.app-mergeDebugResources-36:/values-v18/values-v18.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\HP\\.gradle\\caches\\8.9\\transforms\\5ba1194b86b8329dab68759a0387f6ae\\transformed\\appcompat-1.7.1\\res\\values-v18\\values-v18.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "48",
+                        "endOffsets": "99"
+                    }
+                }
+            ]
+        }
+    ]
+}
