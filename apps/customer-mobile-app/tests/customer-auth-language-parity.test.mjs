@@ -23,3 +23,10 @@ test("Customer auth language labels are compact EN, OR and Amharic abbreviation"
   assert.match(labels, /values\.includes\("am"\)/);
   assert.match(main, /import "\.\/auth-language-labels"/);
 });
+
+test("Customer signed-out card hides the redundant intro block and lifts the form", () => {
+  assert.match(css, /label:first-child\+p,/);
+  assert.match(css, /label:first-child\+p\+h1,/);
+  assert.match(css, /label:first-child\+p\+h1\+p\{display:none!important\}/);
+  assert.match(css, /label:first-child\+p\+h1\+p\+form\{margin-top:0!important\}/);
+});
