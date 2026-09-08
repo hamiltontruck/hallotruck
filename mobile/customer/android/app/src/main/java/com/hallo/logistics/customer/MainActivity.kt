@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderTruckOptions() = with(binding) {
+    private fun renderTruckOptions(): Unit = with(binding) {
         truckOptions.removeAllViews()
         TRUCKS.forEach { truck ->
             val item = ItemCustomerTruckBinding.inflate(layoutInflater, truckOptions, false)
@@ -208,7 +208,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun render(state: CustomerUiState) = with(binding) {
         progress.visibility = visible(state.loading || state.busy)
-        val fallbackStatus = tr("Secure Customer workspace", "Iddoo hojii Customer nageenya qabu", "ደህንነቱ የተጠበቀ የደንበኛ ቦታ")
+        val fallbackStatus = tr("Secure Customer workspace", "Iddoo hojii Customer nageenya qabu", "ደህነቱ የተጠበቀ የደንበኛ ቦታ")
         status.text = state.message.ifBlank { fallbackStatus }
         authPanel.visibility = visible(!state.authorized && !state.loading)
         customerShell.visibility = visible(state.authorized)
@@ -240,7 +240,7 @@ class MainActivity : AppCompatActivity() {
         homeTrack.visibility = visible(active != null)
         quoteResult.text = state.quote?.let { quote ->
             state.route?.let { "${it.pickup.label}\n→ ${it.dropoff.label}\n${selectedVehicle.label} · ${quote.distanceKm} km · ${it.durationMinutes} min\n${formatTons(quote.cargoTons)} · ${money(quote.totalEtb)}" } ?: money(quote.totalEtb)
-        } ?: tr("Route, distance and the secure backend quote will appear here.", "Daandiin, fageenyi fi gatiin backend nageenya qabu asitti mulʼata.", "መንገድ፣ ርቀት እና ደህንነቱ የተጠበቀ ዋጋ እዚህ ይታያል።")
+        } ?: tr("Route, distance and the secure backend quote will appear here.", "Daandiin, fageenyi fi gatiin backend nageenya qabu asitti mulʼata.", "መንገድ፣ ርቀት እና ደህነቱ የተጠበቀ ዋጋ እዚህ ይታያል።")
         renderPlaceSuggestions(state)
         bookingMap.showRoute(state.route)
         createOrder.isEnabled = state.quote != null && state.route != null && !state.busy
@@ -262,7 +262,7 @@ class MainActivity : AppCompatActivity() {
             CustomerPage.NOTIFICATIONS -> tr("Alerts", "Beeksisa", "ማሳወቂያዎች")
             CustomerPage.PROFILE -> tr("Your account", "Akkaawuntii kee", "መለያዎ")
         }
-        authSubtitle.text = tr("Book, pay and follow every delivery securely.", "Nageenyaan ajaji, kaffali, geejjiba hordofi.", "በደህንነት ይዘዙ፣ ይክፈሉ እና ይከታተሉ።")
+        authSubtitle.text = tr("Book, pay and follow every delivery securely.", "Nageenyaan ajaji, kaffali, geejjiba hordofi.", "በደህነት ይዘዙ፣ ይክፈሉ እና ይከታተሉ።")
         navHome.text = tr("Home", "Mana", "መነሻ")
         navBook.text = tr("Book", "Ajaji", "ይዘዙ")
         navOrders.text = tr("Orders", "Ajaja", "ትዕዛዝ")
@@ -278,7 +278,7 @@ class MainActivity : AppCompatActivity() {
         truckSectionTitle.text = tr("2 · Choose a truck", "2 · Konkolaataa filadhu", "2 · መኪና ይምረጡ")
         truckSectionHelp.text = tr("Swipe to compare capacity and select.", "Harkisi; baayʼina walbira qabii filadhu.", "አቅምን ለማወዳደር ያንሸራትቱ።")
         cargoSectionTitle.text = tr("3–4 · Cargo and load", "3–4 · Feʼumsaa fi baayʼina", "3–4 · ጭነት እና መጠን")
-        quoteSectionTitle.text = tr("5 · Secure quote", "5 · Gatii nageenya qabu", "5 · ደህንነቱ የተጠበቀ ዋጋ")
+        quoteSectionTitle.text = tr("5 · Secure quote", "5 · Gatii nageenya qabu", "5 · ደህነቱ የተጠበቀ ዋጋ")
         pickupLayout.hint = tr("Pickup place", "Bakka feʼumsaa", "መነሻ ቦታ")
         dropoffLayout.hint = tr("Drop-off place", "Bakka buusaa", "መድረሻ ቦታ")
         cargoCategoryLayout.hint = tr("Cargo category", "Gosa feʼumsaa", "የጭነት ዓይነት")
@@ -361,8 +361,8 @@ class MainActivity : AppCompatActivity() {
         val order = state.trackingOrder ?: state.orders.firstOrNull { it.status in setOf("accepted", "in_transit") }
         val assignment = order?.let { selected -> state.assignments.firstOrNull { it.orderId == selected.id } }
         driverDetails.text = assignment?.let {
-            "${it.driverName ?: tr("Assigned driver", "Konkolaachisaa ramadame", "የተመደበ አሽከርካሪ")}\n${it.vehicleType ?: "—"} · ${it.plateNumber ?: "—"}\n${if (it.driverVerified == true) tr("✓ Verified driver", "✓ Konkolaachisaa mirkanaaʼe", "✓ የተረጋገጠ አሽከርካሪ") else tr("Verification pending", "Mirkaneessi eegamaa jira", "ማረጋገጫ በመጠባበቅ ላይ")}"
-        } ?: tr("Waiting for secure driver assignment", "Ramaddii konkolaachisaa nageenya qabu eegaa jira", "ደህንነቱ የተጠበቀ የአሽከርካሪ ምደባ በመጠባበቅ ላይ")
+            "${it.driverName ?: tr("Assigned driver", "Konkolaachisaa ramadame", "የተመደበ አሽከርካሪ")}\n${it.vehicleType ?: "—"} · ${it.plateNumber ?: "—"}\n${if (it.driverVerified == true) tr("✓ Verified driver", "Konkolaachisaa mirkanaaʼe", "✓ የተረጋገጠ አሽከርካሪ") else tr("Verification pending", "Mirkaneessi eegamaa jira", "ማረጋገጫ በመጠባበቅ ላይ")}"
+        } ?: tr("Waiting for secure driver assignment", "Ramaddii konkolaachisaa nageenya qabu eegaa jira", "ደህነቱ የተጠበቀ የአሽከርካሪ ምደባ በመጠባበቅ ላይ")
         trackingMap.showTrip(state.liveTrip)
         trackingFreshness.text = trackingFreshness(state.liveTrip)
         val fresh = CustomerPolicy.trackingFreshness(state.liveTrip?.recordedAt, state.liveTrip?.truckLatitude != null)
