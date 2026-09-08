@@ -13,7 +13,7 @@ function compactCustomerAuthLanguageSelects() {
     select.dataset.customerAuthLanguage = "compact";
     Array.from(select.options).forEach((option) => {
       const label = COMPACT_LANGUAGE_LABELS[option.value];
-      if (label) option.textContent = label;
+      if (label && option.textContent !== label) option.textContent = label;
     });
   });
 }
