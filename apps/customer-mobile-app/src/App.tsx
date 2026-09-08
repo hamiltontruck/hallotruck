@@ -1,34 +1,21 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CustomerIdentity } from "./auth/CustomerAuthBoundary";
 import { CustomerBookingMap } from "./CustomerBookingMap";
+import { CustomerBookingFlow } from "./CustomerBookingFlow";
 import { CustomerOrdersPage, CustomerProfilePage } from "./CustomerDataPages";
 import { CustomerPaymentsPage } from "./CustomerPaymentsPage";
 import { CustomerTrackingPage } from "./CustomerTrackingPage";
+import { CustomerLanguageSwitcher, useCustomerLanguage } from "./customer-language";
 import {
-  loadCustomerQuotePreview,
   loadCustomerRoutePreview,
   type CustomerPlaceOption,
-  type CustomerQuotePreview,
   type CustomerRoutePreview,
 } from "./customer-quote.service";
+import type { CreatedCustomerOrder } from "./customer-order.service";
+import { customerTruckByKey } from "./customer-vehicle-catalog";
 
 type Tab = "home" | "orders" | "track" | "payments" | "profile";
-type IconName = "home" | "orders" | "track" | "payments" | "profile" | "arrow" | "box" | "clock";
-
-type TruckOption = {
-  key: string;
-  label: string;
-  capacity: string;
-  maxTons: number;
-  body: "pickup" | "van" | "box" | "dry";
-};
-
-const TRUCKS: TruckOption[] = [
-  { key: "pickup", label: "Pickup", capacity: "Max load: 3 Ton", maxTons: 3, body: "pickup" },
-  { key: "van", label: "Van", capacity: "Max load: 5 Ton", maxTons: 5, body: "van" },
-  { key: "isuzu", label: "Isuzu 5 Ton", capacity: "Max load: 5 Ton", maxTons: 5, body: "box" },
-  { key: "dry-cargo", label: "Dry Cargo", capacity: "Max load: 10 Ton", maxTons: 10, body: "dry" },
-];
+type IconName = "home" | "orders" | "track" | "payments" | "profile" | "clock";
 
 const ICONS: Record<IconName, ReactNode> = {
   home: <><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9 20v-6h6v6"/></>,
@@ -36,8 +23,6 @@ const ICONS: Record<IconName, ReactNode> = {
   track: <><path d="m3 6 5-3 8 3 5-3v15l-5 3-8-3-5 3Z"/><path d="M8 3v15M16 6v15"/></>,
   payments: <><path d="M4 7h16v12H4z"/><path d="M4 10h16M15 14h3"/></>,
   profile: <><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></>,
-  arrow: <><path d="M5 12h14M13 6l6 6-6 6"/></>,
-  box: <><path d="m4 7 8-4 8 4-8 4Z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></>,
   clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
 };
 
@@ -49,270 +34,12 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   );
 }
 
-function HaloLogo() {
+function HalloLogo() {
   return (
     <div className="halo-logo" aria-label="HALLOTRUCK Customer Mobile">
       <div className="halo-wordmark">HALLO<span style={{ color: "var(--gold)", marginLeft: ".08em" }}>TRUCK</span></div>
       <div className="halo-brand-copy"><strong>Customer</strong><small>Smart Logistics</small></div>
     </div>
-  );
-}
-
-function TruckArtwork({ body }: { body: TruckOption["body"] }) {
-  const longBody = body === "van" || body === "dry";
-  const boxBody = body === "box" || body === "dry";
-  return (
-    <svg className="truck-art" viewBox="0 0 170 82" role="img" aria-label="Truck illustration">
-      <ellipse cx="87" cy="68" rx="67" ry="6" fill="#dfe5eb" />
-      {boxBody && <rect x={body === "dry" ? 60 : 67} y="18" width={body === "dry" ? 86 : 72} height="39" rx="3" fill="#f8fafc" stroke="#b6c0ca" />}
-      {body === "pickup" && <path d="M58 37h50l18 17H48l10-17Z" fill="#f8fafc" stroke="#a9b4bf" />}
-      {body === "van" && <path d="M46 25h80c11 0 20 9 20 20v12H40V35c0-6 2-10 6-10Z" fill="#f8fafc" stroke="#a9b4bf" />}
-      <path d={longBody ? "M24 43h31l9-21h27v35H24Z" : "M31 41h37l9-21h24v37H31Z"} fill="#ffffff" stroke="#9aa6b2" />
-      <path d={longBody ? "M61 25h20v14H55Z" : "M75 24h18v15H69Z"} fill="#d8e5ef" />
-      <rect x="25" y="54" width="121" height="7" rx="3" fill="#475467" />
-      <circle cx="54" cy="62" r="10" fill="#26323e" /><circle cx="54" cy="62" r="4" fill="#cbd5df" />
-      <circle cx="124" cy="62" r="10" fill="#26323e" /><circle cx="124" cy="62" r="4" fill="#cbd5df" />
-    </svg>
-  );
-}
-
-function formatQuoteEtb(amount: number) {
-  return `ETB ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount)}`;
-}
-
-function BookingSheet({
-  pickup,
-  dropoff,
-  pickupPlace,
-  dropoffPlace,
-  userId,
-  selectedTruck,
-  routePreview,
-  routeLoading,
-  routeError,
-  onTruckChange,
-  onClose,
-  onRouteResolved,
-}: {
-  pickup: string;
-  dropoff: string;
-  pickupPlace: CustomerPlaceOption | null;
-  dropoffPlace: CustomerPlaceOption | null;
-  userId: string;
-  selectedTruck: string;
-  routePreview: CustomerRoutePreview | null;
-  routeLoading: boolean;
-  routeError: string;
-  onTruckChange: (truckKey: string) => void;
-  onClose: () => void;
-  onRouteResolved: (route: CustomerRoutePreview) => void;
-}) {
-  const [cargo, setCargo] = useState("General goods");
-  const [loadType, setLoadType] = useState("Loose / bulk");
-  const [cargoQuantity, setCargoQuantity] = useState("");
-  const [cargoUnit, setCargoUnit] = useState<"ton" | "quintal">("ton");
-  const [cargoDetailsOpen, setCargoDetailsOpen] = useState(false);
-  const [cargoNotes, setCargoNotes] = useState("");
-  const [quote, setQuote] = useState<CustomerQuotePreview | null>(null);
-  const [quoteLoading, setQuoteLoading] = useState(false);
-  const [quoteError, setQuoteError] = useState("");
-  const truck = TRUCKS.find((item) => item.key === selectedTruck) ?? TRUCKS[0];
-  const rawCargoAmount = Number(cargoQuantity);
-  const cargoTons = Number.isFinite(rawCargoAmount) && rawCargoAmount > 0
-    ? (cargoUnit === "quintal" ? rawCargoAmount / 10 : rawCargoAmount)
-    : 0;
-  const cargoReady = cargoTons > 0 && cargoTons <= truck.maxTons;
-  const routeReady = Boolean(routePreview && !routeLoading && !routeError);
-
-  useEffect(() => {
-    setQuote(null);
-    setQuoteError("");
-  }, [pickupPlace, dropoffPlace, selectedTruck]);
-
-  async function calculateQuote() {
-    if (!pickupPlace || !dropoffPlace || !routeReady) {
-      setQuoteError("Choose a valid pickup and drop-off route first.");
-      return;
-    }
-    if (!cargoTons) {
-      setQuoteError("Enter a load amount greater than zero.");
-      return;
-    }
-    if (cargoTons > truck.maxTons) {
-      setQuoteError(`The load exceeds ${truck.label} capacity of ${truck.maxTons} Ton.`);
-      return;
-    }
-
-    setQuoteLoading(true);
-    setQuoteError("");
-    setQuote(null);
-    try {
-      const result = await loadCustomerQuotePreview(userId, {
-        pickupQuery: pickup,
-        dropoffQuery: dropoff,
-        pickupPlace,
-        dropoffPlace,
-        vehicleType: truck.label,
-        cargoTons,
-      });
-      setQuote(result);
-      onRouteResolved(result);
-    } catch (error) {
-      setQuoteError(error instanceof Error ? error.message : "Quote could not be calculated.");
-    } finally {
-      setQuoteLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    setQuote(null);
-    setQuoteError("");
-
-    if (!pickupPlace || !dropoffPlace || !routeReady || cargoTons <= 0) {
-      setQuoteLoading(false);
-      return;
-    }
-
-    if (cargoTons > truck.maxTons) {
-      setQuoteLoading(false);
-      setQuoteError(`The load exceeds ${truck.label} capacity of ${truck.maxTons} Ton.`);
-      return;
-    }
-
-    let active = true;
-    setQuoteLoading(true);
-    const timer = window.setTimeout(() => {
-      void loadCustomerQuotePreview(userId, {
-        pickupQuery: pickup,
-        dropoffQuery: dropoff,
-        pickupPlace,
-        dropoffPlace,
-        vehicleType: truck.label,
-        cargoTons,
-      })
-        .then((result) => {
-          if (active) setQuote(result);
-        })
-        .catch((error: unknown) => {
-          if (active) setQuoteError(error instanceof Error ? error.message : "Quote could not be calculated.");
-        })
-        .finally(() => {
-          if (active) setQuoteLoading(false);
-        });
-    }, 250);
-
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [cargoTons, dropoff, dropoffPlace, pickup, pickupPlace, routeReady, truck.label, truck.maxTons, userId]);
-
-  function invalidateQuote() {
-    setQuote(null);
-    setQuoteError("");
-  }
-
-  return (
-    <section className="booking-screen" aria-label="Choose truck and cargo">
-      <div className="booking-topbar">
-        <button type="button" className="round-button" onClick={onClose} aria-label="Back">‹</button>
-        <div><small>02 · BOOK YOUR TRIP</small><strong>Choose truck &amp; cargo</strong></div>
-        <span aria-hidden="true" style={{ width: "2.45rem", height: "2.45rem" }} />
-      </div>
-
-      <div className="booking-body">
-        <p className="booking-subtitle">Select the best vehicle and load details for your delivery.</p>
-        <div className="step-row" aria-label="Booking progress">
-          <span className={routeReady ? "done" : ""}>✓ Route</span>
-          <span className="active">✓ Truck</span>
-          <span className={cargo && loadType ? "done" : ""}>Cargo</span>
-          <span className={cargoReady ? "done" : ""}>Load</span>
-          <span className={quote ? "done" : ""}>Quote</span>
-        </div>
-
-        {routePreview && (
-          <div style={{ margin: "0 0 14px", border: "1px solid #dce6f2", borderRadius: 16, background: "#f8fbff", padding: 12, color: "#10213d", fontSize: 11, lineHeight: 1.55 }}>
-            <small style={{ color: "#9a6700", fontWeight: 900 }}>AUTO ROUTE</small>
-            <strong style={{ display: "block", marginTop: 3, fontSize: 12 }}>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong>
-            <span style={{ display: "block", marginTop: 4 }}>{routePreview.distance_km.toFixed(1)} km · {Math.round(routePreview.duration_minutes)} min · {truck.label}</span>
-          </div>
-        )}
-        {routeLoading && <p style={{ margin: "0 0 12px", color: "#66758c", fontSize: 11, fontWeight: 750 }}>Recalculating the HGV route for {truck.label}…</p>}
-        {routeError && <p role="alert" style={{ margin: "0 0 12px", color: "#b42318", fontSize: 11, fontWeight: 800 }}>{routeError}</p>}
-
-        <h2>Choose truck type</h2>
-        <div className="truck-grid">
-          {TRUCKS.map((option) => (
-            <button type="button" key={option.key} className={`truck-card ${selectedTruck === option.key ? "selected" : ""}`} onClick={() => { onTruckChange(option.key); invalidateQuote(); }}>
-              <div className="truck-art-wrap"><TruckArtwork body={option.body}/></div>
-              <strong>{option.label}</strong>
-              <small>{option.capacity}</small>
-              {selectedTruck === option.key && <span className="truck-check">✓</span>}
-            </button>
-          ))}
-        </div>
-
-        <div className="cargo-grid">
-          <label><span>Cargo category</span><select value={cargo} onChange={(event) => setCargo(event.target.value)}><option>General goods</option><option>Food &amp; beverage</option><option>Construction material</option><option>Other cargo</option></select></label>
-          <label><span>Packaging / load type</span><select value={loadType} onChange={(event) => setLoadType(event.target.value)}><option>Loose / bulk</option><option>Boxed</option><option>Palletized</option><option>Bagged</option></select></label>
-        </div>
-
-        <div className="cargo-grid">
-          <label><span>Load amount</span><input type="number" min="0" step="0.1" inputMode="decimal" value={cargoQuantity} onChange={(event) => { setCargoQuantity(event.target.value); invalidateQuote(); }} placeholder="e.g. 5" /></label>
-          <label><span>Unit</span><select value={cargoUnit} onChange={(event) => { setCargoUnit(event.target.value as "ton" | "quintal"); invalidateQuote(); }}><option value="ton">Ton</option><option value="quintal">Quintal</option></select></label>
-        </div>
-
-        <button
-          type="button"
-          className="details-row"
-          aria-expanded={cargoDetailsOpen}
-          aria-controls="customer-cargo-details"
-          onClick={() => setCargoDetailsOpen((open) => !open)}
-        >
-          <span style={{ display: "grid", gap: 2, textAlign: "left" }}>
-            <strong style={{ fontSize: 11 }}>Additional cargo details</strong>
-            <small style={{ color: "#7a8798", fontSize: 9 }}>{cargoNotes.trim() ? "Details added" : "Optional"}</small>
-          </span>
-          <span aria-hidden="true" style={{ transition: "transform 160ms ease", transform: cargoDetailsOpen ? "rotate(180deg)" : "rotate(0deg)" }}>⌄</span>
-        </button>
-
-        {cargoDetailsOpen && (
-          <div id="customer-cargo-details" style={{ margin: "-2px 0 12px", border: "1px solid #e2e9f3", borderRadius: 14, background: "#fff", padding: 10 }}>
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ color: "#66758c", fontSize: 10, fontWeight: 850 }}>Notes / handling instructions</span>
-              <textarea
-                value={cargoNotes}
-                maxLength={500}
-                rows={4}
-                onChange={(event) => setCargoNotes(event.target.value)}
-                placeholder="Product name, handling instructions, quantity details…"
-                style={{ width: "100%", resize: "vertical", border: "1px solid #dce6f2", borderRadius: 12, outline: 0, background: "#fbfcfe", padding: 10, color: "#10213d", font: "inherit", fontSize: 11, lineHeight: 1.45 }}
-              />
-            </label>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 6, color: "#7a8798", fontSize: 9 }}>
-              <span>Optional; does not change the transport quote.</span>
-              <span>{cargoNotes.length}/500</span>
-            </div>
-          </div>
-        )}
-
-        {quoteError && <p role="alert" style={{ margin: "0 0 12px", color: "#b42318", fontSize: 12, fontWeight: 700 }}>{quoteError}</p>}
-
-        {quote && (
-          <div style={{ margin: "0 0 12px", border: "1px solid #dce6f2", borderRadius: 16, background: "#f8fbff", padding: 12, color: "#10213d", fontSize: 11, lineHeight: 1.55 }}>
-            <strong style={{ display: "block", fontSize: 12 }}>{quote.pickup_label} → {quote.dropoff_label}</strong>
-            <span style={{ display: "block", marginTop: 4 }}>{quote.distance_km.toFixed(1)} km · {Math.round(quote.duration_minutes)} min · {quote.cargo_tons.toFixed(1)} Ton · {quote.vehicle_type}</span>
-            <span style={{ display: "block", marginTop: 4, color: "#66758c" }}>{cargo} · {loadType}{cargoNotes.trim() ? " · Additional handling details added" : ""}</span>
-          </div>
-        )}
-
-        <div className="quote-panel">
-          <div><small>Estimated quote</small><strong>{quote ? formatQuoteEtb(quote.total_quote_etb) : quoteLoading ? "Calculating…" : "—"}</strong><span>{quote ? "Current Admin-managed transport rate." : cargoTons > 0 ? "Birr calculates automatically from the secure pricing RPC." : "Enter the load amount to calculate Birr automatically."}</span></div>
-          <button type="button" onClick={() => void calculateQuote()} disabled={quoteLoading || !routeReady || !cargoReady}>{quoteLoading ? "Calculating…" : quote ? "Refresh Quote" : "Calculate Quote"} <Icon name="arrow" size={18}/></button>
-        </div>
-        <p style={{ margin: "10px 2px 0", color: "#68778d", fontSize: 10, lineHeight: 1.5 }}>Order creation is not enabled yet. This screen remains a read-only quote preview.</p>
-      </div>
-    </section>
   );
 }
 
@@ -336,6 +63,7 @@ function BottomNav({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
 }
 
 export default function App({ identity }: { identity: CustomerIdentity }) {
+  const { text } = useCustomerLanguage();
   const [tab, setTab] = useState<Tab>("home");
   const [bookingOpen, setBookingOpen] = useState(false);
   const [pickup, setPickup] = useState("");
@@ -346,7 +74,8 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
   const [routePreview, setRoutePreview] = useState<CustomerRoutePreview | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
-  const truck = TRUCKS.find((item) => item.key === selectedTruck) ?? TRUCKS[0];
+  const [createdOrder, setCreatedOrder] = useState<CreatedCustomerOrder | null>(null);
+  const truck = customerTruckByKey(selectedTruck);
 
   useEffect(() => {
     if (!pickupPlace || !dropoffPlace) {
@@ -360,7 +89,6 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
     setRoutePreview(null);
     setRouteLoading(true);
     setRouteError("");
-
     void loadCustomerRoutePreview(identity.userId, {
       pickup: pickupPlace,
       dropoff: dropoffPlace,
@@ -377,7 +105,6 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
       .finally(() => {
         if (!controller.signal.aborted) setRouteLoading(false);
       });
-
     return () => controller.abort();
   }, [dropoffPlace, identity.userId, pickupPlace, truck.label]);
 
@@ -424,20 +151,26 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
     setRouteError("");
   }
 
-  function acceptRoute(route: CustomerRoutePreview) {
-    setPickup(route.pickup_label);
-    setDropoff(route.dropoff_label);
-    setPickupPlace({ label: route.pickup_label, coordinates: route.pickup });
-    setDropoffPlace({ label: route.dropoff_label, coordinates: route.dropoff });
-    setRoutePreview(route);
-    setRouteError("");
+  function handleOrderCreated(order: CreatedCustomerOrder) {
+    setCreatedOrder(order);
+    setBookingOpen(false);
+    setTab("orders");
   }
 
   let content: ReactNode;
   if (tab === "home") {
     content = (
       <main className="home-page">
-        <header className="home-brand"><HaloLogo/><span title={routeLabel}><Icon name="clock" size={16}/> {routeLoading ? "Finding route" : routePreview ? `${routePreview.distance_km.toFixed(1)} km` : "New booking"}</span></header>
+        <header className="home-brand customer-home-brand">
+          <HalloLogo/>
+          <div className="customer-home-actions">
+            <CustomerLanguageSwitcher compact />
+            <span className="customer-route-status" title={routeLabel}>
+              <Icon name="clock" size={15}/>
+              {routeLoading ? text.findingRoute : routePreview ? `${routePreview.distance_km.toFixed(1)} km` : text.newBooking}
+            </span>
+          </div>
+        </header>
         <CustomerBookingMap
           pickup={pickup}
           dropoff={dropoff}
@@ -471,9 +204,15 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
     <div className="customer-app-shell">
       <div className="phone-stage">
         {content}
+        {createdOrder && (
+          <div className="customer-order-success" role="status">
+            <div><strong>Order confirmed</strong><span>{createdOrder.trackingId} · ETB {createdOrder.priceEtb.toLocaleString()}</span></div>
+            <button type="button" onClick={() => setCreatedOrder(null)} aria-label="Dismiss order confirmation">×</button>
+          </div>
+        )}
         {!bookingOpen && <BottomNav tab={tab} setTab={setTab}/>} 
         {bookingOpen && (
-          <BookingSheet
+          <CustomerBookingFlow
             pickup={pickup}
             dropoff={dropoff}
             pickupPlace={pickupPlace}
@@ -485,7 +224,7 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
             routeError={routeError}
             onTruckChange={setSelectedTruck}
             onClose={() => setBookingOpen(false)}
-            onRouteResolved={acceptRoute}
+            onOrderCreated={handleOrderCreated}
           />
         )}
       </div>
