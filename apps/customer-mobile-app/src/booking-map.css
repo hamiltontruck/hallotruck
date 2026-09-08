@@ -6,8 +6,10 @@
 .real-booking-map .maplibregl-ctrl-bottom-left { bottom: 7.35rem; left: 0.45rem; }
 .real-booking-map .maplibregl-ctrl-attrib { max-width: 180px; font-size: 9px; }
 .real-route-card { top: calc(max(0.75rem, env(safe-area-inset-top)) + 3.75rem); overflow: visible; border-radius: 1.25rem; padding: 0.68rem 0.82rem; box-shadow: 0 10px 24px rgb(16 33 61 / 0.14); }
-.booking-place-field { position: relative; min-width: 0; }
-.booking-place-field label { display: grid; gap: 0.22rem; }
+.booking-place-field { position: relative; min-width: 0; max-width: 100%; }
+.booking-place-field label { display: grid; min-width: 0; max-width: 100%; gap: 0.22rem; }
+/* iOS Safari auto-zooms focused form controls below 16px. Keep the route search at a mobile-safe size without disabling map pinch zoom. */
+.booking-place-field input { width: 100%; min-width: 0; max-width: 100%; font-size: 16px; line-height: 1.25; touch-action: manipulation; }
 .booking-place-message { display: block; margin-top: 0.18rem; color: #66758c; font-size: 0.52rem; line-height: 1.3; }
 .booking-place-error { color: #b42318; }
 .booking-place-results { position: absolute; z-index: 60; top: calc(100% + 0.35rem); right: -0.1rem; left: -0.1rem; max-height: 13.5rem; overflow-y: auto; border: 1px solid #dbe4ef; border-radius: 0.9rem; background: #fff; padding: 0.25rem; box-shadow: 0 14px 32px rgb(16 33 61 / 0.18); }
