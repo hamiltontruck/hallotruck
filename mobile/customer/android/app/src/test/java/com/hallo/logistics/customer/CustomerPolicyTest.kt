@@ -38,4 +38,17 @@ class CustomerPolicyTest {
         assertEquals("OFFLINE", CustomerPolicy.trackingFreshness("2026-09-07T11:00:00Z", true, now))
         assertEquals("OFFLINE", CustomerPolicy.trackingFreshness(null, false, now))
     }
+
+    @Test fun cargoUnitsConvertWithoutChangingBackendQuoteRules() {
+        assertEquals(2.5, CustomerBookingPolicy.cargoToTons(2.5, "ton"), 0.0)
+        assertEquals(2.5, CustomerBookingPolicy.cargoToTons(25.0, "quintal"), 0.0)
+        assertEquals(0.0, CustomerBookingPolicy.cargoToTons(0.0, "ton"), 0.0)
+    }
+
+    @Test fun cargoDescriptionKeepsStructuredExistingOrderFieldsReadable() {
+        assertEquals(
+            "General goods · Bagged · 25 quintal · Keep dry",
+            CustomerBookingPolicy.cargoDescription("General goods", "Bagged", 25.0, "quintal", "Keep dry"),
+        )
+    }
 }

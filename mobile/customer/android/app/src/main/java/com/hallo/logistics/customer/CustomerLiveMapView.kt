@@ -21,6 +21,9 @@ class CustomerLiveMapView @JvmOverloads constructor(
         settings.domStorageEnabled = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
+        settings.setSupportZoom(false)
+        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        overScrollMode = OVER_SCROLL_NEVER
         webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 ready = true
@@ -53,12 +56,12 @@ class CustomerLiveMapView @JvmOverloads constructor(
         val MAP_HTML = """
             <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
             <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-            <style>html,body,#map{margin:0;width:100%;height:100%;overflow:hidden;background:#dfe9f5}.pin{width:18px;height:18px;border:3px solid white;border-radius:50%;box-shadow:0 3px 10px #10213d55}.pickup{background:#10213d}.dropoff{background:#f5b400}.truck{width:32px;height:32px;border-radius:10px;background:#10213d;color:#f5b400;display:grid;place-items:center;font:bold 18px sans-serif}</style>
+            <style>html,body,#map{margin:0;width:100%;height:100%;overflow:hidden;background:#dfe9f5}.maplibregl-ctrl-group{border-radius:12px;overflow:hidden;box-shadow:0 4px 14px #10213d33}.pin{width:18px;height:18px;border:3px solid white;border-radius:50%;box-shadow:0 3px 10px #10213d55}.pickup{background:#10213d}.dropoff{background:#f5b400}.truck{width:36px;height:36px;border:3px solid white;border-radius:12px;background:#10213d;color:#f5b400;display:grid;place-items:center;font:bold 19px sans-serif;box-shadow:0 5px 14px #10213d66}</style>
             </head><body><div id="map"></div><script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script><script>
-            const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[39.6,8.8],zoom:5.2,attributionControl:false});let markers=[];
+            const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[39.6,8.8],zoom:5.2,attributionControl:false});map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');let markers=[];
             function clearMarkers(){markers.forEach(m=>m.remove());markers=[]}function marker(p,c,t){if(!p)return;const e=document.createElement('div');e.className=c;e.textContent=t||'';markers.push(new maplibregl.Marker({element:e}).setLngLat(p).addTo(map))}
-            function fit(points){if(!points.length)return;const b=points.slice(1).reduce((x,p)=>x.extend(p),new maplibregl.LngLatBounds(points[0],points[0]));map.fitBounds(b,{padding:45,maxZoom:13,duration:500})}
-            function routeSource(points){if(map.getLayer('route'))map.removeLayer('route');if(map.getSource('route'))map.removeSource('route');if(points.length>1){map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:points}}});map.addLayer({id:'route',type:'line',source:'route',paint:{'line-color':'#f5b400','line-width':6,'line-opacity':.95}})}}
+            function fit(points){if(!points.length)return;const b=points.slice(1).reduce((x,p)=>x.extend(p),new maplibregl.LngLatBounds(points[0],points[0]));map.fitBounds(b,{padding:52,maxZoom:13,duration:500})}
+            function routeSource(points){if(map.getLayer('route'))map.removeLayer('route');if(map.getLayer('route-outline'))map.removeLayer('route-outline');if(map.getSource('route'))map.removeSource('route');if(points.length>1){map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:points}}});map.addLayer({id:'route-outline',type:'line',source:'route',paint:{'line-color':'#10213d','line-width':10,'line-opacity':.82}});map.addLayer({id:'route',type:'line',source:'route',paint:{'line-color':'#f5b400','line-width':6,'line-opacity':1}})}}
             function showRoute(points){const run=()=>{clearMarkers();routeSource(points);marker(points[0],'pin pickup');marker(points[points.length-1],'pin dropoff');fit(points)};map.loaded()?run():map.once('load',run)}
             function showTrip(p,d,t,h){const run=()=>{clearMarkers();routeSource([p,d].filter(Boolean));marker(p,'pin pickup');marker(d,'pin dropoff');marker(t,'truck','➤');const all=[p,d,t].filter(Boolean);fit(all)};map.loaded()?run():map.once('load',run)}
             </script></body></html>

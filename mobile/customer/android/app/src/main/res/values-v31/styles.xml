@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.HalloCustomer" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/hallo_gold</item>
+        <item name="colorOnPrimary">@color/hallo_navy</item>
+        <item name="colorSecondary">@color/hallo_navy</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:navigationBarColor">@color/hallo_surface</item>
+        <item name="android:statusBarColor">@color/hallo_navy</item>
+        <item name="android:windowBackground">@drawable/hallo_splash_background</item>
+        <item name="android:windowSplashScreenBackground">@color/hallo_navy</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/hallo_logistics_logo</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/white</item>
+    </style>
+</resources>
