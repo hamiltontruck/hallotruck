@@ -191,7 +191,7 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
       </main>
     );
   } else if (tab === "orders") {
-    content = <CustomerOrdersPage userId={identity.userId} onHome={() => setTab("home")}/>;
+    content = <CustomerOrdersPage userId={identity.userId} onHome={() => setTab("home")} onNewOrder={() => setBookingOpen(true)}/>;
   } else if (tab === "track") {
     content = <CustomerTrackingPage userId={identity.userId} onHome={() => setTab("home")}/>;
   } else if (tab === "payments") {
