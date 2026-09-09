@@ -114,5 +114,9 @@ data class CustomerUiState(
     val driverPhotoUrl: String? = null,
     val pickupSuggestions: List<CustomerPlace> = emptyList(),
     val dropoffSuggestions: List<CustomerPlace> = emptyList(),
+    val selectedPickup: CustomerPlace? = null,
+    val selectedDropoff: CustomerPlace? = null,
+    val placeSearchMessage: String = "",
     val quote: QuoteResult? = null,
 )
+
