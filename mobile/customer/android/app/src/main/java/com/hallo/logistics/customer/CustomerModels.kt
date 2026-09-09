@@ -9,6 +9,8 @@ import kotlinx.serialization.Serializable
     val phone: String? = null,
     val email: String? = null,
     @SerialName("home_address") val homeAddress: String? = null,
+    @SerialName("customer_type") val customerType: String? = null,
+    @SerialName("company_name") val companyName: String? = null,
     val role: String? = null,
 )
 
@@ -23,7 +25,34 @@ import kotlinx.serialization.Serializable
     val status: String? = null,
     @SerialName("payment_status") val paymentStatus: String? = null,
     @SerialName("selected_payment_method") val paymentMethod: String? = null,
+    @SerialName("cancellation_reason") val cancellationReason: String? = null,
+    @SerialName("cancelled_at") val cancelledAt: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+)
+
+@Serializable data class CustomerDeliveryProof(
+    @SerialName("order_id") val orderId: String,
+    @SerialName("recipient_name") val recipientName: String,
+    @SerialName("delivery_note") val deliveryNote: String? = null,
+    @SerialName("photo_path") val photoPath: String,
+    @SerialName("signature_path") val signaturePath: String,
+    @SerialName("delivered_at") val deliveredAt: String,
+)
+
+@Serializable data class CustomerRating(
+    val id: String,
+    @SerialName("order_id") val orderId: String,
+    val score: Int,
+    val comment: String? = null,
+)
+
+data class UpdateCustomerProfileInput(
+    val fullName: String,
+    val phone: String,
+    val email: String,
+    val homeAddress: String,
+    val customerType: String,
+    val companyName: String,
 )
 
 @Serializable data class CustomerPayment(
@@ -106,6 +135,8 @@ data class CustomerUiState(
     val profile: CustomerProfile? = null,
     val orders: List<CustomerOrder> = emptyList(),
     val payments: List<CustomerPayment> = emptyList(),
+    val proofs: List<CustomerDeliveryProof> = emptyList(),
+    val ratings: List<CustomerRating> = emptyList(),
     val notifications: List<CustomerNotification> = emptyList(),
     val liveTrip: CustomerLiveTrip? = null,
     val assignments: List<CustomerAssignment> = emptyList(),

@@ -93,6 +93,20 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
         repository.markNotificationRead(item.id); authorizeAndLoad(preservePage = true)
     }
 
+    fun updateProfile(input: UpdateCustomerProfileInput) = execute("Updating profile…") {
+        repository.updateProfile(input)
+        authorizeAndLoad(preservePage = true)
+        _state.value = _state.value.copy(message = "Profile updated")
+    }
+
+    fun submitRating(order: CustomerOrder, score: Int, comment: String) = execute("Saving rating…") {
+        repository.submitRating(order.id, score, comment)
+        authorizeAndLoad(preservePage = true)
+        _state.value = _state.value.copy(message = "Thank you. Rating saved")
+    }
+
+    suspend fun signedCustomerFile(bucket: String, path: String): String = repository.signedCustomerFile(bucket, path)
+
     private suspend fun authorizeAndLoad(preservePage: Boolean = false) {
         repository.requireCustomer()
         val profile = viewModelScope.async { repository.profile() }
@@ -101,11 +115,14 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
         val assignments = viewModelScope.async { repository.assignments() }
         val orderRows = orders.await()
         val payments = repository.payments(orderRows.map { it.id })
+        val proofs = repository.deliveryProofs(orderRows.map { it.id })
+        val ratings = repository.ratings(orderRows.map { it.id })
         _state.value = CustomerUiState(
             loading = false, authorized = true,
             page = if (preservePage) _state.value.page else CustomerPage.HOME,
             message = "Customer workspace", profile = profile.await(), orders = orderRows,
-            payments = payments, notifications = notifications.await(), quote = _state.value.quote,
+            payments = payments, proofs = proofs, ratings = ratings,
+            notifications = notifications.await(), quote = _state.value.quote,
             assignments = assignments.await(), trackingOrder = _state.value.trackingOrder,
             liveTrip = _state.value.liveTrip, route = _state.value.route,
             driverPhotoUrl = _state.value.driverPhotoUrl,

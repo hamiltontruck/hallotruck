@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private var selectedPackagingKey = "loose_bulk"
     private var selectedUnitKey = "ton"
     private var selectedPaymentKey = "cash"
+    private var orderFilter = OrderFilter.ALL
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -127,28 +128,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderTruckOptions(): Unit = with(binding) {
-        truckOptions.removeAllViews()
-        TRUCKS.forEach { truck ->
-            val item = ItemCustomerTruckBinding.inflate(layoutInflater, truckOptions, false)
-            item.truckImage.setImageResource(truck.image)
-            item.truckImage.contentDescription = truck.label
-            item.truckName.text = truck.label
-            item.truckCapacity.text = tr("Up to ${truck.capacity} ton", "Hanga toonii ${truck.capacity}", "እስከ ${truck.capacity} ቶን")
-            val selected = truck.backendValue == selectedVehicle.backendValue
-            item.root.strokeWidth = if (selected) 3.dp else 1.dp
-            item.root.setStrokeColor(getColor(if (selected) R.color.hallo_gold else R.color.hallo_line))
-            item.root.setCardBackgroundColor(getColor(if (selected) R.color.hallo_gold_soft else android.R.color.white))
-            item.root.contentDescription = "${truck.label}, ${truck.capacity} ton${if (selected) ", selected" else ""}"
-            item.root.setOnClickListener {
-                if (selectedVehicle.backendValue != truck.backendValue) {
-                    selectedVehicle = truck
-                    viewModel.bookingInputChanged()
-                    renderTruckOptions()
-                    updateBookingSteps(viewModel.state.value)
+    private fun renderTruckOptions() {
+        with(binding) {
+            truckOptions.removeAllViews()
+            TRUCKS.forEach { truck ->
+                val item = ItemCustomerTruckBinding.inflate(layoutInflater, truckOptions, false)
+                item.truckImage.setImageResource(truck.image)
+                item.truckImage.contentDescription = truck.label
+                item.truckName.text = truck.label
+                item.truckCapacity.text = tr("Up to ${truck.capacity} ton", "Hanga toonii ${truck.capacity}", "እስከ ${truck.capacity} ቶን")
+                val selected = truck.backendValue == selectedVehicle.backendValue
+                item.root.strokeWidth = if (selected) 3.dp else 1.dp
+                item.root.setStrokeColor(getColor(if (selected) R.color.hallo_gold else R.color.hallo_line))
+                item.root.setCardBackgroundColor(getColor(if (selected) R.color.hallo_gold_soft else android.R.color.white))
+                item.root.contentDescription = "${truck.label}, ${truck.capacity} ton${if (selected) ", selected" else ""}"
+                item.root.setOnClickListener {
+                    if (selectedVehicle.backendValue != truck.backendValue) {
+                        selectedVehicle = truck
+                        viewModel.bookingInputChanged()
+                        renderTruckOptions()
+                        updateBookingSteps(viewModel.state.value)
+                    }
                 }
+                truckOptions.addView(item.root)
             }
-            truckOptions.addView(item.root)
         }
     }
 
@@ -164,10 +167,21 @@ class MainActivity : AppCompatActivity() {
         navTrack.setOnClickListener { openActiveTracking() }
         navProfile.setOnClickListener { viewModel.show(CustomerPage.PROFILE) }
         navNotifications.setOnClickListener { viewModel.show(CustomerPage.NOTIFICATIONS) }
+        orderFilters.addOnButtonCheckedListener { _, checkedId, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            orderFilter = when (checkedId) {
+                filterActive.id -> OrderFilter.ACTIVE
+                filterPayment.id -> OrderFilter.PAYMENT
+                filterDelivered.id -> OrderFilter.DELIVERED
+                else -> OrderFilter.ALL
+            }
+            renderOrders(viewModel.state.value)
+        }
         startBooking.setOnClickListener { viewModel.show(CustomerPage.BOOK) }
         homeTrack.setOnClickListener { openActiveTracking() }
         refresh.setOnClickListener { viewModel.refresh() }
         refreshTracking.setOnClickListener { viewModel.refreshTracking() }
+        editProfile.setOnClickListener { profileDialog(viewModel.state.value.profile) }
         signOut.setOnClickListener { viewModel.signOut() }
         calculateQuote.setOnClickListener {
             viewModel.calculateAutomaticRoute(
@@ -246,7 +260,7 @@ class MainActivity : AppCompatActivity() {
         createOrder.isEnabled = state.quote != null && state.route != null && !state.busy
         profileDetails.text = state.profile?.let { "${it.fullName.orEmpty()}\n${it.phone.orEmpty()}\n${it.email.orEmpty()}\n${it.homeAddress.orEmpty()}\n\nCustomer access only · HALLO shared backend" }.orEmpty()
         updateBookingSteps(state)
-        renderOrders(state.orders)
+        renderOrders(state)
         renderPayments(state.payments, state.orders)
         renderNotifications(state.notifications)
         renderTracking(state)
@@ -296,7 +310,12 @@ class MainActivity : AppCompatActivity() {
         messageDriver.text = tr("Message", "Ergaa", "መልዕክት")
         refreshTracking.text = tr("Refresh live position", "Bakka jiru haaromsi", "የቀጥታ ቦታ ያድሱ")
         profileTitle.text = tr("Customer profile", "Piroofaayilii Customer", "የደንበኛ መገለጫ")
+        editProfile.text = tr("Edit profile", "Piroofaayilii gulaali", "መገለጫ ያርትዑ")
         signOut.text = tr("Sign out", "Baʼi", "ውጣ")
+        filterAll.text = tr("All", "Hunda", "ሁሉ")
+        filterActive.text = tr("Active", "Hojii", "ንቁ")
+        filterPayment.text = tr("Due", "Kaffaltii", "ክፍያ")
+        filterDelivered.text = tr("Done", "Xumurame", "ተጠናቋል")
         renderAuthModeWithoutReset()
         updateLoadSummary()
     }
@@ -429,7 +448,18 @@ class MainActivity : AppCompatActivity() {
         ))
     }
 
-    private fun renderOrders(items: List<CustomerOrder>) {
+    private fun renderOrders(state: CustomerUiState) {
+        val activeStatuses = setOf("quoted", "placed", "accepted", "in_transit")
+        val due = state.orders.filter { it.status != "cancelled" && (it.priceEtb ?: 0.0) > state.payments.filter { payment -> payment.orderId == it.id && payment.event in setOf("verified", "released", "paid", "completed") }.sumOf { payment -> payment.amountEtb ?: 0.0 } }
+        binding.ordersTotalSummary.text = "${state.orders.size}\n${tr("Total", "Waliigala", "ጠቅላላ")}"
+        binding.ordersActiveSummary.text = "${state.orders.count { it.status in activeStatuses }}\n${tr("Active", "Hojii", "ንቁ")}"
+        binding.ordersDueSummary.text = "${due.size}\n${tr("Payment", "Kaffaltii", "ክፍያ")}"
+        val items = when (orderFilter) {
+            OrderFilter.ALL -> state.orders
+            OrderFilter.ACTIVE -> state.orders.filter { it.status in activeStatuses }
+            OrderFilter.PAYMENT -> due
+            OrderFilter.DELIVERED -> state.orders.filter { it.status == "delivered" }
+        }
         binding.ordersList.removeAllViews()
         if (items.isEmpty()) {
             binding.ordersList.addView(text(tr("No orders yet", "Ajajni ammallee hin jiru", "እስካሁን ትዕዛዝ የለም")))
@@ -443,6 +473,19 @@ class MainActivity : AppCompatActivity() {
             item.orderMeta.text = "${order.vehicleType ?: "Truck"} · ${order.distanceKm ?: "—"} km\n${money(order.priceEtb)} · ${tr("Payment", "Kaffaltii", "ክፍያ")}: ${label(order.paymentStatus)}"
             if (order.status in setOf("accepted", "in_transit")) item.orderActions.addView(button(tr("Track driver", "Konkolaachisaa hordofi", "አሽከርካሪን ይከታተሉ")) { viewModel.track(order) })
             if (order.paymentStatus != null) item.orderActions.addView(button(tr("View payment status", "Haala kaffaltii ilaali", "የክፍያ ሁኔታን ይመልከቱ")) { viewModel.show(CustomerPage.PAYMENTS) })
+            item.orderActions.addView(button(tr("Invoice summary", "Cuunfaa invoice", "የደረሰኝ ማጠቃለያ")) { invoiceDialog(order, state.payments.filter { it.orderId == order.id }) })
+            state.proofs.firstOrNull { it.orderId == order.id }?.let { proof ->
+                item.orderActions.addView(button(tr("Delivery photo", "Suuraa geessuu", "የመላኪያ ፎቶ")) { openSecureFile("delivery-proofs", proof.photoPath) })
+                item.orderActions.addView(button(tr("Signature", "Mallattoo", "ፊርማ")) { openSecureFile("delivery-proofs", proof.signaturePath) })
+            }
+            if (order.status == "delivered") {
+                val rating = state.ratings.firstOrNull { it.orderId == order.id }
+                item.orderActions.addView(button(rating?.let { "${tr("Your rating", "Madaallii kee", "የእርስዎ ግምገማ")}: ${"★".repeat(it.score)}" }
+                    ?: tr("Rate driver", "Konkolaachisaa madaali", "አሽከርካሪን ይገምግሙ")) { if (rating == null) ratingDialog(order) })
+            }
+            if (order.status == "cancelled" && !order.cancellationReason.isNullOrBlank()) {
+                item.orderActions.addView(text("${tr("Cancellation", "Haqa", "ስረዛ")}: ${order.cancellationReason}"))
+            }
             if (CustomerPolicy.canCancel(order.status)) item.orderActions.addView(button(tr("Cancel order", "Ajaja haqi", "ትዕዛዝ ሰርዝ")) { cancellationDialog(order) })
             binding.ordersList.addView(item.root)
         }
@@ -457,9 +500,57 @@ class MainActivity : AppCompatActivity() {
         }
         items.forEach { payment ->
             val card = card()
-            card.addView(text("${tracking[payment.orderId] ?: "Order"} · ${label(payment.event)}\n${money(payment.amountEtb)} · ${payment.provider ?: "—"}\nReference: ${payment.providerRef ?: "—"}"))
+            val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            content.addView(text("${tracking[payment.orderId] ?: "Order"} · ${label(payment.event)}\n${money(payment.amountEtb)} · ${payment.provider ?: "—"}\nReference: ${payment.providerRef ?: "—"}"))
+            payment.receiptPath?.takeIf { it.isNotBlank() }?.let { path -> content.addView(button(tr("View receipt", "Nagahee ilaali", "ደረሰኝ ይመልከቱ")) { openSecureFile("payment-receipts", path) }) }
+            card.addView(content)
             binding.paymentsList.addView(card, marginParams())
         }
+    }
+
+    private fun openSecureFile(bucket: String, path: String) {
+        lifecycleScope.launch {
+            runCatching { viewModel.signedCustomerFile(bucket, path) }
+                .onSuccess { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
+                .onFailure { AlertDialog.Builder(this@MainActivity).setMessage(it.message ?: "File unavailable").setPositiveButton("OK", null).show() }
+        }
+    }
+
+    private fun invoiceDialog(order: CustomerOrder, payments: List<CustomerPayment>) {
+        val paid = payments.filter { it.event in setOf("verified", "released", "paid", "completed") }.sumOf { it.amountEtb ?: 0.0 }
+        val total = order.priceEtb ?: 0.0
+        AlertDialog.Builder(this)
+            .setTitle("HALLO · ${order.trackingId ?: tr("Invoice", "Invoice", "ደረሰኝ")}")
+            .setMessage("${order.pickupAddress.orEmpty()} → ${order.dropoffAddress.orEmpty()}\n${tr("Vehicle", "Konkolaataa", "ተሽከርካሪ")}: ${order.vehicleType ?: "—"}\n${tr("Total", "Waliigala", "ጠቅላላ")}: ${money(total)}\n${tr("Verified payment", "Kaffaltii mirkanaaʼe", "የተረጋገጠ ክፍያ")}: ${money(paid)}\n${tr("Balance", "Haftee", "ቀሪ")}: ${money((total - paid).coerceAtLeast(0.0))}")
+            .setPositiveButton("OK", null).show()
+    }
+
+    private fun ratingDialog(order: CustomerOrder) {
+        val comment = EditText(this).apply { hint = tr("Optional comment", "Yaada dabalataa", "አማራጭ አስተያየት"); maxLines = 4; filters = arrayOf(InputFilter.LengthFilter(500)) }
+        var score = 5
+        AlertDialog.Builder(this)
+            .setTitle(tr("Rate this delivery", "Geejjiba kana madaali", "ይህን ማድረስ ይገምግሙ"))
+            .setSingleChoiceItems(arrayOf("★★★★★", "★★★★☆", "★★★☆☆", "★★☆☆☆", "★☆☆☆☆"), 0) { _, which -> score = 5 - which }
+            .setView(comment)
+            .setNegativeButton(tr("Not now", "Amma miti", "አሁን አይደለም"), null)
+            .setPositiveButton(tr("Submit", "Ergi", "አስገባ")) { _, _ -> viewModel.submitRating(order, score, comment.text.toString()) }
+            .show()
+    }
+
+    private fun profileDialog(profile: CustomerProfile?) {
+        if (profile == null) return
+        fun field(hint: String, value: String?) = EditText(this).apply { this.hint = hint; setText(value.orEmpty()); setPadding(10.dp, 8.dp, 10.dp, 8.dp) }
+        val name = field(tr("Full name", "Maqaa guutuu", "ሙሉ ስም"), profile.fullName)
+        val phone = field(tr("Phone", "Bilbila", "ስልክ"), profile.phone).apply { inputType = InputType.TYPE_CLASS_PHONE }
+        val email = field("Email", profile.email).apply { inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS }
+        val address = field(tr("Home address", "Teessoo mana", "የቤት አድራሻ"), profile.homeAddress)
+        val type = field(tr("Customer type: individual or business", "Gosa: individual ykn business", "ዓይነት፦ individual ወይም business"), profile.customerType ?: "individual")
+        val company = field(tr("Company name (business)", "Maqaa dhaabbataa", "የድርጅት ስም"), profile.companyName)
+        val form = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(20.dp, 4.dp, 20.dp, 0); listOf(name, phone, email, address, type, company).forEach(::addView) }
+        AlertDialog.Builder(this).setTitle(tr("Edit profile", "Piroofaayilii gulaali", "መገለጫ ያርትዑ")).setView(form)
+            .setNegativeButton(tr("Cancel", "Dhiisi", "ይቅር"), null)
+            .setPositiveButton(tr("Save", "Olkaaʼi", "አስቀምጥ")) { _, _ -> viewModel.updateProfile(UpdateCustomerProfileInput(name.text.toString(), phone.text.toString(), email.text.toString(), address.text.toString(), type.text.toString(), company.text.toString())) }
+            .show()
     }
 
     private fun renderNotifications(items: List<CustomerNotification>) {
@@ -502,6 +593,7 @@ class MainActivity : AppCompatActivity() {
     private val Int.dp get() = (this * resources.displayMetrics.density).toInt()
 
     private enum class AppLanguage { EN, OR, AM }
+    private enum class OrderFilter { ALL, ACTIVE, PAYMENT, DELIVERED }
     private data class SelectOption(val key: String, val en: String, val or: String, val am: String) {
         fun label(language: AppLanguage) = when (language) { AppLanguage.EN -> en; AppLanguage.OR -> or; AppLanguage.AM -> am }
     }

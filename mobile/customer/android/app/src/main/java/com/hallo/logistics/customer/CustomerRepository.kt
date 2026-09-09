@@ -11,6 +11,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -100,8 +101,24 @@ class CustomerRepository {
 
     suspend fun orders(): List<CustomerOrder> {
         val id = requireCustomer()
-        return client.from("orders").select(Columns.list("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,status,payment_status,selected_payment_method,created_at")) {
+        return client.from("orders").select(Columns.list("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,status,payment_status,selected_payment_method,cancellation_reason,cancelled_at,created_at")) {
             filter { eq("customer_id", id) }; order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
+        }.decodeList()
+    }
+
+    suspend fun deliveryProofs(orderIds: List<String>): List<CustomerDeliveryProof> {
+        requireCustomer()
+        if (orderIds.isEmpty()) return emptyList()
+        return client.from("delivery_proofs").select(Columns.list("order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at")) {
+            filter { isIn("order_id", orderIds) }
+        }.decodeList()
+    }
+
+    suspend fun ratings(orderIds: List<String>): List<CustomerRating> {
+        requireCustomer()
+        if (orderIds.isEmpty()) return emptyList()
+        return client.from("ratings").select(Columns.list("id,order_id,score,comment")) {
+            filter { isIn("order_id", orderIds) }
         }.decodeList()
     }
 
@@ -160,6 +177,24 @@ class CustomerRepository {
         val signed = json.parseToJsonElement(body).jsonObject["signedURL"]?.jsonPrimitive?.contentOrNull
             ?: json.parseToJsonElement(body).jsonObject["signedUrl"]?.jsonPrimitive?.contentOrNull
             ?: return null
+        return if (signed.startsWith("http")) signed else "${BuildConfig.SUPABASE_URL.trimEnd('/')}/storage/v1$signed"
+    }
+
+    suspend fun signedCustomerFile(bucket: String, path: String): String {
+        require(bucket in setOf("delivery-proofs", "payment-receipts")) { "Unsupported customer file" }
+        requireCustomer()
+        val clean = path.trim().trimStart('/')
+        require(clean.isNotBlank() && !clean.contains("..")) { "Invalid customer file" }
+        val session = client.auth.currentSessionOrNull() ?: error("Customer session expired")
+        val encodedPath = clean.split('/').joinToString("/") { URLEncoder.encode(it, StandardCharsets.UTF_8.name()).replace("+", "%20") }
+        val body = postJson(
+            "${BuildConfig.SUPABASE_URL.trimEnd('/')}/storage/v1/object/sign/$bucket/$encodedPath",
+            "{\"expiresIn\":300}",
+            mapOf("Authorization" to "Bearer ${session.accessToken}", "apikey" to BuildConfig.SUPABASE_PUBLISHABLE_KEY),
+        )
+        val root = json.parseToJsonElement(body).jsonObject
+        val signed = root["signedURL"]?.jsonPrimitive?.contentOrNull ?: root["signedUrl"]?.jsonPrimitive?.contentOrNull
+            ?: error("Secure file link was not returned")
         return if (signed.startsWith("http")) signed else "${BuildConfig.SUPABASE_URL.trimEnd('/')}/storage/v1$signed"
     }
 
@@ -265,6 +300,40 @@ class CustomerRepository {
     suspend fun cancelOrder(orderId: String, reason: String) {
         requireCustomer(); val clean = reason.trim(); require(clean.length in 5..500) { "Cancellation reason must contain 5–500 characters" }
         client.postgrest.rpc("customer_cancel_order", buildJsonObject { put("p_order_id", orderId); put("p_reason", clean) })
+    }
+
+    suspend fun updateProfile(input: UpdateCustomerProfileInput) {
+        requireCustomer()
+        val cleanName = input.fullName.trim().replace(Regex("\\s+"), " ")
+        val cleanPhone = input.phone.trim()
+        val cleanEmail = input.email.trim().lowercase()
+        val type = input.customerType.trim().lowercase()
+        require(cleanName.length >= 2) { "Enter your full name" }
+        require(Regex("^(09\\d{8}|\\+2519\\d{8})$").matches(cleanPhone)) { "Phone must be 09xxxxxxxx or +2519xxxxxxxx" }
+        require(cleanEmail.isBlank() || Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(cleanEmail)) { "Enter a valid email address" }
+        require(type in setOf("individual", "business")) { "Choose a valid customer type" }
+        require(type != "business" || input.companyName.isNotBlank()) { "Company name is required for a business account" }
+        client.postgrest.rpc("customer_update_profile", buildJsonObject {
+            put("p_full_name", cleanName)
+            put("p_phone", cleanPhone)
+            if (cleanEmail.isBlank()) put("p_email", JsonNull) else put("p_email", cleanEmail)
+            val homeAddress = input.homeAddress.trim()
+            if (homeAddress.isBlank()) put("p_home_address", JsonNull) else put("p_home_address", homeAddress)
+            put("p_customer_type", type)
+            if (type == "business") put("p_company_name", input.companyName.trim()) else put("p_company_name", JsonNull)
+        })
+    }
+
+    suspend fun submitRating(orderId: String, score: Int, comment: String) {
+        requireCustomer()
+        require(score in 1..5) { "Choose a rating from 1 to 5 stars" }
+        require(comment.length <= 500) { "Rating comment must be 500 characters or fewer" }
+        client.postgrest.rpc("customer_submit_rating", buildJsonObject {
+            put("p_order_id", orderId)
+            put("p_score", score)
+            val cleanComment = comment.trim()
+            if (cleanComment.isBlank()) put("p_comment", JsonNull) else put("p_comment", cleanComment)
+        })
     }
 
     suspend fun liveTrip(orderId: String): CustomerLiveTrip? {
