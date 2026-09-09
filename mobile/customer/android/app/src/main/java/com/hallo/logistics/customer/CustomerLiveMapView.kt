@@ -34,11 +34,17 @@ class CustomerLiveMapView @JvmOverloads constructor(
         loadDataWithBaseURL("https://tiles.openfreemap.org", MAP_HTML, "text/html", "UTF-8", null)
     }
 
-    fun showRoute(route: CustomerRoute?) {
+    fun showBooking(pickup: CustomerPlace?, dropoff: CustomerPlace?, route: CustomerRoute?) {
         val points = route?.coordinates.orEmpty().map { JsonArray(listOf(JsonPrimitive(it.first), JsonPrimitive(it.second))) }
-        update("showRoute(${JsonArray(points)})")
+        fun coordinate(place: CustomerPlace?) = place?.let { "[${it.longitude},${it.latitude}]" } ?: "null"
+        update("showBooking(${coordinate(pickup)},${coordinate(dropoff)},${JsonArray(points)})")
         contentDescription = route?.let { "Truck route from ${it.pickup.label} to ${it.dropoff.label}, ${it.distanceKm} kilometers" }
-            ?: "Route map waiting for pickup and drop-off"
+            ?: when {
+                pickup != null && dropoff != null -> "Map showing selected pickup and drop-off"
+                pickup != null -> "Map showing selected pickup"
+                dropoff != null -> "Map showing selected drop-off"
+                else -> "Route map waiting for pickup and drop-off"
+            }
     }
 
     fun showTrip(trip: CustomerLiveTrip?) {
@@ -62,9 +68,10 @@ class CustomerLiveMapView @JvmOverloads constructor(
             function clearMarkers(){markers.forEach(m=>m.remove());markers=[]}function marker(p,c,t){if(!p)return;const e=document.createElement('div');e.className=c;e.textContent=t||'';markers.push(new maplibregl.Marker({element:e}).setLngLat(p).addTo(map))}
             function fit(points){if(!points.length)return;const b=points.slice(1).reduce((x,p)=>x.extend(p),new maplibregl.LngLatBounds(points[0],points[0]));map.fitBounds(b,{padding:52,maxZoom:13,duration:500})}
             function routeSource(points){if(map.getLayer('route'))map.removeLayer('route');if(map.getLayer('route-outline'))map.removeLayer('route-outline');if(map.getSource('route'))map.removeSource('route');if(points.length>1){map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:points}}});map.addLayer({id:'route-outline',type:'line',source:'route',paint:{'line-color':'#10213d','line-width':10,'line-opacity':.82}});map.addLayer({id:'route',type:'line',source:'route',paint:{'line-color':'#f5b400','line-width':6,'line-opacity':1}})}}
-            function showRoute(points){const run=()=>{clearMarkers();routeSource(points);marker(points[0],'pin pickup');marker(points[points.length-1],'pin dropoff');fit(points)};map.loaded()?run():map.once('load',run)}
+            function showBooking(p,d,points){const run=()=>{clearMarkers();routeSource(points);const start=points.length?points[0]:p;const end=points.length?points[points.length-1]:d;marker(start,'pin pickup');marker(end,'pin dropoff');fit(points.length?points:[p,d].filter(Boolean))};map.loaded()?run():map.once('load',run)}
             function showTrip(p,d,t,h){const run=()=>{clearMarkers();routeSource([p,d].filter(Boolean));marker(p,'pin pickup');marker(d,'pin dropoff');marker(t,'truck','➤');const all=[p,d,t].filter(Boolean);fit(all)};map.loaded()?run():map.once('load',run)}
             </script></body></html>
         """.trimIndent()
     }
 }
+
