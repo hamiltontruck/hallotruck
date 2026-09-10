@@ -18,11 +18,6 @@ jobs:
         working-directory: mobile/driver/android
     steps:
       - uses: actions/checkout@v4
-      - name: Upload Driver source snapshot
-        uses: actions/upload-artifact@v4
-        with:
-          name: driver-android-source-snapshot
-          path: mobile/driver/android/app/src
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -31,15 +26,7 @@ jobs:
         with:
           gradle-version: "8.9"
       - name: Unit tests
-        shell: bash
-        run: set -o pipefail; gradle testDebugUnitTest --no-daemon --stacktrace 2>&1 | tee driver-test.log
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: driver-android-test-log
-          path: mobile/driver/android/driver-test.log
-          if-no-files-found: ignore
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
       - name: Android lint
         run: gradle lintDebug --no-daemon --stacktrace
       - name: Debug APK
