@@ -11,8 +11,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -68,10 +66,10 @@ class CustomerParityService(
         client.postgrest.rpc("customer_update_profile", buildJsonObject {
             put("p_full_name", clean.fullName)
             put("p_phone", clean.phone)
-            put("p_email", clean.email.ifBlank { null })
-            put("p_home_address", clean.homeAddress.ifBlank { null })
+            put("p_email", clean.email.takeIf { it.isNotBlank() })
+            put("p_home_address", clean.homeAddress.takeIf { it.isNotBlank() })
             put("p_customer_type", clean.customerType)
-            put("p_company_name", if (clean.customerType == "business") clean.companyName else null)
+            put("p_company_name", clean.companyName.takeIf { clean.customerType == "business" && it.isNotBlank() })
         })
     }
 
