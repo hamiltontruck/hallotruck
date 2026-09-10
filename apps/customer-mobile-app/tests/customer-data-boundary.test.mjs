@@ -23,10 +23,14 @@ test("verified Customer identity is passed to standalone Orders and Profile page
   assert.match(app, /<CustomerProfilePage userId=\{identity\.userId\}/);
 });
 
-test("this read-only slice contains no Customer order or profile mutation calls", () => {
+test("Customer data service keeps direct table writes blocked and allows only the guarded cancellation RPC", () => {
   assert.doesNotMatch(service, /\.insert\(/);
   assert.doesNotMatch(service, /\.update\(/);
   assert.doesNotMatch(service, /\.delete\(/);
   assert.doesNotMatch(service, /customer_update_profile/);
-  assert.doesNotMatch(service, /customer_cancel_order/);
+
+  assert.match(service, /export async function cancelCustomerMobileOrder\(userId: string, orderId: string, reason: string\)/);
+  assert.match(service, /const client = await requireCustomerSession\(userId\);[\s\S]*?client\.rpc\("customer_cancel_order", \{/);
+  assert.match(service, /p_order_id: orderId/);
+  assert.match(service, /p_reason: cleanReason/);
 });
