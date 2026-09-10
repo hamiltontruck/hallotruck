@@ -237,6 +237,7 @@ class CustomerViewModel(
                     live?.pickupLatitude,
                     live?.dropoffLongitude,
                     live?.dropoffLatitude,
+                    freshOrder.vehicleType,
                 )
             }.getOrNull()
         }
@@ -250,6 +251,7 @@ class CustomerViewModel(
                     live?.truckLatitude,
                     live?.dropoffLongitude,
                     live?.dropoffLatitude,
+                    freshOrder.vehicleType,
                 )
             }.getOrNull()
         } else {
