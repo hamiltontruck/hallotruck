@@ -17,6 +17,10 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      ORG_GRADLE_PROJECT_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      ORG_GRADLE_PROJECT_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      ORG_GRADLE_PROJECT_MAPTILER_KEY: ${{ secrets.MAPTILER_KEY }}
     defaults:
       run:
         working-directory: mobile/customer/android
@@ -29,9 +33,27 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Validate Customer runtime configuration
+        shell: bash
+        run: |
+          missing=0
+          for key in ORG_GRADLE_PROJECT_SUPABASE_URL ORG_GRADLE_PROJECT_SUPABASE_PUBLISHABLE_KEY ORG_GRADLE_PROJECT_MAPTILER_KEY; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Required Customer Android repository secret is missing: ${key#ORG_GRADLE_PROJECT_}"
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
       - name: Unit tests
         run: gradle testDebugUnitTest --no-daemon --stacktrace
       - name: Android lint
         run: gradle lintDebug --no-daemon --stacktrace
       - name: Debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
+      - name: Upload configured Customer APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hallo-customer-android-debug
+          path: mobile/customer/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
