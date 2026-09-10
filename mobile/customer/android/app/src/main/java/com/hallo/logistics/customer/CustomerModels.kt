@@ -166,6 +166,7 @@ data class CustomerUiState(
     val trackingRoute: CustomerRoadRoute? = null,
     val remainingRoute: CustomerRoadRoute? = null,
     val route: CustomerRoute? = null,
+    val driverPhotoUrl: String? = null,
     val pickupSuggestions: List<CustomerPlace> = emptyList(),
     val dropoffSuggestions: List<CustomerPlace> = emptyList(),
     val selectedPickup: CustomerPlace? = null,
