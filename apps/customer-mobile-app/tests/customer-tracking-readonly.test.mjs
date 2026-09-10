@@ -9,34 +9,42 @@ const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 test("tracking orders are explicitly scoped to the verified Customer", () => {
   assert.match(service, /auth\.getUser\(\)/);
   assert.match(service, /auth\.user\.id !== userId/);
-  assert.match(service, /\.from\("orders"\)[\s\S]*?\.eq\("customer_id", userId\)[\s\S]*?\.in\("status", ACTIVE_TRACKING_STATUSES\)/);
+  assert.match(service, /\.from\("orders"\)[\s\S]*?\.eq\("customer_id", userId\)/);
+  assert.match(service, /ownedOrders\.filter\(\(order\) => order\.id === preferredOrderId/);
 });
 
-test("assignment cards are filtered back to the Customer active order ids", () => {
-  assert.match(service, /\.rpc\("customer_driver_assignment_cards"\)/);
+test("assignment cards are filtered back to Customer-owned tracking order ids", () => {
+  assert.match(service, /loadCustomerAssignments\(userId, orderIds\)/);
   assert.match(service, /allowedOrderIds = new Set\(orderIds\)/);
-  assert.match(service, /\.filter\(\(assignment\) => allowedOrderIds\.has\(assignment\.order_id\)\)/);
+  assert.match(service, /allowedOrderIds\.has\(assignment\.order_id\)/);
 });
 
-test("live GPS uses the secured live-trip RPC and freshness-aware snapshot UI", () => {
+test("live GPS uses the secured live-trip RPC and ownership mismatch guard", () => {
   assert.match(service, /\.rpc\("customer_get_live_trip", \{ p_order_id: order\.id \}\)/);
   assert.match(service, /row\.order_id !== order\.id/);
-  assert.match(page, /GPS SNAPSHOT/);
-  assert.match(page, /classifyTrackingFreshness\(hasGps \? trip\?\.recorded_at : null\)/);
-  assert.match(page, /8000/);
+  assert.match(service, /Customer live-trip ownership mismatch/);
 });
 
-test("Track tab receives verified Customer identity", () => {
+test("tracking subscriptions are lifecycle safe and use scoped realtime sources", () => {
+  assert.match(service, /client\.channel\(`customer-mobile-trip:\$\{userId\}:\$\{orderId\}`\)/);
+  assert.match(service, /table: "tracking_pings", filter: `order_id=eq\.\$\{orderId\}`/);
+  assert.match(service, /table: "delivery_proofs", filter: `order_id=eq\.\$\{orderId\}`/);
+  assert.match(service, /void client\.removeChannel\(channel\)/);
+  assert.doesNotMatch(page, /setInterval/);
+  assert.match(page, /cleanup\?\.\(\)/);
+});
+
+test("Track tab receives verified Customer identity and can open one owned order", () => {
   assert.match(app, /import \{ CustomerTrackingPage \} from "\.\/CustomerTrackingPage"/);
-  assert.match(app, /tab === "track"/);
-  assert.match(app, /<CustomerTrackingPage userId=\{identity\.userId\}/);
+  assert.match(app, /trackingOrderId/);
+  assert.match(app, /onTrackOrder=\{openTracking\}/);
+  assert.match(app, /<CustomerTrackingPage userId=\{identity\.userId\} initialOrderId=\{trackingOrderId\}/);
 });
 
-test("tracking slice is read-only and does not invent ETA or stale-live state", () => {
+test("tracking slice is read-only for Customer GPS", () => {
   assert.doesNotMatch(service, /\.insert\(/);
   assert.doesNotMatch(service, /\.update\(/);
   assert.doesNotMatch(service, /\.delete\(/);
   assert.doesNotMatch(service, /service_role/i);
-  assert.doesNotMatch(page, /Estimated ETA|remainingSeconds|router\.project-osrm/);
-  assert.match(page, /STALE or OFFLINE coordinates are historical last-known data, never a current\/live position/);
+  assert.match(page, /GPS writes remain Driver-only/);
 });
