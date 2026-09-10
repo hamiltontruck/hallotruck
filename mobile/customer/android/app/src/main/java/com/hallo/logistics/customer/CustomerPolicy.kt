@@ -4,15 +4,26 @@ import java.time.Duration
 import java.time.Instant
 
 object CustomerPolicy {
-    private val cancellable = setOf("quoted", "placed", "accepted")
+    private val cancellable = setOf("quoted", "placed")
+    private val assignmentVisible = setOf("assigned", "accepted", "in_transit")
+    private val trackable = assignmentVisible + "delivered"
+
     fun isCustomer(role: String?) = role?.trim()?.lowercase() == "customer"
     fun isSixDigitPin(value: String) = value.matches(Regex("^[0-9]{6}$"))
-    fun canCancel(status: String?) = status?.lowercase() in cancellable
+    fun canCancel(status: String?) = status?.trim()?.lowercase() in cancellable
+    fun showAssignment(status: String?) = status?.trim()?.lowercase() in assignmentVisible
+    fun canTrack(status: String?) = status?.trim()?.lowercase() in trackable
+
     fun trackingFreshness(recordedAt: String?, hasCoordinates: Boolean, now: Instant = Instant.now()): String {
         if (!hasCoordinates || recordedAt.isNullOrBlank()) return "OFFLINE"
         val seconds = runCatching { Duration.between(Instant.parse(recordedAt), now).seconds }.getOrDefault(Long.MAX_VALUE)
-        return when { seconds <= 90 -> "LIVE"; seconds <= 600 -> "STALE"; else -> "OFFLINE" }
+        return when {
+            seconds <= 90 -> "LIVE"
+            seconds <= 600 -> "STALE"
+            else -> "OFFLINE"
+        }
     }
+
     fun normalizePhone(value: String): String {
         val compact = value.trim().replace(Regex("[\\s()-]"), "")
         require(compact.matches(Regex("^(\\+251|251|0)?[79][0-9]{8}$"))) { "Enter a valid Ethiopian 07/09 mobile number" }
