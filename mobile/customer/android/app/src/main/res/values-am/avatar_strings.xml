@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_photo">የመገለጫ ፎቶ</string>
+    <string name="profile_photo_change">ፎቶ ጨምር / ቀይር</string>
+    <string name="profile_photo_camera">ፎቶ አንሳ</string>
+    <string name="profile_photo_gallery">ከጋለሪ ምረጥ</string>
+    <string name="profile_photo_remove">ፎቶ አስወግድ</string>
+    <string name="profile_photo_updated">የመገለጫ ፎቶ ተዘምኗል</string>
+    <string name="profile_photo_removed">የመገለጫ ፎቶ ተወግዷል</string>
+    <string name="profile_photo_uploading">የመገለጫ ፎቶ በመጫን ላይ…</string>
+    <string name="profile_photo_removing">የመገለጫ ፎቶ በማስወገድ ላይ…</string>
+    <string name="profile_photo_error">የመገለጫ ፎቶውን ማዘጋጀት አልተቻለም።</string>
+    <string name="profile_photo_camera_permission">የመገለጫ ፎቶ ለማንሳት የካሜራ ፈቃድ ያስፈልጋል።</string>
+    <string name="profile_photo_private">የመገለጫ ፎቶዎ በግል ይቀመጣል፤ የሚታየው ለአጭር ጊዜ በሚሰራ ደህንነቱ በተጠበቀ ሊንክ ብቻ ነው።</string>
+</resources>
