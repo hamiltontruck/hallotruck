@@ -18,6 +18,11 @@ jobs:
         working-directory: mobile/driver/android
     steps:
       - uses: actions/checkout@v4
+      - name: Upload Driver source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: driver-android-source-snapshot
+          path: mobile/driver/android/app/src
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
