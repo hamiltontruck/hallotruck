@@ -5,6 +5,7 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -93,9 +94,26 @@ class CustomerRepository {
 
     suspend fun profile(): CustomerProfile {
         val id = requireCustomer()
-        val row = client.postgrest.rpc("customer_get_profile").decodeList<CustomerProfile>().firstOrNull() ?: error("Customer profile was not found")
+        val row = client.postgrest.rpc("customer_get_profile_v2").decodeList<CustomerProfile>().firstOrNull() ?: error("Customer profile was not found")
         require(row.id == id) { "Customer profile ownership mismatch" }
         return row
+    }
+
+    suspend fun uploadProfileAvatar(jpegBytes: ByteArray): String {
+        val id = requireCustomer()
+        require(jpegBytes.isNotEmpty()) { "Profile photo is empty" }
+        require(jpegBytes.size <= 5 * 1024 * 1024) { "Profile photo must be 5 MB or smaller" }
+        val path = "$id/avatar.jpg"
+        client.storage.from("customer-avatars").upload(path, jpegBytes) { upsert = true }
+        client.postgrest.rpc("customer_set_avatar", buildJsonObject { put("p_avatar_path", path) })
+        return path
+    }
+
+    suspend fun removeProfileAvatar() {
+        val id = requireCustomer()
+        val path = "$id/avatar.jpg"
+        client.postgrest.rpc("customer_clear_avatar")
+        runCatching { client.storage.from("customer-avatars").delete(path) }
     }
 
     suspend fun orders(): List<CustomerOrder> {
@@ -283,4 +301,3 @@ class CustomerRepository {
         return client.postgrest.rpc("customer_get_live_trip", buildJsonObject { put("p_order_id", orderId) }).decodeList<CustomerLiveTrip>().firstOrNull()
     }
 }
-
