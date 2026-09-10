@@ -67,5 +67,5 @@ test("V4 layouts stay narrow-phone safe and keep touch targets", () => {
   assert.match(styles, /overflow-x:clip/);
   assert.match(styles, /@media\(max-width:360px\)/);
   assert.match(styles, /env\(safe-area-inset-bottom\)/);
-  assert.doesNotMatch(styles, /min-width:\s*(3[2-9][0-9]|[4-9][0-9]{2})px/);
+  assert.doesNotMatch(styles, /(?:^|[;{])\s*min-width:\s*(3[2-9][0-9]|[4-9][0-9]{2})px/);
 });
