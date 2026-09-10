@@ -17,7 +17,15 @@ class LiveTripMapView @JvmOverloads constructor(context: Context, attrs: Attribu
     private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(24, 32, 51); textSize = 30f; isFakeBoldText = true }
     private var snapshot: LiveTripSnapshot? = null
 
-    fun show(value: LiveTripSnapshot?) { snapshot = value; contentDescription = value?.let { "Live trip map. Speed ${it.speedKmh?.toInt() ?: 0} kilometers per hour" } ?: "Live trip map waiting for GPS"; invalidate() }
+    fun show(value: LiveTripSnapshot?) {
+        snapshot = value
+        contentDescription = if (value?.truckLat != null && value.truckLng != null) {
+            context.getString(R.string.live_trip_map_accessibility, value.speedKmh?.toInt() ?: 0)
+        } else {
+            context.getString(R.string.live_trip_map_waiting_accessibility)
+        }
+        invalidate()
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -27,6 +35,6 @@ class LiveTripMapView @JvmOverloads constructor(context: Context, attrs: Attribu
         canvas.drawCircle(pad, h * .72f, 18f, point); canvas.drawCircle(w - pad, h * .28f, 18f, point)
         val hasGps = snapshot?.truckLat != null && snapshot?.truckLng != null
         canvas.drawCircle(w * .52f, h * .52f, 23f, if (hasGps) truck else point)
-        canvas.drawText(if (hasGps) "LIVE GPS" else "WAITING FOR GPS", pad, 42f, label)
+        canvas.drawText(context.getString(if (hasGps) R.string.live_gps else R.string.waiting_for_gps), pad, 42f, label)
     }
 }
