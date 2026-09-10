@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl, { type LngLatLike, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { CustomerLiveTrip } from "./customer-tracking.service";
@@ -79,6 +79,7 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
   const hasTruck = Boolean(trip && validCoordinate(trip.truck_lng, trip.truck_lat));
   const freshness = classifyTrackingFreshness(hasTruck ? trip?.recorded_at : null);
   const gpsLive = hasTruck && freshness === "LIVE";
+  const gpsBadge = freshness === "LIVE" ? "GPS LIVE" : freshness === "STALE" ? "GPS STALE" : "GPS OFFLINE";
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -145,7 +146,7 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
       <div className="customer-track-v4__progress"><span style={{ width: `${completedPercent}%` }}/></div>
       <div className="customer-track-v4__metrics"><Metric label="Trip status" value={(status || "pending").replaceAll("_", " ")}/><Metric label="Truck GPS status" value={gpsText}/><Metric label="Remaining distance" value={status === "delivered" ? "0 km" : remainingKm == null ? "—" : `${remainingKm.toFixed(1)} km`}/><Metric label="ETA" value={status === "delivered" ? "Delivered" : eta}/></div>
       <div className="customer-track-v4__map-shell">
-        <div className="customer-track-v4__map-head"><div><small>LIVE TRIP MAP</small><strong>Pickup → Drop-off → Truck</strong></div><b className={gpsLive ? "is-live" : ""}>{gpsLive ? "GPS LIVE" : `GPS ${freshness}`}</b></div>
+        <div className="customer-track-v4__map-head"><div><small>LIVE TRIP MAP</small><strong>Pickup → Drop-off → Truck</strong></div><b className={gpsLive ? "is-live" : ""}>{gpsBadge}</b></div>
         <div ref={containerRef} className="customer-track-v4__map" aria-label="Trip tracking map"/>
         {routeLoading && <p className="customer-track-v4__message">Loading route…</p>}
         {routeError && <p className="customer-track-v4__message">Route line unavailable: {routeError}</p>}
