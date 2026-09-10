@@ -1,0 +1,6 @@
+<resources>
+    <string name="live_gps">GPS KALLATTII</string>
+    <string name="waiting_for_gps">GPS EEGAA JIRA</string>
+    <string name="live_trip_map_accessibility">Kaartaa imalaa kallattii. Saffisa sa’aatii keessaa kiilomeetira %1$d</string>
+    <string name="live_trip_map_waiting_accessibility">Kaartaan imalaa GPS eegaa jira</string>
+</resources>
