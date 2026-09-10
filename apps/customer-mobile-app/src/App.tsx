@@ -4,7 +4,7 @@ import { CustomerBookingMap } from "./CustomerBookingMap";
 import { CustomerBookingFlow } from "./CustomerBookingFlow";
 import { CustomerOrdersV4Page as CustomerOrdersPage } from "./CustomerOrdersV4Page";
 import { CustomerProfileV4Page as CustomerProfilePage } from "./CustomerProfileV4Page";
-import { CustomerPaymentsPage } from "./CustomerPaymentsPage";
+import { CustomerPaymentsPage } from "./CustomerDataPages";
 import { CustomerTrackingPage } from "./CustomerTrackingPage";
 import { CustomerLanguageSwitcher, useCustomerLanguage } from "./customer-language";
 import {
