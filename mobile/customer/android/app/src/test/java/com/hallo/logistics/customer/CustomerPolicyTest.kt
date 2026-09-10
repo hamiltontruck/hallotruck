@@ -26,9 +26,21 @@ class CustomerPolicyTest {
     @Test(expected = IllegalArgumentException::class)
     fun nonEthiopianPhoneFailsClosed() { CustomerPolicy.normalizePhone("123") }
 
-    @Test fun cancellationMatchesExistingBackendLifecycle() {
-        listOf("quoted", "placed", "accepted").forEach { assertTrue(CustomerPolicy.canCancel(it)) }
-        listOf("in_transit", "delivered", "cancelled", null).forEach { assertFalse(CustomerPolicy.canCancel(it)) }
+    @Test fun cancellationMatchesRootCustomerPortalLifecycle() {
+        listOf("quoted", "placed").forEach { assertTrue(CustomerPolicy.canCancel(it)) }
+        listOf("assigned", "accepted", "in_transit", "delivered", "cancelled", null).forEach {
+            assertFalse(CustomerPolicy.canCancel(it))
+        }
+    }
+
+    @Test fun assignmentAndTrackingVisibilityFollowCustomerLifecycle() {
+        listOf("assigned", "accepted", "in_transit").forEach {
+            assertTrue(CustomerPolicy.showAssignment(it))
+            assertTrue(CustomerPolicy.canTrack(it))
+        }
+        assertTrue(CustomerPolicy.canTrack("delivered"))
+        assertFalse(CustomerPolicy.showAssignment("delivered"))
+        listOf("quoted", "placed", "cancelled", null).forEach { assertFalse(CustomerPolicy.canTrack(it)) }
     }
 
     @Test fun trackingNeverLabelsOldOrMissingGpsAsLive() {
