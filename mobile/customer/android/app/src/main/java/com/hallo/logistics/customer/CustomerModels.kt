@@ -3,16 +3,21 @@ package com.hallo.logistics.customer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable data class CustomerProfile(
+@Serializable
+data class CustomerProfile(
     val id: String,
     @SerialName("full_name") val fullName: String? = null,
     val phone: String? = null,
     val email: String? = null,
     @SerialName("home_address") val homeAddress: String? = null,
+    @SerialName("customer_type") val customerType: String? = null,
+    @SerialName("company_name") val companyName: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
     val role: String? = null,
 )
 
-@Serializable data class CustomerOrder(
+@Serializable
+data class CustomerOrder(
     val id: String,
     @SerialName("tracking_id") val trackingId: String? = null,
     @SerialName("pickup_address") val pickupAddress: String? = null,
@@ -22,11 +27,21 @@ import kotlinx.serialization.Serializable
     @SerialName("price_etb") val priceEtb: Double? = null,
     val status: String? = null,
     @SerialName("payment_status") val paymentStatus: String? = null,
+    @SerialName("payment_provider") val paymentProvider: String? = null,
+    @SerialName("payment_ref") val paymentRef: String? = null,
+    @SerialName("payment_terms") val paymentTerms: String? = null,
     @SerialName("selected_payment_method") val paymentMethod: String? = null,
+    @SerialName("cargo_quantity") val cargoQuantity: Double? = null,
+    @SerialName("cargo_unit") val cargoUnit: String? = null,
+    @SerialName("cargo_description") val cargoDescription: String? = null,
+    @SerialName("cancellation_reason") val cancellationReason: String? = null,
+    @SerialName("cancellation_source") val cancellationSource: String? = null,
+    @SerialName("cancelled_at") val cancelledAt: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
 )
 
-@Serializable data class CustomerPayment(
+@Serializable
+data class CustomerPayment(
     val id: String,
     @SerialName("order_id") val orderId: String,
     val provider: String? = null,
@@ -37,7 +52,8 @@ import kotlinx.serialization.Serializable
     @SerialName("receipt_path") val receiptPath: String? = null,
 )
 
-@Serializable data class CustomerNotification(
+@Serializable
+data class CustomerNotification(
     val id: String,
     @SerialName("event_type") val eventType: String,
     val title: String,
@@ -46,7 +62,8 @@ import kotlinx.serialization.Serializable
     @SerialName("created_at") val createdAt: String,
 )
 
-@Serializable data class CustomerLiveTrip(
+@Serializable
+data class CustomerLiveTrip(
     @SerialName("order_id") val orderId: String,
     val status: String? = null,
     @SerialName("pickup_lng") val pickupLongitude: Double? = null,
@@ -60,7 +77,8 @@ import kotlinx.serialization.Serializable
     @SerialName("recorded_at") val recordedAt: String? = null,
 )
 
-@Serializable data class CustomerAssignment(
+@Serializable
+data class CustomerAssignment(
     @SerialName("order_id") val orderId: String,
     @SerialName("driver_name") val driverName: String? = null,
     @SerialName("driver_phone") val driverPhone: String? = null,
@@ -74,7 +92,13 @@ import kotlinx.serialization.Serializable
     @SerialName("driver_photo_path") val driverPhotoPath: String? = null,
 )
 
+data class CustomerAssignmentMedia(
+    val driverPhotoUrl: String? = null,
+    val truckPhotoUrl: String? = null,
+)
+
 data class CustomerPlace(val label: String, val longitude: Double, val latitude: Double)
+
 data class CustomerRoute(
     val pickup: CustomerPlace,
     val dropoff: CustomerPlace,
@@ -84,18 +108,46 @@ data class CustomerRoute(
     val coordinates: List<Pair<Double, Double>>,
 )
 
+data class CustomerRoadRoute(
+    val distanceKm: Double,
+    val durationSeconds: Double,
+    val coordinates: List<Pair<Double, Double>>,
+)
+
 data class QuoteInput(val distanceKm: Double, val vehicleType: String, val cargoTons: Double)
 data class QuoteResult(val distanceKm: Double, val vehicleType: String, val cargoTons: Double, val totalEtb: Double)
+
 data class CreateOrderInput(
-    val pickupAddress: String, val pickupLongitude: Double, val pickupLatitude: Double,
-    val dropoffAddress: String, val dropoffLongitude: Double, val dropoffLatitude: Double,
-    val vehicleType: String, val distanceKm: Double, val cargoTons: Double,
-    val cargoQuantity: Double, val cargoUnit: String, val cargoCategory: String,
-    val packagingType: String, val cargoDescription: String,
-    val paymentMethod: String, val quoteEtb: Double,
+    val pickupAddress: String,
+    val pickupLongitude: Double,
+    val pickupLatitude: Double,
+    val dropoffAddress: String,
+    val dropoffLongitude: Double,
+    val dropoffLatitude: Double,
+    val vehicleType: String,
+    val distanceKm: Double,
+    val cargoTons: Double,
+    val cargoQuantity: Double,
+    val cargoUnit: String,
+    val cargoCategory: String,
+    val packagingType: String,
+    val cargoDescription: String,
+    val paymentMethod: String,
+    val quoteEtb: Double,
+)
+
+data class CustomerProfileUpdateInput(
+    val fullName: String,
+    val phone: String,
+    val email: String,
+    val homeAddress: String,
+    val customerType: String,
+    val companyName: String,
 )
 
 enum class CustomerPage { HOME, BOOK, ORDERS, TRACKING, PAYMENTS, NOTIFICATIONS, PROFILE }
+
+enum class CustomerOrderFilter { ALL, ACTIVE, PAYMENT, DELIVERED, CANCELLED }
 
 data class CustomerUiState(
     val loading: Boolean = true,
@@ -109,7 +161,10 @@ data class CustomerUiState(
     val notifications: List<CustomerNotification> = emptyList(),
     val liveTrip: CustomerLiveTrip? = null,
     val assignments: List<CustomerAssignment> = emptyList(),
+    val assignmentMedia: Map<String, CustomerAssignmentMedia> = emptyMap(),
     val trackingOrder: CustomerOrder? = null,
+    val trackingRoute: CustomerRoadRoute? = null,
+    val remainingRoute: CustomerRoadRoute? = null,
     val route: CustomerRoute? = null,
     val driverPhotoUrl: String? = null,
     val pickupSuggestions: List<CustomerPlace> = emptyList(),
@@ -119,4 +174,3 @@ data class CustomerUiState(
     val placeSearchMessage: String = "",
     val quote: QuoteResult? = null,
 )
-
