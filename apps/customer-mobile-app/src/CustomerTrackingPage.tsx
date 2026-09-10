@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { CustomerAssignmentCard } from "./CustomerAssignmentCard";
 import { CustomerTrackingMap } from "./CustomerTrackingMap";
-import { loadCustomerTrackingData, subscribeCustomerTracking, type CustomerTrackingData } from "./customer-tracking.service";
+import { loadCustomerTrackingData, subscribeCustomerTracking, type CustomerLiveTrip, type CustomerTrackingData } from "./customer-tracking.service";
+import { classifyTrackingFreshness } from "./tracking-freshness";
 import "./customer-tracking-v4.css";
 
 type TrackingState = { kind: "loading" } | { kind: "ready"; data: CustomerTrackingData } | { kind: "error"; message: string };
@@ -9,6 +10,41 @@ type TrackingState = { kind: "loading" } | { kind: "ready"; data: CustomerTracki
 function labelStatus(value: string | null | undefined) {
   const clean = value?.trim().replaceAll("_", " ") || "pending";
   return clean.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatGpsRecordedAt(value: string | null | undefined) {
+  if (!value) return "Waiting for GPS update";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
+function CustomerGpsSnapshot({ trip }: { trip: CustomerLiveTrip | undefined }) {
+  const hasGps = trip?.truck_lat != null && trip?.truck_lng != null;
+  const freshness = classifyTrackingFreshness(hasGps ? trip?.recorded_at : null);
+  const gpsLive = hasGps && freshness === "LIVE";
+  const title = !hasGps ? "Waiting for GPS" : gpsLive ? "Live Driver GPS" : `${freshness} · last known location`;
+
+  return (
+    <section className="customer-track-gps-snapshot" data-tracking-freshness={freshness}>
+      <div>
+        <small>GPS SNAPSHOT</small>
+        <strong>{title}</strong>
+        <span>Last GPS update</span>
+        <b>{formatGpsRecordedAt(trip?.recorded_at)}</b>
+      </div>
+      <i className={gpsLive ? "is-live" : ""} aria-label={gpsLive ? "GPS live" : `GPS ${freshness.toLowerCase()}`} />
+      <p>STALE or OFFLINE coordinates are historical last-known data, never a current/live position.</p>
+    </section>
+  );
 }
 
 export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders }: { userId: string; initialOrderId?: string | null; onHome: () => void; onOrders: () => void }) {
@@ -63,6 +99,7 @@ export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders 
 
       <CustomerAssignmentCard userId={userId} assignment={assignment} orderVehicleType={order.vehicle_type}/>
       <CustomerTrackingMap trip={trip} totalDistanceKm={order.distance_km}/>
+      <CustomerGpsSnapshot trip={trip}/>
 
       <button type="button" className="customer-track-refresh" onClick={() => void reload(false)} disabled={refreshing}>{refreshing ? "Refreshing…" : "Refresh tracking"}</button>
       <p className="customer-track-security">Read-only Customer tracking. GPS writes remain Driver-only; assignment and trip access stay bound to this signed-in Customer's order.</p>
