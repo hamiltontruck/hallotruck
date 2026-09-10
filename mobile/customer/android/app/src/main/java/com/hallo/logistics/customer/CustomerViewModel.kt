@@ -65,6 +65,36 @@ class CustomerViewModel(
         _state.value = _state.value.copy(route = null, quote = null)
     }
 
+    fun swapRoute() {
+        pickupSearch?.cancel()
+        dropoffSearch?.cancel()
+        val current = _state.value
+        _state.value = current.copy(
+            route = null,
+            quote = null,
+            selectedPickup = current.selectedDropoff,
+            selectedDropoff = current.selectedPickup,
+            pickupSuggestions = emptyList(),
+            dropoffSuggestions = emptyList(),
+            placeSearchMessage = "",
+        )
+    }
+
+    fun resetRoute() {
+        pickupSearch?.cancel()
+        dropoffSearch?.cancel()
+        val current = _state.value
+        _state.value = current.copy(
+            route = null,
+            quote = null,
+            selectedPickup = null,
+            selectedDropoff = null,
+            pickupSuggestions = emptyList(),
+            dropoffSuggestions = emptyList(),
+            placeSearchMessage = "",
+        )
+    }
+
     fun placeInputChanged(value: String, pickup: Boolean) {
         val clean = value.trim()
         val current = _state.value
