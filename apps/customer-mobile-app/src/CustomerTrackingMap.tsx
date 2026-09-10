@@ -151,7 +151,7 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
         {routeLoading && <p className="customer-track-v4__message">Loading route…</p>}
         {routeError && <p className="customer-track-v4__message">Route line unavailable: {routeError}</p>}
         {!hasTruck && <p className="customer-track-v4__message">Waiting for the assigned Driver's first GPS location.</p>}
-        {hasTruck && !gpsLive && <p className="customer-track-v4__message customer-track-v4__message--warn">{freshness} — truck marker is historical last-known data, not a current/live position.</p>}
+        {hasTruck && !gpsLive && <p className="customer-track-v4__message customer-track-v4__message--warn">{freshness} — last known location, not a current/live position.</p>}
         <div className="customer-track-v4__legend"><span>● Pickup</span><span>● Drop-off</span><span>▣ Truck</span></div>
       </div>
       <div className="customer-track-v4__last-update"><span>Latest location timestamp</span><strong>{lastUpdate}</strong></div>

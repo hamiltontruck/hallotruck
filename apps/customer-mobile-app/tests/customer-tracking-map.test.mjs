@@ -44,8 +44,10 @@ test("freshness contract preserves LIVE STALE OFFLINE and exact timestamp", () =
   assert.match(freshnessSource, /TRACKING_LIVE_MAX_AGE_MS = 2 \* 60 \* 1000/);
   assert.match(freshnessSource, /TRACKING_OFFLINE_AFTER_MS = 30 \* 60 \* 1000/);
   assert.match(mapSource, /classifyTrackingFreshness\(hasTruck \? trip\?\.recorded_at : null\)/);
+  assert.match(mapSource, /"GPS STALE"/);
+  assert.match(mapSource, /"GPS OFFLINE"/);
   assert.match(mapSource, /Waiting for GPS/);
-  assert.match(mapSource, /historical last-known data, not a current\/live position/);
+  assert.match(mapSource, /last known location, not a current\/live position/);
   assert.match(mapSource, /second: "2-digit"/);
   assert.match(mapSource, /timeZoneName: "short"/);
 });
