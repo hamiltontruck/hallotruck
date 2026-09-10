@@ -18,9 +18,9 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
-      ORG_GRADLE_PROJECT_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      ORG_GRADLE_PROJECT_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
-      ORG_GRADLE_PROJECT_MAPTILER_KEY: ${{ secrets.MAPTILER_KEY }}
+      ORG_GRADLE_PROJECT_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      ORG_GRADLE_PROJECT_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      ORG_GRADLE_PROJECT_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
     defaults:
       run:
         working-directory: mobile/customer/android
