@@ -192,15 +192,15 @@ class MainActivity : AppCompatActivity() {
             )
         }
         createOrder.setOnClickListener { createCurrentOrder() }
-        pickupAddress.doAfterTextChanged { value -> viewModel.bookingInputChanged(); viewModel.searchPlaces(value?.toString().orEmpty(), true) }
-        dropoffAddress.doAfterTextChanged { value -> viewModel.bookingInputChanged(); viewModel.searchPlaces(value?.toString().orEmpty(), false) }
+        pickupAddress.doAfterTextChanged { value -> viewModel.placeInputChanged(value?.toString().orEmpty(), true) }
+        dropoffAddress.doAfterTextChanged { value -> viewModel.placeInputChanged(value?.toString().orEmpty(), false) }
         cargoQuantity.doAfterTextChanged {
             viewModel.bookingInputChanged()
             updateLoadSummary()
             updateBookingSteps(viewModel.state.value)
         }
-        pickupAddress.setOnItemClickListener { _, _, _, _ -> viewModel.bookingInputChanged() }
-        dropoffAddress.setOnItemClickListener { _, _, _, _ -> viewModel.bookingInputChanged() }
+        pickupAddress.setOnItemClickListener { _, _, position, _ -> statePlace(position, true)?.let { viewModel.selectPlace(it, true) } }
+        dropoffAddress.setOnItemClickListener { _, _, position, _ -> statePlace(position, false)?.let { viewModel.selectPlace(it, false) } }
     }
 
     private fun openActiveTracking() {
@@ -256,7 +256,9 @@ class MainActivity : AppCompatActivity() {
             state.route?.let { "${it.pickup.label}\n→ ${it.dropoff.label}\n${selectedVehicle.label} · ${quote.distanceKm} km · ${it.durationMinutes} min\n${formatTons(quote.cargoTons)} · ${money(quote.totalEtb)}" } ?: money(quote.totalEtb)
         } ?: tr("Route, distance and the secure backend quote will appear here.", "Daandiin, fageenyi fi gatiin backend nageenya qabu asitti mulʼata.", "መንገድ፣ ርቀት እና ደህንነቱ የተጠበቀ ዋጋ እዚህ ይታያል።")
         renderPlaceSuggestions(state)
-        bookingMap.showRoute(state.route)
+        pickupLayout.error = state.placeSearchMessage.takeIf { pickupAddress.hasFocus() }
+        dropoffLayout.error = state.placeSearchMessage.takeIf { dropoffAddress.hasFocus() }
+        bookingMap.showBooking(state.selectedPickup, state.selectedDropoff, state.route)
         createOrder.isEnabled = state.quote != null && state.route != null && !state.busy
         profileDetails.text = state.profile?.let { "${it.fullName.orEmpty()}\n${it.phone.orEmpty()}\n${it.email.orEmpty()}\n${it.homeAddress.orEmpty()}\n\nCustomer access only · HALLO shared backend" }.orEmpty()
         updateBookingSteps(state)
@@ -339,6 +341,11 @@ class MainActivity : AppCompatActivity() {
             binding.dropoffAddress.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, dropoff))
             if (dropoff.isNotEmpty() && binding.dropoffAddress.hasFocus()) binding.dropoffAddress.showDropDown()
         }
+    }
+
+    private fun statePlace(position: Int, pickup: Boolean): CustomerPlace? {
+        val state = viewModel.state.value
+        return (if (pickup) state.pickupSuggestions else state.dropoffSuggestions).getOrNull(position)
     }
 
     private fun updateBookingSteps(state: CustomerUiState) {
@@ -637,3 +644,4 @@ class MainActivity : AppCompatActivity() {
         )
     }
 }
+

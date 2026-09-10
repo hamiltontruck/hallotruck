@@ -34,6 +34,33 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
     fun show(page: CustomerPage) { _state.value = _state.value.copy(page = page, message = "") }
     fun bookingInputChanged() { _state.value = _state.value.copy(route = null, quote = null) }
 
+    fun placeInputChanged(value: String, pickup: Boolean) {
+        val clean = value.trim()
+        val current = _state.value
+        _state.value = if (pickup) current.copy(
+            route = null,
+            quote = null,
+            selectedPickup = current.selectedPickup?.takeIf { it.label.equals(clean, ignoreCase = true) },
+        ) else current.copy(
+            route = null,
+            quote = null,
+            selectedDropoff = current.selectedDropoff?.takeIf { it.label.equals(clean, ignoreCase = true) },
+        )
+        searchPlaces(value, pickup)
+    }
+
+    fun selectPlace(place: CustomerPlace, pickup: Boolean) {
+        if (pickup) pickupSearch?.cancel() else dropoffSearch?.cancel()
+        val current = _state.value
+        _state.value = if (pickup) current.copy(
+            route = null, quote = null, selectedPickup = place,
+            pickupSuggestions = emptyList(), placeSearchMessage = "",
+        ) else current.copy(
+            route = null, quote = null, selectedDropoff = place,
+            dropoffSuggestions = emptyList(), placeSearchMessage = "",
+        )
+    }
+
     fun searchPlaces(query: String, pickup: Boolean) {
         val previous = if (pickup) pickupSearch else dropoffSearch
         previous?.cancel()
@@ -43,8 +70,12 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
         }
         val job = viewModelScope.launch {
             delay(280)
-            val suggestions = runCatching { repository.searchPlaces(query) }.getOrElse { emptyList() }
-            _state.value = if (pickup) _state.value.copy(pickupSuggestions = suggestions) else _state.value.copy(dropoffSuggestions = suggestions)
+            val result = runCatching { repository.searchPlaces(query) }
+            val suggestions = result.getOrElse { emptyList() }
+            val searchMessage = result.exceptionOrNull()?.message
+                ?: if (suggestions.isEmpty()) "No matching places found in the HALLO operating region" else ""
+            _state.value = if (pickup) _state.value.copy(pickupSuggestions = suggestions, placeSearchMessage = searchMessage)
+            else _state.value.copy(dropoffSuggestions = suggestions, placeSearchMessage = searchMessage)
         }
         if (pickup) pickupSearch = job else dropoffSearch = job
     }
@@ -57,7 +88,8 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
 
     fun calculateAutomaticRoute(pickup: String, dropoff: String, vehicleType: String, cargoTons: Double) = execute("Finding places and calculating the truck route…") {
         require(cargoTons > 0) { "Enter cargo weight" }
-        val route = repository.route(pickup, dropoff, vehicleType)
+        val current = _state.value
+        val route = repository.route(pickup, dropoff, vehicleType, current.selectedPickup, current.selectedDropoff)
         val quote = repository.quote(QuoteInput(route.distanceKm, vehicleType, cargoTons))
         _state.value = _state.value.copy(
             busy = false,
@@ -126,6 +158,8 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
             assignments = assignments.await(), trackingOrder = _state.value.trackingOrder,
             liveTrip = _state.value.liveTrip, route = _state.value.route,
             driverPhotoUrl = _state.value.driverPhotoUrl,
+            selectedPickup = _state.value.selectedPickup,
+            selectedDropoff = _state.value.selectedDropoff,
         )
     }
 
@@ -141,3 +175,4 @@ class CustomerViewModel(private val repository: CustomerRepository = CustomerRep
     private fun signedOut(message: String) { _state.value = CustomerUiState(loading = false, message = message) }
     private fun fail(message: String) { _state.value = _state.value.copy(loading = false, busy = false, message = message) }
 }
+

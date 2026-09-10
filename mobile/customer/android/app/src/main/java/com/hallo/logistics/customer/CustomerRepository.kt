@@ -135,10 +135,16 @@ class CustomerRepository {
         return client.postgrest.rpc("customer_driver_assignment_cards").decodeList()
     }
 
-    suspend fun route(pickupQuery: String, dropoffQuery: String, vehicleType: String): CustomerRoute {
+    suspend fun route(
+        pickupQuery: String,
+        dropoffQuery: String,
+        vehicleType: String,
+        selectedPickup: CustomerPlace? = null,
+        selectedDropoff: CustomerPlace? = null,
+    ): CustomerRoute {
         requireCustomer()
-        val pickup = geocode(pickupQuery)
-        val dropoff = geocode(dropoffQuery)
+        val pickup = selectedPickup?.takeIf { it.matches(pickupQuery) } ?: geocode(pickupQuery)
+        val dropoff = selectedDropoff?.takeIf { it.matches(dropoffQuery) } ?: geocode(dropoffQuery)
         require(pickup.longitude != dropoff.longitude || pickup.latitude != dropoff.latitude) { "Pickup and drop-off must be different places" }
         val session = client.auth.currentSessionOrNull() ?: error("Customer session expired")
         val response = postJson(
@@ -151,6 +157,8 @@ class CustomerRepository {
             mapOf("Authorization" to "Bearer ${session.accessToken}", "apikey" to BuildConfig.SUPABASE_PUBLISHABLE_KEY),
         )
         val root = json.parseToJsonElement(response).jsonObject
+        require(root["provider"]?.jsonPrimitive?.contentOrNull == "openrouteservice") { "Truck routing returned an unexpected provider" }
+        require(root["profile"]?.jsonPrimitive?.contentOrNull == "driving-hgv") { "Truck routing did not return an HGV route" }
         val distance = root["distanceKm"]?.jsonPrimitive?.doubleOrNull ?: error("Route distance was not returned")
         val duration = root["durationMinutes"]?.jsonPrimitive?.doubleOrNull?.toInt() ?: error("Route duration was not returned")
         val points = root["coordinates"]?.jsonArray?.mapNotNull { element ->
@@ -203,7 +211,7 @@ class CustomerRepository {
         if (clean.length < 2) return emptyList()
         require(BuildConfig.MAPTILER_KEY.isNotBlank()) { "Configure MAPTILER_KEY to search places automatically" }
         val encoded = URLEncoder.encode(clean, StandardCharsets.UTF_8.name())
-        val url = "https://api.maptiler.com/geocoding/$encoded.json?key=${URLEncoder.encode(BuildConfig.MAPTILER_KEY, StandardCharsets.UTF_8.name())}&limit=6&language=en&country=et,dj,so&autocomplete=true"
+        val url = "https://api.maptiler.com/geocoding/$encoded.json?key=${URLEncoder.encode(BuildConfig.MAPTILER_KEY, StandardCharsets.UTF_8.name())}&limit=6&language=en&country=et,dj,so&autocomplete=true&types=continental_marine,country,major_landform&excludeTypes=true"
         val root = json.parseToJsonElement(get(url)).jsonObject
         return root["features"]?.jsonArray.orEmpty().mapNotNull { item ->
             val feature = item as? JsonObject ?: return@mapNotNull null
@@ -212,12 +220,15 @@ class CustomerRepository {
             val latitude = center.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
             if (!isOperatingCoordinate(longitude, latitude)) return@mapNotNull null
             val label = feature["place_name"]?.jsonPrimitive?.contentOrNull ?: feature["text"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-            CustomerPlace(label, longitude, latitude)
-        }.distinctBy { it.label }.take(6)
+            CustomerPlace(label.trim(), longitude, latitude)
+        }.distinctBy { it.label.lowercase() }.take(6)
     }
 
     private suspend fun geocode(query: String): CustomerPlace = searchPlaces(query).firstOrNull()
         ?: error("Place was not found in the HALLO operating region")
+
+    private fun CustomerPlace.matches(query: String): Boolean =
+        label.equals(query.trim(), ignoreCase = true) && isOperatingCoordinate(longitude, latitude)
 
     private fun isOperatingCoordinate(longitude: Double, latitude: Double): Boolean =
         (longitude in 32.8..48.1 && latitude in 3.0..15.2) ||
@@ -341,3 +352,4 @@ class CustomerRepository {
         return client.postgrest.rpc("customer_get_live_trip", buildJsonObject { put("p_order_id", orderId) }).decodeList<CustomerLiveTrip>().firstOrNull()
     }
 }
+
