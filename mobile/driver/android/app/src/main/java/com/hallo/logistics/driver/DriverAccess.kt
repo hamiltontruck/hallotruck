@@ -41,6 +41,20 @@ object DriverErrorPolicy {
             else->DriverErrorCode.REQUEST_FAILED
         }
     }
+
+    // Preserved for regression/security tests and non-UI callers. UI renders localized
+    // resources from code(error), so raw Supabase request headers are never exposed.
+    fun safeMessage(error:Throwable):String=when(code(error)) {
+        DriverErrorCode.INVALID_CREDENTIALS -> "Email or password is incorrect"
+        DriverErrorCode.ACCOUNT_EXISTS -> "An account already exists for this email"
+        DriverErrorCode.NETWORK -> "Network unavailable. Check your connection and try again"
+        DriverErrorCode.SESSION_EXPIRED -> "Your session expired. Sign in again"
+        DriverErrorCode.FORBIDDEN -> "You do not have permission for this Driver action"
+        DriverErrorCode.INVALID_INPUT -> "Check the required information and try again"
+        DriverErrorCode.DUPLICATE_ACTION -> "This action was already completed"
+        DriverErrorCode.PERMISSION_DENIED -> "Required permission was denied"
+        DriverErrorCode.REQUEST_FAILED -> "Request failed. Please try again"
+    }
 }
 
 object DriverDocumentPolicy {
