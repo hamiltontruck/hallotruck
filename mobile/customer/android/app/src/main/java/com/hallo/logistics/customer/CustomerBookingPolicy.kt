@@ -9,6 +9,21 @@ object CustomerBookingPolicy {
         return if (unit == "quintal") quantity / 10.0 else quantity
     }
 
+    fun truckCapacityTons(vehicleType: String): Double? = when (vehicleType.trim()) {
+        "Isuzu 5 Ton" -> 5.0
+        "Dry Cargo" -> 10.0
+        "Truck 22 Ton" -> 22.0
+        "Truck 25 Ton" -> 25.0
+        "Truck 30 Ton" -> 30.0
+        else -> null
+    }
+
+    fun requireWithinCapacity(cargoTons: Double, vehicleType: String) {
+        require(cargoTons.isFinite() && cargoTons > 0) { "Enter cargo weight" }
+        val capacity = truckCapacityTons(vehicleType) ?: return
+        require(cargoTons <= capacity) { "Cargo load exceeds the selected truck capacity" }
+    }
+
     fun cargoDescription(
         categoryLabel: String,
         packagingLabel: String,
