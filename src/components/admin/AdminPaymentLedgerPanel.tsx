@@ -135,13 +135,12 @@ export function AdminPaymentLedgerPanel({
     try {
       const result = await getAdminPaymentLedgerPage({ page, pageSize, event: paymentStatus, search: searchQuery });
       setData(result);
-      if (result.page !== page) onPage(result.page);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load payment ledger.");
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, paymentStatus, searchQuery, onPage]);
+  }, [page, pageSize, paymentStatus, searchQuery]);
 
   useEffect(() => { void load(); }, [load]);
 
