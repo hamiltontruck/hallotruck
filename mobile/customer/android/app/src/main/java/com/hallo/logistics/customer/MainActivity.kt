@@ -1,11 +1,18 @@
 package com.hallo.logistics.customer
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.location.Location
+import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.text.InputFilter
 import android.text.InputType
@@ -22,11 +29,13 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -62,6 +71,11 @@ class MainActivity : AppCompatActivity() {
     private var selectedPaymentKey = "cash"
     private var orderFilter = CustomerOrderFilter.ALL
     private val expandedOrders = mutableSetOf<String>()
+
+    private val locationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        val granted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true || grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) requestCurrentPickup() else if (::binding.isInitialized) binding.status.text = getString(R.string.location_permission_required)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -150,6 +164,7 @@ class MainActivity : AppCompatActivity() {
     private fun configureBookingControls() {
         renderTruckOptions()
         configureBookingDropdowns()
+        installRouteActions()
         updateLoadSummary()
     }
 
@@ -242,7 +257,7 @@ class MainActivity : AppCompatActivity() {
                 currentCargoTons(),
             )
         }
-        createOrder.setOnClickListener { createCurrentOrder() }
+        createOrder.setOnClickListener { showBookingReview() }
         pickupAddress.doAfterTextChanged { value -> viewModel.placeInputChanged(value?.toString().orEmpty(), true) }
         dropoffAddress.doAfterTextChanged { value -> viewModel.placeInputChanged(value?.toString().orEmpty(), false) }
         cargoQuantity.doAfterTextChanged {
@@ -304,7 +319,7 @@ class MainActivity : AppCompatActivity() {
         shown.visibility = View.VISIBLE
         highlightNavigation(state.page)
 
-        val firstName = state.profile?.fullName?.substringBefore(' ')?.takeIf { it.isNotBlank() } ?: "Customer"
+        val firstName = state.profile?.fullName?.substringBefore(' ')?.takeIf { it.isNotBlank() } ?: getString(R.string.customer_generic)
         welcome.text = getString(R.string.welcome_name, firstName)
         homeSummary.text = getString(R.string.home_summary, state.orders.size, unread)
         val active = state.orders.firstOrNull { CustomerPolicy.showAssignment(it.status) }
@@ -312,10 +327,11 @@ class MainActivity : AppCompatActivity() {
             "${it.trackingId ?: getString(R.string.order_label)}\n${it.pickupAddress.orEmpty()} → ${it.dropoffAddress.orEmpty()}\n${label(it.status)}"
         } ?: getString(R.string.no_active_delivery)
         homeTrack.visibility = visible(active != null)
+        renderHomeDashboard(state, unread)
 
         quoteResult.text = state.quote?.let { quote ->
             state.route?.let {
-                "${it.pickup.label}\n→ ${it.dropoff.label}\n${getString(selectedVehicle.labelRes)} · ${formatDistance(quote.distanceKm)} · ${it.durationMinutes} min\n${formatTons(quote.cargoTons)} · ${money(quote.totalEtb)}"
+                "${it.pickup.label}\n→ ${it.dropoff.label}\n${getString(selectedVehicle.labelRes)} · ${formatDistance(quote.distanceKm)} · ${getString(R.string.minutes_short, it.durationMinutes)}\n${formatTons(quote.cargoTons)} · ${money(quote.totalEtb)}"
             } ?: money(quote.totalEtb)
         } ?: getString(R.string.secure_quote_placeholder)
         renderPlaceSuggestions(state)
@@ -332,13 +348,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun localizedStatus(state: CustomerUiState): String {
-        if (state.loading || state.busy) return getString(R.string.loading)
-        return when (state.message) {
-            "Customer workspace", "" -> getString(R.string.secure_customer_workspace)
-            "Tracking updated" -> getString(R.string.tracking_updated)
-            "Waiting for the driver to share the first GPS location" -> getString(R.string.waiting_gps)
-            "Signed out" -> getString(R.string.sign_out)
-            else -> state.message.ifBlank { getString(R.string.secure_customer_workspace) }
+        if (state.loading || state.busy) {
+            return when {
+                state.message.startsWith("Finding places") -> getString(R.string.route_calculating)
+                state.message.startsWith("Calculating secure quote") -> getString(R.string.quote_calculating)
+                state.message.startsWith("Creating order") -> getString(R.string.creating_order)
+                state.message.startsWith("Saving customer profile") -> getString(R.string.saving)
+                else -> getString(R.string.loading)
+            }
+        }
+        return when {
+            state.message == "Customer workspace" || state.message.isBlank() -> getString(R.string.secure_customer_workspace)
+            state.message == "Tracking updated" -> getString(R.string.tracking_updated)
+            state.message == "Waiting for the driver to share the first GPS location" -> getString(R.string.waiting_gps)
+            state.message == "Signed out" -> getString(R.string.sign_out)
+            state.message.startsWith("Route ready:") -> getString(R.string.route_ready)
+            state.message.startsWith("Quote ready:") -> getString(R.string.quote_ready)
+            state.message.startsWith("Order ") && state.message.endsWith(" created") -> getString(R.string.order_created)
+            state.message == "Customer profile updated" -> getString(R.string.profile_updated)
+            state.message == "Enter cargo weight" -> getString(R.string.enter_valid_load)
+            state.message == "Cargo load exceeds the selected truck capacity" -> getString(
+                R.string.capacity_exceeded,
+                formatTons(currentCargoTons()),
+                formatTons(selectedVehicle.capacity.toDouble()),
+            )
+            else -> state.message
         }
     }
 
@@ -364,7 +398,8 @@ class MainActivity : AppCompatActivity() {
         homeActiveLabel.text = getString(R.string.active_delivery)
         homeTrack.text = getString(R.string.open_live_tracking)
         startBooking.text = getString(R.string.create_delivery_order)
-        refresh.text = getString(R.string.refresh_customer_data)
+        refresh.text = ""
+        refresh.contentDescription = getString(R.string.refresh_customer_data)
         bookTitle.text = getString(R.string.book_truck)
         bookSubtitle.text = getString(R.string.booking_steps)
         routeSectionTitle.text = getString(R.string.route_section)
@@ -420,6 +455,125 @@ class MainActivity : AppCompatActivity() {
         return null
     }
 
+    private fun installRouteActions() {
+        val parent = binding.pickupLayout.parent as? LinearLayout ?: return
+        if (parent.findViewWithTag<View>(ROUTE_ACTIONS_TAG) != null) return
+        val row = LinearLayout(this).apply {
+            tag = ROUTE_ACTIONS_TAG
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 6.dp, 0, 0)
+        }
+        row.addView(routeActionButton(getString(R.string.my_location)) { requestCurrentPickup() }, weightParams(end = 4.dp))
+        row.addView(routeActionButton(getString(R.string.swap_route)) { swapBookingRoute() }, weightParams(start = 4.dp, end = 4.dp))
+        row.addView(routeActionButton(getString(R.string.reset_route)) { resetBookingRoute() }, weightParams(start = 4.dp))
+        val index = parent.indexOfChild(binding.dropoffLayout).takeIf { it >= 0 } ?: 1
+        parent.addView(row, index + 1)
+    }
+
+    private fun routeActionButton(label: String, action: () -> Unit) = MaterialButton(this).apply {
+        text = label
+        isAllCaps = false
+        minWidth = 0
+        minimumWidth = 0
+        minHeight = 48.dp
+        maxLines = 1
+        textSize = 11f
+        insetTop = 0
+        insetBottom = 0
+        backgroundTintList = ColorStateList.valueOf(getColor(R.color.hallo_navy_soft))
+        setTextColor(getColor(R.color.hallo_navy))
+        setOnClickListener { action() }
+    }
+
+    private fun swapBookingRoute() = with(binding) {
+        val pickup = pickupAddress.text?.toString().orEmpty()
+        val dropoff = dropoffAddress.text?.toString().orEmpty()
+        viewModel.swapRoute()
+        pickupAddress.setText(dropoff, false)
+        dropoffAddress.setText(pickup, false)
+        updateBookingSteps(viewModel.state.value)
+    }
+
+    private fun resetBookingRoute() = with(binding) {
+        viewModel.resetRoute()
+        pickupAddress.setText("", false)
+        dropoffAddress.setText("", false)
+        updateBookingSteps(viewModel.state.value)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun requestCurrentPickup() {
+        val fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!fine && !coarse) {
+            locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            return
+        }
+        val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+            .firstOrNull { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
+        if (provider == null) {
+            binding.status.text = getString(R.string.location_unavailable)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            runCatching {
+                manager.getCurrentLocation(provider, null, mainExecutor) { applyCurrentPickup(it) }
+            }.onFailure { binding.status.text = getString(R.string.location_unavailable) }
+        } else {
+            applyCurrentPickup(runCatching { manager.getLastKnownLocation(provider) }.getOrNull())
+        }
+    }
+
+    private fun applyCurrentPickup(location: Location?) {
+        if (location == null) {
+            binding.status.text = getString(R.string.location_unavailable)
+            return
+        }
+        val place = CustomerPlace(getString(R.string.my_location), location.longitude, location.latitude)
+        viewModel.selectPlace(place, true)
+        binding.pickupAddress.setText(place.label, false)
+        binding.status.text = ""
+        updateBookingSteps(viewModel.state.value)
+    }
+
+    private fun showBookingReview() = with(binding) {
+        val state = viewModel.state.value
+        val route = state.route ?: return@with
+        val quote = state.quote ?: return@with
+        val capacityCheck = runCatching { CustomerBookingPolicy.requireWithinCapacity(quote.cargoTons, selectedVehicle.backendValue) }
+        if (capacityCheck.isFailure) {
+            status.text = getString(R.string.capacity_exceeded, formatTons(quote.cargoTons), formatTons(selectedVehicle.capacity.toDouble()))
+            return@with
+        }
+        val quantity = cargoQuantity.text?.toString()?.toDoubleOrNull() ?: 0.0
+        val summary = buildString {
+            append(route.pickup.label).append("\n→ ").append(route.dropoff.label).append("\n\n")
+            append(getString(R.string.vehicle)).append(": ").append(getString(selectedVehicle.labelRes)).append("\n")
+            append(getString(R.string.distance)).append(": ").append(formatDistance(route.distanceKm)).append("\n")
+            append(getString(R.string.load)).append(": ").append(formatTons(quote.cargoTons)).append(" ( ").append(quantity).append(' ').append(getString(UNITS.first { it.key == selectedUnitKey }.labelRes)).append(" )\n")
+            append(getString(R.string.quote)).append(": ").append(money(quote.totalEtb)).append("\n")
+            append(getString(R.string.payment_method)).append(": ").append(paymentMethod(selectedPaymentKey))
+        }
+        val dialog = AlertDialog.Builder(this@MainActivity)
+            .setTitle(getString(R.string.booking_review))
+            .setMessage(summary)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(getString(R.string.confirm_order), null)
+            .create()
+        dialog.setOnShowListener {
+            val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            button.setOnClickListener {
+                if (viewModel.state.value.busy) return@setOnClickListener
+                button.isEnabled = false
+                createCurrentOrder()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
     private fun renderPlaceSuggestions(state: CustomerUiState) {
         val pickup = state.pickupSuggestions.map { it.label }
         if (pickup != pickupLabels) {
@@ -461,6 +615,20 @@ class MainActivity : AppCompatActivity() {
         val quantity = binding.cargoQuantity.text?.toString()?.toDoubleOrNull() ?: 0.0
         val tons = CustomerBookingPolicy.cargoToTons(quantity, selectedUnitKey)
         binding.loadSummary.text = getString(R.string.load_equivalent, if (tons > 0) formatTons(tons) else "—")
+    }
+
+    private fun renderHomeDashboard(state: CustomerUiState, unread: Int) {
+        binding.pageHome.findViewWithTag<View>(HOME_DASHBOARD_TAG)?.let(binding.pageHome::removeView)
+        val activeCount = state.orders.count { CustomerPolicy.showAssignment(it.status) }
+        val due = state.orders.filterNot { it.status == "cancelled" }.sumOf { order ->
+            CustomerPaymentPolicy.summarize(order, paymentsFor(order, state)).remainingToSubmit
+        }
+        val card = card().apply { tag = HOME_DASHBOARD_TAG }
+        val content = vertical(12.dp)
+        content.addView(metricRow(getString(R.string.metric_orders) to state.orders.size.toString(), getString(R.string.metric_active) to activeCount.toString()))
+        content.addView(metricRow(getString(R.string.metric_to_pay) to money(due), getString(R.string.notifications) to unread.toString()))
+        card.addView(content)
+        binding.pageHome.addView(card, 2, marginParams())
     }
 
     private fun highlightNavigation(page: CustomerPage) {
@@ -734,7 +902,7 @@ class MainActivity : AppCompatActivity() {
             fresh == "STALE" -> getString(R.string.gps_stale)
             fresh == "OFFLINE" -> getString(R.string.gps_offline)
             state.trackingRoute == null -> getString(R.string.route_unavailable)
-            else -> "${getString(R.string.speed)}: ${state.liveTrip.speedKmh?.toInt()?.let { "$it km/h" } ?: "—"} · ${getString(R.string.heading)}: ${state.liveTrip.heading?.toInt()?.let { "$it°" } ?: "—"}\n${getString(R.string.last_gps_update)}: ${state.liveTrip.recordedAt ?: "—"}"
+            else -> "${getString(R.string.speed)}: ${state.liveTrip.speedKmh?.toInt()?.let(::formatSpeed) ?: "—"} · ${getString(R.string.heading)}: ${state.liveTrip.heading?.toInt()?.let { "$it°" } ?: "—"}\n${getString(R.string.last_gps_update)}: ${state.liveTrip.recordedAt ?: "—"}"
         }
         driverDetails.text = assignment?.let { "${it.driverName ?: getString(R.string.assigned_driver)}\n${it.plateNumber ?: "—"}" }
             ?: getString(R.string.driver_assignment_waiting)
@@ -811,7 +979,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun gpsValue(trip: CustomerLiveTrip?, freshness: String, hasTruck: Boolean): String = when {
         !hasTruck -> getString(R.string.gps_offline)
-        freshness == "LIVE" && trip?.speedKmh != null -> "${getString(R.string.gps_live)} · ${trip.speedKmh.toInt()} km/h"
+        freshness == "LIVE" && trip?.speedKmh != null -> "${getString(R.string.gps_live)} · ${formatSpeed(trip.speedKmh.toInt())}"
         freshness == "LIVE" -> getString(R.string.gps_live)
         freshness == "STALE" -> getString(R.string.gps_stale)
         else -> getString(R.string.gps_offline)
@@ -861,26 +1029,73 @@ class MainActivity : AppCompatActivity() {
             binding.paymentsList.addView(text(getString(R.string.no_payments)))
             return
         }
+
+        val summaries = state.orders.associateWith { order -> CustomerPaymentPolicy.summarize(order, paymentsFor(order, state)) }
+        val overview = card()
+        val overviewContent = vertical(14.dp)
+        overviewContent.addView(metricRow(
+            getString(R.string.invoice_total) to money(summaries.values.sumOf { it.invoiceTotal }),
+            getString(R.string.verified_paid) to money(summaries.values.sumOf { it.verifiedPaid }),
+        ))
+        overviewContent.addView(metricRow(
+            getString(R.string.pending_amount) to money(summaries.values.sumOf { it.pendingVerification }),
+            getString(R.string.balance_to_pay) to money(summaries.values.sumOf { it.balanceToPay }),
+        ))
+        overview.addView(overviewContent)
+        binding.paymentsList.addView(overview, marginParams())
+
+        val groups = linkedMapOf(
+            PAYMENT_ESCROW to mutableListOf<CustomerOrder>(),
+            PAYMENT_PENDING to mutableListOf<CustomerOrder>(),
+            PAYMENT_UNPAID to mutableListOf<CustomerOrder>(),
+            PAYMENT_VERIFIED to mutableListOf<CustomerOrder>(),
+        )
         state.orders.forEach { order ->
             val payments = paymentsFor(order, state)
-            val summary = CustomerPaymentPolicy.summarize(order, payments)
-            val card = card()
-            val content = vertical(14.dp)
-            content.addView(textView(order.trackingId ?: getString(R.string.order_label), 16f, true))
-            content.addView(textView("${getString(R.string.invoice_total)}: ${money(summary.invoiceTotal)}", 13f))
-            content.addView(textView("${getString(R.string.verified_paid)}: ${money(summary.verifiedPaid)}", 13f))
-            content.addView(textView("${getString(R.string.pending_amount)}: ${money(summary.pendingVerification)}", 13f))
-            content.addView(textView("${getString(R.string.balance_to_pay)}: ${money(summary.balanceToPay)}", 13f, true))
-            content.addView(textView("${getString(R.string.payment_method)}: ${paymentMethod(order.paymentMethod)}", 12f, false, getColor(R.color.hallo_muted)))
-            payments.forEach { payment ->
-                content.addView(textView("${label(payment.event)} · ${money(payment.amountEtb)} · ${payment.provider ?: "—"}", 12f))
-                if (!payment.providerRef.isNullOrBlank()) content.addView(textView(getString(R.string.provider_reference, payment.providerRef), 11f, false, getColor(R.color.hallo_muted)))
-                if (!payment.receiptPath.isNullOrBlank()) content.addView(actionButton(getString(R.string.view_receipt)) { viewModel.openReceipt(payment) })
+            val summary = summaries.getValue(order)
+            val bucket = when {
+                order.paymentStatus == "held_escrow" || payments.any { it.event == "held_escrow" } -> PAYMENT_ESCROW
+                summary.pendingVerification > 0.0 -> PAYMENT_PENDING
+                summary.balanceToPay > 0.0 -> PAYMENT_UNPAID
+                else -> PAYMENT_VERIFIED
             }
-            content.addView(actionButton(getString(R.string.invoice_receipt_pdf)) { openInvoice(order, payments) })
-            card.addView(content)
-            binding.paymentsList.addView(card, marginParams())
+            groups.getValue(bucket).add(order)
         }
+
+        groups.forEach { (bucket, orders) ->
+            if (orders.isEmpty()) return@forEach
+            binding.paymentsList.addView(textView(getString(paymentGroupLabel(bucket)), 12f, true, getColor(R.color.hallo_muted)).apply {
+                setPadding(4.dp, 10.dp, 4.dp, 6.dp)
+            })
+            orders.forEach { order ->
+                val payments = paymentsFor(order, state)
+                val summary = summaries.getValue(order)
+                val card = card()
+                val content = vertical(14.dp)
+                content.addView(textView(order.trackingId ?: getString(R.string.order_label), 16f, true))
+                content.addView(textView("${getString(R.string.invoice_total)}: ${money(summary.invoiceTotal)}", 13f))
+                content.addView(textView("${getString(R.string.verified_paid)}: ${money(summary.verifiedPaid)}", 13f))
+                content.addView(textView("${getString(R.string.pending_amount)}: ${money(summary.pendingVerification)}", 13f))
+                content.addView(textView("${getString(R.string.balance_to_pay)}: ${money(summary.balanceToPay)}", 13f, true))
+                content.addView(textView("${getString(R.string.payment_method)}: ${paymentMethod(order.paymentMethod)}", 12f, false, getColor(R.color.hallo_muted)))
+                payments.forEach { payment ->
+                    content.addView(textView("${label(payment.event)} · ${money(payment.amountEtb)} · ${payment.provider ?: "—"}", 12f))
+                    if (!payment.providerRef.isNullOrBlank()) content.addView(textView(getString(R.string.provider_reference, payment.providerRef), 11f, false, getColor(R.color.hallo_muted)))
+                    if (!payment.receiptPath.isNullOrBlank()) content.addView(actionButton(getString(R.string.view_receipt)) { viewModel.openReceipt(payment) })
+                }
+                content.addView(actionButton(getString(R.string.invoice_receipt_pdf)) { openInvoice(order, payments) })
+                card.addView(content)
+                binding.paymentsList.addView(card, marginParams())
+            }
+        }
+    }
+
+    @StringRes
+    private fun paymentGroupLabel(bucket: Int): Int = when (bucket) {
+        PAYMENT_ESCROW -> R.string.payment_group_escrow
+        PAYMENT_PENDING -> R.string.payment_group_pending
+        PAYMENT_UNPAID -> R.string.payment_group_unpaid
+        else -> R.string.payment_group_verified
     }
 
     private fun renderNotifications(items: List<CustomerNotification>) {
@@ -1128,7 +1343,7 @@ class MainActivity : AppCompatActivity() {
         val totalMinutes = (seconds / 60.0).toInt().coerceAtLeast(0)
         val hours = totalMinutes / 60
         val minutes = totalMinutes % 60
-        return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+        return if (hours > 0) getString(R.string.hours_minutes_short, hours, minutes) else getString(R.string.minutes_only_short, minutes)
     }
 
     private fun currentCargoTons(): Double = CustomerBookingPolicy.cargoToTons(
@@ -1136,8 +1351,9 @@ class MainActivity : AppCompatActivity() {
         selectedUnitKey,
     )
 
-    private fun formatTons(value: Double): String = "${NumberFormat.getNumberInstance().apply { maximumFractionDigits = 2 }.format(value)} ton"
-    private fun formatDistance(value: Double?): String = value?.let { "${NumberFormat.getNumberInstance().apply { maximumFractionDigits = 1 }.format(it)} km" } ?: "—"
+    private fun formatSpeed(value: Int): String = getString(R.string.speed_kmh, value)
+    private fun formatTons(value: Double): String = getString(R.string.tons_short, NumberFormat.getNumberInstance().apply { maximumFractionDigits = 2 }.format(value))
+    private fun formatDistance(value: Double?): String = value?.let { getString(R.string.distance_km, NumberFormat.getNumberInstance().apply { maximumFractionDigits = 1 }.format(it)) } ?: "—"
     private fun money(value: Double?) = if (value == null) "—" else "ETB ${NumberFormat.getIntegerInstance().format(value)}"
 
     private fun card() = MaterialCardView(this).apply {
@@ -1210,6 +1426,12 @@ class MainActivity : AppCompatActivity() {
         const val TRACKING_REMAINING_TAG = "customer-tracking-remaining"
         const val PROFILE_AVATAR_TAG = "customer-profile-avatar"
         const val PROFILE_EDIT_TAG = "customer-profile-edit"
+        const val HOME_DASHBOARD_TAG = "customer-home-dashboard"
+        const val ROUTE_ACTIONS_TAG = "customer-route-actions"
+        const val PAYMENT_ESCROW = 0
+        const val PAYMENT_PENDING = 1
+        const val PAYMENT_UNPAID = 2
+        const val PAYMENT_VERIFIED = 3
 
         val TRUCKS = listOf(
             TruckOption("Isuzu 5 Ton", 5, R.drawable.truck_isuzu_5, R.string.truck_isuzu_5),

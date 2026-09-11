@@ -163,4 +163,32 @@
     <string name="no_contact_app">No compatible contact app is available.</string>
     <string name="receipt_unavailable">Payment receipt is not available.</string>
     <string name="pdf_open_error">PDF could not be opened.</string>
+
+    <string name="my_location">My Location</string>
+    <string name="swap_route">Swap</string>
+    <string name="reset_route">Reset</string>
+    <string name="location_permission_required">Location permission is required to use My Location.</string>
+    <string name="location_unavailable">Your current location is not available yet. Turn on device location and try again.</string>
+    <string name="capacity_exceeded">This load is %1$s, above the selected truck capacity of %2$s.</string>
+    <string name="enter_valid_load">Enter a cargo weight greater than zero.</string>
+    <string name="booking_review">Review delivery order</string>
+    <string name="confirm_order">Confirm order</string>
+    <string name="customer_generic">Customer</string>
+    <string name="minutes_short">%1$d min</string>
+    <string name="speed_kmh">%1$d km/h</string>
+    <string name="hours_minutes_short">%1$dh %2$dm</string>
+    <string name="minutes_only_short">%1$dm</string>
+    <string name="tons_short">%1$s ton</string>
+    <string name="distance_km">%1$s km</string>
+    <string name="payment_group_unpaid">UNPAID</string>
+    <string name="payment_group_pending">PENDING VERIFICATION</string>
+    <string name="payment_group_verified">VERIFIED / PAID</string>
+    <string name="payment_group_escrow">ESCROW</string>
+    <string name="route_calculating">Finding places and calculating the truck route…</string>
+    <string name="route_ready">Route and secure quote are ready.</string>
+    <string name="quote_calculating">Calculating secure quote…</string>
+    <string name="quote_ready">Secure quote is ready.</string>
+    <string name="creating_order">Creating order…</string>
+    <string name="order_created">Order created successfully.</string>
+    <string name="profile_updated">Customer profile updated.</string>
 </resources>

@@ -10,11 +10,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -87,35 +84,37 @@ class CustomerParityService(
 
     suspend fun signedReceipt(path: String?): String? = signedObject("payment-receipts", path, 300)
 
+    /**
+     * Reuses HALLO's authoritative truck-routing Edge Function instead of calling a second
+     * public routing provider from Android. This keeps booking, live tracking, ETA and
+     * remaining-distance calculations on the same HGV routing contract.
+     */
     suspend fun roadRoute(
         fromLongitude: Double?,
         fromLatitude: Double?,
         toLongitude: Double?,
         toLatitude: Double?,
+        vehicleType: String?,
     ): CustomerRoadRoute? {
         repository.requireCustomer()
         if (fromLongitude == null || fromLatitude == null || toLongitude == null || toLatitude == null) return null
         if (!fromLongitude.isFinite() || !fromLatitude.isFinite() || !toLongitude.isFinite() || !toLatitude.isFinite()) return null
-        val body = request(
-            "https://router.project-osrm.org/route/v1/driving/$fromLongitude,$fromLatitude;$toLongitude,$toLatitude?overview=full&geometries=geojson&steps=false",
-            "GET",
-            null,
-            emptyMap(),
+        val vehicle = vehicleType?.trim().orEmpty()
+        if (vehicle.isBlank()) return null
+
+        val from = CustomerPlace("Route start", fromLongitude, fromLatitude)
+        val to = CustomerPlace("Route destination", toLongitude, toLatitude)
+        val route = repository.route(
+            pickupQuery = from.label,
+            dropoffQuery = to.label,
+            vehicleType = vehicle,
+            selectedPickup = from,
+            selectedDropoff = to,
         )
-        val route = json.parseToJsonElement(body).jsonObject["routes"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
-        val distanceMeters = route["distance"]?.jsonPrimitive?.doubleOrNull ?: return null
-        val durationSeconds = route["duration"]?.jsonPrimitive?.doubleOrNull ?: return null
-        val coordinates = route["geometry"]?.jsonObject?.get("coordinates")?.jsonArray.orEmpty().mapNotNull { point ->
-            val pair = point as? JsonArray ?: return@mapNotNull null
-            val longitude = pair.getOrNull(0)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
-            val latitude = pair.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
-            longitude to latitude
-        }
-        if (coordinates.size < 2) return null
         return CustomerRoadRoute(
-            distanceKm = distanceMeters / 1000.0,
-            durationSeconds = durationSeconds,
-            coordinates = coordinates,
+            distanceKm = route.distanceKm,
+            durationSeconds = route.durationMinutes * 60.0,
+            coordinates = route.coordinates,
         )
     }
 

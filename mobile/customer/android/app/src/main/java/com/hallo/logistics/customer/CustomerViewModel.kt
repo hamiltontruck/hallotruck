@@ -65,6 +65,36 @@ class CustomerViewModel(
         _state.value = _state.value.copy(route = null, quote = null)
     }
 
+    fun swapRoute() {
+        pickupSearch?.cancel()
+        dropoffSearch?.cancel()
+        val current = _state.value
+        _state.value = current.copy(
+            route = null,
+            quote = null,
+            selectedPickup = current.selectedDropoff,
+            selectedDropoff = current.selectedPickup,
+            pickupSuggestions = emptyList(),
+            dropoffSuggestions = emptyList(),
+            placeSearchMessage = "",
+        )
+    }
+
+    fun resetRoute() {
+        pickupSearch?.cancel()
+        dropoffSearch?.cancel()
+        val current = _state.value
+        _state.value = current.copy(
+            route = null,
+            quote = null,
+            selectedPickup = null,
+            selectedDropoff = null,
+            pickupSuggestions = emptyList(),
+            dropoffSuggestions = emptyList(),
+            placeSearchMessage = "",
+        )
+    }
+
     fun placeInputChanged(value: String, pickup: Boolean) {
         val clean = value.trim()
         val current = _state.value
@@ -137,6 +167,7 @@ class CustomerViewModel(
     }
 
     fun calculateQuote(distanceKm: Double, vehicleType: String, cargoTons: Double) = execute("Calculating secure quote…") {
+        CustomerBookingPolicy.requireWithinCapacity(cargoTons, vehicleType)
         val quote = repository.quote(QuoteInput(distanceKm, vehicleType, cargoTons))
         _state.value = _state.value.copy(
             busy = false,
@@ -151,7 +182,7 @@ class CustomerViewModel(
         vehicleType: String,
         cargoTons: Double,
     ) = execute("Finding places and calculating the truck route…") {
-        require(cargoTons > 0) { "Enter cargo weight" }
+        CustomerBookingPolicy.requireWithinCapacity(cargoTons, vehicleType)
         val current = _state.value
         val route = repository.route(
             pickup,
@@ -170,6 +201,7 @@ class CustomerViewModel(
     }
 
     fun createOrder(input: CreateOrderInput) = execute("Creating order…") {
+        CustomerBookingPolicy.requireWithinCapacity(input.cargoTons, input.vehicleType)
         val tracking = repository.createOrder(input)
         authorizeAndLoad(preservePage = true)
         _state.value = _state.value.copy(page = CustomerPage.ORDERS, message = "Order $tracking created")
@@ -237,6 +269,7 @@ class CustomerViewModel(
                     live?.pickupLatitude,
                     live?.dropoffLongitude,
                     live?.dropoffLatitude,
+                    freshOrder.vehicleType,
                 )
             }.getOrNull()
         }
@@ -250,6 +283,7 @@ class CustomerViewModel(
                     live?.truckLatitude,
                     live?.dropoffLongitude,
                     live?.dropoffLatitude,
+                    freshOrder.vehicleType,
                 )
             }.getOrNull()
         } else {

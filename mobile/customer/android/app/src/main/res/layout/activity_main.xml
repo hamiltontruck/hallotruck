@@ -1,151 +1,287 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/hallo_surface" android:fitsSystemWindows="true" android:orientation="vertical">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/hallo_surface"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="76dp" android:background="@color/hallo_navy" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="14dp" android:paddingTop="8dp" android:paddingEnd="14dp" android:paddingBottom="8dp">
-        <ImageView android:layout_width="54dp" android:layout_height="54dp" android:contentDescription="HALLO Logistics" android:scaleType="fitCenter" android:src="@drawable/hallo_logistics_logo" />
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="11dp" android:layout_weight="1" android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:letterSpacing="0.12" android:text="HALLO CUSTOMER" android:textColor="@color/hallo_gold" android:textSize="11sp" android:textStyle="bold" />
-            <TextView android:id="@+id/headerTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:text="Move smarter" android:textColor="@android:color/white" android:textSize="21sp" android:textStyle="bold" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/hallo_navy"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="12dp">
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="HALLO Logistics"
+            android:scaleType="fitCenter"
+            android:src="@drawable/hallo_logistics_logo" />
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.09"
+                android:text="HALLO · CUSTOMER"
+                android:textColor="@color/hallo_gold"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/headerTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textColor="@android:color/white"
+                android:textSize="17sp"
+                android:textStyle="bold" />
         </LinearLayout>
-        <ProgressBar android:id="@+id/progress" android:layout_width="28dp" android:layout_height="28dp" android:indeterminateTint="@color/hallo_gold" />
+        <ProgressBar
+            android:id="@+id/progress"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:indeterminateTint="@color/hallo_gold" />
     </LinearLayout>
 
-    <com.google.android.material.card.MaterialCardView android:id="@+id/statusCard" style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_marginTop="-7dp" android:layout_marginEnd="12dp" app:cardCornerRadius="18dp">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="48dp" android:orientation="horizontal" android:paddingStart="12dp" android:paddingTop="5dp" android:paddingEnd="8dp" android:paddingBottom="5dp">
-            <TextView android:id="@+id/status" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:accessibilityLiveRegion="polite" android:ellipsize="end" android:maxLines="2" android:textColor="@color/hallo_text" android:textSize="12sp" />
-            <FrameLayout android:layout_width="44dp" android:layout_height="44dp">
-                <com.google.android.material.button.MaterialButton android:id="@+id/navNotifications" style="@style/Widget.Material3.Button.IconButton" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="Notifications" android:visibility="gone" app:icon="@drawable/ic_notifications" app:iconTint="@color/hallo_navy" />
-                <TextView android:id="@+id/notificationBadge" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="top|end" android:background="@drawable/bg_notification_badge" android:gravity="center" android:textColor="@android:color/white" android:textSize="9sp" android:textStyle="bold" android:visibility="gone" />
-            </FrameLayout>
-            <com.google.android.material.button.MaterialButtonToggleGroup android:id="@+id/languageSelector" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="2dp" android:visibility="gone" app:checkedButton="@id/languageEn" app:selectionRequired="true" app:singleSelection="true">
-                <com.google.android.material.button.MaterialButton android:id="@+id/languageEn" style="@style/Widget.Hallo.CompactToggle" android:layout_width="38dp" android:layout_height="38dp" android:text="EN" />
-                <com.google.android.material.button.MaterialButton android:id="@+id/languageOr" style="@style/Widget.Hallo.CompactToggle" android:layout_width="38dp" android:layout_height="38dp" android:text="OR" />
-                <com.google.android.material.button.MaterialButton android:id="@+id/languageAm" style="@style/Widget.Hallo.CompactToggle" android:layout_width="42dp" android:layout_height="38dp" android:text="አማ" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    <LinearLayout
+        android:id="@+id/statusCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        android:gravity="center_vertical"
+        android:minHeight="48dp"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="10dp">
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:accessibilityLiveRegion="polite"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/hallo_muted"
+            android:textSize="11sp" />
+        <FrameLayout android:layout_width="44dp" android:layout_height="44dp">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/navNotifications"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="Notifications"
+                android:visibility="gone"
+                app:icon="@drawable/ic_notifications"
+                app:iconTint="@color/hallo_navy" />
+            <TextView
+                android:id="@+id/notificationBadge"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="top|end"
+                android:background="@drawable/bg_notification_badge"
+                android:gravity="center"
+                android:textColor="@android:color/white"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </FrameLayout>
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/languageSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:checkedButton="@id/languageEn"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+            <com.google.android.material.button.MaterialButton android:id="@+id/languageEn" style="@style/Widget.Hallo.CompactToggle" android:layout_width="36dp" android:layout_height="36dp" android:text="EN" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/languageOr" style="@style/Widget.Hallo.CompactToggle" android:layout_width="36dp" android:layout_height="36dp" android:text="OR" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/languageAm" style="@style/Widget.Hallo.CompactToggle" android:layout_width="40dp" android:layout_height="36dp" android:text="አማ" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+    </LinearLayout>
 
-    <androidx.core.widget.NestedScrollView android:id="@+id/contentScroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:fillViewport="true" android:paddingBottom="22dp">
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/contentScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:overScrollMode="ifContentScrolls"
+        android:paddingBottom="20dp">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
             <LinearLayout android:id="@+id/authPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
-                <TextView android:id="@+id/authTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Customer sign in" android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold" />
-                <TextView android:id="@+id/authSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:layout_marginBottom="14dp" android:text="Book, pay and follow every delivery securely." android:textColor="@color/hallo_muted" android:textSize="14sp" />
+                <TextView android:id="@+id/authTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold" />
+                <TextView android:id="@+id/authSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:layout_marginBottom="14dp" android:textColor="@color/hallo_muted" android:textSize="14sp" />
                 <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="17dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                         <LinearLayout android:id="@+id/signupFields" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Full name"><com.google.android.material.textfield.TextInputEditText android:id="@+id/fullName" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textPersonName" android:maxLength="120" /></com.google.android.material.textfield.TextInputLayout>
-                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Phone · 09xxxxxxxx"><com.google.android.material.textfield.TextInputEditText android:id="@+id/phone" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="phone" android:maxLength="17" /></com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content"><com.google.android.material.textfield.TextInputEditText android:id="@+id/fullName" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textPersonName" android:maxLength="120" /></com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content"><com.google.android.material.textfield.TextInputEditText android:id="@+id/phone" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="phone" android:maxLength="17" /></com.google.android.material.textfield.TextInputLayout>
                         </LinearLayout>
-                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Email"><com.google.android.material.textfield.TextInputEditText android:id="@+id/email" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textEmailAddress" /></com.google.android.material.textfield.TextInputLayout>
-                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Password / 6-digit signup PIN" app:endIconMode="password_toggle"><com.google.android.material.textfield.TextInputEditText android:id="@+id/password" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textPassword" /></com.google.android.material.textfield.TextInputLayout>
-                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/confirmPinLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Confirm 6-digit PIN" android:visibility="gone" app:endIconMode="password_toggle"><com.google.android.material.textfield.TextInputEditText android:id="@+id/confirmPin" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberPassword" android:maxLength="6" /></com.google.android.material.textfield.TextInputLayout>
-                        <com.google.android.material.button.MaterialButton android:id="@+id/authSubmit" style="@style/Widget.Hallo.Primary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Sign in" />
-                        <com.google.android.material.button.MaterialButton android:id="@+id/authMode" style="@style/Widget.Material3.Button.TextButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Create a Customer account" android:textColor="@color/hallo_navy" />
+                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content"><com.google.android.material.textfield.TextInputEditText android:id="@+id/email" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textEmailAddress" /></com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" app:endIconMode="password_toggle"><com.google.android.material.textfield.TextInputEditText android:id="@+id/password" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textPassword" /></com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/confirmPinLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" app:endIconMode="password_toggle"><com.google.android.material.textfield.TextInputEditText android:id="@+id/confirmPin" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberPassword" android:maxLength="6" /></com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/authSubmit" style="@style/Widget.Hallo.Primary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/authMode" style="@style/Widget.Material3.Button.TextButton" android:layout_width="match_parent" android:layout_height="48dp" android:textColor="@color/hallo_navy" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <LinearLayout android:id="@+id/customerShell" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="16dp" android:paddingTop="18dp" android:paddingEnd="16dp" android:paddingBottom="16dp" android:visibility="gone">
+            <LinearLayout android:id="@+id/customerShell" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="16dp" android:paddingTop="14dp" android:paddingEnd="16dp" android:paddingBottom="16dp" android:visibility="gone">
+
                 <LinearLayout android:id="@+id/pageHome" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-                    <TextView android:id="@+id/welcome" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="30sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/homeSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_muted" android:textSize="15sp" />
-                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="17dp">
-                        <TextView android:id="@+id/homeActiveLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ACTIVE DELIVERY" android:textColor="@color/hallo_success" android:textSize="12sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/homeActiveOrder" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:lineSpacingExtra="4dp" android:textColor="@color/hallo_text" android:textSize="16sp" />
-                        <com.google.android.material.button.MaterialButton android:id="@+id/homeTrack" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Open live tracking" />
-                    </LinearLayout></com.google.android.material.card.MaterialCardView>
-                    <com.google.android.material.button.MaterialButton android:id="@+id/startBooking" style="@style/Widget.Hallo.Primary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Create delivery order" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/refresh" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Refresh customer data" />
+                    <TextView android:id="@+id/welcome" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="27sp" android:textStyle="bold" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:gravity="center_vertical" android:orientation="horizontal">
+                        <TextView android:id="@+id/homeSummary" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/hallo_muted" android:textSize="14sp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/refresh" style="@style/Widget.Material3.Button.IconButton" android:layout_width="48dp" android:layout_height="48dp" android:contentDescription="Refresh" app:icon="@drawable/ic_refresh" app:iconTint="@color/hallo_navy" />
+                    </LinearLayout>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                            <TextView android:id="@+id/homeActiveLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/hallo_success" android:textSize="11sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/homeActiveOrder" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:lineSpacingExtra="4dp" android:textColor="@color/hallo_text" android:textSize="16sp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/homeTrack" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="12dp" app:icon="@drawable/ic_nav_track" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.button.MaterialButton android:id="@+id/startBooking" style="@style/Widget.Hallo.Primary" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="14dp" app:icon="@drawable/ic_hallo_truck" />
                 </LinearLayout>
 
                 <LinearLayout android:id="@+id/pageBook" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-                    <TextView android:id="@+id/bookTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Book a truck" android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/bookSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Route → Truck → Cargo → Load → Quote → Confirm" android:textColor="@color/hallo_muted" />
-                    <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:clipToPadding="false" android:scrollbars="none"><LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingEnd="6dp">
-                        <TextView android:id="@+id/stepRoute" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_active" android:text="1 Route" android:textColor="@android:color/white" android:textSize="12sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/stepTruck" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_idle" android:text="2 Truck" android:textColor="@color/hallo_navy" android:textSize="12sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/stepCargo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_idle" android:text="3 Cargo" android:textColor="@color/hallo_navy" android:textSize="12sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/stepLoad" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_idle" android:text="4 Load" android:textColor="@color/hallo_navy" android:textSize="12sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/stepQuote" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_idle" android:text="5 Quote" android:textColor="@color/hallo_navy" android:textSize="12sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/stepConfirm" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_step_idle" android:text="6 Confirm" android:textColor="@color/hallo_navy" android:textSize="12sp" android:textStyle="bold" />
-                    </LinearLayout></HorizontalScrollView>
-
-                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="15dp">
-                        <TextView android:id="@+id/routeSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="1 · Route" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
-                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/pickupLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Pickup place" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/pickupAddress" android:layout_width="match_parent" android:layout_height="wrap_content" android:completionThreshold="2" android:inputType="textCapWords" /></com.google.android.material.textfield.TextInputLayout>
-                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/dropoffLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Drop-off place" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/dropoffAddress" android:layout_width="match_parent" android:layout_height="wrap_content" android:completionThreshold="2" android:inputType="textCapWords" /></com.google.android.material.textfield.TextInputLayout>
-                    </LinearLayout></com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="15dp">
-                        <TextView android:id="@+id/truckSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="2 · Choose a truck" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/truckSectionHelp" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Swipe to compare capacity and select." android:textColor="@color/hallo_muted" android:textSize="12sp" />
-                        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:clipToPadding="false" android:scrollbars="none"><LinearLayout android:id="@+id/truckOptions" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingEnd="4dp" /></HorizontalScrollView>
-                    </LinearLayout></com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="15dp">
-                        <TextView android:id="@+id/cargoSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="3–4 · Cargo and load" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
-                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/cargoCategoryLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Cargo category" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/cargoCategory" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" /></com.google.android.material.textfield.TextInputLayout>
-                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/packagingTypeLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Packaging / load type" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/packagingType" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" /></com.google.android.material.textfield.TextInputLayout>
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:baselineAligned="false" android:orientation="horizontal">
-                            <com.google.android.material.textfield.TextInputLayout android:id="@+id/cargoQuantityLayout" style="@style/Widget.Hallo.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginEnd="8dp" android:layout_weight="1.35" android:hint="Quantity"><com.google.android.material.textfield.TextInputEditText android:id="@+id/cargoQuantity" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" /></com.google.android.material.textfield.TextInputLayout>
-                            <com.google.android.material.textfield.TextInputLayout android:id="@+id/cargoUnitLayout" style="@style/Widget.Hallo.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="Unit" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/cargoUnit" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" /></com.google.android.material.textfield.TextInputLayout>
+                    <TextView android:id="@+id/bookTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="26sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/bookSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/hallo_muted" android:textSize="13sp" />
+                    <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:clipToPadding="false" android:scrollbars="none">
+                        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingEnd="6dp">
+                            <TextView android:id="@+id/stepRoute" android:layout_width="38dp" android:layout_height="38dp" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_active" android:gravity="center" android:textColor="@android:color/white" android:textStyle="bold" />
+                            <TextView android:id="@+id/stepTruck" android:layout_width="38dp" android:layout_height="38dp" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_idle" android:gravity="center" android:textColor="@color/hallo_navy" android:textStyle="bold" />
+                            <TextView android:id="@+id/stepCargo" android:layout_width="38dp" android:layout_height="38dp" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_idle" android:gravity="center" android:textColor="@color/hallo_navy" android:textStyle="bold" />
+                            <TextView android:id="@+id/stepLoad" android:layout_width="38dp" android:layout_height="38dp" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_idle" android:gravity="center" android:textColor="@color/hallo_navy" android:textStyle="bold" />
+                            <TextView android:id="@+id/stepQuote" android:layout_width="38dp" android:layout_height="38dp" android:layout_marginEnd="6dp" android:background="@drawable/bg_step_idle" android:gravity="center" android:textColor="@color/hallo_navy" android:textStyle="bold" />
+                            <TextView android:id="@+id/stepConfirm" android:layout_width="38dp" android:layout_height="38dp" android:background="@drawable/bg_step_idle" android:gravity="center" android:textColor="@color/hallo_navy" android:textStyle="bold" />
                         </LinearLayout>
-                        <TextView android:id="@+id/loadSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_step_idle" android:text="Load: —" android:textColor="@color/hallo_navy" android:textSize="13sp" android:textStyle="bold" />
-                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/additionalNotesLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Additional notes (optional)" app:counterEnabled="true" app:counterMaxLength="360"><com.google.android.material.textfield.TextInputEditText android:id="@+id/additionalNotes" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="top|start" android:inputType="textCapSentences|textMultiLine" android:maxLength="360" android:minLines="3" /></com.google.android.material.textfield.TextInputLayout>
-                    </LinearLayout></com.google.android.material.card.MaterialCardView>
+                    </HorizontalScrollView>
 
-                    <com.google.android.material.button.MaterialButton android:id="@+id/calculateQuote" style="@style/Widget.Hallo.Primary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Find route &amp; calculate quote" />
-                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" app:cardCornerRadius="22dp"><com.hallo.logistics.customer.CustomerLiveMapView android:id="@+id/bookingMap" android:layout_width="match_parent" android:layout_height="238dp" /></com.google.android.material.card.MaterialCardView>
-                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="15dp">
-                        <TextView android:id="@+id/quoteSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="5 · Secure quote" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/quoteResult" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:lineSpacingExtra="4dp" android:textColor="@color/hallo_text" android:textSize="15sp" android:textStyle="bold" />
-                        <com.google.android.material.textfield.TextInputLayout android:id="@+id/paymentMethodLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Payment method" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/paymentMethod" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" /></com.google.android.material.textfield.TextInputLayout>
-                        <com.google.android.material.button.MaterialButton android:id="@+id/createOrder" style="@style/Widget.Hallo.Primary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:enabled="false" android:text="6 · Confirm &amp; create order" />
-                    </LinearLayout></com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" app:cardCornerRadius="18dp">
+                        <com.hallo.logistics.customer.CustomerLiveMapView android:id="@+id/bookingMap" android:layout_width="match_parent" android:layout_height="280dp" android:nestedScrollingEnabled="false" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="14dp">
+                            <TextView android:id="@+id/routeSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
+                            <com.google.android.material.textfield.TextInputLayout android:id="@+id/pickupLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/pickupAddress" android:layout_width="match_parent" android:layout_height="wrap_content" android:completionThreshold="2" android:inputType="textCapWords" /></com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout android:id="@+id/dropoffLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/dropoffAddress" android:layout_width="match_parent" android:layout_height="wrap_content" android:completionThreshold="2" android:inputType="textCapWords" /></com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/calculateQuote" style="@style/Widget.Hallo.Primary" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="10dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="14dp">
+                            <TextView android:id="@+id/truckSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/truckSectionHelp" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/hallo_muted" android:textSize="12sp" />
+                            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:clipToPadding="false" android:scrollbars="none"><LinearLayout android:id="@+id/truckOptions" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingEnd="4dp" /></HorizontalScrollView>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="14dp">
+                            <TextView android:id="@+id/cargoSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
+                            <com.google.android.material.textfield.TextInputLayout android:id="@+id/cargoCategoryLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/cargoCategory" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" /></com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout android:id="@+id/packagingTypeLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/packagingType" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" /></com.google.android.material.textfield.TextInputLayout>
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:baselineAligned="false" android:orientation="horizontal">
+                                <com.google.android.material.textfield.TextInputLayout android:id="@+id/cargoQuantityLayout" style="@style/Widget.Hallo.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginEnd="8dp" android:layout_weight="1.35"><com.google.android.material.textfield.TextInputEditText android:id="@+id/cargoQuantity" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" /></com.google.android.material.textfield.TextInputLayout>
+                                <com.google.android.material.textfield.TextInputLayout android:id="@+id/cargoUnitLayout" style="@style/Widget.Hallo.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/cargoUnit" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" /></com.google.android.material.textfield.TextInputLayout>
+                            </LinearLayout>
+                            <TextView android:id="@+id/loadSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_step_idle" android:padding="12dp" android:textColor="@color/hallo_navy" android:textSize="13sp" android:textStyle="bold" />
+                            <com.google.android.material.textfield.TextInputLayout android:id="@+id/additionalNotesLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" app:counterEnabled="true" app:counterMaxLength="360"><com.google.android.material.textfield.TextInputEditText android:id="@+id/additionalNotes" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="top|start" android:inputType="textCapSentences|textMultiLine" android:maxLength="360" android:minLines="2" /></com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="14dp">
+                            <TextView android:id="@+id/quoteSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/quoteResult" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:lineSpacingExtra="4dp" android:textColor="@color/hallo_text" android:textSize="15sp" android:textStyle="bold" />
+                            <com.google.android.material.textfield.TextInputLayout android:id="@+id/paymentMethodLayout" style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" app:endIconMode="dropdown_menu"><AutoCompleteTextView android:id="@+id/paymentMethod" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" /></com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/createOrder" style="@style/Widget.Hallo.Primary" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="10dp" android:enabled="false" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
 
                 <LinearLayout android:id="@+id/pageOrders" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-                    <TextView android:id="@+id/ordersTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="My orders" android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/ordersSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Status, delivery and cancellation" android:textColor="@color/hallo_muted" />
-                    <LinearLayout android:id="@+id/ordersList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" />
+                    <TextView android:id="@+id/ordersTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="26sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/ordersSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/hallo_muted" android:textSize="13sp" />
+                    <LinearLayout android:id="@+id/ordersList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical" />
                 </LinearLayout>
 
                 <LinearLayout android:id="@+id/pageTracking" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-                    <TextView android:id="@+id/trackingTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Live tracking" android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/trackingFreshness" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:background="@drawable/bg_step_idle" android:textColor="@color/hallo_success" android:textStyle="bold" />
-                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" app:cardCornerRadius="22dp"><com.hallo.logistics.customer.CustomerLiveMapView android:id="@+id/trackingMap" android:layout_width="match_parent" android:layout_height="300dp" /></com.google.android.material.card.MaterialCardView>
-                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
-                            <ImageView android:id="@+id/driverPhoto" android:layout_width="74dp" android:layout_height="74dp" android:background="@drawable/bg_logo_badge" android:contentDescription="Assigned driver photo" android:padding="3dp" android:scaleType="centerCrop" android:visibility="gone" />
-                            <TextView android:id="@+id/driverDetails" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:lineSpacingExtra="3dp" android:textColor="@color/hallo_text" android:textSize="15sp" />
+                    <TextView android:id="@+id/trackingTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="24sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/trackingFreshness" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:background="@drawable/bg_step_idle" android:paddingStart="10dp" android:paddingTop="6dp" android:paddingEnd="10dp" android:paddingBottom="6dp" android:textStyle="bold" />
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" app:cardCornerRadius="18dp"><com.hallo.logistics.customer.CustomerLiveMapView android:id="@+id/trackingMap" android:layout_width="match_parent" android:layout_height="310dp" android:nestedScrollingEnabled="false" /></com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="14dp">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                                <ImageView android:id="@+id/driverPhoto" android:layout_width="64dp" android:layout_height="64dp" android:background="@drawable/bg_logo_badge" android:contentDescription="Assigned driver photo" android:padding="3dp" android:scaleType="centerCrop" android:visibility="gone" />
+                                <TextView android:id="@+id/driverDetails" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:lineSpacingExtra="3dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
+                            </LinearLayout>
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:baselineAligned="false" android:orientation="horizontal" android:weightSum="3">
+                                <TextView android:id="@+id/tripStatus" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginEnd="3dp" android:layout_weight="1" android:background="@drawable/bg_step_idle" android:gravity="center" android:minHeight="60dp" android:padding="5dp" android:textColor="@color/hallo_navy" android:textSize="10sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/tripEta" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="2dp" android:layout_marginEnd="2dp" android:layout_weight="1" android:background="@drawable/bg_step_idle" android:gravity="center" android:minHeight="60dp" android:padding="5dp" android:textColor="@color/hallo_navy" android:textSize="10sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/tripVehicle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="3dp" android:layout_weight="1" android:background="@drawable/bg_step_idle" android:gravity="center" android:minHeight="60dp" android:padding="5dp" android:textColor="@color/hallo_navy" android:textSize="10sp" android:textStyle="bold" />
+                            </LinearLayout>
+                            <TextView android:id="@+id/trackingResult" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:lineSpacingExtra="3dp" android:textColor="@color/hallo_muted" android:textSize="12sp" />
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="horizontal">
+                                <com.google.android.material.button.MaterialButton android:id="@+id/callDriver" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginEnd="4dp" android:layout_weight="1" app:icon="@drawable/ic_phone" />
+                                <com.google.android.material.button.MaterialButton android:id="@+id/messageDriver" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="4dp" android:layout_weight="1" app:icon="@drawable/ic_message" />
+                            </LinearLayout>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/refreshTracking" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" app:icon="@drawable/ic_refresh" />
                         </LinearLayout>
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:baselineAligned="false" android:orientation="horizontal" android:weightSum="3">
-                            <TextView android:id="@+id/tripStatus" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginEnd="4dp" android:layout_weight="1" android:background="@drawable/bg_step_idle" android:gravity="center" android:minHeight="58dp" android:padding="6dp" android:textColor="@color/hallo_navy" android:textSize="11sp" android:textStyle="bold" />
-                            <TextView android:id="@+id/tripEta" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="2dp" android:layout_marginEnd="2dp" android:layout_weight="1" android:background="@drawable/bg_step_idle" android:gravity="center" android:minHeight="58dp" android:padding="6dp" android:textColor="@color/hallo_navy" android:textSize="11sp" android:textStyle="bold" />
-                            <TextView android:id="@+id/tripVehicle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:layout_weight="1" android:background="@drawable/bg_step_idle" android:gravity="center" android:minHeight="58dp" android:padding="6dp" android:textColor="@color/hallo_navy" android:textSize="11sp" android:textStyle="bold" />
-                        </LinearLayout>
-                        <TextView android:id="@+id/trackingResult" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:lineSpacingExtra="3dp" android:textColor="@color/hallo_muted" />
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="horizontal">
-                            <com.google.android.material.button.MaterialButton android:id="@+id/callDriver" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginEnd="4dp" android:layout_weight="1" android:text="Call" app:icon="@drawable/ic_phone" />
-                            <com.google.android.material.button.MaterialButton android:id="@+id/messageDriver" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:layout_weight="1" android:text="Message" app:icon="@drawable/ic_message" />
-                        </LinearLayout>
-                        <com.google.android.material.button.MaterialButton android:id="@+id/refreshTracking" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Refresh live position" />
-                    </LinearLayout></com.google.android.material.card.MaterialCardView>
+                    </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
 
-                <LinearLayout android:id="@+id/pagePayments" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Payments" android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold" /><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Verified payment and delivery status" android:textColor="@color/hallo_muted" /><LinearLayout android:id="@+id/paymentsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" /></LinearLayout>
-                <LinearLayout android:id="@+id/pageNotifications" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Notifications" android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold" /><LinearLayout android:id="@+id/notificationsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" /></LinearLayout>
-                <LinearLayout android:id="@+id/pageProfile" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:id="@+id/profileTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Customer profile" android:textColor="@color/hallo_text" android:textSize="28sp" android:textStyle="bold" /><com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp"><TextView android:id="@+id/profileDetails" android:layout_width="match_parent" android:layout_height="wrap_content" android:lineSpacingExtra="6dp" android:padding="18dp" android:textColor="@color/hallo_text" android:textSize="16sp" /></com.google.android.material.card.MaterialCardView><com.google.android.material.button.MaterialButton android:id="@+id/signOut" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Sign out" /></LinearLayout>
+                <LinearLayout android:id="@+id/pagePayments" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="26sp" android:textStyle="bold" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/hallo_muted" android:textSize="13sp" />
+                    <LinearLayout android:id="@+id/paymentsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical" />
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/pageNotifications" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="26sp" android:textStyle="bold" />
+                    <LinearLayout android:id="@+id/notificationsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical" />
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/pageProfile" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                    <TextView android:id="@+id/profileTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_text" android:textSize="26sp" android:textStyle="bold" />
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"><TextView android:id="@+id/profileDetails" android:layout_width="match_parent" android:layout_height="wrap_content" android:lineSpacingExtra="5dp" android:padding="16dp" android:textColor="@color/hallo_text" android:textSize="14sp" /></com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.button.MaterialButton android:id="@+id/signOut" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="12dp" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <LinearLayout android:id="@+id/bottomNavigation" android:layout_width="match_parent" android:layout_height="64dp" android:background="@android:color/white" android:elevation="12dp" android:gravity="center" android:orientation="horizontal" android:paddingStart="4dp" android:paddingEnd="4dp" android:visibility="gone" android:weightSum="5">
-        <com.google.android.material.button.MaterialButton android:id="@+id/navHome" style="@style/Widget.Material3.Button.TextButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:minWidth="0dp" android:padding="2dp" android:text="Home" android:textColor="@color/hallo_navy" android:textSize="11sp" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/navBook" style="@style/Widget.Material3.Button.TextButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:minWidth="0dp" android:padding="2dp" android:text="Book" android:textColor="@color/hallo_navy" android:textSize="11sp" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/navOrders" style="@style/Widget.Material3.Button.TextButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:minWidth="0dp" android:padding="2dp" android:text="Orders" android:textColor="@color/hallo_navy" android:textSize="11sp" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/navTrack" style="@style/Widget.Material3.Button.TextButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:minWidth="0dp" android:padding="2dp" android:text="Track" android:textColor="@color/hallo_navy" android:textSize="11sp" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/navProfile" style="@style/Widget.Material3.Button.TextButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:minWidth="0dp" android:padding="2dp" android:text="Profile" android:textColor="@color/hallo_navy" android:textSize="11sp" />
+    <LinearLayout
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@android:color/white"
+        android:elevation="10dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="4dp"
+        android:visibility="gone"
+        android:weightSum="5">
+        <com.hallo.logistics.customer.CustomerNavButton android:id="@+id/navHome" style="@style/Widget.Hallo.NavButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" app:icon="@drawable/ic_nav_home" />
+        <com.hallo.logistics.customer.CustomerNavButton android:id="@+id/navOrders" style="@style/Widget.Hallo.NavButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" app:icon="@drawable/ic_nav_orders" />
+        <com.hallo.logistics.customer.CustomerNavButton android:id="@+id/navTrack" style="@style/Widget.Hallo.NavButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" app:icon="@drawable/ic_nav_track" />
+        <com.hallo.logistics.customer.CustomerNavButton android:id="@+id/navBook" style="@style/Widget.Hallo.NavButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" app:icon="@drawable/ic_nav_payments" />
+        <com.hallo.logistics.customer.CustomerNavButton android:id="@+id/navProfile" style="@style/Widget.Hallo.NavButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" app:icon="@drawable/ic_nav_profile" />
     </LinearLayout>
 </LinearLayout>

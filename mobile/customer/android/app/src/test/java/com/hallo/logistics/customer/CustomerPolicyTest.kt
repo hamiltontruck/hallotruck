@@ -57,6 +57,15 @@ class CustomerPolicyTest {
         assertEquals(0.0, CustomerBookingPolicy.cargoToTons(0.0, "ton"), 0.0)
     }
 
+    @Test fun selectedTruckCapacityIsEnforcedBeforeQuoteOrOrderCreation() {
+        assertEquals(5.0, CustomerBookingPolicy.truckCapacityTons("Isuzu 5 Ton") ?: 0.0, 0.0)
+        assertEquals(10.0, CustomerBookingPolicy.truckCapacityTons("Dry Cargo") ?: 0.0, 0.0)
+        assertEquals(30.0, CustomerBookingPolicy.truckCapacityTons("Truck 30 Ton") ?: 0.0, 0.0)
+        CustomerBookingPolicy.requireWithinCapacity(5.0, "Isuzu 5 Ton")
+        val failure = runCatching { CustomerBookingPolicy.requireWithinCapacity(5.01, "Isuzu 5 Ton") }.exceptionOrNull()
+        assertTrue(failure is IllegalArgumentException)
+    }
+
     @Test fun cargoDescriptionKeepsStructuredExistingOrderFieldsReadable() {
         assertEquals(
             "General goods · Bagged · 25 quintal · Keep dry",
