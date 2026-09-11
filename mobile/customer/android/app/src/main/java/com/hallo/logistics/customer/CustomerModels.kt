@@ -12,6 +12,7 @@ data class CustomerProfile(
     @SerialName("home_address") val homeAddress: String? = null,
     @SerialName("customer_type") val customerType: String? = null,
     @SerialName("company_name") val companyName: String? = null,
+    @SerialName("avatar_path") val avatarPath: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     val role: String? = null,
 )
@@ -156,6 +157,7 @@ data class CustomerUiState(
     val page: CustomerPage = CustomerPage.HOME,
     val message: String = "Restoring session…",
     val profile: CustomerProfile? = null,
+    val profileAvatarUrl: String? = null,
     val orders: List<CustomerOrder> = emptyList(),
     val payments: List<CustomerPayment> = emptyList(),
     val notifications: List<CustomerNotification> = emptyList(),
