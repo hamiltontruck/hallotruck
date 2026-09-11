@@ -2,10 +2,15 @@ package com.hallo.logistics.customer
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.net.Uri
 import android.util.AttributeSet
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.core.content.ContextCompat
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.roundToInt
@@ -26,7 +31,7 @@ class CustomerLiveMapView @JvmOverloads constructor(
         settings.setSupportZoom(true)
         settings.builtInZoomControls = false
         settings.displayZoomControls = false
-        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        setBackgroundColor(Color.TRANSPARENT)
         overScrollMode = OVER_SCROLL_NEVER
         isVerticalScrollBarEnabled = false
         isHorizontalScrollBarEnabled = false
@@ -53,6 +58,22 @@ class CustomerLiveMapView @JvmOverloads constructor(
             if (params.height != bounded) {
                 params.height = bounded
                 layoutParams = params
+            }
+
+            (parent as? MaterialCardView)?.apply {
+                radius = (12 * metrics.density)
+                cardElevation = 0f
+                strokeWidth = metrics.density.roundToInt().coerceAtLeast(1)
+                strokeColor = ContextCompat.getColor(context, R.color.hallo_line)
+            }
+
+            rootView.findViewById<MaterialButton>(R.id.refreshTracking)?.apply {
+                text = context.getString(R.string.continue_tracking)
+                minHeight = (52 * metrics.density).roundToInt()
+                cornerRadius = (8 * metrics.density).roundToInt()
+                backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.hallo_navy))
+                setTextColor(Color.WHITE)
+                strokeWidth = 0
             }
         }
     }
