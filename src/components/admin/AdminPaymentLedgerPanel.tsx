@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { PaymentCorrectionForm } from "./PaymentCorrectionForm";
-import { openPaymentReceipt, type AdminOrder } from "../../services/admin.service";
+import { openDeliveryProof, openPaymentReceipt, type AdminOrder, type DeliveryProof, type Payment } from "../../services/admin.service";
 import {
   ADMIN_PAYMENT_EVENTS,
   ADMIN_PAYMENT_PAGE_SIZES,
+  getAdminOrderFinancialDetails,
   getAdminPaymentLedgerPage,
   type AdminPaymentLedgerItem,
   type AdminPaymentLedgerPage,
@@ -48,6 +49,11 @@ function LedgerRow({ item, onManage, onRefresh }: { item: AdminPaymentLedgerItem
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [correcting, setCorrecting] = useState(false);
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState("");
+  const [orderPayments, setOrderPayments] = useState<Payment[]>([]);
+  const [deliveryProof, setDeliveryProof] = useState<DeliveryProof | null>(null);
   const nextEvent = payment.event === "initiated" ? "held_escrow" : payment.event === "held_escrow" ? "released" : null;
   const paymentAmount = Number(payment.amount_etb || 0);
   const deliveryLocked = nextEvent === "released" && order?.status !== "delivered";
@@ -77,6 +83,26 @@ function LedgerRow({ item, onManage, onRefresh }: { item: AdminPaymentLedgerItem
     }
   }
 
+  async function toggleEvidence() {
+    if (showEvidence) {
+      setShowEvidence(false);
+      return;
+    }
+    setShowEvidence(true);
+    if (orderPayments.length || deliveryProof || detailsLoading) return;
+    setDetailsLoading(true);
+    setDetailsError("");
+    try {
+      const details = await getAdminOrderFinancialDetails(payment.order_id);
+      setOrderPayments(details.payments);
+      setDeliveryProof(details.proof as DeliveryProof | null);
+    } catch (err) {
+      setDetailsError(err instanceof Error ? err.message : "Could not load order evidence.");
+    } finally {
+      setDetailsLoading(false);
+    }
+  }
+
   return <div className="border-b border-asphalt/10 p-4 last:border-0 sm:px-6">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
       <div className="min-w-0 flex-1">
@@ -93,11 +119,21 @@ function LedgerRow({ item, onManage, onRefresh }: { item: AdminPaymentLedgerItem
       </div>
       <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col">
         {order && <button type="button" onClick={() => onManage(order)} className="min-h-11 border border-asphalt/20 px-3 py-2 text-xs font-semibold">Open order</button>}
+        <button type="button" onClick={toggleEvidence} className="min-h-11 border border-asphalt/20 px-3 py-2 text-xs font-semibold">{showEvidence ? "Hide evidence" : "Payment / delivery evidence"}</button>
         {payment.receipt_path && <button type="button" onClick={receipt} className="min-h-11 border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800">Open receipt</button>}
         {nextEvent && <button type="button" disabled={saving || deliveryLocked} onClick={advance} className="min-h-11 bg-asphalt px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">{saving ? "Saving…" : nextEvent === "held_escrow" ? "Verify payment" : "Release payment"}</button>}
         {canCorrect && <button type="button" disabled={saving} onClick={() => setCorrecting((value) => !value)} className="min-h-11 bg-route px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">{correcting ? "Cancel correction" : "Correct / refund"}</button>}
       </div>
     </div>
+    {showEvidence && <div className="mt-4 border border-asphalt/10 bg-[#f5f3ed] p-4">
+      <p className="font-mono text-[10px] uppercase tracking-wide text-steel">Order-specific evidence</p>
+      {detailsLoading && <p role="status" className="mt-3 text-xs text-steel">Loading this order's payment history and delivery proof…</p>}
+      {detailsError && <p role="alert" className="mt-3 text-xs text-route">{detailsError}</p>}
+      {!detailsLoading && !detailsError && <>
+        <div className="mt-3 space-y-2">{orderPayments.length ? orderPayments.map((record) => <div key={record.id} className="flex flex-col justify-between gap-2 border-b border-asphalt/10 pb-2 text-xs last:border-0 min-[430px]:flex-row"><span><strong>ETB {Number(record.amount_etb).toLocaleString()}</strong> · {record.event.replace(/_/g, " ")} · {record.provider}</span>{record.receipt_path && <button type="button" onClick={() => openPaymentReceipt(record.receipt_path!)} className="font-semibold text-emerald-800">Open receipt</button>}</div>) : <p className="text-xs text-steel">No payment records for this order.</p>}</div>
+        <div className="mt-4 border-t border-asphalt/10 pt-3">{deliveryProof ? <><p className="text-xs font-semibold text-emerald-800">Delivery proof recorded · {new Date(deliveryProof.delivered_at).toLocaleString()}</p><p className="mt-1 text-xs text-steel">Received by {deliveryProof.recipient_name}</p><div className="mt-2 flex flex-wrap gap-3"><button type="button" onClick={() => openDeliveryProof(deliveryProof.photo_path)} className="text-xs font-semibold text-amber-dim">View delivery photo</button><button type="button" onClick={() => openDeliveryProof(deliveryProof.signature_path)} className="text-xs font-semibold text-amber-dim">View signature</button></div></> : <p className="text-xs text-steel">No delivery proof recorded for this order.</p>}</div>
+      </>}
+    </div>}
     {correcting && <PaymentCorrectionForm paymentId={payment.id} paymentAmountEtb={paymentAmount} onCancel={() => setCorrecting(false)} onSubmitted={onRefresh} />}
   </div>;
 }
