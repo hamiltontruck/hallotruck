@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="delivery_proof">Delivery proof</string>
+    <string name="delivery_recipient">Recipient: %1$s</string>
+    <string name="delivered_at">Delivered: %1$s</string>
+    <string name="delivery_note">Note: %1$s</string>
+    <string name="view_delivery_photo">Delivery photo</string>
+    <string name="view_signature">Signature</string>
+    <string name="private_delivery_evidence">Private delivery evidence · secure link expires shortly</string>
+    <string name="opening_secure_proof">Opening secure delivery proof…</string>
+    <string name="proof_unavailable">Delivery proof is unavailable</string>
+    <string name="completion_evidence_error">Delivery details could not be loaded</string>
+    <string name="rate_driver">Rate driver</string>
+    <string name="your_rating">Your rating: %1$d/5</string>
+    <string name="rating_optional_note">Optional note</string>
+    <string name="submit_rating">Submit rating</string>
+    <string name="rating_submitting">Saving rating…</string>
+    <string name="rating_saved">Thank you. Rating saved</string>
+    <string name="rating_error">Rating could not be saved</string>
+</resources>
