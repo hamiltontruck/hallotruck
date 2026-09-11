@@ -8,6 +8,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import kotlin.math.roundToInt
 
 @SuppressLint("SetJavaScriptEnabled")
 class CustomerLiveMapView @JvmOverloads constructor(
@@ -37,6 +38,23 @@ class CustomerLiveMapView @JvmOverloads constructor(
             }
         }
         loadDataWithBaseURL("https://api.maptiler.com", mapHtml(), "text/html", "UTF-8", null)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (id != R.id.trackingMap) return
+        post {
+            val metrics = resources.displayMetrics
+            val target = (metrics.heightPixels * 0.56f).roundToInt()
+            val minimum = (320 * metrics.density).roundToInt()
+            val maximum = (480 * metrics.density).roundToInt()
+            val params = layoutParams ?: return@post
+            val bounded = target.coerceIn(minimum, maximum)
+            if (params.height != bounded) {
+                params.height = bounded
+                layoutParams = params
+            }
+        }
     }
 
     fun showBooking(pickup: CustomerPlace?, dropoff: CustomerPlace?, route: CustomerRoute?) {
