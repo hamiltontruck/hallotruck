@@ -14,6 +14,8 @@ import {
   getControlCenterData,
 } from "../services/admin-control-center.service";
 
+// Control Center V2 removed the old partial finance data warning path: live finance
+// totals now arrive as one exact leadership-guarded database report.
 type Tone = "neutral" | "good" | "warning" | "critical";
 
 function money(value: number) {
@@ -77,7 +79,6 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
       setLoading(false);
     }
   }
-
   useEffect(() => {
     if (!fixture) void load();
   }, [fixture]);
