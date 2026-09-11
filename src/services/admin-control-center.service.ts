@@ -208,6 +208,8 @@ function serverSummaryOf(value: unknown): ControlCenterServerSummary {
 }
 
 export async function getControlCenterData(): Promise<ControlCenterData> {
+  // The former per-driver "Driver finance unavailable" fallback is intentionally gone:
+  // this single report succeeds with exact set-based finance totals or fails as one unit.
   const { data, error } = await supabase.rpc("admin_control_center_v2_report");
   if (error) throw new Error(error.message);
 
