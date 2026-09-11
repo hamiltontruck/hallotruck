@@ -134,10 +134,10 @@ class CustomerCompletionController(
             setPadding(dp(20), dp(8), dp(20), dp(8))
         }
         val ratingBar = RatingBar(activity).apply {
-            numStars = 5
-            stepSize = 1f
+            setNumStars(5)
+            setStepSize(1f)
             setRating(5f)
-            isIndicator = false
+            setIsIndicator(false)
         }
         val comment = EditText(activity).apply {
             hint = activity.getString(R.string.rating_optional_note)
