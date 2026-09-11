@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="delivery_proof">የማድረሻ ማስረጃ</string>
+    <string name="delivery_recipient">ተቀባይ: %1$s</string>
+    <string name="delivered_at">የደረሰበት ጊዜ: %1$s</string>
+    <string name="delivery_note">ማስታወሻ: %1$s</string>
+    <string name="view_delivery_photo">የማድረሻ ፎቶ</string>
+    <string name="view_signature">ፊርማ</string>
+    <string name="private_delivery_evidence">የግል የማድረሻ ማስረጃ · ደህንነቱ የተጠበቀ ሊንክ በአጭር ጊዜ ያበቃል</string>
+    <string name="opening_secure_proof">ደህንነቱ የተጠበቀ የማድረሻ ማስረጃ በመክፈት ላይ…</string>
+    <string name="proof_unavailable">የማድረሻ ማስረጃ አልተገኘም</string>
+    <string name="completion_evidence_error">የማድረሻ ዝርዝር መጫን አልተቻለም</string>
+    <string name="rate_driver">አሽከርካሪውን ይገምግሙ</string>
+    <string name="your_rating">የእርስዎ ግምገማ: %1$d/5</string>
+    <string name="rating_optional_note">አማራጭ ማስታወሻ</string>
+    <string name="submit_rating">ግምገማ ላክ</string>
+    <string name="rating_submitting">ግምገማ በማስቀመጥ ላይ…</string>
+    <string name="rating_saved">እናመሰግናለን። ግምገማው ተቀምጧል</string>
+    <string name="rating_error">ግምገማውን ማስቀመጥ አልተቻለም</string>
+</resources>
