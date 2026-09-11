@@ -87,17 +87,55 @@ export interface DeliveryProof {
 
 function fail(message: string): never { throw new Error(message); }
 
+const ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT = 100;
+
+function shouldLoadAllOrdersForControlQueue() {
+  if (typeof window === "undefined") return false;
+  const hashQuery = window.location.hash.includes("?") ? window.location.hash.split("?")[1] ?? "" : "";
+  const params = new URLSearchParams(hashQuery || window.location.search);
+  const queue = params.get("queue");
+  return Boolean(queue && queue !== "all");
+}
+
 export async function getDashboardData() {
-  const [ordersResult, trucksResult, customersResult, paymentsResult, driversResult, proofsResult] = await Promise.all([
-    supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at").order("created_at", { ascending: false }),
+  const baseOrdersQuery = supabase.from("orders")
+    .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at")
+    .order("created_at", { ascending: false });
+  const ordersQuery = shouldLoadAllOrdersForControlQueue()
+    ? baseOrdersQuery
+    : baseOrdersQuery.limit(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT);
+
+  const [
+    ordersResult,
+    trucksResult,
+    customersResult,
+    paymentsResult,
+    driversResult,
+    proofsResult,
+    totalOrdersResult,
+    activeOrdersResult,
+    deliveredOrdersResult,
+  ] = await Promise.all([
+    ordersQuery,
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }),
     supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,raw_payload,created_at").order("created_at", { ascending: false }),
     supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name"),
     supabase.from("delivery_proofs").select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at").order("delivered_at", { ascending:false }),
+    supabase.from("orders").select("id", { count: "exact", head: true }),
+    supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["accepted", "in_transit"]),
+    supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "delivered"),
   ]);
 
-  const error = ordersResult.error || trucksResult.error || customersResult.error || paymentsResult.error || driversResult.error || proofsResult.error;
+  const error = ordersResult.error
+    || trucksResult.error
+    || customersResult.error
+    || paymentsResult.error
+    || driversResult.error
+    || proofsResult.error
+    || totalOrdersResult.error
+    || activeOrdersResult.error
+    || deliveredOrdersResult.error;
   if (error) fail(error.message);
 
   const trucks = (trucksResult.data ?? []) as Truck[];
@@ -131,9 +169,9 @@ export async function getDashboardData() {
     .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
 
   const metrics: DashboardMetrics = {
-    totalOrders: orders.length,
-    activeOrders: orders.filter((order) => ["accepted", "in_transit"].includes(order.status)).length,
-    deliveredOrders: orders.filter((order) => order.status === "delivered").length,
+    totalOrders: totalOrdersResult.count ?? 0,
+    activeOrders: activeOrdersResult.count ?? 0,
+    deliveredOrders: deliveredOrdersResult.count ?? 0,
     availableTrucks: trucks.filter((truck) => truck.status === "available").length,
     totalCustomers: customers.length,
     revenueEtb: Math.max(0, releasedTotal - refundedTotal),
