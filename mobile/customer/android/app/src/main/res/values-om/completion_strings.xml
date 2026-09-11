@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="delivery_proof">Ragaa geessii</string>
+    <string name="delivery_recipient">Fudhataa: %1$s</string>
+    <string name="delivered_at">Geessifame: %1$s</string>
+    <string name="delivery_note">Yaada: %1$s</string>
+    <string name="view_delivery_photo">Suuraa geessii</string>
+    <string name="view_signature">Mallattoo</string>
+    <string name="private_delivery_evidence">Ragaa geessii dhuunfaa · linkiin nageenya qabu yeroo gabaabaa keessatti xumurama</string>
+    <string name="opening_secure_proof">Ragaa geessii nageenya qabu banaa jira…</string>
+    <string name="proof_unavailable">Ragaan geessii hin argamne</string>
+    <string name="completion_evidence_error">Odeeffannoo geessii fe’uun hin danda’amne</string>
+    <string name="rate_driver">Konkolaachisaa madaali</string>
+    <string name="your_rating">Madaallii kee: %1$d/5</string>
+    <string name="rating_optional_note">Yaada filannoo</string>
+    <string name="submit_rating">Madaallii ergi</string>
+    <string name="rating_submitting">Madaallii olkaa’aa jira…</string>
+    <string name="rating_saved">Galatoomi. Madaalliin olkaa’ameera</string>
+    <string name="rating_error">Madaallii olkaa’uun hin danda’amne</string>
+</resources>
