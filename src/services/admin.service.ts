@@ -85,25 +85,57 @@ export interface DeliveryProof {
   delivered_at: string;
 }
 
+type FinanceDashboardSummary = {
+  released_total_etb: number | string;
+  refunded_total_etb: number | string;
+  held_total_etb: number | string;
+  initiated_total_etb: number | string;
+  payment_count: number | string;
+  delivery_proof_count: number | string;
+};
+
 function fail(message: string): never { throw new Error(message); }
 
 const ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT = 100;
+const ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT = 100;
+
+function getAdminSearchParams() {
+  if (typeof window === "undefined") return new URLSearchParams();
+  const hashQuery = window.location.hash.includes("?") ? window.location.hash.split("?")[1] ?? "" : "";
+  return new URLSearchParams(hashQuery || window.location.search);
+}
 
 function shouldLoadAllOrdersForControlQueue() {
-  if (typeof window === "undefined") return false;
-  const hashQuery = window.location.hash.includes("?") ? window.location.hash.split("?")[1] ?? "" : "";
-  const params = new URLSearchParams(hashQuery || window.location.search);
-  const queue = params.get("queue");
+  const queue = getAdminSearchParams().get("queue");
   return Boolean(queue && queue !== "all");
 }
 
+function shouldLoadFullFinanceWorkspace() {
+  const section = getAdminSearchParams().get("section");
+  return section === "Finance" || section === "Reports";
+}
+
 export async function getDashboardData() {
+  const fullControlQueue = shouldLoadAllOrdersForControlQueue();
+  const fullFinanceWorkspace = shouldLoadFullFinanceWorkspace();
   const baseOrdersQuery = supabase.from("orders")
     .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at")
     .order("created_at", { ascending: false });
-  const ordersQuery = shouldLoadAllOrdersForControlQueue()
+  const ordersQuery = fullControlQueue
     ? baseOrdersQuery
     : baseOrdersQuery.limit(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT);
+  const basePaymentsQuery = supabase.from("payments")
+    .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,raw_payload,created_at")
+    .order("created_at", { ascending: false });
+  const paymentsQuery = fullFinanceWorkspace
+    ? basePaymentsQuery
+    : basePaymentsQuery.limit(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT);
+  const baseProofsQuery = supabase.from("delivery_proofs")
+    .select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at")
+    .order("delivered_at", { ascending: false });
+  const proofsQuery = fullControlQueue
+    ? baseProofsQuery
+    : baseProofsQuery.limit(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT);
 
   const [
     ordersResult,
@@ -115,16 +147,18 @@ export async function getDashboardData() {
     totalOrdersResult,
     activeOrdersResult,
     deliveredOrdersResult,
+    financeSummaryResult,
   ] = await Promise.all([
     ordersQuery,
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }),
-    supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,raw_payload,created_at").order("created_at", { ascending: false }),
+    paymentsQuery,
     supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name"),
-    supabase.from("delivery_proofs").select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at").order("delivered_at", { ascending:false }),
+    proofsQuery,
     supabase.from("orders").select("id", { count: "exact", head: true }),
     supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["accepted", "in_transit"]),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "delivered"),
+    supabase.rpc("admin_finance_dashboard_summary"),
   ]);
 
   const error = ordersResult.error
@@ -135,7 +169,8 @@ export async function getDashboardData() {
     || proofsResult.error
     || totalOrdersResult.error
     || activeOrdersResult.error
-    || deliveredOrdersResult.error;
+    || deliveredOrdersResult.error
+    || financeSummaryResult.error;
   if (error) fail(error.message);
 
   const trucks = (trucksResult.data ?? []) as Truck[];
@@ -143,6 +178,7 @@ export async function getDashboardData() {
   const payments = (paymentsResult.data ?? []) as Payment[];
   const drivers = (driversResult.data ?? []) as Driver[];
   const deliveryProofs = (proofsResult.data ?? []) as DeliveryProof[];
+  const financeSummary = ((financeSummaryResult.data ?? [])[0] ?? null) as FinanceDashboardSummary | null;
   const orders = ((ordersResult.data ?? []) as Omit<AdminOrder, "driver_name" | "plate_number" | "assignment_label">[]).map((order) => {
     const driver = drivers.find((item) => item.id === order.driver_id);
     const truck = trucks.find((item) => item.id === order.truck_id);
@@ -161,12 +197,8 @@ export async function getDashboardData() {
       cargo_description: cargoLabel,
     };
   });
-  const releasedTotal = payments
-    .filter((payment) => payment.event === "released")
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
-  const refundedTotal = payments
-    .filter((payment) => payment.event === "refunded")
-    .reduce((sum, payment) => sum + Number(payment.amount_etb || 0), 0);
+  const releasedTotal = Number(financeSummary?.released_total_etb ?? 0);
+  const refundedTotal = Number(financeSummary?.refunded_total_etb ?? 0);
 
   const metrics: DashboardMetrics = {
     totalOrders: totalOrdersResult.count ?? 0,
