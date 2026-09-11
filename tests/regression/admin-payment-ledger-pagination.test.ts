@@ -31,8 +31,12 @@ test("Payment ledger RPC is leadership guarded and indexed", () => {
   assert.match(migration, /limit v_page_size/);
 });
 
-test("Order-specific finance evidence has a lazy query contract", () => {
+test("Order-specific finance evidence is lazy loaded", () => {
   assert.match(service, /getAdminOrderFinancialDetails/);
   assert.match(service, /\.eq\("order_id", orderId\)/);
   assert.match(service, /delivery_proofs/);
+  assert.match(panel, /getAdminOrderFinancialDetails\(payment\.order_id\)/);
+  assert.match(panel, /Payment \/ delivery evidence/);
+  assert.match(panel, /View delivery photo/);
+  assert.match(panel, /View signature/);
 });
