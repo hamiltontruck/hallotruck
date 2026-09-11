@@ -1,0 +1,11 @@
+<resources>
+<string name="auth_welcome">እንኳን ደህና ተመለሱ</string>
+<string name="auth_login_description">የጭነት መኪና ይዘዙ። መላኪያዎን ይከታተሉ።</string>
+<string name="auth_create_title">መለያዎን ይፍጠሩ</string>
+<string name="auth_create_description">በHALLO መላኪያዎን ይዘዙ እና ይከታተሉ።</string>
+<string name="auth_new">ለHALLO አዲስ ነዎት?</string>
+<string name="auth_existing">መለያ አለዎት?</string>
+<string name="auth_forgot">የይለፍ ቃል ረሱ?</string>
+<string name="auth_recovery_help">የደንበኛ ፖርታል ይከፈታል። ለመቀጠል የይለፍ ቃል ረሱ የሚለውን ይጫኑ።</string>
+<string name="auth_open_portal">የደንበኛ ፖርታል ክፈት</string>
+</resources>

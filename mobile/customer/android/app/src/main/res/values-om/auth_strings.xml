@@ -1,0 +1,11 @@
+<resources>
+<string name="auth_welcome">Baga nagaan deebite</string>
+<string name="auth_login_description">Konkolaataa ajajadhu. Geejjiba kee hordofi.</string>
+<string name="auth_create_title">Herrega kee uumadhu</string>
+<string name="auth_create_description">HALLO waliin geejjiba ajajadhu, hordofi.</string>
+<string name="auth_new">HALLO irratti haaraa dha?</string>
+<string name="auth_existing">Herrega qabdaa?</string>
+<string name="auth_forgot">Jecha icciitii irraanfatte?</string>
+<string name="auth_recovery_help">Customer Portal banama. Itti fufuuf filannoo jecha icciitii irraanfattee jedhu tuqi.</string>
+<string name="auth_open_portal">Customer Portal bani</string>
+</resources>
