@@ -7,6 +7,7 @@ const root = process.cwd();
 const migration = readFileSync(path.join(root, "supabase", "migrations", "20260827101439_immutable_financial_corrections.sql"), "utf8");
 const restorationMigration = readFileSync(path.join(root, "supabase", "migrations", "20260902065000_legacy_over_refund_restoration.sql"), "utf8");
 const releaseGuard = readFileSync(path.join(root, "supabase", "migrations", "20260827102244_count_all_refunds_in_release_guard.sql"), "utf8");
+const financeReportingMigration = readFileSync(path.join(root, "supabase", "migrations", "20260911041221_finance_v3_db_reporting.sql"), "utf8");
 const adminService = readFileSync(path.join(root, "src", "services", "admin.service.ts"), "utf8");
 const correctionService = readFileSync(path.join(root, "src", "services", "financial-correction.service.ts"), "utf8");
 const adminFinance = readFileSync(path.join(root, "src", "pages", "SmartLogistics.tsx"), "utf8");
@@ -92,7 +93,8 @@ test("all refund events recalculate driver earnings and Finance commission", () 
   assert.match(driverEarnings, /filter\(\(payment\) => payment\.event === "refunded"\)/);
   assert.doesNotMatch(driverEarnings, /payment\.provider === "credit_refund"/);
   assert.doesNotMatch(driverCompliance, /payment\.provider === "credit_refund"/);
-  assert.match(financeDashboard, /from\("financial_corrections"\)/);
+  assert.match(financeReportingMigration, /from public\.financial_corrections/i);
+  assert.match(financeReportingMigration, /driver_commission_reversal_etb/i);
   assert.match(financeDashboard, /table: "financial_corrections"/);
   assert.match(migration, /create or replace function public\.admin_platform_commission_accruals/i);
   assert.match(migration, /'partially_reversed'/i);

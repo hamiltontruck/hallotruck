@@ -13,9 +13,14 @@ const hardenedAccessMigration = readFileSync(
   path.join(process.cwd(), "supabase", "migrations", "20260829170000_harden_finance_dashboard_v3_access.sql"),
   "utf8",
 );
+const reportingMigration = readFileSync(
+  path.join(process.cwd(), "supabase", "migrations", "20260911041221_finance_v3_db_reporting.sql"),
+  "utf8",
+);
 const adminGate = readFileSync(path.join(process.cwd(), "src", "components", "auth", "AdminGate.tsx"), "utf8");
 const app = readFileSync(path.join(process.cwd(), "src", "App.tsx"), "utf8");
 const dashboard = readFileSync(path.join(process.cwd(), "src", "pages", "AdminFinanceDashboardV3.tsx"), "utf8");
+const reportingService = readFileSync(path.join(process.cwd(), "src", "services", "admin-finance-v3.service.ts"), "utf8");
 
 const now = new Date("2026-08-26T12:00:00Z");
 const data: FinanceDashboardData = {
@@ -118,14 +123,24 @@ test("AdminGate uses database profile role/status and handles failed lookup secu
   assert.doesNotMatch(adminGate, /app_metadata|user_metadata|localStorage|routeParams|email\.endsWith/i);
 });
 
-test("Finance source failures show source-specific error and retry without false zero KPIs", () => {
-  for (const source of ["payments", "orders", "profiles", "deposits", "commission charges", "commission payments", "driver confirmations", "financial corrections"]) {
-    assert.match(dashboard, new RegExp(`name: "${source}"`, "i"));
-  }
-  assert.match(dashboard, /source failed:/i);
-  assert.match(dashboard, /Retry finance data/i);
-  assert.match(dashboard, /No KPI values are shown because one or more finance sources failed/i);
-  assert.match(dashboard, /error \?[\s\S]*loading \?[\s\S]*<section className="mt-5 grid grid-cols-2 gap-3/i);
+test("Finance V3 live dashboard uses DB reporting and no 5000-row bulk caps", () => {
+  assert.match(reportingService, /admin_finance_v3_report/);
+  assert.match(reportingService, /FINANCE_V3_PAGE_SIZES = \[50, 100\]/);
+  assert.match(dashboard, /getAdminFinanceV3Report/);
+  assert.match(dashboard, /Loading DB-side finance report/);
+  assert.match(dashboard, /Retry finance data/);
+  assert.doesNotMatch(dashboard, /\.limit\(5000\)/);
+  assert.doesNotMatch(reportingService, /\.limit\(5000\)/);
+});
+
+test("Finance V3 RPC is leadership guarded, Ethiopia-day aware and paginates drill-down", () => {
+  assert.match(reportingMigration, /private\.is_admin_or_ceo\(\)/i);
+  assert.match(reportingMigration, /security invoker/i);
+  assert.match(reportingMigration, /Africa\/Addis_Ababa/);
+  assert.match(reportingMigration, /offset \(v_page - 1\) \* v_page_size/i);
+  assert.match(reportingMigration, /limit v_page_size/i);
+  assert.match(reportingMigration, /payments_event_provider_created_at_idx/i);
+  assert.match(reportingMigration, /revoke all on function public\.admin_finance_v3_report[\s\S]*from public, anon/i);
 });
 
 test("finance dashboard access follows database leadership roles without opening participant data", () => {
