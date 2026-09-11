@@ -41,34 +41,19 @@ function localDayBounds(now = new Date()) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-function withFilters<T extends {
-  eq: (column: string, value: string) => T;
-  gte: (column: string, value: string) => T;
-  lt: (column: string, value: string) => T;
-  or: (filters: string) => T;
-}>(query: T, options: AdminOrderPageOptions, statusOverride?: string) {
-  const status = statusOverride ?? options.status;
-  if (status && status !== "all" && ADMIN_ORDER_STATUSES.includes(status as AdminOrderStatus)) {
-    query = query.eq("status", status);
-  }
-  if (options.today) {
-    const { start, end } = localDayBounds();
-    query = query.gte("created_at", start).lt("created_at", end);
-  }
-  const search = safeSearchTerm(options.search ?? "");
-  if (search) {
-    const pattern = `*${search}*`;
-    query = query.or([
-      `tracking_id.ilike.${pattern}`,
-      `customer_name.ilike.${pattern}`,
-      `customer_phone.ilike.${pattern}`,
-      `pickup_address.ilike.${pattern}`,
-      `dropoff_address.ilike.${pattern}`,
-      `vehicle_type.ilike.${pattern}`,
-      `cargo_description.ilike.${pattern}`,
-    ].join(","));
-  }
-  return query;
+function searchFilter(search: string) {
+  const normalized = safeSearchTerm(search);
+  if (!normalized) return "";
+  const pattern = `*${normalized}*`;
+  return [
+    `tracking_id.ilike.${pattern}`,
+    `customer_name.ilike.${pattern}`,
+    `customer_phone.ilike.${pattern}`,
+    `pickup_address.ilike.${pattern}`,
+    `dropoff_address.ilike.${pattern}`,
+    `vehicle_type.ilike.${pattern}`,
+    `cargo_description.ilike.${pattern}`,
+  ].join(",");
 }
 
 function decorateOrders(rows: RawAdminOrder[], drivers: Driver[], trucks: Truck[]) {
@@ -100,25 +85,34 @@ export async function getAdminOrdersPage(
   const requestedPage = normalizePage(options.page);
   const from = (requestedPage - 1) * pageSize;
   const to = from + pageSize - 1;
+  const search = searchFilter(options.search ?? "");
+  const day = options.today ? localDayBounds() : null;
+  const selectedStatus = options.status && options.status !== "all" && ADMIN_ORDER_STATUSES.includes(options.status as AdminOrderStatus)
+    ? options.status
+    : null;
 
   let rowsQuery = supabase
     .from("orders")
     .select(ORDER_COLUMNS, { count: "exact" })
     .order("created_at", { ascending: false })
     .order("id", { ascending: false });
-  rowsQuery = withFilters(rowsQuery, { ...options, page: requestedPage, pageSize });
+  if (selectedStatus) rowsQuery = rowsQuery.eq("status", selectedStatus);
+  if (day) rowsQuery = rowsQuery.gte("created_at", day.start).lt("created_at", day.end);
+  if (search) rowsQuery = rowsQuery.or(search);
   const rowsPromise = rowsQuery.range(from, to);
 
   const countPromises = ADMIN_ORDER_STATUSES.filter((status) => status !== "all").map(async (status) => {
-    let countQuery = supabase.from("orders").select("id", { count: "exact", head: true });
-    countQuery = withFilters(countQuery, { ...options, status: "all", page: requestedPage, pageSize }, status);
+    let countQuery = supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", status);
+    if (day) countQuery = countQuery.gte("created_at", day.start).lt("created_at", day.end);
+    if (search) countQuery = countQuery.or(search);
     const { count, error } = await countQuery;
     if (error) throw new Error(error.message);
     return [status, count ?? 0] as const;
   });
 
   let allCountQuery = supabase.from("orders").select("id", { count: "exact", head: true });
-  allCountQuery = withFilters(allCountQuery, { ...options, status: "all", page: requestedPage, pageSize }, "all");
+  if (day) allCountQuery = allCountQuery.gte("created_at", day.start).lt("created_at", day.end);
+  if (search) allCountQuery = allCountQuery.or(search);
 
   const [rowsResult, allCountResult, statusEntries] = await Promise.all([
     rowsPromise,
@@ -128,7 +122,7 @@ export async function getAdminOrdersPage(
   if (rowsResult.error) throw new Error(rowsResult.error.message);
   if (allCountResult.error) throw new Error(allCountResult.error.message);
 
-  const total = rowsResult.count ?? allCountResult.count ?? 0;
+  const total = rowsResult.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.min(requestedPage, totalPages);
   const statusCounts = Object.fromEntries(statusEntries) as Record<string, number>;
