@@ -1,12 +1,12 @@
 package com.hallo.logistics.customer
 
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.google.android.material.textview.MaterialTextView
 import kotlin.math.roundToInt
@@ -23,7 +23,7 @@ class CustomerOrderStatusView @JvmOverloads constructor(
         gravity = android.view.Gravity.CENTER
     }
 
-    override fun setText(text: CharSequence?, type: BufferType?) {
+    override fun setText(text: CharSequence?, type: TextView.BufferType?) {
         super.setText(text, type)
         applyStatusStyle(text?.toString().orEmpty())
     }
@@ -47,7 +47,6 @@ class CustomerOrderStatusView @JvmOverloads constructor(
             else -> R.color.hallo_navy to 0xFFF0F4F9.toInt()
         }
         setTextColor(ContextCompat.getColor(context, foreground))
-        backgroundTintList = ColorStateList.valueOf(backgroundColor)
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = px(14).toFloat()
