@@ -161,6 +161,6 @@ export function AdminPaymentLedgerPanel({
     {error && <p role="alert" className="mb-4 border border-route/30 bg-route/10 p-3 text-sm text-route">{error}</p>}
     {loading ? <div role="status" className="border border-asphalt/10 bg-white p-10 text-center text-sm text-steel">Loading payment ledger…</div> : <div className="min-w-0 overflow-hidden border border-asphalt/10 bg-white"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-asphalt/10 p-4 min-[360px]:p-5 sm:px-6"><h2 className="min-w-0 break-words font-display text-lg font-semibold">{searchQuery || paymentStatus !== "all" ? "Matching payments" : "Payment ledger"}</h2><span className="shrink-0 font-mono text-xs text-steel">{data.items.length} on page</span></div>{data.items.length ? data.items.map((item) => <LedgerRow key={item.payment.id} item={item} onManage={onManage} onRefresh={refresh}/>) : <p className="p-8 text-center text-sm text-steel">No matching payments.</p>}</div>}
 
-    {data.totalPages > 1 && <Pagination page={data.page} totalPages={data.totalPages} onPage={onPage}/>} 
+    {data.totalPages > 1 && <Pagination page={data.page} totalPages={data.totalPages} onPage={onPage}/>}
   </>;
 }
