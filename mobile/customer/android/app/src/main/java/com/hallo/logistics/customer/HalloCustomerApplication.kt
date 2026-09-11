@@ -27,7 +27,11 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
         val details = host.findViewById<TextView>(R.id.profileDetails)
         val ordersList = host.findViewById<LinearLayout>(R.id.ordersList)
         val avatarController = CustomerAvatarController(host, viewModel) { status?.text = it }
-        val completionController = CustomerCompletionController(host, viewModel) { status?.text = it }
+        val completionController = CustomerCompletionController(
+            activity = host,
+            viewModel = viewModel,
+            setStatus = { message -> status?.text = message },
+        )
 
         host.lifecycleScope.launch {
             host.repeatOnLifecycle(Lifecycle.State.STARTED) {
