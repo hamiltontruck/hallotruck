@@ -88,13 +88,17 @@ export interface DeliveryProof {
 function fail(message: string): never { throw new Error(message); }
 
 export async function getDashboardData() {
+  // Admin Operations is an operational control surface, so it must never derive
+  // counts, filters, finance totals, or search results from an arbitrary first
+  // 100 rows. Supabase/PostgREST already pages responses when needed; these
+  // datasets are still small enough to load as the complete working set here.
   const [ordersResult, trucksResult, customersResult, paymentsResult, driversResult, proofsResult] = await Promise.all([
-    supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at").order("created_at", { ascending: false }).limit(100),
+    supabase.from("orders").select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at").order("created_at", { ascending: false }),
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }),
-    supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,raw_payload,created_at").order("created_at", { ascending: false }).limit(100),
+    supabase.from("payments").select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,raw_payload,created_at").order("created_at", { ascending: false }),
     supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name"),
-    supabase.from("delivery_proofs").select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at").order("delivered_at", { ascending:false }).limit(100),
+    supabase.from("delivery_proofs").select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at").order("delivered_at", { ascending:false }),
   ]);
 
   const error = ordersResult.error || trucksResult.error || customersResult.error || paymentsResult.error || driversResult.error || proofsResult.error;
@@ -258,36 +262,31 @@ export async function createOrder(input: NewOrderInput) {
 }
 
 export async function createCustomer(input: { fullName: string; phone: string; email?: string; companyName?: string }) {
-  const { data: auth } = await supabase.auth.getUser();
-  const { error } = await supabase.from("customers").insert({
+  const { data, error } = await supabase.from("customers").insert({
     full_name: input.fullName,
     phone: input.phone,
     email: input.email || null,
     company_name: input.companyName || null,
-    created_by: auth.user?.id,
-  });
+  }).select("*").single();
   if (error) fail(error.message);
+  return data as Customer;
 }
 
-export async function createTruck(input: { plateNumber: string; vehicleType: string; capacityTons?: number }) {
-  const { error } = await supabase.rpc("create_fleet_vehicle", {
-    p_partner_id: null,
-    p_plate_number: input.plateNumber.trim().toUpperCase(),
-    p_vehicle_type: input.vehicleType.trim(),
-    p_capacity_tons: input.capacityTons || null,
-    p_ownership_type: "company",
-    p_fuel_type: null,
-    p_branch_id: null,
-  });
+export async function createTruck(input: { plateNumber:string; vehicleType:string; capacityTons?:number }) {
+  const { data, error } = await supabase.from("trucks").insert({ plate_number:input.plateNumber, vehicle_type:input.vehicleType, capacity_tons:input.capacityTons || null, status:"available" }).select("*").single();
   if (error) fail(error.message);
+  return data as Truck;
 }
 
-export function subscribeToAdminData(onChange: () => void) {
+export function subscribeToAdminData(onChange:()=>void) {
+  let timer:number|undefined;
+  const notify=()=>{ if(timer) window.clearTimeout(timer); timer=window.setTimeout(onChange,250); };
   return supabase.channel("admin-live-data")
-    .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "trucks" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "delivery_proofs" }, onChange)
+    .on("postgres_changes", {event:"*",schema:"public",table:"orders"}, notify)
+    .on("postgres_changes", {event:"*",schema:"public",table:"trucks"}, notify)
+    .on("postgres_changes", {event:"*",schema:"public",table:"customers"}, notify)
+    .on("postgres_changes", {event:"*",schema:"public",table:"payments"}, notify)
+    .on("postgres_changes", {event:"*",schema:"public",table:"delivery_proofs"}, notify)
+    .on("postgres_changes", {event:"UPDATE",schema:"public",table:"profiles"}, notify)
     .subscribe();
 }
