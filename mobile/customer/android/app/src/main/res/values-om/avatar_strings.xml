@@ -7,9 +7,9 @@
     <string name="profile_photo_remove">Suuraa haqi</string>
     <string name="profile_photo_updated">Suuraan piroofaayilaa haaromfame</string>
     <string name="profile_photo_removed">Suuraan piroofaayilaa haqame</string>
-    <string name="profile_photo_uploading">Suuraa piroofaayilaa olkaa'aa jira…</string>
+    <string name="profile_photo_uploading">Suuraa piroofaayilaa olkaa’aa jira…</string>
     <string name="profile_photo_removing">Suuraa piroofaayilaa haqaa jira…</string>
-    <string name="profile_photo_error">Suuraa piroofaayilaa qopheessuun hin danda'amne.</string>
+    <string name="profile_photo_error">Suuraa piroofaayilaa qopheessuun hin danda’amne.</string>
     <string name="profile_photo_camera_permission">Suuraa piroofaayilaa kaasuuf hayyamni camera barbaachisa.</string>
-    <string name="profile_photo_private">Suuraan piroofaayilaa kee dhuunfaatti kuufama; linkii nageenya qabu yeroo gabaabaaf hojjatuun qofa mul'ata.</string>
+    <string name="profile_photo_private">Suuraan piroofaayilaa kee dhuunfaatti kuufama; linkii nageenya qabu yeroo gabaabaaf hojjatuun qofa mul’ata.</string>
 </resources>
