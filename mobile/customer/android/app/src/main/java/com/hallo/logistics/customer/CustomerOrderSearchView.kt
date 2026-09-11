@@ -80,9 +80,9 @@ class CustomerOrderSearchView @JvmOverloads constructor(
             val status = child.findViewById<TextView>(R.id.orderStatus)
             val haystack = buildString {
                 append(tracking.text).append(' ')
-                append(route?.text.orEmpty()).append(' ')
-                append(meta?.text.orEmpty()).append(' ')
-                append(status?.text.orEmpty())
+                append(route?.text ?: "").append(' ')
+                append(meta?.text ?: "").append(' ')
+                append(status?.text ?: "")
             }
             child.visibility = if (needle.isBlank() || haystack.contains(needle, ignoreCase = true)) View.VISIBLE else View.GONE
         }
