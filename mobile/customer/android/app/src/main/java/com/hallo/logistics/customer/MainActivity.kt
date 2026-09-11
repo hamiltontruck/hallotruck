@@ -61,7 +61,7 @@ import java.text.NumberFormat
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: CustomerViewModel by viewModels()
-    private val authBack = object : OnBackPressedCallback(false) {
+    private val authBack: OnBackPressedCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
             signupMode = false
             renderAuthMode(resetSecrets = true)
@@ -328,7 +328,7 @@ class MainActivity : AppCompatActivity() {
         if (order == null) viewModel.show(CustomerPage.TRACKING) else viewModel.track(order)
     }
 
-    private fun renderAuthMode(resetSecrets: Boolean) = with(binding) {
+    private fun renderAuthMode(resetSecrets: Boolean): Unit = with(binding) {
         authBack.isEnabled = signupMode && !viewModel.state.value.authorized && !viewModel.state.value.busy
         signupFields.visibility = visible(signupMode)
         confirmPinLayout.visibility = visible(signupMode)
