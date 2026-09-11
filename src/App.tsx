@@ -20,6 +20,7 @@ import {
 } from "./pages/AdminPaymentReferenceConflicts";
 import { AdminFinanceDashboardV3 } from "./pages/AdminFinanceDashboardV3";
 import { AdminIntelligence } from "./pages/AdminIntelligence";
+import { AdminReports } from "./pages/AdminReports";
 import { AdminAiAssistant } from "./pages/AdminAiAssistant";
 import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
 import { AdminPartnerControl } from "./pages/AdminPartnerControl";
@@ -92,7 +93,7 @@ function DriverShell({ children }: { children: React.ReactNode }) {
   return <div className="driver-mobile-flow min-h-screen bg-bone pb-24 md:pb-0"><OfflineBanner /><Header />{showPaymentAction && <DriverPaymentCollectionBanner />}{showOperationalAlerts && <DriverDocumentExpiryAlert />}{children}</div>;
 }
 function AdminWorkspace(){return <AdminToolShell><AdminCeoOverview /></AdminToolShell>}
-function AdminOperationsWorkspace(){return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
+function AdminOperationsWorkspace(){const {search}=useLocation();const section=new URLSearchParams(search).get("section");if(section==="Reports")return <Navigate to="/admin/reports" replace />;return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
 function AdminPaymentReviewWorkspace(){return <><AdminPaymentReferenceConflictBanner /><AdminPaymentWorkspace /></>}
 function CustomerSectionIntro({ section }: { section: "orders" | "payments" }) {
   const { language } = useLanguage();
@@ -117,6 +118,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/" element={<PortalLanding />} />
 <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
 <Route path="/admin/operations" element={<AdminGate><AdminOperationsWorkspace /></AdminGate>} />
+<Route path="/admin/reports" element={<AdminGate><AdminToolShell><AdminReports /></AdminToolShell></AdminGate>} />
 <Route path="/admin/more" element={<AdminGate><AdminToolShell><AdminMore /></AdminToolShell></AdminGate>} />
 <Route path="/admin/intelligence" element={<AdminGate><AdminToolShell><AdminIntelligence /></AdminToolShell></AdminGate>} />
 <Route path="/admin/ai-assistant" element={<AdminGate><AdminToolShell><AdminAiAssistant /></AdminToolShell></AdminGate>} />
