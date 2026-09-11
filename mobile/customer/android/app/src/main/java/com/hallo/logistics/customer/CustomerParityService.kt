@@ -70,6 +70,12 @@ class CustomerParityService(
         })
     }
 
+    suspend fun uploadProfileAvatar(jpegBytes: ByteArray): String = repository.uploadProfileAvatar(jpegBytes)
+
+    suspend fun removeProfileAvatar() = repository.removeProfileAvatar()
+
+    suspend fun signedProfileAvatar(path: String?): String? = signedObject("customer-avatars", path, 900)
+
     suspend fun assignmentMedia(assignments: List<CustomerAssignment>): Map<String, CustomerAssignmentMedia> = coroutineScope {
         assignments.map { assignment ->
             async {

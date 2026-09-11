@@ -51,22 +51,36 @@ function dumpDom(chrome, url, profileDirectory, viewport = { width: 412, height:
     "--hide-scrollbars",
     `--window-size=${viewport.width},${viewport.height}`,
     "--virtual-time-budget=8000",
-    `--user-data-dir=${profileDirectory}`,
-    "--dump-dom",
-    url,
   ];
 
-  for (const headlessFlag of ["--headless=new", "--headless"]) {
-    const result = spawnSync(chrome, [headlessFlag, ...common], {
-      cwd: root,
-      encoding: "utf8",
-      maxBuffer: 20 * 1024 * 1024,
-      timeout: 30_000,
-    });
-    if (!result.error && result.status === 0 && result.stdout) return result.stdout;
-    if (result.error?.code === "ETIMEDOUT") throw new Error(`Chrome timed out while opening ${url}`);
+  let lastFailure = "unknown Chrome failure";
+  const headlessFlags = ["--headless=new", "--headless"];
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (let flagIndex = 0; flagIndex < headlessFlags.length; flagIndex += 1) {
+      const headlessFlag = headlessFlags[flagIndex];
+      const attemptProfile = path.join(profileDirectory, `attempt-${attempt}-${flagIndex}`);
+      const result = spawnSync(chrome, [
+        headlessFlag,
+        ...common,
+        `--user-data-dir=${attemptProfile}`,
+        "--dump-dom",
+        url,
+      ], {
+        cwd: root,
+        encoding: "utf8",
+        maxBuffer: 20 * 1024 * 1024,
+        timeout: 30_000,
+      });
+      if (!result.error && result.status === 0 && result.stdout) return result.stdout;
+
+      const stderr = typeof result.stderr === "string" ? result.stderr.trim() : "";
+      const reason = result.error?.code === "ETIMEDOUT"
+        ? "timed out"
+        : `exited with status ${result.status ?? "unknown"}`;
+      lastFailure = `${headlessFlag} attempt ${attempt + 1} ${reason}${stderr ? `: ${stderr.slice(-1000)}` : ""}`;
+    }
   }
-  throw new Error(`Chrome could not render ${url}`);
+  throw new Error(`Chrome could not render ${url} after bounded retries. ${lastFailure}`);
 }
 
 async function withProfile(run) {

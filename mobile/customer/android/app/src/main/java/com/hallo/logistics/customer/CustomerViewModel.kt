@@ -224,6 +224,18 @@ class CustomerViewModel(
         _state.value = _state.value.copy(page = CustomerPage.PROFILE, message = "Customer profile updated")
     }
 
+    fun uploadProfileAvatar(jpegBytes: ByteArray) = execute("Uploading profile photo…") {
+        parityService.uploadProfileAvatar(jpegBytes)
+        authorizeAndLoad(preservePage = true)
+        _state.value = _state.value.copy(page = CustomerPage.PROFILE, message = "Profile photo updated")
+    }
+
+    fun removeProfileAvatar() = execute("Removing profile photo…") {
+        parityService.removeProfileAvatar()
+        authorizeAndLoad(preservePage = true)
+        _state.value = _state.value.copy(page = CustomerPage.PROFILE, message = "Profile photo removed")
+    }
+
     fun openReceipt(payment: CustomerPayment) = execute("Opening receipt…") {
         val url = parityService.signedReceipt(payment.receiptPath) ?: error("Payment receipt is not available")
         _events.emit(CustomerUiEvent.OpenUrl(url))
@@ -314,7 +326,7 @@ class CustomerViewModel(
 
     private suspend fun authorizeAndLoad(preservePage: Boolean = false) {
         repository.requireCustomer()
-        val profile = viewModelScope.async { repository.profile() }
+        val profileDeferred = viewModelScope.async { repository.profile() }
         val orders = viewModelScope.async { parityService.orders() }
         val notifications = viewModelScope.async { repository.notifications() }
         val assignmentsDeferred = viewModelScope.async { repository.assignments() }
@@ -322,6 +334,8 @@ class CustomerViewModel(
         val payments = repository.payments(orderRows.map { it.id })
         val assignments = assignmentsDeferred.await()
         val media = parityService.assignmentMedia(assignments)
+        val profile = profileDeferred.await()
+        val avatarUrl = runCatching { parityService.signedProfileAvatar(profile.avatarPath) }.getOrNull()
         val current = _state.value
 
         _state.value = CustomerUiState(
@@ -329,7 +343,8 @@ class CustomerViewModel(
             authorized = true,
             page = if (preservePage) current.page else CustomerPage.HOME,
             message = "Customer workspace",
-            profile = profile.await(),
+            profile = profile,
+            profileAvatarUrl = avatarUrl,
             orders = orderRows,
             payments = payments,
             notifications = notifications.await(),

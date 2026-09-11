@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_photo">Profile photo</string>
+    <string name="profile_photo_change">Add / change photo</string>
+    <string name="profile_photo_camera">Take photo</string>
+    <string name="profile_photo_gallery">Choose from gallery</string>
+    <string name="profile_photo_remove">Remove photo</string>
+    <string name="profile_photo_updated">Profile photo updated</string>
+    <string name="profile_photo_removed">Profile photo removed</string>
+    <string name="profile_photo_uploading">Uploading profile photo…</string>
+    <string name="profile_photo_removing">Removing profile photo…</string>
+    <string name="profile_photo_error">Profile photo could not be prepared.</string>
+    <string name="profile_photo_camera_permission">Camera permission is required to take a profile photo.</string>
+    <string name="profile_photo_private">Your profile photo is stored privately and shown through a short-lived secure link.</string>
+</resources>
