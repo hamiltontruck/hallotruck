@@ -7,9 +7,10 @@ import {
   isLegacyCompletedPayment,
 } from "../domain/admin-control-center";
 import {
-  ControlCenterData,
-  ControlOrder,
-  ControlPayment,
+  type ControlCenterData,
+  type ControlCenterServerSummary,
+  type ControlOrder,
+  type ControlPayment,
   getControlCenterData,
 } from "../services/admin-control-center.service";
 
@@ -23,6 +24,39 @@ function paymentTotal(payments: ControlPayment[], event: string) {
   return canonicalPayments(payments)
     .filter((payment) => payment.event === event)
     .reduce((sum, payment) => sum + Math.max(0, Number(payment.amount_etb || 0)), 0);
+}
+
+function fixtureSummary(data: ControlCenterData, view: ReturnType<typeof buildControlCenterView>): ControlCenterServerSummary {
+  const payments = canonicalPayments(view.payments);
+  return {
+    todayRevenue: view.todayRevenue,
+    totalOrders: data.orders.length,
+    todayOrders: view.todayOrders.length,
+    activeTrips: view.activeTrips.length,
+    deliveredToday: view.deliveredToday.length,
+    delayedTrips: view.delayedTrips.length,
+    unassignedOrders: view.unassignedOrders.length,
+    availableTrucks: view.availableTrucks.length,
+    totalTrucks: data.trucks.length,
+    activeDrivers: view.activeDrivers.length,
+    totalDrivers: data.drivers.length,
+    newCustomersToday: view.activeCustomersToday.length,
+    pendingPayments: view.pendingPayments.length,
+    missingEvidence: view.missingEvidenceOrders.length,
+    legacyCompleted: view.legacyOrderIds.size,
+    commissionReceivable: view.driverCommissionReceivable,
+    totalDriverDeposit: view.totalDriverDeposit,
+    availableDriverDeposit: view.availableDriverDeposit,
+    complianceDocumentAlerts: view.complianceAlerts.length,
+    driverOnboardingAlerts: view.driverOnboardingAlerts.length,
+    maintenanceAlerts: view.maintenanceAlerts.length,
+    releasedAmount: paymentTotal(payments, "released"),
+    escrowAmount: paymentTotal(payments, "held_escrow"),
+    refundedAmount: paymentTotal(payments, "refunded"),
+    failedPayments: payments.filter((payment) => payment.event === "failed").length,
+    failedOrRefundedPayments: view.failedOrRefundedPayments.length,
+    canonicalPayments: payments.length,
+  };
 }
 
 export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterData | null } = {}) {
@@ -49,46 +83,45 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
   }, [fixture]);
 
   const view = useMemo(() => data ? buildControlCenterView(data) : null, [data]);
+  const summary = useMemo(() => {
+    if (!data || !view) return null;
+    return data.serverSummary ?? fixtureSummary(data, view);
+  }, [data, view]);
 
   if (loading) {
     return <main className="min-h-screen bg-[#f5f3ed] p-5"><p className="py-24 text-center font-mono text-sm text-steel">Loading CEO control center…</p></main>;
   }
 
-  if (!data || !view) {
+  if (!data || !view || !summary) {
     return <main className="min-h-screen bg-[#f5f3ed] p-5"><div className="mx-auto max-w-3xl border border-route/30 bg-route/10 p-5 text-route"><p>{error || "Dashboard data is unavailable."}</p><button type="button" onClick={() => void load()} className="mt-4 bg-asphalt px-4 py-3 text-sm font-semibold text-white">Retry</button></div></main>;
   }
 
-  const complianceTotal = view.complianceAlerts.length + view.driverOnboardingAlerts.length;
-  const attentionTotal = view.delayedTrips.length
-    + view.unassignedOrders.length
-    + view.pendingPayments.length
-    + view.missingEvidenceOrders.length
+  const complianceTotal = summary.complianceDocumentAlerts + summary.driverOnboardingAlerts;
+  const attentionTotal = summary.delayedTrips
+    + summary.unassignedOrders
+    + summary.pendingPayments
+    + summary.missingEvidence
     + complianceTotal
-    + view.maintenanceAlerts.length;
-
-  const released = paymentTotal(view.payments, "released");
-  const escrow = paymentTotal(view.payments, "held_escrow");
-  const refunded = paymentTotal(view.payments, "refunded");
-  const failed = view.payments.filter((payment) => payment.event === "failed").length;
+    + summary.maintenanceAlerts;
 
   const cards = [
-    { label: "Today's Revenue", value: money(view.todayRevenue), detail: "Released minus refunds today", to: "/admin/payment-review?date=today", tone: "good" as Tone },
-    { label: "Total Orders", value: String(data.orders.length), detail: "All operational records", to: "/admin/operations?section=Orders", tone: "neutral" as Tone },
-    { label: "Today's Orders", value: String(view.todayOrders.length), detail: "Orders created today", to: "/admin/operations?section=Orders&date=today", tone: "neutral" as Tone },
-    { label: "Active Trips", value: String(view.activeTrips.length), detail: "Accepted or in transit", to: "/admin/operations?section=Live%20trips", tone: "neutral" as Tone },
-    { label: "Delivered Today", value: String(view.deliveredToday.length), detail: "Completed today", to: "/admin/operations?section=Orders&status=delivered&date=today", tone: "good" as Tone },
-    { label: "Delayed Trips", value: String(view.delayedTrips.length), detail: "Active longer than 48 hours", to: "/admin/operations?section=Orders&queue=delayed", tone: view.delayedTrips.length ? "critical" as Tone : "good" as Tone },
-    { label: "Unassigned Orders", value: String(view.unassignedOrders.length), detail: "Missing driver or truck", to: "/admin/operations?section=Orders&queue=unassigned", tone: view.unassignedOrders.length ? "warning" as Tone : "good" as Tone },
-    { label: "Available Trucks", value: String(view.availableTrucks.length), detail: `${data.trucks.length} total fleet`, to: "/admin/fleet-maintenance", tone: "neutral" as Tone },
-    { label: "Active Drivers", value: String(view.activeDrivers.length), detail: `${data.drivers.length} registered`, to: "/admin/driver-compliance", tone: "neutral" as Tone },
-    { label: "New Customers Today", value: String(view.activeCustomersToday.length), detail: "Accounts created today", to: "/admin/operations?section=Customers&date=today", tone: "neutral" as Tone },
-    { label: "Pending Payments", value: String(view.pendingPayments.length), detail: "Waiting for admin review", to: "/admin/payment-review?status=pending", tone: view.pendingPayments.length ? "warning" as Tone : "good" as Tone },
-    { label: "Missing Evidence", value: String(view.missingEvidenceOrders.length), detail: "Delivered without POD", to: "/admin/operations?section=Orders&queue=missing-evidence", tone: view.missingEvidenceOrders.length ? "warning" as Tone : "good" as Tone },
-    { label: "Legacy Completed", value: String(view.legacyOrderIds.size), detail: "Historical released payments", to: "/admin/payment-review?queue=legacy", tone: "neutral" as Tone },
-    { label: "Commission Receivable", value: money(view.driverCommissionReceivable), detail: "Outstanding driver commission", to: "/admin/driver-commission", tone: view.driverCommissionReceivable ? "warning" as Tone : "good" as Tone },
-    { label: "Available Driver Deposits", value: money(view.availableDriverDeposit), detail: `${money(view.totalDriverDeposit)} deposited`, to: "/admin/driver-finance-search", tone: "good" as Tone },
+    { label: "Today's Revenue", value: money(summary.todayRevenue), detail: "Released minus refunds today", to: "/admin/payment-review?date=today", tone: "good" as Tone },
+    { label: "Total Orders", value: String(summary.totalOrders), detail: "All operational records", to: "/admin/operations?section=Orders", tone: "neutral" as Tone },
+    { label: "Today's Orders", value: String(summary.todayOrders), detail: "Orders created today", to: "/admin/operations?section=Orders&date=today", tone: "neutral" as Tone },
+    { label: "Active Trips", value: String(summary.activeTrips), detail: "Accepted or in transit", to: "/admin/operations?section=Live%20trips", tone: "neutral" as Tone },
+    { label: "Delivered Today", value: String(summary.deliveredToday), detail: "Completed today", to: "/admin/operations?section=Orders&status=delivered&date=today", tone: "good" as Tone },
+    { label: "Delayed Trips", value: String(summary.delayedTrips), detail: "Active longer than 48 hours", to: "/admin/operations?section=Orders&queue=delayed", tone: summary.delayedTrips ? "critical" as Tone : "good" as Tone },
+    { label: "Unassigned Orders", value: String(summary.unassignedOrders), detail: "Missing driver or truck", to: "/admin/operations?section=Orders&queue=unassigned", tone: summary.unassignedOrders ? "warning" as Tone : "good" as Tone },
+    { label: "Available Trucks", value: String(summary.availableTrucks), detail: `${summary.totalTrucks} total fleet`, to: "/admin/fleet-maintenance", tone: "neutral" as Tone },
+    { label: "Active Drivers", value: String(summary.activeDrivers), detail: `${summary.totalDrivers} registered`, to: "/admin/driver-compliance", tone: "neutral" as Tone },
+    { label: "New Customers Today", value: String(summary.newCustomersToday), detail: "Accounts created today", to: "/admin/operations?section=Customers&date=today", tone: "neutral" as Tone },
+    { label: "Pending Payments", value: String(summary.pendingPayments), detail: "Waiting for admin review", to: "/admin/payment-review?status=pending", tone: summary.pendingPayments ? "warning" as Tone : "good" as Tone },
+    { label: "Missing Evidence", value: String(summary.missingEvidence), detail: "Delivered without POD", to: "/admin/operations?section=Orders&queue=missing-evidence", tone: summary.missingEvidence ? "warning" as Tone : "good" as Tone },
+    { label: "Legacy Completed", value: String(summary.legacyCompleted), detail: "Historical released payments", to: "/admin/payment-review?queue=legacy", tone: "neutral" as Tone },
+    { label: "Commission Receivable", value: money(summary.commissionReceivable), detail: "Outstanding driver commission", to: "/admin/driver-commission", tone: summary.commissionReceivable ? "warning" as Tone : "good" as Tone },
+    { label: "Available Driver Deposits", value: money(summary.availableDriverDeposit), detail: `${money(summary.totalDriverDeposit)} deposited`, to: "/admin/driver-finance-search", tone: "good" as Tone },
     { label: "Driver Compliance Alerts", value: String(complianceTotal), detail: "Onboarding, rejected or expiring", to: "/admin/driver-compliance", tone: complianceTotal ? "warning" as Tone : "good" as Tone },
-    { label: "Fleet Maintenance Alerts", value: String(view.maintenanceAlerts.length), detail: "Maintenance or service due", to: "/admin/fleet-maintenance", tone: view.maintenanceAlerts.length ? "warning" as Tone : "good" as Tone },
+    { label: "Fleet Maintenance Alerts", value: String(summary.maintenanceAlerts), detail: "Maintenance or service due", to: "/admin/fleet-maintenance", tone: summary.maintenanceAlerts ? "warning" as Tone : "good" as Tone },
   ];
 
   return <main className="min-h-screen overflow-x-hidden bg-[#f5f3ed] p-3 pb-24 text-asphalt sm:p-6 lg:p-8">
@@ -108,13 +141,12 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
         </div>
         <div className="mt-6 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4 font-mono text-[10px] uppercase tracking-wide text-white/45">
           <span><i className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-400" />Live database control</span>
-          <span>{data.orders.length.toLocaleString()} orders · {view.payments.length.toLocaleString()} canonical payments · {data.drivers.length.toLocaleString()} drivers</span>
+          <span>{summary.totalOrders.toLocaleString()} orders · {summary.canonicalPayments.toLocaleString()} canonical payments · {summary.totalDrivers.toLocaleString()} drivers</span>
           <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Awaiting refresh"}</span>
         </div>
       </header>
 
       {error && <p className="mt-4 break-words border border-route/30 bg-route/10 p-4 text-sm text-route">{error}</p>}
-      {Boolean(data.warnings?.length) && <div className="mt-4 border border-amber/40 bg-amber/10 p-4 text-sm text-asphalt" role="status"><p className="font-semibold">Dashboard is live with partial finance data.</p><p className="mt-1 text-xs leading-5 text-steel">{data.warnings!.length} driver finance {data.warnings!.length === 1 ? "summary is" : "summaries are"} temporarily unavailable. Operational queues remain current; refresh before using aggregate commission or deposit totals.</p></div>}
 
       <section className="mt-4 border border-asphalt/10 bg-white p-4 sm:p-5" aria-label="Admin command shortcuts">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-mono text-[10px] tracking-[.18em] text-amber-dim">COMMAND BAR</p><h2 className="mt-1 font-display text-xl font-bold">Control the business from one place</h2></div><p className="text-xs text-steel">Fast, role-safe entry points to the highest-frequency Admin actions.</p></div>
@@ -133,7 +165,7 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="break-words font-display text-lg font-semibold">{attentionTotal ? `${attentionTotal} operational items need attention` : "Operations healthy"}</p>
-            <p className="mt-1 break-words text-xs leading-5 text-steel">Delayed {view.delayedTrips.length} · Unassigned {view.unassignedOrders.length} · Payments {view.pendingPayments.length} · Evidence {view.missingEvidenceOrders.length} · Compliance {complianceTotal} · Maintenance {view.maintenanceAlerts.length}</p>
+            <p className="mt-1 break-words text-xs leading-5 text-steel">Delayed {summary.delayedTrips} · Unassigned {summary.unassignedOrders} · Payments {summary.pendingPayments} · Evidence {summary.missingEvidence} · Compliance {complianceTotal} · Maintenance {summary.maintenanceAlerts}</p>
           </div>
           <a href="#action-queues" className="self-start border border-asphalt/15 bg-white px-4 py-3 text-xs font-semibold">Review queues →</a>
         </div>
@@ -146,46 +178,46 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
       <section id="finance-summary" className="mt-7 scroll-mt-5">
         <SectionHeader eyebrow="FINANCE CONTROL" title="Payment and revenue summary" actionTo="/admin/payment-review" actionLabel="Open finance review" />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-          <Metric label="Released" value={money(released)} tone="good" to="/admin/payment-review?status=released" />
-          <Metric label="Held in escrow" value={money(escrow)} tone="warning" to="/admin/payment-review?status=escrow" />
-          <Metric label="Refunded" value={money(refunded)} tone={refunded ? "critical" : "neutral"} to="/admin/payment-review?status=refunded" />
-          <Metric label="Failed payments" value={String(failed)} tone={failed ? "critical" : "good"} to="/admin/payment-review?status=rejected" />
-          <Metric label="Commission receivable" value={money(view.driverCommissionReceivable)} tone={view.driverCommissionReceivable ? "warning" : "good"} to="/admin/driver-commission" />
-          <Metric label="Available driver deposits" value={money(view.availableDriverDeposit)} tone="good" to="/admin/driver-finance-search" />
+          <Metric label="Released" value={money(summary.releasedAmount)} tone="good" to="/admin/payment-review?status=released" />
+          <Metric label="Held in escrow" value={money(summary.escrowAmount)} tone="warning" to="/admin/payment-review?status=escrow" />
+          <Metric label="Refunded" value={money(summary.refundedAmount)} tone={summary.refundedAmount ? "critical" : "neutral"} to="/admin/payment-review?status=refunded" />
+          <Metric label="Failed payments" value={String(summary.failedPayments)} tone={summary.failedPayments ? "critical" : "good"} to="/admin/payment-review?status=rejected" />
+          <Metric label="Commission receivable" value={money(summary.commissionReceivable)} tone={summary.commissionReceivable ? "warning" : "good"} to="/admin/driver-commission" />
+          <Metric label="Available driver deposits" value={money(summary.availableDriverDeposit)} tone="good" to="/admin/driver-finance-search" />
         </div>
       </section>
 
       <section id="action-queues" className="mt-8 scroll-mt-5">
         <SectionHeader eyebrow="ACTION CENTER" title="Operational exception queues" actionTo="/admin/operations" actionLabel="Open operations" />
         <div className="grid gap-5 xl:grid-cols-2">
-          <QueueCard id="delayed-queue" title="Delayed and unassigned orders" count={view.delayedTrips.length + view.unassignedOrders.length} actionTo="/admin/operations?section=Orders&queue=delayed-or-unassigned">
+          <QueueCard id="delayed-queue" title="Delayed and unassigned orders" count={summary.delayedTrips + summary.unassignedOrders} actionTo="/admin/operations?section=Orders&queue=delayed-or-unassigned">
             <OrderQueue rows={dedupeOrders([...view.delayedTrips, ...view.unassignedOrders])} badge={(order) => isDelayedOrder(order) ? "Delayed" : "Unassigned"} />
           </QueueCard>
 
-          <QueueCard id="payment-queue" title="Pending payment reviews" count={view.pendingPayments.length} actionTo="/admin/payment-review?status=pending">
+          <QueueCard id="payment-queue" title="Pending payment reviews" count={summary.pendingPayments} actionTo="/admin/payment-review?status=pending">
             <PaymentQueue rows={view.pendingPayments} empty="No pending payment reviews." />
           </QueueCard>
 
-          <QueueCard id="evidence-queue" title="Missing delivery evidence" count={view.missingEvidenceOrders.length} actionTo="/admin/operations?section=Orders&queue=missing-evidence">
+          <QueueCard id="evidence-queue" title="Missing delivery evidence" count={summary.missingEvidence} actionTo="/admin/operations?section=Orders&queue=missing-evidence">
             <OrderQueue rows={view.missingEvidenceOrders} badge={() => "Evidence required"} empty="No delivered orders are missing evidence." />
           </QueueCard>
 
-          <QueueCard id="legacy-queue" title="Legacy completed orders" count={view.legacyOrderIds.size} actionTo="/admin/payment-review?queue=legacy">
+          <QueueCard id="legacy-queue" title="Legacy completed orders" count={summary.legacyCompleted} actionTo="/admin/payment-review?queue=legacy">
             <PaymentQueue rows={view.legacyPayments} badge="Legacy completed" empty="No legacy-completed payments." />
           </QueueCard>
 
-          <QueueCard id="failed-queue" title="Failed and refunded payments" count={view.failedOrRefundedPayments.length} actionTo="/admin/payment-review?queue=exceptions">
+          <QueueCard id="failed-queue" title="Failed and refunded payments" count={summary.failedOrRefundedPayments} actionTo="/admin/payment-review?queue=exceptions">
             <PaymentQueue rows={view.failedOrRefundedPayments} empty="No failed or refunded payments." />
           </QueueCard>
 
           <QueueCard id="compliance-queue" title="Driver compliance alerts" count={complianceTotal} actionTo="/admin/driver-compliance">
             <div className="grid gap-2 p-4 text-sm sm:p-5">
-              <QueueSummary label="Driver onboarding / approval" value={view.driverOnboardingAlerts.length} />
-              <QueueSummary label="Pending, rejected or expiring documents" value={view.complianceAlerts.length} />
+              <QueueSummary label="Driver onboarding / approval" value={summary.driverOnboardingAlerts} />
+              <QueueSummary label="Pending, rejected or expiring documents" value={summary.complianceDocumentAlerts} />
             </div>
           </QueueCard>
 
-          <QueueCard id="maintenance-queue" title="Fleet maintenance alerts" count={view.maintenanceAlerts.length} actionTo="/admin/fleet-maintenance">
+          <QueueCard id="maintenance-queue" title="Fleet maintenance alerts" count={summary.maintenanceAlerts} actionTo="/admin/fleet-maintenance">
             <div className="divide-y divide-asphalt/10">
               {view.maintenanceAlerts.slice(0, 6).map((truck) => <div key={truck.id} className="flex min-w-0 items-center justify-between gap-3 p-4 sm:p-5"><p className="min-w-0 break-all font-mono text-xs font-semibold">{truck.plate_number}</p><span className="shrink-0 bg-amber/10 px-2.5 py-1.5 text-[10px] font-semibold uppercase text-amber-dim">{truck.status.replace(/_/g, " ")}</span></div>)}
               {!view.maintenanceAlerts.length && <Empty label="No maintenance alerts." />}
