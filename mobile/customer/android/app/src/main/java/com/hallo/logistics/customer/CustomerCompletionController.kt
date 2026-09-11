@@ -133,10 +133,10 @@ class CustomerCompletionController(
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(8), dp(20), dp(8))
         }
-        val rating = RatingBar(activity).apply {
+        val ratingBar = RatingBar(activity).apply {
             numStars = 5
             stepSize = 1f
-            this.rating = 5f
+            setRating(5f)
             isIndicator = false
         }
         val comment = EditText(activity).apply {
@@ -146,7 +146,7 @@ class CustomerCompletionController(
             filters = arrayOf(InputFilter.LengthFilter(500))
         }
         val error = text("", 12f, true, activity.getColor(R.color.hallo_danger)).apply { visibility = View.GONE }
-        content.addView(rating)
+        content.addView(ratingBar)
         content.addView(comment, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         content.addView(error)
 
@@ -159,7 +159,7 @@ class CustomerCompletionController(
         dialog.setOnShowListener {
             val submit = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             submit.setOnClickListener {
-                val score = rating.rating.toInt()
+                val score = ratingBar.rating.toInt()
                 val validated = runCatching { CustomerCompletionPolicy.rating(score, comment.text.toString()) }
                 val failure = validated.exceptionOrNull()
                 if (failure != null) {
