@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 const service = fs.readFileSync("src/services/admin-orders.service.ts", "utf8");
 const page = fs.readFileSync("src/pages/SmartLogistics.tsx", "utf8");
-const migration = fs.readFileSync("supabase/migrations/20260911_admin_orders_pagination_indexes.sql", "utf8");
+const migration = fs.readFileSync("supabase/migrations/20260911044900_admin_orders_pagination_indexes.sql", "utf8");
 
 const checks = [
   [service.includes("ADMIN_ORDER_PAGE_SIZES = [50, 100]"), "service exposes 50/100 page sizes"],
