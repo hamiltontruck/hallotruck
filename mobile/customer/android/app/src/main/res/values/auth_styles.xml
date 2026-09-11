@@ -1,0 +1,5 @@
+<resources>
+<color name="auth_blue">#0864ED</color><color name="auth_background">#F5F9FF</color>
+<style name="Widget.Hallo.AuthPrimary" parent="Widget.Hallo.Primary"><item name="backgroundTint">@color/auth_blue</item><item name="android:textSize">16sp</item></style>
+<style name="Widget.Hallo.AuthInput" parent="Widget.Hallo.Input"><item name="boxBackgroundColor">@android:color/white</item><item name="boxStrokeColor">@color/auth_blue</item></style>
+</resources>

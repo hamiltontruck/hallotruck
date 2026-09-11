@@ -29,6 +29,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
@@ -60,6 +61,12 @@ import java.text.NumberFormat
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: CustomerViewModel by viewModels()
+    private val authBack = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            signupMode = false
+            renderAuthMode(resetSecrets = true)
+        }
+    }
     private var signupMode = false
     private var pickupLabels: List<String> = emptyList()
     private var dropoffLabels: List<String> = emptyList()
@@ -83,10 +90,13 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         language = CustomerLanguage.fromTag(AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag())
+        signupMode = savedInstanceState?.getBoolean("authSignupMode") ?: false
+        configureAuthLanguages()
         configureLanguageSelector()
         configureBottomInsets()
         configureBookingControls()
         bindActions()
+        onBackPressedDispatcher.addCallback(this, authBack)
         applyLocalizedCopy(CustomerPage.HOME)
 
         lifecycleScope.launch {
@@ -110,6 +120,32 @@ class MainActivity : AppCompatActivity() {
                     if (viewModel.state.value.page == CustomerPage.TRACKING && !viewModel.state.value.busy) {
                         viewModel.refreshTracking()
                     }
+                }
+            }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("authSignupMode", signupMode)
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun configureAuthLanguages() = with(binding) {
+        authLanguages.check(when (language) {
+            CustomerLanguage.EN -> authEn.id
+            CustomerLanguage.OR -> authOr.id
+            CustomerLanguage.AM -> authAm.id
+        })
+        authLanguages.addOnButtonCheckedListener { _, id, checked ->
+            if (checked) {
+                val requested = when (id) {
+                    authOr.id -> CustomerLanguage.OR
+                    authAm.id -> CustomerLanguage.AM
+                    else -> CustomerLanguage.EN
+                }
+                if (requested != language) {
+                    language = requested
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(requested.tag))
                 }
             }
         }
@@ -221,11 +257,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindActions() = with(binding) {
+        authForgot.setOnClickListener {
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(R.string.auth_forgot)
+                .setMessage(R.string.auth_recovery_help)
+                .setPositiveButton(R.string.auth_open_portal) { _, _ ->
+                    openSecureUrl("https://hamiltontruck.github.io/hallotruck/#/customer/login")
+                }.setNegativeButton(android.R.string.cancel, null).show()
+        }
+        listOf(password, confirmPin).forEach { field ->
+            field.setOnEditorActionListener { _, action, _ ->
+                if (action == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                    authSubmit.performClick()
+                    true
+                } else false
+            }
+        }
         authMode.setOnClickListener {
             signupMode = !signupMode
             renderAuthMode(resetSecrets = true)
         }
         authSubmit.setOnClickListener {
+            if (viewModel.state.value.busy || viewModel.state.value.loading) return@setOnClickListener
             if (signupMode) {
                 viewModel.signUp(
                     fullName.text.toString(),
@@ -276,16 +329,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderAuthMode(resetSecrets: Boolean) = with(binding) {
+        authBack.isEnabled = signupMode && !viewModel.state.value.authorized && !viewModel.state.value.busy
         signupFields.visibility = visible(signupMode)
         confirmPinLayout.visibility = visible(signupMode)
-        authTitle.text = getString(if (signupMode) R.string.create_customer_account else R.string.customer_sign_in)
+        authTitle.text = getString(if (signupMode) R.string.auth_create_title else R.string.auth_welcome)
         authSubmit.text = getString(if (signupMode) R.string.create_account else R.string.sign_in)
-        authMode.text = getString(if (signupMode) R.string.sign_in_instead else R.string.create_customer_account)
-        password.inputType = if (signupMode) {
+        authMode.text = getString(if (signupMode) R.string.sign_in else R.string.create_account)
+        authPrompt.text = getString(if (signupMode) R.string.auth_existing else R.string.auth_new)
+        authSubtitle.text = getString(if (signupMode) R.string.auth_create_description else R.string.auth_login_description)
+        authForgot.visibility = visible(!signupMode)
+        authHero.layoutParams = authHero.layoutParams.apply { height = (if (signupMode) 100 else 144).dp }
+        password.setAutofillHints(if (signupMode) "newPassword" else "password")
+        val authInputType = if (signupMode) {
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
         } else {
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
+        if (password.inputType != authInputType) password.inputType = authInputType
         password.filters = arrayOf(InputFilter.LengthFilter(if (signupMode) 6 else 128))
         if (resetSecrets) {
             password.setText("")
@@ -296,7 +356,19 @@ class MainActivity : AppCompatActivity() {
     private fun render(state: CustomerUiState) = with(binding) {
         progress.visibility = visible(state.loading || state.busy)
         status.text = localizedStatus(state)
+        appHeader.visibility = visible(state.authorized || state.loading)
+        statusCard.visibility = visible(state.authorized || state.loading)
         authPanel.visibility = visible(!state.authorized && !state.loading)
+        authProgress.visibility = visible(state.busy)
+        authFeedback.text = localizedStatus(state)
+        authFeedback.visibility = visible(state.message.isNotBlank() && state.message != "Sign in with your HALLO Customer account")
+        listOf(authSubmit, authMode, authForgot, fullName, phone, email, password, confirmPin, authEn, authOr, authAm).forEach {
+            it.isEnabled = !state.busy && !state.loading
+        }
+        if (state.authorized) {
+            password.text?.clear()
+            confirmPin.text?.clear()
+        }
         customerShell.visibility = visible(state.authorized)
         bottomNavigation.visibility = visible(state.authorized)
         navNotifications.visibility = visible(state.authorized)
@@ -306,6 +378,7 @@ class MainActivity : AppCompatActivity() {
         notificationBadge.text = if (unread > 99) "99+" else unread.toString()
         listOf(pageHome, pageBook, pageOrders, pageTracking, pagePayments, pageNotifications, pageProfile).forEach { it.visibility = View.GONE }
         applyLocalizedCopy(state.page)
+        if (state.busy) authSubmit.text = getString(R.string.loading)
         if (!state.authorized) return@with
         val shown = when (state.page) {
             CustomerPage.HOME -> pageHome

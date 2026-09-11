@@ -1,0 +1,11 @@
+<resources>
+<string name="auth_welcome">Welcome back</string>
+<string name="auth_login_description">Book your truck. Track every delivery.</string>
+<string name="auth_create_title">Create your account</string>
+<string name="auth_create_description">Book and track your deliveries with HALLO.</string>
+<string name="auth_new">New to HALLO?</string>
+<string name="auth_existing">Already have an account?</string>
+<string name="auth_forgot">Forgot password?</string>
+<string name="auth_recovery_help">Password recovery opens the Customer Portal. Tap “Forgot password?” there to continue.</string>
+<string name="auth_open_portal">Open Customer Portal</string>
+</resources>
