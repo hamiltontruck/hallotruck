@@ -42,7 +42,10 @@ class CustomerOrderSearchView @JvmOverloads constructor(
         input.setHintTextColor(ContextCompat.getColor(context, R.color.hallo_muted))
         input.textSize = 14f
         input.setPadding(px(2), 0, px(2), 0)
-        addView(input, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        addView(
+            input,
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+        )
 
         input.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -71,10 +74,10 @@ class CustomerOrderSearchView @JvmOverloads constructor(
         for (index in 0 until list.childCount) {
             val child = list.getChildAt(index)
             if (child === this) continue
-            val tracking = child.findViewById<TextView?>(R.id.orderTrackingId) ?: continue
-            val route = child.findViewById<TextView?>(R.id.orderRoute)
-            val meta = child.findViewById<TextView?>(R.id.orderMeta)
-            val status = child.findViewById<TextView?>(R.id.orderStatus)
+            val tracking = child.findViewById<TextView>(R.id.orderTrackingId) ?: continue
+            val route = child.findViewById<TextView>(R.id.orderRoute)
+            val meta = child.findViewById<TextView>(R.id.orderMeta)
+            val status = child.findViewById<TextView>(R.id.orderStatus)
             val haystack = buildString {
                 append(tracking.text).append(' ')
                 append(route?.text.orEmpty()).append(' ')
