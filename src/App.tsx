@@ -1,4 +1,4 @@
-import { HashRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { HashRouter, Link, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { CustomerBottomNav } from "./components/customer/CustomerBottomNav";
@@ -7,6 +7,7 @@ import { DriverDocumentExpiryAlert } from "./components/driver/DriverDocumentExp
 import { AdminSidebarLeadershipLinks } from "./components/admin/AdminSidebarLeadershipLinks";
 import { AdminToolShell } from "./components/admin/AdminToolShell";
 import { SmartLogistics } from "./pages/SmartLogistics";
+import { AdminOrdersScalable } from "./pages/AdminOrdersScalable";
 import { AdminCeoOverview } from "./pages/AdminCeoOverview";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
 import { AdminDriverFinanceSearch } from "./pages/AdminDriverFinanceSearch";
@@ -92,7 +93,11 @@ function DriverShell({ children }: { children: React.ReactNode }) {
   return <div className="driver-mobile-flow min-h-screen bg-bone pb-24 md:pb-0"><OfflineBanner /><Header />{showPaymentAction && <DriverPaymentCollectionBanner />}{showOperationalAlerts && <DriverDocumentExpiryAlert />}{children}</div>;
 }
 function AdminWorkspace(){return <AdminToolShell><AdminCeoOverview /></AdminToolShell>}
-function AdminOperationsWorkspace(){return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
+function AdminOperationsWorkspace(){
+  const [params] = useSearchParams();
+  const scalableOrders = params.get("section") === "Orders" && !params.get("queue") && !params.get("mode") && !params.get("action");
+  return <>{scalableOrders ? <AdminToolShell><AdminOrdersScalable /></AdminToolShell> : <SmartLogistics />}<AdminSidebarLeadershipLinks /></>;
+}
 function AdminPaymentReviewWorkspace(){return <><AdminPaymentReferenceConflictBanner /><AdminPaymentWorkspace /></>}
 function CustomerSectionIntro({ section }: { section: "orders" | "payments" }) {
   const { language } = useLanguage();
