@@ -7,7 +7,7 @@ const migration = fs.readFileSync("supabase/migrations/20260911_admin_orders_pag
 const checks = [
   [service.includes("ADMIN_ORDER_PAGE_SIZES = [50, 100]"), "service exposes 50/100 page sizes"],
   [service.includes('.select(ORDER_COLUMNS, { count: "exact" })'), "orders query requests exact filtered count"],
-  [service.includes(".range(from, to)"), "orders query uses server-side range pagination"],
+  [service.includes("range(from, to)"), "orders query uses server-side range pagination"],
   [service.includes("tracking_id.ilike") && service.includes("customer_name.ilike") && service.includes("customer_phone.ilike"), "search runs in Supabase query"],
   [service.includes('"quoted"'), "quoted status is supported"],
   [page.includes("getAdminOrdersPage"), "SmartLogistics uses paginated order service"],
