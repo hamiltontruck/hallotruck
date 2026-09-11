@@ -25,13 +25,19 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
         val status = host.findViewById<TextView>(R.id.status)
         val page = host.findViewById<LinearLayout>(R.id.pageProfile)
         val details = host.findViewById<TextView>(R.id.profileDetails)
-        val controller = CustomerAvatarController(host, viewModel) { status?.text = it }
+        val ordersList = host.findViewById<LinearLayout>(R.id.ordersList)
+        val avatarController = CustomerAvatarController(host, viewModel) { status?.text = it }
+        val completionController = CustomerCompletionController(
+            activity = host,
+            viewModel = viewModel,
+            setStatus = { message -> status?.text = message },
+        )
 
         host.lifecycleScope.launch {
             host.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.state.collect { state ->
                     page?.post {
-                        controller.render(state.profile, state.profileAvatarUrl, page, details, state.busy)
+                        avatarController.render(state.profile, state.profileAvatarUrl, page, details, state.busy)
                         when (state.message) {
                             "Uploading profile photo…" -> status?.text = host.getString(R.string.profile_photo_uploading)
                             "Removing profile photo…" -> status?.text = host.getString(R.string.profile_photo_removing)
@@ -39,6 +45,7 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
                             "Profile photo removed" -> status?.text = host.getString(R.string.profile_photo_removed)
                         }
                     }
+                    ordersList?.let { completionController.render(state, it) }
                 }
             }
         }
