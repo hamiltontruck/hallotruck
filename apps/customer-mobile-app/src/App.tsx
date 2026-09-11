@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CustomerIdentity } from "./auth/CustomerAuthBoundary";
 import { CustomerBookingMap } from "./CustomerBookingMap";
 import { CustomerBookingFlow } from "./CustomerBookingFlow";
-import { CustomerOrdersPage, CustomerProfilePage } from "./CustomerDataPages";
+import { CustomerOrdersV4Page as CustomerOrdersPage } from "./CustomerOrdersV4Page";
+import { CustomerProfileV4Page as CustomerProfilePage } from "./CustomerProfileV4Page";
 import { CustomerPaymentsPage } from "./CustomerPaymentsPage";
 import { CustomerTrackingPage } from "./CustomerTrackingPage";
 import { CustomerLanguageSwitcher, useCustomerLanguage } from "./customer-language";
@@ -13,6 +14,7 @@ import {
 } from "./customer-quote.service";
 import type { CreatedCustomerOrder } from "./customer-order.service";
 import { customerTruckByKey } from "./customer-vehicle-catalog";
+import "./customer-v4-parity.css";
 
 type Tab = "home" | "orders" | "track" | "payments" | "profile";
 type IconName = "home" | "orders" | "track" | "payments" | "profile" | "clock";
@@ -27,20 +29,11 @@ const ICONS: Record<IconName, ReactNode> = {
 };
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
-  return (
-    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      {ICONS[name]}
-    </svg>
-  );
+  return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICONS[name]}</svg>;
 }
 
 function HalloLogo() {
-  return (
-    <div className="halo-logo" aria-label="HALLOTRUCK Customer Mobile">
-      <div className="halo-wordmark">HALLO<span style={{ color: "var(--gold)", marginLeft: ".08em" }}>TRUCK</span></div>
-      <div className="halo-brand-copy"><strong>Customer</strong><small>Smart Logistics</small></div>
-    </div>
-  );
+  return <div className="halo-logo" aria-label="HALLOTRUCK Customer Mobile"><div className="halo-wordmark">HALLO<span style={{ color: "var(--gold)", marginLeft: ".08em" }}>TRUCK</span></div><div className="halo-brand-copy"><strong>Customer</strong><small>Smart Logistics</small></div></div>;
 }
 
 function BottomNav({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
@@ -51,20 +44,13 @@ function BottomNav({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
     { tab: "payments", label: "Payments", icon: "payments" },
     { tab: "profile", label: "Profile", icon: "profile" },
   ];
-  return (
-    <nav className="bottom-nav" aria-label="Customer navigation">
-      {items.map((item) => (
-        <button type="button" key={item.tab} className={tab === item.tab ? "active" : ""} onClick={() => setTab(item.tab)}>
-          <span><Icon name={item.icon} size={20}/></span><small>{item.label}</small>
-        </button>
-      ))}
-    </nav>
-  );
+  return <nav className="bottom-nav" aria-label="Customer navigation">{items.map((item) => <button type="button" key={item.tab} className={tab === item.tab ? "active" : ""} onClick={() => setTab(item.tab)}><span><Icon name={item.icon} size={20}/></span><small>{item.label}</small></button>)}</nav>;
 }
 
 export default function App({ identity }: { identity: CustomerIdentity }) {
   const { text } = useCustomerLanguage();
   const [tab, setTab] = useState<Tab>("home");
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
@@ -79,155 +65,41 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
 
   useEffect(() => {
     if (!pickupPlace || !dropoffPlace) {
-      setRoutePreview(null);
-      setRouteLoading(false);
-      setRouteError("");
-      return;
+      setRoutePreview(null); setRouteLoading(false); setRouteError(""); return;
     }
-
     const controller = new AbortController();
-    setRoutePreview(null);
-    setRouteLoading(true);
-    setRouteError("");
-    void loadCustomerRoutePreview(identity.userId, {
-      pickup: pickupPlace,
-      dropoff: dropoffPlace,
-      vehicleType: truck.label,
-      signal: controller.signal,
-    })
-      .then((route) => {
-        if (!controller.signal.aborted) setRoutePreview(route);
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted || (error as Error).name === "AbortError") return;
-        setRouteError(error instanceof Error ? error.message : "Truck route could not be calculated.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setRouteLoading(false);
-      });
+    setRoutePreview(null); setRouteLoading(true); setRouteError("");
+    void loadCustomerRoutePreview(identity.userId, { pickup: pickupPlace, dropoff: dropoffPlace, vehicleType: truck.label, signal: controller.signal })
+      .then((route) => { if (!controller.signal.aborted) setRoutePreview(route); })
+      .catch((error: unknown) => { if (controller.signal.aborted || (error as Error).name === "AbortError") return; setRouteError(error instanceof Error ? error.message : "Truck route could not be calculated."); })
+      .finally(() => { if (!controller.signal.aborted) setRouteLoading(false); });
     return () => controller.abort();
   }, [dropoffPlace, identity.userId, pickupPlace, truck.label]);
 
-  const routeLabel = useMemo(() => routePreview
-    ? `${routePreview.pickup_label} → ${routePreview.dropoff_label} · ${routePreview.distance_km.toFixed(1)} km`
-    : pickup && dropoff ? `${pickup} → ${dropoff}` : "Route not selected", [dropoff, pickup, routePreview]);
+  const routeLabel = useMemo(() => routePreview ? `${routePreview.pickup_label} → ${routePreview.dropoff_label} · ${routePreview.distance_km.toFixed(1)} km` : pickup && dropoff ? `${pickup} → ${dropoff}` : "Route not selected", [dropoff, pickup, routePreview]);
 
-  function changePickup(value: string) {
-    setPickup(value);
-    if (pickupPlace?.label !== value) setPickupPlace(null);
-  }
-
-  function changeDropoff(value: string) {
-    setDropoff(value);
-    if (dropoffPlace?.label !== value) setDropoffPlace(null);
-  }
-
-  function selectPickup(place: CustomerPlaceOption) {
-    setPickup(place.label);
-    setPickupPlace(place);
-  }
-
-  function selectDropoff(place: CustomerPlaceOption) {
-    setDropoff(place.label);
-    setDropoffPlace(place);
-  }
-
-  function swapPlaces() {
-    if (!pickupPlace || !dropoffPlace) return;
-    const nextPickup = dropoffPlace;
-    const nextDropoff = pickupPlace;
-    setPickup(nextPickup.label);
-    setDropoff(nextDropoff.label);
-    setPickupPlace(nextPickup);
-    setDropoffPlace(nextDropoff);
-  }
-
-  function resetRoute() {
-    setPickup("");
-    setDropoff("");
-    setPickupPlace(null);
-    setDropoffPlace(null);
-    setRoutePreview(null);
-    setRouteError("");
-  }
-
-  function handleOrderCreated(order: CreatedCustomerOrder) {
-    setCreatedOrder(order);
-    setBookingOpen(false);
-    setTab("orders");
-  }
+  function changePickup(value: string) { setPickup(value); if (pickupPlace?.label !== value) setPickupPlace(null); }
+  function changeDropoff(value: string) { setDropoff(value); if (dropoffPlace?.label !== value) setDropoffPlace(null); }
+  function selectPickup(place: CustomerPlaceOption) { setPickup(place.label); setPickupPlace(place); }
+  function selectDropoff(place: CustomerPlaceOption) { setDropoff(place.label); setDropoffPlace(place); }
+  function swapPlaces() { if (!pickupPlace || !dropoffPlace) return; const nextPickup = dropoffPlace; const nextDropoff = pickupPlace; setPickup(nextPickup.label); setDropoff(nextDropoff.label); setPickupPlace(nextPickup); setDropoffPlace(nextDropoff); }
+  function resetRoute() { setPickup(""); setDropoff(""); setPickupPlace(null); setDropoffPlace(null); setRoutePreview(null); setRouteError(""); }
+  function handleOrderCreated(order: CreatedCustomerOrder) { setCreatedOrder(order); setBookingOpen(false); setTrackingOrderId(null); setTab("orders"); }
+  function openTracking(orderId: string) { setTrackingOrderId(orderId); setTab("track"); }
+  function changeTab(next: Tab) { setTrackingOrderId(null); setTab(next); }
 
   let content: ReactNode;
   if (tab === "home") {
-    content = (
-      <main className="home-page">
-        <header className="home-brand customer-home-brand">
-          <HalloLogo/>
-          <div className="customer-home-actions">
-            <CustomerLanguageSwitcher compact />
-            <span className="customer-route-status" title={routeLabel}>
-              <Icon name="clock" size={15}/>
-              {routeLoading ? text.findingRoute : routePreview ? `${routePreview.distance_km.toFixed(1)} km` : text.newBooking}
-            </span>
-          </div>
-        </header>
-        <CustomerBookingMap
-          pickup={pickup}
-          dropoff={dropoff}
-          pickupPlace={pickupPlace}
-          dropoffPlace={dropoffPlace}
-          routePreview={routePreview}
-          routeLoading={routeLoading}
-          routeError={routeError}
-          vehicleType={truck.label}
-          onPickupChange={changePickup}
-          onDropoffChange={changeDropoff}
-          onPickupSelect={selectPickup}
-          onDropoffSelect={selectDropoff}
-          onSwap={swapPlaces}
-          onReset={resetRoute}
-          onBook={() => setBookingOpen(true)}
-        />
-      </main>
-    );
+    content = <main className="home-page"><header className="home-brand customer-home-brand"><HalloLogo/><div className="customer-home-actions"><CustomerLanguageSwitcher compact/><span className="customer-route-status" title={routeLabel}><Icon name="clock" size={15}/>{routeLoading ? text.findingRoute : routePreview ? `${routePreview.distance_km.toFixed(1)} km` : text.newBooking}</span></div></header><CustomerBookingMap pickup={pickup} dropoff={dropoff} pickupPlace={pickupPlace} dropoffPlace={dropoffPlace} routePreview={routePreview} routeLoading={routeLoading} routeError={routeError} vehicleType={truck.label} onPickupChange={changePickup} onDropoffChange={changeDropoff} onPickupSelect={selectPickup} onDropoffSelect={selectDropoff} onSwap={swapPlaces} onReset={resetRoute} onBook={() => setBookingOpen(true)}/></main>;
   } else if (tab === "orders") {
-    content = <CustomerOrdersPage userId={identity.userId} onHome={() => setTab("home")} onNewOrder={() => setBookingOpen(true)}/>;
+    content = <CustomerOrdersPage userId={identity.userId} onHome={() => changeTab("home")} onNewOrder={() => setBookingOpen(true)} onTrackOrder={openTracking}/>;
   } else if (tab === "track") {
-    content = <CustomerTrackingPage userId={identity.userId} onHome={() => setTab("home")}/>;
+    content = <CustomerTrackingPage userId={identity.userId} initialOrderId={trackingOrderId} onHome={() => changeTab("home")} onOrders={() => changeTab("orders")}/>;
   } else if (tab === "payments") {
-    content = <CustomerPaymentsPage userId={identity.userId} onHome={() => setTab("home")}/>;
+    content = <CustomerPaymentsPage userId={identity.userId} onHome={() => changeTab("home")}/>;
   } else {
     content = <CustomerProfilePage userId={identity.userId}/>;
   }
 
-  return (
-    <div className="customer-app-shell">
-      <div className="phone-stage">
-        {content}
-        {createdOrder && (
-          <div className="customer-order-success" role="status">
-            <div><strong>Order confirmed</strong><span>{createdOrder.trackingId} · ETB {createdOrder.priceEtb.toLocaleString()}</span></div>
-            <button type="button" onClick={() => setCreatedOrder(null)} aria-label="Dismiss order confirmation">×</button>
-          </div>
-        )}
-        {!bookingOpen && <BottomNav tab={tab} setTab={setTab}/>} 
-        {bookingOpen && (
-          <CustomerBookingFlow
-            pickup={pickup}
-            dropoff={dropoff}
-            pickupPlace={pickupPlace}
-            dropoffPlace={dropoffPlace}
-            userId={identity.userId}
-            selectedTruck={selectedTruck}
-            routePreview={routePreview}
-            routeLoading={routeLoading}
-            routeError={routeError}
-            onTruckChange={setSelectedTruck}
-            onClose={() => setBookingOpen(false)}
-            onOrderCreated={handleOrderCreated}
-          />
-        )}
-      </div>
-    </div>
-  );
+  return <div className="customer-app-shell"><div className="phone-stage">{content}{createdOrder && <div className="customer-order-success" role="status"><div><strong>Order confirmed</strong><span>{createdOrder.trackingId} · ETB {createdOrder.priceEtb.toLocaleString()}</span></div><button type="button" onClick={() => setCreatedOrder(null)} aria-label="Dismiss order confirmation">×</button></div>}{!bookingOpen && <BottomNav tab={tab} setTab={changeTab}/>} {bookingOpen && <CustomerBookingFlow pickup={pickup} dropoff={dropoff} pickupPlace={pickupPlace} dropoffPlace={dropoffPlace} userId={identity.userId} selectedTruck={selectedTruck} routePreview={routePreview} routeLoading={routeLoading} routeError={routeError} onTruckChange={setSelectedTruck} onClose={() => setBookingOpen(false)} onOrderCreated={handleOrderCreated}/>}</div></div>;
 }
