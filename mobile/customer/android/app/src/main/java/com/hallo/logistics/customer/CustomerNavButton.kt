@@ -16,6 +16,11 @@ class CustomerNavButton @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : MaterialButton(context, attrs) {
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (id == R.id.navProfile) post { CustomerProfileUiPolisher.install(rootView) }
+    }
+
     override fun setBackgroundColor(color: Int) {
         val selected = color != Color.TRANSPARENT
         isSelected = selected
