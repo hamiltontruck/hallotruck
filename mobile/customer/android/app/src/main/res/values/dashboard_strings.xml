@@ -1,0 +1,9 @@
+<resources>
+<string name="dash_hero_title">Move your cargo\nwith confidence</string>
+<string name="dash_hero_help">Choose a truck and get a quote for your route.</string>
+<string name="dash_overview">Your overview</string>
+<string name="dash_recent">Recent orders</string>
+<string name="dash_all_orders">View all orders</string>
+<string name="dash_profile">My profile</string>
+<string name="dash_empty">Your deliveries will appear here after your first booking.</string>
+</resources>

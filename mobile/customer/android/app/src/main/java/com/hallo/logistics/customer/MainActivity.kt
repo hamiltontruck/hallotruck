@@ -291,6 +291,18 @@ class MainActivity : AppCompatActivity() {
                 viewModel.signIn(email.text.toString(), password.text.toString())
             }
         }
+        dashOrders.setOnClickListener {
+            orderFilter = CustomerOrderFilter.ALL
+            viewModel.show(CustomerPage.ORDERS)
+        }
+        dashAllOrders.setOnClickListener { dashOrders.performClick() }
+        dashActive.setOnClickListener {
+            orderFilter = CustomerOrderFilter.ACTIVE
+            viewModel.show(CustomerPage.ORDERS)
+        }
+        dashPayments.setOnClickListener { viewModel.show(CustomerPage.PAYMENTS) }
+        dashNotifications.setOnClickListener { viewModel.show(CustomerPage.NOTIFICATIONS) }
+        dashProfile.setOnClickListener { viewModel.show(CustomerPage.PROFILE) }
         navHome.setOnClickListener { viewModel.show(CustomerPage.HOME) }
         navBook.setOnClickListener { viewModel.show(CustomerPage.PAYMENTS) }
         navOrders.setOnClickListener { viewModel.show(CustomerPage.ORDERS) }
@@ -690,18 +702,39 @@ class MainActivity : AppCompatActivity() {
         binding.loadSummary.text = getString(R.string.load_equivalent, if (tons > 0) formatTons(tons) else "—")
     }
 
-    private fun renderHomeDashboard(state: CustomerUiState, unread: Int) {
-        binding.pageHome.findViewWithTag<View>(HOME_DASHBOARD_TAG)?.let(binding.pageHome::removeView)
+    private fun renderHomeDashboard(state: CustomerUiState, unread: Int): Unit = with(binding) {
         val activeCount = state.orders.count { CustomerPolicy.showAssignment(it.status) }
         val due = state.orders.filterNot { it.status == "cancelled" }.sumOf { order ->
             CustomerPaymentPolicy.summarize(order, paymentsFor(order, state)).remainingToSubmit
         }
-        val card = card().apply { tag = HOME_DASHBOARD_TAG }
-        val content = vertical(12.dp)
-        content.addView(metricRow(getString(R.string.metric_orders) to state.orders.size.toString(), getString(R.string.metric_active) to activeCount.toString()))
-        content.addView(metricRow(getString(R.string.metric_to_pay) to money(due), getString(R.string.notifications) to unread.toString()))
-        card.addView(content)
-        binding.pageHome.addView(card, 2, marginParams())
+        dashOrders.text = "${state.orders.size}\n${getString(R.string.metric_orders)}"
+        dashActive.text = "$activeCount\n${getString(R.string.metric_active)}"
+        dashPayments.text = "${money(due)}\n${getString(R.string.metric_to_pay)}"
+        dashNotifications.text = "$unread\n${getString(R.string.notifications)}"
+        val activeOrder = state.orders.firstOrNull { CustomerPolicy.showAssignment(it.status) }
+        dashActiveStatus.text = activeOrder?.let { label(it.status) }.orEmpty()
+        dashActiveStatus.visibility = visible(activeOrder != null)
+        refresh.isEnabled = !state.busy
+        dashRecentOrders.removeAllViews()
+        val recent = state.orders.sortedByDescending { order ->
+            runCatching { java.time.Instant.parse(order.createdAt).toEpochMilli() }.getOrDefault(Long.MIN_VALUE)
+        }.take(3)
+        if (recent.isEmpty()) {
+            dashRecentOrders.addView(text(getString(R.string.dash_empty)))
+        } else recent.forEach { order ->
+            val recentCard = card()
+            val content = vertical(14.dp)
+            content.addView(textView(order.trackingId ?: getString(R.string.order_label), 15f, true))
+            content.addView(textView(label(order.status), 12f, true, getColor(R.color.hallo_muted)))
+            content.addView(textView("${order.pickupAddress.orEmpty()}\n→ ${order.dropoffAddress.orEmpty()}", 14f))
+            content.addView(actionButton(getString(R.string.view_details)) {
+                orderFilter = CustomerOrderFilter.ALL
+                expandedOrders.add(order.id)
+                viewModel.show(CustomerPage.ORDERS)
+            })
+            recentCard.addView(content)
+            dashRecentOrders.addView(recentCard, marginParams())
+        }
     }
 
     private fun highlightNavigation(page: CustomerPage) {
@@ -1499,7 +1532,6 @@ class MainActivity : AppCompatActivity() {
         const val TRACKING_REMAINING_TAG = "customer-tracking-remaining"
         const val PROFILE_AVATAR_TAG = "customer-profile-avatar"
         const val PROFILE_EDIT_TAG = "customer-profile-edit"
-        const val HOME_DASHBOARD_TAG = "customer-home-dashboard"
         const val ROUTE_ACTIONS_TAG = "customer-route-actions"
         const val PAYMENT_ESCROW = 0
         const val PAYMENT_PENDING = 1
@@ -1541,3 +1573,4 @@ class MainActivity : AppCompatActivity() {
         )
     }
 }
+

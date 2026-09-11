@@ -1,0 +1,4 @@
+<resources>
+<style name="Widget.Hallo.DashboardPrimary" parent="Widget.Hallo.Primary"><item name="backgroundTint">#0864ED</item><item name="android:textSize">16sp</item></style>
+<style name="Widget.Hallo.DashboardMetric" parent="Widget.Hallo.Secondary"><item name="android:minHeight">112dp</item><item name="android:minWidth">0dp</item><item name="android:paddingLeft">8dp</item><item name="android:paddingRight">8dp</item><item name="android:paddingTop">12dp</item><item name="android:paddingBottom">12dp</item><item name="android:textSize">15sp</item><item name="android:textStyle">bold</item><item name="backgroundTint">@android:color/white</item><item name="iconTint">#0864ED</item><item name="iconSize">22dp</item></style>
+</resources>
