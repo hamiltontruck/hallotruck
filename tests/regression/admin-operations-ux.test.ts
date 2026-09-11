@@ -51,6 +51,9 @@ test("Admin Operations stays mobile-safe through 430px and supports deterministi
   assert.match(source, /fixture\?\.metrics/);
   assert.match(source, /min-\[360px\]:p-5/);
   assert.match(source, /min-\[430px\]:flex-none/);
-  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_auto\]/);
+  assert.match(source, /sm:grid-cols-\[110px_minmax\(0,1fr\)_auto_auto_auto\]/);
+  assert.match(source, /sm:hidden/);
+  assert.match(source, /min-h-11/);
+  assert.match(source, /break-words/);
   assert.match(source, /overflow-hidden bg-white border/);
 });

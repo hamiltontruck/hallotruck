@@ -8,6 +8,7 @@ import { AdminManageOrderActionButton, AdminManageOrderActionStatus, manageOrder
 import type { ManageOrderAction } from "../components/admin/AdminManageOrderAction";
 import { PaymentCorrectionForm } from "../components/admin/PaymentCorrectionForm";
 import { matchesAdminOrderControlQueue, sameLocalDay } from "../domain/admin-control-center";
+import { ADMIN_ORDER_PAGE_SIZES, ADMIN_ORDER_STATUSES, getAdminOrdersPage } from "../services/admin-orders.service";
 import { AdminOrder, Customer, DashboardMetrics, DeliveryProof, Driver, Payment, Truck, adminCancelOrder, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, openDeliveryProof, openPaymentReceipt, printInvoice, submitDeliveryProof, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
 type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
@@ -48,7 +49,7 @@ export type SmartLogisticsFixture = {
   deliveryProofs: DeliveryProof[];
 };
 
-type OperationsFilterName = "status" | "queue" | "date" | "fleet_status" | "driver_status" | "payment_status";
+type OperationsFilterName = "status" | "queue" | "date" | "fleet_status" | "driver_status" | "payment_status" | "page" | "page_size";
 
 export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFixture | null } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -77,7 +78,7 @@ export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFix
     const next = new URLSearchParams(searchParams);
     if (label === "Overview") next.delete("section");
     else next.set("section", label);
-    for (const key of ["status", "queue", "date", "fleet_status", "driver_status", "payment_status"]) next.delete(key);
+    for (const key of ["status", "queue", "date", "fleet_status", "driver_status", "payment_status", "page", "page_size"]) next.delete(key);
     setSearchParams(next, { replace: true });
   };
 
@@ -86,6 +87,7 @@ export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFix
     const next = new URLSearchParams(searchParams);
     if (value.trim()) next.set("q", value);
     else next.delete("q");
+    next.delete("page");
     if (section === "Overview" && value.trim()) {
       setSection("Orders");
       next.set("section", "Orders");
@@ -97,12 +99,13 @@ export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFix
     const next = new URLSearchParams(searchParams);
     if (!value || value === "all") next.delete(name);
     else next.set(name, value);
+    if (name !== "page") next.delete("page");
     setSearchParams(next, { replace: true });
   };
 
   const clearModuleFilters = () => {
     const next = new URLSearchParams(searchParams);
-    for (const key of ["status", "queue", "date", "fleet_status", "driver_status", "payment_status"]) next.delete(key);
+    for (const key of ["status", "queue", "date", "fleet_status", "driver_status", "payment_status", "page", "page_size"]) next.delete(key);
     setSearchParams(next, { replace: true });
   };
 
@@ -179,7 +182,7 @@ export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFix
         </header>
         <div className="p-3 min-[360px]:p-5 sm:p-8 max-w-[1500px] mx-auto">
           {error && <p role="alert" className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5 break-words">{error}</p>}
-          {loading ? <div role="status" aria-live="polite" className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} deliveryProofs={deliveryProofs} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} initialOrderQueue={searchParams.get("queue") ?? "all"} initialDateFilter={searchParams.get("date") ?? "all"} initialFleetStatus={searchParams.get("fleet_status") ?? "all"} initialDriverStatus={searchParams.get("driver_status") ?? "all"} initialPaymentStatus={searchParams.get("payment_status") ?? "all"} onSearch={updateSearch} onFilter={updateFilter} onClearFilters={clearModuleFilters} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
+          {loading ? <div role="status" aria-live="polite" className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} deliveryProofs={deliveryProofs} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} initialOrderQueue={searchParams.get("queue") ?? "all"} initialDateFilter={searchParams.get("date") ?? "all"} initialFleetStatus={searchParams.get("fleet_status") ?? "all"} initialDriverStatus={searchParams.get("driver_status") ?? "all"} initialPaymentStatus={searchParams.get("payment_status") ?? "all"} initialOrderPage={searchParams.get("page") ?? "1"} initialOrderPageSize={searchParams.get("page_size") ?? "100"} fixtureMode={Boolean(fixture)} onSearch={updateSearch} onFilter={updateFilter} onClearFilters={clearModuleFilters} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
         </div>
       </main>
       {modal === "order" ? <AdminCreateOrderModal onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} /> : modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
@@ -234,7 +237,7 @@ function SectionHead({ title, action, onClick }: { title:string; action:string; 
 
 function OrderRow({ order:o, onManage }: { order: AdminOrder; onManage?: (order:AdminOrder)=>void }) {
   const color = o.status === "cancelled" ? "bg-red-100 text-red-800" : o.status === "delivered" ? "bg-emerald-100 text-emerald-800" : o.status === "in_transit" ? "bg-amber/20 text-amber-dim" : o.status === "accepted" ? "bg-sky-100 text-sky-800" : "bg-asphalt/5 text-steel";
-  return <div className="min-w-0 p-4 sm:px-6 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[100px_minmax(0,1fr)_auto_auto_auto] items-center gap-3 sm:gap-5"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><div className="order-3 sm:order-none col-span-2 sm:col-span-1"><p className="min-w-0 break-words text-sm font-medium flex flex-wrap items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p><p className="text-[11px] font-semibold text-asphalt mt-1">Driver / plate: {o.assignment_label || "Driver and truck not assigned"}</p></div><span className="hidden sm:block font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span><span className={`text-[10px] font-semibold px-2.5 py-1.5 capitalize ${color}`}>{o.status.replace("_", " ")}</span>{onManage&&<button onClick={()=>onManage(o)} className="text-xs font-semibold text-amber-dim">Manage</button>}</div>;
+  return <div className="min-w-0 border-b border-asphalt/10 p-4 last:border-0 sm:grid sm:grid-cols-[110px_minmax(0,1fr)_auto_auto_auto] sm:items-center sm:gap-5 sm:px-6"><div className="flex min-w-0 items-center justify-between gap-3 sm:block"><span className="font-mono text-xs font-semibold">{o.tracking_id}</span><span className={`shrink-0 text-[10px] font-semibold px-2.5 py-1.5 capitalize sm:hidden ${color}`}>{o.status.replace("_", " ")}</span></div><div className="mt-3 min-w-0 sm:mt-0"><p className="min-w-0 break-words text-sm font-medium flex flex-wrap items-center gap-1.5"><Icon name="pin" className="w-3.5 h-3.5 text-amber" />{o.pickup_address} <span className="text-steel">→</span> {o.dropoff_address}</p><p className="text-[11px] text-steel mt-1 break-words">{o.customer_name ?? "Customer"} · {o.cargo_description ?? o.vehicle_type}</p><p className="text-[11px] font-semibold text-asphalt mt-1 break-words">Driver / plate: {o.assignment_label || "Driver and truck not assigned"}</p></div><div className="mt-4 flex min-w-0 items-center justify-between gap-3 border-t border-asphalt/10 pt-3 sm:mt-0 sm:block sm:border-0 sm:pt-0"><span className="font-mono text-xs">ETB {Number(o.price_etb ?? 0).toLocaleString()}</span>{onManage&&<button onClick={()=>onManage(o)} className="min-h-11 px-3 text-xs font-semibold text-amber-dim sm:hidden">Manage</button>}</div><span className={`hidden text-[10px] font-semibold px-2.5 py-1.5 capitalize sm:inline-block ${color}`}>{o.status.replace("_", " ")}</span>{onManage&&<button onClick={()=>onManage(o)} className="hidden min-h-11 px-3 text-xs font-semibold text-amber-dim sm:inline-block">Manage</button>}</div>;
 }
 
 function includesQuery(values: Array<string | number | null | undefined>, query: string) {
@@ -242,12 +245,12 @@ function includesQuery(values: Array<string | number | null | undefined>, query:
   return values.some((value) => String(value ?? "").toLowerCase().includes(query));
 }
 
-function ModulePage({ section, orders, customers, trucks, payments, drivers, deliveryProofs, searchQuery, initialOrderStatus, initialOrderQueue, initialDateFilter, initialFleetStatus, initialDriverStatus, initialPaymentStatus, onSearch, onFilter, onClearFilters, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; deliveryProofs:DeliveryProof[]; searchQuery:string; initialOrderStatus:string; initialOrderQueue:string; initialDateFilter:string; initialFleetStatus:string; initialDriverStatus:string; initialPaymentStatus:string; onSearch:(value:string)=>void; onFilter:(name:OperationsFilterName,value:string)=>void; onClearFilters:()=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
-  const allowedOrderStatuses = ["all", "placed", "accepted", "in_transit", "delivered", "cancelled"];
+function ModulePage({ section, orders, customers, trucks, payments, drivers, deliveryProofs, searchQuery, initialOrderStatus, initialOrderQueue, initialDateFilter, initialFleetStatus, initialDriverStatus, initialPaymentStatus, initialOrderPage, initialOrderPageSize, fixtureMode, onSearch, onFilter, onClearFilters, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; deliveryProofs:DeliveryProof[]; searchQuery:string; initialOrderStatus:string; initialOrderQueue:string; initialDateFilter:string; initialFleetStatus:string; initialDriverStatus:string; initialPaymentStatus:string; initialOrderPage:string; initialOrderPageSize:string; fixtureMode:boolean; onSearch:(value:string)=>void; onFilter:(name:OperationsFilterName,value:string)=>void; onClearFilters:()=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+  const allowedOrderStatuses = [...ADMIN_ORDER_STATUSES];
   const allowedFleetStatuses = ["all", "available", "assigned", "on_trip", "maintenance", "suspended", "inactive"];
   const allowedDriverStatuses = ["all", "approved", "pending", "rejected", "suspended", "active", "available"];
   const allowedPaymentStatuses = ["all", "initiated", "held_escrow", "released", "refunded", "failed"];
-  const orderStatus = allowedOrderStatuses.includes(initialOrderStatus) ? initialOrderStatus : "all";
+  const orderStatus = allowedOrderStatuses.includes(initialOrderStatus as (typeof ADMIN_ORDER_STATUSES)[number]) ? initialOrderStatus : "all";
   const fleetStatus = allowedFleetStatuses.includes(initialFleetStatus) ? initialFleetStatus : "all";
   const driverStatus = allowedDriverStatuses.includes(initialDriverStatus) ? initialDriverStatus : "all";
   const paymentStatus = allowedPaymentStatuses.includes(initialPaymentStatus) ? initialPaymentStatus : "all";
@@ -273,6 +276,29 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
   const busyFleet=trucks.filter((truck)=>truck.status==="assigned").length;
   const fleetUtilization=trucks.length?Math.round(busyFleet/trucks.length*100):0;
   const approvedDrivers=drivers.filter((driver)=>driver.driver_status==="approved").length;
+  const requestedPage = Math.max(1, Number.parseInt(initialOrderPage, 10) || 1);
+  const requestedPageSize = Number(initialOrderPageSize) === 50 ? 50 : 100;
+  const serverOrdersEnabled = section === "Orders" && !fixtureMode && initialOrderQueue === "all";
+  const [pagedOrders,setPagedOrders]=useState<AdminOrder[]>([]);
+  const [pagedTotal,setPagedTotal]=useState(0);
+  const [pagedTotalPages,setPagedTotalPages]=useState(1);
+  const [pagedStatusCounts,setPagedStatusCounts]=useState<Record<string,number>>({});
+  const [pagedLoading,setPagedLoading]=useState(false);
+  const [pagedError,setPagedError]=useState("");
+
+  useEffect(()=>{
+    if(!serverOrdersEnabled) return;
+    let cancelled=false;
+    setPagedLoading(true); setPagedError("");
+    void getAdminOrdersPage({page:requestedPage,pageSize:requestedPageSize,status:orderStatus,search:searchQuery,today:initialDateFilter==="today"},drivers,trucks)
+      .then((result)=>{if(cancelled)return;setPagedOrders(result.orders);setPagedTotal(result.total);setPagedTotalPages(result.totalPages);setPagedStatusCounts(result.statusCounts);if(result.page!==requestedPage)onFilter("page",String(result.page));})
+      .catch((err)=>{if(cancelled)return;setPagedError(err instanceof Error?err.message:"Could not load orders.");})
+      .finally(()=>{if(!cancelled)setPagedLoading(false);});
+    return()=>{cancelled=true;};
+  },[serverOrdersEnabled,requestedPage,requestedPageSize,orderStatus,searchQuery,initialDateFilter,drivers,trucks,onFilter]);
+
+  const displayedOrders=serverOrdersEnabled?pagedOrders:filteredOrders;
+  const orderCount=(status:string)=>serverOrdersEnabled?(pagedStatusCounts[status]??0):(status==="all"?orders.length:orders.filter((order)=>order.status===status).length);
 
   return <div>
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div>{["Orders","Customers","Fleet & drivers"].includes(section) && <button onClick={() => onAdd(addKind)} className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button>}</div>
@@ -281,8 +307,11 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
 
     {section === "Orders" && <>
       {(initialOrderQueue !== "all" || initialDateFilter === "today") && <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2 border border-amber/35 bg-amber/10 p-3 text-xs"><strong>Control-center filter:</strong>{initialOrderQueue !== "all" && <span className="bg-white px-2 py-1 capitalize">{initialOrderQueue.replace(/-/g, " ")}</span>}{initialDateFilter === "today" && <span className="bg-white px-2 py-1">Today</span>}<Link to="/admin/operations?section=Orders" className="ml-auto font-semibold text-amber-dim">Clear filters</Link></div>}
-      <FilterButtons label="Order status" values={allowedOrderStatuses} selected={orderStatus} count={(status)=>status==="all"?orders.length:orders.filter((order)=>order.status===status).length} onChange={(status)=>onFilter("status",status)} />
-      <DataPanel title={searchQuery||orderStatus!=="all"||initialOrderQueue!=="all"||initialDateFilter!=="all"?"Matching orders":"All orders"} empty="No matching orders.">{filteredOrders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>
+      <FilterButtons label="Order status" values={allowedOrderStatuses} selected={orderStatus} count={orderCount} onChange={(status)=>onFilter("status",status)} />
+      {serverOrdersEnabled&&<div className="mb-4 flex flex-col gap-3 border border-asphalt/10 bg-white p-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between"><div className="text-xs text-steel"><span className="font-semibold text-asphalt">{pagedTotal.toLocaleString()}</span> matching orders · Page {requestedPage} of {pagedTotalPages}</div><label className="flex items-center gap-2 text-xs font-semibold text-asphalt">Rows<select aria-label="Orders per page" value={requestedPageSize} onChange={(event)=>onFilter("page_size",event.target.value)} className="min-h-11 border border-asphalt/15 bg-white px-3">{ADMIN_ORDER_PAGE_SIZES.map((size)=><option key={size} value={size}>{size}</option>)}</select></label></div>}
+      {pagedError&&serverOrdersEnabled&&<p role="alert" className="mb-4 border border-route/30 bg-route/10 p-3 text-sm text-route">{pagedError}</p>}
+      {pagedLoading&&serverOrdersEnabled?<div role="status" className="border border-asphalt/10 bg-white p-10 text-center text-sm text-steel">Loading orders…</div>:<DataPanel title={searchQuery||orderStatus!=="all"||initialOrderQueue!=="all"||initialDateFilter!=="all"?"Matching orders":"All orders"} empty="No matching orders.">{displayedOrders.map(o=><OrderRow key={o.id} order={o} onManage={onManage}/>)}</DataPanel>}
+      {serverOrdersEnabled&&pagedTotalPages>1&&<Pagination page={requestedPage} totalPages={pagedTotalPages} onPage={(page)=>onFilter("page",String(page))}/>}
     </>}
     {section === "Customers" && <DataPanel title={searchQuery?"Matching customers":"Customers"} empty="No matching customers.">{filteredCustomers.map(c=><SimpleRow key={c.id} title={c.full_name} subtitle={`${c.phone}${c.company_name ? ` · ${c.company_name}` : ""}`} badge={c.is_credit_customer ? "Credit" : "Standard"} />)}</DataPanel>}
     {section === "Fleet & drivers" && <>
@@ -306,7 +335,8 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
   </div>;
 }
 
-function FilterButtons({label,values,selected,count,onChange}:{label:string;values:string[];selected:string;count:(value:string)=>number;onChange:(value:string)=>void}){return <fieldset className="mb-4 min-w-0 border border-asphalt/10 bg-white p-3 min-[360px]:p-4"><legend className="px-1 text-[10px] font-semibold uppercase tracking-wide text-steel">{label}</legend><div className="flex min-w-0 flex-wrap gap-2" aria-label={label}>{values.map((value)=><button key={value} type="button" aria-pressed={selected===value} onClick={()=>onChange(value)} className={`min-h-11 min-w-[5rem] flex-1 border px-3 py-2 text-[11px] font-semibold capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber min-[430px]:flex-none ${selected===value?"border-asphalt bg-asphalt text-white":"border-asphalt/10 bg-white text-steel"}`}>{value==="all"?`All ${count(value)}`:`${value.replace(/_/g," ")} ${count(value)}`}</button>)}</div></fieldset>}
+function Pagination({page,totalPages,onPage}:{page:number;totalPages:number;onPage:(page:number)=>void}){const start=Math.max(1,Math.min(page-2,totalPages-4));const pages=Array.from({length:Math.min(5,totalPages)},(_,index)=>start+index).filter(value=>value<=totalPages);return <nav aria-label="Orders pagination" className="mt-4 flex flex-wrap items-center justify-between gap-3 border border-asphalt/10 bg-white p-3"><button type="button" disabled={page<=1} onClick={()=>onPage(page-1)} className="min-h-11 border border-asphalt/15 px-4 text-xs font-semibold disabled:opacity-35">Previous</button><div className="flex flex-wrap justify-center gap-2">{pages.map(value=><button key={value} type="button" aria-current={value===page?"page":undefined} onClick={()=>onPage(value)} className={`min-h-11 min-w-11 px-3 text-xs font-semibold ${value===page?"bg-asphalt text-white":"border border-asphalt/15 bg-white"}`}>{value}</button>)}</div><button type="button" disabled={page>=totalPages} onClick={()=>onPage(page+1)} className="min-h-11 border border-asphalt/15 px-4 text-xs font-semibold disabled:opacity-35">Next</button></nav>}
+function FilterButtons({label,values,selected,count,onChange}:{label:string;values:readonly string[];selected:string;count:(value:string)=>number;onChange:(value:string)=>void}){return <fieldset className="mb-4 min-w-0 border border-asphalt/10 bg-white p-3 min-[360px]:p-4"><legend className="px-1 text-[10px] font-semibold uppercase tracking-wide text-steel">{label}</legend><div className="flex min-w-0 flex-wrap gap-2" aria-label={label}>{values.map((value)=><button key={value} type="button" aria-pressed={selected===value} onClick={()=>onChange(value)} className={`min-h-11 min-w-[5rem] flex-1 border px-3 py-2 text-[11px] font-semibold capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber min-[430px]:flex-none ${selected===value?"border-asphalt bg-asphalt text-white":"border-asphalt/10 bg-white text-steel"}`}>{value==="all"?`All ${count(value)}`:`${value.replace(/_/g," ")} ${count(value)}`}</button>)}</div></fieldset>}
 function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="min-w-0 overflow-hidden bg-white border border-asphalt/10"><div className="p-4 min-[360px]:p-5 sm:px-6 border-b border-asphalt/10 flex flex-wrap items-center justify-between gap-2"><h2 className="min-w-0 break-words font-display font-semibold text-lg">{title}</h2><span className="shrink-0 font-mono text-xs text-steel">{count} {count===1?"record":"records"}</span></div>{count ? children : <Empty label={empty}/>}</div>; }
 function SimpleRow({ title, subtitle, badge }: { title:string; subtitle:string; badge:string }) { return <div className="min-w-0 p-4 sm:px-6 border-b border-asphalt/10 last:border-0 flex flex-col items-start justify-between gap-3 min-[430px]:flex-row min-[430px]:items-center"><div className="min-w-0"><p className="break-words font-semibold text-sm">{title}</p><p className="mt-1 break-words text-xs leading-5 text-steel">{subtitle}</p></div><span className="shrink-0 text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{badge.replace(/_/g," ")}</span></div>; }
 function FinanceSummaryCard({label,value,money=true}:{label:string;value:number;money?:boolean}){return <div className="border border-asphalt/10 bg-white p-4 sm:p-5"><p className="font-mono text-[10px] uppercase tracking-wide text-steel">{label}</p><p className="mt-3 font-display text-xl font-bold text-asphalt">{money?`ETB ${compactMoney(value)}`:value.toLocaleString()}</p></div>}
