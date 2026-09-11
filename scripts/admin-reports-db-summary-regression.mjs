@@ -16,7 +16,8 @@ assert.match(service, /supabase\.rpc\(\"admin_reports_summary\"\)/, "Reports ser
 assert.doesNotMatch(panel, /from\(\"payments\"\)|from\(\"orders\"\)|\.limit\(5000\)|\.limit\(4000\)|\.limit\(2000\)/, "Reports UI must not bulk-load raw ledgers");
 assert.match(migration, /security invoker/i, "Reports RPC must remain SECURITY INVOKER");
 assert.match(migration, /private\.is_admin_or_ceo\(\)/, "Reports RPC must enforce Admin\/CEO authorization");
-assert.match(migration, /revoke execute on function public\.admin_reports_summary\(\) from public, anon/i, "public and anon execution must stay revoked");
+assert.match(migration, /revoke execute on function public\.admin_reports_summary\(\) from public/i, "public execution must stay revoked");
+assert.match(migration, /revoke execute on function public\.admin_reports_summary\(\) from anon/i, "anon execution must stay revoked");
 assert.equal(marker, "20260911195014", "production migration marker must match the applied Reports migration");
 
 console.log("Admin Reports DB summary regression: PASS");
