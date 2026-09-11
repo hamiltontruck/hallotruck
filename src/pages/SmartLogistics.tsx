@@ -4,6 +4,7 @@ import { supabase } from "../services/supabase.client";
 import { AdminLiveTripsPanel } from "../components/admin/AdminLiveTripsPanel";
 import { AdminCreateOrderModal } from "../components/admin/AdminCreateOrderModal";
 import { AdminMobileBottomNav } from "../components/admin/AdminMobileBottomNav";
+import { AdminPaymentLedgerPanel } from "../components/admin/AdminPaymentLedgerPanel";
 import { AdminManageOrderActionButton, AdminManageOrderActionStatus, manageOrderBusyGuidanceId, manageOrderBusyMessage } from "../components/admin/AdminManageOrderAction";
 import type { ManageOrderAction } from "../components/admin/AdminManageOrderAction";
 import { PaymentCorrectionForm } from "../components/admin/PaymentCorrectionForm";
@@ -320,12 +321,12 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
       {(fleetStatus!=="all"||driverStatus!=="all")&&<button type="button" onClick={onClearFilters} className="mb-4 text-xs font-semibold text-route underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-route">Clear Fleet & Driver filters</button>}
       <div className="grid min-w-0 gap-5 xl:grid-cols-2"><DataPanel title={searchQuery||fleetStatus!=="all"?"Matching fleet":"Registered fleet"} empty="No matching trucks.">{filteredTrucks.map(t=><SimpleRow key={t.id} title={t.plate_number} subtitle={`${t.vehicle_type} · ${t.capacity_tons ?? "—"} tons`} badge={t.status} />)}</DataPanel><DataPanel title={searchQuery||driverStatus!=="all"?"Matching drivers":"Registered drivers"} empty="No matching drivers.">{filteredDrivers.map(d=><SimpleRow key={d.id} title={d.full_name||"Driver"} subtitle={d.phone||"No phone recorded"} badge={d.driver_status||"pending"} />)}</DataPanel></div>
     </>}
-    {section === "Finance" && <>
+    {section === "Finance" && (fixtureMode ? <>
       <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4"><FinanceSummaryCard label="Released customer funds" value={releasedNet}/><FinanceSummaryCard label="Held in escrow" value={heldTotal}/><FinanceSummaryCard label="Needs verification" value={initiatedTotal}/><FinanceSummaryCard label="Payment records" value={payments.length} money={false}/></div>
       <FilterButtons label="Payment status" values={allowedPaymentStatuses} selected={paymentStatus} count={(status)=>status==="all"?payments.length:payments.filter((payment)=>payment.event===status).length} onChange={(status)=>onFilter("payment_status",status)} />
       {paymentStatus!=="all"&&<button type="button" onClick={onClearFilters} className="mb-4 text-xs font-semibold text-route underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-route">Clear Finance filters</button>}
       <DataPanel title={searchQuery||paymentStatus!=="all"?"Matching payments":"Payment ledger"} empty="No matching payments.">{filteredPayments.map(p=><FinancePaymentRow key={p.id} payment={p} order={orders.find(o=>o.id===p.order_id)} driver={drivers.find(d=>d.id===orders.find(o=>o.id===p.order_id)?.driver_id)} allPayments={payments} onManage={onManage} onReload={onReload} />)}</DataPanel>
-    </>}
+    </> : <AdminPaymentLedgerPanel searchQuery={searchQuery} paymentStatus={paymentStatus} page={requestedPage} pageSize={requestedPageSize} onPage={(page)=>onFilter("page",String(page))} onPageSize={(size)=>onFilter("page_size",String(size))} onStatus={(status)=>onFilter("payment_status",status)} onClearFilters={onClearFilters} onManage={onManage} onParentReload={onReload} />)}
     {section === "Live trips" && <AdminLiveTripsPanel orders={orders} trucks={trucks} drivers={drivers} onManage={onManage} />}
     {section === "Reports" && <>
       <Link to="/admin/intelligence" className="mb-5 flex min-w-0 flex-col gap-4 overflow-hidden bg-asphalt p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="min-w-0"><p className="font-mono text-[10px] tracking-[.18em] text-amber">ADMIN INTELLIGENCE</p><p className="mt-2 break-words font-display text-2xl font-bold">Open next-generation Reports & Global Search</p><p className="mt-2 max-w-2xl break-words text-xs leading-5 text-white/55">Search every operational record, change report periods, inspect revenue trends, top routes and actionable smart signals.</p></div><span className="shrink-0 font-semibold text-amber">Open intelligence →</span></Link>

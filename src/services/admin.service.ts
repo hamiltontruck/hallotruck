@@ -111,8 +111,7 @@ function shouldLoadAllOrdersForControlQueue() {
 }
 
 function shouldLoadFullFinanceWorkspace() {
-  const section = getAdminSearchParams().get("section");
-  return section === "Finance" || section === "Reports";
+  return getAdminSearchParams().get("section") === "Reports";
 }
 
 export async function getDashboardData() {
