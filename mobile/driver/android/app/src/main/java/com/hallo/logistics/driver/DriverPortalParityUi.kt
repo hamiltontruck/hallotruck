@@ -19,7 +19,7 @@ object DriverPortalParityUi {
         when (view) {
             is MaterialCardView -> {
                 view.radius = dp(view, 16f)
-                view.cardElevation = dp(view, 0f)
+                view.cardElevation = 0f
             }
             is TextView -> if (view.textSize in 14f..18f) view.includeFontPadding = false
         }
