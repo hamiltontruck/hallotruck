@@ -1,5 +1,5 @@
 <resources>
-    <string name="assigned_load">Fe'umsa ramadame</string>
+    <string name="assigned_load">Fe\'umsa ramadame</string>
     <string name="trip_progress">Adeemsa imalaa</string>
     <string name="location_sharing">Bakka jirtu kallattiin qooduu</string>
     <string name="location_sharing_hint">Yeroo imalli kee hojii irra jiru GPS kee HALLO fi maamilaaf haaromfama.</string>
@@ -7,7 +7,7 @@
     <string name="released_earnings">Galii gadhiifame</string>
     <string name="trip_earnings_history">Seenaa galii imalaa</string>
     <string name="delivery_proof">Ragaa geessuu</string>
-    <string name="delivery_proof_hint">Geessuu xumuruuf maqaa fudhataa, suuraa, mallattoo fi bu'aa kaffaltii barbaachisa.</string>
+    <string name="delivery_proof_hint">Geessuu xumuruuf maqaa fudhataa, suuraa, mallattoo fi bu\'aa kaffaltii barbaachisa.</string>
     <string name="support_and_disputes">Deeggarsa fi falmii</string>
-    <string name="support_contract_unavailable">Ammaaf beeksisa deeggarsa HALLO fayyadami. Tarkaanfiin falmii backend mirkanaa'e yeroo jiraatu qofa mul'ata.</string>
+    <string name="support_contract_unavailable">Ammaaf beeksisa deeggarsa HALLO fayyadami. Tarkaanfiin falmii backend mirkanaa\'e yeroo jiraatu qofa mul\'ata.</string>
 </resources>
