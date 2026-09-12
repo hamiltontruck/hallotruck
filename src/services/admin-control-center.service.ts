@@ -83,6 +83,8 @@ export interface ControlCenterServerSummary {
   newCustomersToday: number;
   pendingPayments: number;
   missingEvidence: number;
+  unreportedPaymentReports: number;
+  unreportedInvoiceTotal: number;
   legacyCompleted: number;
   commissionReceivable: number;
   totalDriverDeposit: number;
@@ -106,6 +108,7 @@ export interface ControlCenterData {
   customers: ControlCustomer[];
   proofs: ControlProof[];
   documents: ControlDocument[];
+  unreportedPaymentOrders?: ControlOrder[];
   driverFinancialSummaries?: ControlDriverFinancialSummary[];
   warnings?: string[];
   serverSummary?: ControlCenterServerSummary;
@@ -191,6 +194,8 @@ function serverSummaryOf(value: unknown): ControlCenterServerSummary {
     newCustomersToday: numberOf(row.newCustomersToday),
     pendingPayments: numberOf(row.pendingPayments),
     missingEvidence: numberOf(row.missingEvidence),
+    unreportedPaymentReports: numberOf(row.unreportedPaymentReports),
+    unreportedInvoiceTotal: numberOf(row.unreportedInvoiceTotal),
     legacyCompleted: numberOf(row.legacyCompleted),
     commissionReceivable: numberOf(row.commissionReceivable),
     totalDriverDeposit: numberOf(row.totalDriverDeposit),
@@ -208,12 +213,21 @@ function serverSummaryOf(value: unknown): ControlCenterServerSummary {
 }
 
 export async function getControlCenterData(): Promise<ControlCenterData> {
-  // The former per-driver "Driver finance unavailable" fallback is intentionally gone:
-  // this single report succeeds with exact set-based finance totals or fails as one unit.
-  const { data, error } = await supabase.rpc("admin_control_center_v2_report");
-  if (error) throw new Error(error.message);
+  // Core KPIs/previews come from one exact report; the delivered-but-unreported
+  // payment queue is fetched through its bounded server page instead of a browser preload.
+  const [controlResult, unreportedResult] = await Promise.all([
+    supabase.rpc("admin_control_center_v2_report"),
+    supabase.rpc("admin_unreported_delivery_payment_page", {
+      p_page: 1,
+      p_page_size: 50,
+      p_search: null,
+      p_today: false,
+    }),
+  ]);
+  if (controlResult.error) throw new Error(controlResult.error.message);
+  if (unreportedResult.error) throw new Error(unreportedResult.error.message);
 
-  const report = recordOf(data);
+  const report = recordOf(controlResult.data);
   const queues = recordOf(report.queues);
   const delayedOrUnassigned = rowsOf(queues.delayedOrUnassigned).map(orderOf);
   const missingEvidence = rowsOf(queues.missingEvidence).map(orderOf);
@@ -221,11 +235,15 @@ export async function getControlCenterData(): Promise<ControlCenterData> {
   const legacyPayments = rowsOf(queues.legacyPayments).map(paymentOf);
   const failedOrRefundedPayments = rowsOf(queues.failedOrRefundedPayments).map(paymentOf);
   const maintenanceTrucks = rowsOf(queues.maintenanceTrucks).map(truckOf);
+  const unreportedReport = recordOf(unreportedResult.data);
+  const unreportedPaymentOrders = rowsOf(unreportedReport.rows).slice(0, 6).map(orderOf);
+  const serverSummary = serverSummaryOf(report.summary);
+  serverSummary.unreportedPaymentReports = numberOf(unreportedReport.total);
+  serverSummary.unreportedInvoiceTotal = numberOf(unreportedReport.invoiceTotal);
 
   return {
-    // The live CEO page needs only six-row action previews. Exact totals and
-    // finance values come from serverSummary, so none of these arrays grows
-    // with the production tables.
+    // The live CEO page uses bounded action previews. Exact totals and finance
+    // values come from server-side report RPCs; no array grows with production tables.
     orders: dedupeById([...delayedOrUnassigned, ...missingEvidence]),
     payments: dedupeById([...pendingPayments, ...legacyPayments, ...failedOrRefundedPayments]),
     trucks: maintenanceTrucks,
@@ -233,8 +251,9 @@ export async function getControlCenterData(): Promise<ControlCenterData> {
     customers: [],
     proofs: [],
     documents: [],
+    unreportedPaymentOrders,
     driverFinancialSummaries: [],
     warnings: [],
-    serverSummary: serverSummaryOf(report.summary),
+    serverSummary,
   };
 }
