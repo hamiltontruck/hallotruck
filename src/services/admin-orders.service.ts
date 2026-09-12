@@ -1,5 +1,5 @@
 import { supabase } from "./supabase.client";
-import type { AdminOrder, Driver, Truck } from "./admin.service";
+import type { AdminOrder } from "./admin.service";
 
 export const ADMIN_ORDER_PAGE_SIZES = [50, 100] as const;
 export const ADMIN_ORDER_STATUSES = ["all", "quoted", "placed", "accepted", "in_transit", "delivered", "cancelled"] as const;
@@ -65,11 +65,7 @@ function normalizeOrder(value: unknown): AdminOrder {
   };
 }
 
-export async function getAdminOrdersPage(
-  options: AdminOrderPageOptions,
-  _drivers: Driver[],
-  _trucks: Truck[],
-): Promise<AdminOrderPageResult> {
+export async function getAdminOrdersPage(options: AdminOrderPageOptions): Promise<AdminOrderPageResult> {
   const pageSize = normalizePageSize(options.pageSize);
   const page = Math.max(1, Math.trunc(numberOf(options.page) || 1));
   const status = options.status && ADMIN_ORDER_STATUSES.includes(options.status as AdminOrderStatus)
