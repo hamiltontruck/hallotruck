@@ -1,0 +1,52 @@
+<resources>
+    <string name="comms_logo_description">HALLO Logistics</string>
+    <string name="comms_title">Messages &amp; Support</string>
+    <string name="comms_subtitle">Customer, HALLO Operations and trip dispute center</string>
+    <string name="comms_close">Close</string>
+    <string name="comms_order_context">Trip context</string>
+    <string name="comms_customer">Customer</string>
+    <string name="comms_operations">HALLO Operations</string>
+    <string name="comms_message_hint">Write a message</string>
+    <string name="comms_send">Send message</string>
+    <string name="comms_dispute_title">Trip issue / dispute</string>
+    <string name="comms_dispute_hint">Choose the affected trip and explain the issue. The report is immutable and visible to authorized HALLO operations staff.</string>
+    <string name="comms_dispute_details_hint">Explain what happened (10–2000 characters)</string>
+    <string name="comms_submit_dispute">Submit dispute</string>
+    <string name="comms_dispute_history">Dispute history</string>
+    <string name="comms_sign_in_required">Sign in as an approved Driver to use messages and support.</string>
+    <string name="comms_loading">Loading messages and trips…</string>
+    <string name="comms_no_orders">No active or completed assigned trips are available.</string>
+    <string name="comms_order_summary">Order %1$s
+%2$s → %3$s
+Status: %4$s</string>
+    <string name="comms_customer_contact">Customer: %1$s
+Phone: %2$s</string>
+    <string name="comms_customer_unavailable">Customer contact is unavailable for this trip.</string>
+    <string name="comms_operations_hint">Secure Driver ↔ HALLO Operations conversation. The selected trip is attached as context when available.</string>
+    <string name="comms_operations_connected">HALLO Operations chat · auto-refreshing</string>
+    <string name="comms_customer_connected">Customer chat · auto-refreshing</string>
+    <string name="comms_choose_order">Choose an assigned trip to message the customer.</string>
+    <string name="comms_message_invalid">Write a message between 1 and 4000 characters.</string>
+    <string name="comms_sending">Sending message…</string>
+    <string name="comms_message_sent">Message sent.</string>
+    <string name="comms_no_messages">No messages yet.</string>
+    <string name="comms_disputes_unavailable">Dispute history is temporarily unavailable.</string>
+    <string name="comms_dispute_order_required">Choose an active or delivered trip before submitting a dispute.</string>
+    <string name="comms_dispute_invalid">Explain the issue using 10 to 2000 characters.</string>
+    <string name="comms_submitting_dispute">Submitting dispute…</string>
+    <string name="comms_dispute_submitted">Dispute submitted to HALLO Operations.</string>
+    <string name="comms_no_disputes">No disputes for this trip.</string>
+    <string name="comms_dispute_row">%1$s · %2$s · %3$s
+%4$s
+HALLO note: %5$s
+Created: %6$s</string>
+    <string name="comms_dispute_payment">Payment</string>
+    <string name="comms_dispute_delivery">Delivery</string>
+    <string name="comms_dispute_assignment">Assignment</string>
+    <string name="comms_dispute_customer">Customer</string>
+    <string name="comms_dispute_safety">Safety</string>
+    <string name="comms_dispute_other">Other</string>
+    <string name="comms_open_messages">Messages &amp; support</string>
+    <string name="comms_message_customer">Message customer</string>
+    <string name="comms_message_operations">HALLO Operations</string>
+</resources>

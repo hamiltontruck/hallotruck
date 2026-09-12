@@ -1,0 +1,52 @@
+<resources>
+    <string name="comms_logo_description">HALLO Logistics</string>
+    <string name="comms_title">Ergaa fi Deeggarsa</string>
+    <string name="comms_subtitle">Maamila, Hojii HALLO fi wiirtuu falmii imalaa</string>
+    <string name="comms_close">Cufi</string>
+    <string name="comms_order_context">Odeeffannoo imalaa</string>
+    <string name="comms_customer">Maamila</string>
+    <string name="comms_operations">Hojii HALLO</string>
+    <string name="comms_message_hint">Ergaa barreessi</string>
+    <string name="comms_send">Ergaa ergi</string>
+    <string name="comms_dispute_title">Rakkoo / falmii imalaa</string>
+    <string name="comms_dispute_hint">Imala rakkoon irratti uumame filadhuutii ibsi. Gabaasni kun hin jijjiiramu; hojjettoota HALLO hayyamamaniif mulata.</string>
+    <string name="comms_dispute_details_hint">Wanta uumame ibsi (qubee 10–2000)</string>
+    <string name="comms_submit_dispute">Falmii ergi</string>
+    <string name="comms_dispute_history">Seenaa falmii</string>
+    <string name="comms_sign_in_required">Ergaa fi deeggarsa fayyadamuuf akka konkolaachisaa mirkanaaheetti seeni.</string>
+    <string name="comms_loading">Ergaa fi imala feaa jira…</string>
+    <string name="comms_no_orders">Imalli ramadame hojii irra jiru ykn xumurame hin jiru.</string>
+    <string name="comms_order_summary">Order %1$s
+%2$s → %3$s
+Haala: %4$s</string>
+    <string name="comms_customer_contact">Maamila: %1$s
+Bilbila: %2$s</string>
+    <string name="comms_customer_unavailable">Odeeffannoon maamilaa imala kanaaf hin argamu.</string>
+    <string name="comms_operations_hint">Mariin Konkolaachisaa ↔ Hojii HALLO nageenyaan eegama. Imalli filatame akka contextitti ni dabalama.</string>
+    <string name="comms_operations_connected">Mariin Hojii HALLO · ofumaan haaromaa jira</string>
+    <string name="comms_customer_connected">Mariin maamilaa · ofumaan haaromaa jira</string>
+    <string name="comms_choose_order">Maamilaaf ergaa erguuf imala ramadame filadhu.</string>
+    <string name="comms_message_invalid">Ergaa qubee 1 hanga 4000 keessaa barreessi.</string>
+    <string name="comms_sending">Ergaa ergaa jira…</string>
+    <string name="comms_message_sent">Ergaan ergameera.</string>
+    <string name="comms_no_messages">Ergaan hanga ammaatti hin jiru.</string>
+    <string name="comms_disputes_unavailable">Seenaan falmii yeroo muraasaaf hin argamu.</string>
+    <string name="comms_dispute_order_required">Falmii erguun dura imala hojii irra jiru ykn geeffame filadhu.</string>
+    <string name="comms_dispute_invalid">Rakkoo qubee 10 hanga 2000 keessatti ibsi.</string>
+    <string name="comms_submitting_dispute">Falmii ergaa jira…</string>
+    <string name="comms_dispute_submitted">Falmii Hojii HALLOtti ergameera.</string>
+    <string name="comms_no_disputes">Imala kanaaf falmiin hin jiru.</string>
+    <string name="comms_dispute_row">%1$s · %2$s · %3$s
+%4$s
+Yaada HALLO: %5$s
+Guyyaa: %6$s</string>
+    <string name="comms_dispute_payment">Kaffaltii</string>
+    <string name="comms_dispute_delivery">Geessuu</string>
+    <string name="comms_dispute_assignment">Ramaddii</string>
+    <string name="comms_dispute_customer">Maamila</string>
+    <string name="comms_dispute_safety">Nageenya</string>
+    <string name="comms_dispute_other">Kan biraa</string>
+    <string name="comms_open_messages">Ergaa fi deeggarsa</string>
+    <string name="comms_message_customer">Maamilaaf ergaa ergi</string>
+    <string name="comms_message_operations">Hojii HALLO</string>
+</resources>

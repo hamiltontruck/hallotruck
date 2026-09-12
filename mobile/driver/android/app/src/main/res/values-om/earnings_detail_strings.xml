@@ -1,0 +1,20 @@
+<resources>
+    <string name="earnings_detail_title">Galii imalaa</string>
+    <string name="earnings_detail_subtitle">Galii gadhiifame, partial fi eeggataa</string>
+    <string name="earnings_released_total">GADHIIFAME GUUTUU</string>
+    <string name="earnings_summary_format">Imala xumurame %1$d · Gadhiifame %2$d
+Komishinii HALLO %3$s · Galii driver %4$s
+Imala eeggataa %5$d · Galii eeggataa mirkanaawe %6$s</string>
+    <string name="earnings_filter_all">Hunda</string>
+    <string name="earnings_filter_released">Gadhiifame</string>
+    <string name="earnings_filter_pending">Eeggataa</string>
+    <string name="earnings_loading">Galii imalaa gadhiifamee fi eeggataa feaa jira…</string>
+    <string name="earnings_none">Galiin imala geeffamee hanga ammaatti hin jiru.</string>
+    <string name="earnings_trip_format">%1$s · %2$s
+%3$s → %4$s
+Invoice %5$s · Gadhiifame %6$s
+Komishinii %7$s · Galii driver %8$s
+Escrow %9$s · Hafee %10$s
+%11$s · %12$s</string>
+    <string name="earnings_open_action">Galii imalaa balinaan</string>
+</resources>
