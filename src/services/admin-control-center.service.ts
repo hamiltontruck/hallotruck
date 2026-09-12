@@ -68,7 +68,7 @@ export async function getControlCenterData(): Promise<ControlCenterData> {
   if(ceoResult.error) throw new Error(ceoResult.error.message);
   const report=recordOf(controlResult.data), queues=recordOf(report.queues);
   const delayedOrUnassigned=rowsOf(queues.delayedOrUnassigned).map(orderOf), missingEvidence=rowsOf(queues.missingEvidence).map(orderOf), pendingPayments=rowsOf(queues.pendingPayments).map(paymentOf), legacyPayments=rowsOf(queues.legacyPayments).map(paymentOf), failedOrRefundedPayments=rowsOf(queues.failedOrRefundedPayments).map(paymentOf), maintenanceTrucks=rowsOf(queues.maintenanceTrucks).map(truckOf);
-  const unreportedReport=recordOf(unreportedResult.data), unreportedPaymentOrders=rowsOf(unreportedReport.rows).slice(0,6).map(orderOf), serverSummary=serverSummaryOf(report.summary);
+  const unreportedReport=recordOf(unreportedResult.data), unreportedPaymentOrders=rowsOf(unreportedReport.rows).slice(0, 6).map(orderOf), serverSummary=serverSummaryOf(report.summary);
   serverSummary.unreportedPaymentReports=numberOf(unreportedReport.total); serverSummary.unreportedInvoiceTotal=numberOf(unreportedReport.invoiceTotal);
   const ceo=recordOf(ceoResult.data);
   serverSummary.partnerCommission=numberOf(ceo.partnerCommission); serverSummary.pendingPartnerSettlements=numberOf(ceo.pendingPartnerSettlements); serverSummary.pendingPartnerSettlementAmount=numberOf(ceo.pendingPartnerSettlementAmount); serverSummary.expiringDocuments=numberOf(ceo.expiringDocuments);
