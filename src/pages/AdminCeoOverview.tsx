@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   buildControlCenterView,
@@ -13,9 +13,10 @@ import {
   type ControlPayment,
   getControlCenterData,
 } from "../services/admin-control-center.service";
+import { supabase } from "../services/supabase.client";
 
 // Control Center V2 removed the old partial finance data warning path: live finance
-// totals now arrive as one exact leadership-guarded database report.
+// totals now arrive from exact leadership-guarded database reports.
 type Tone = "neutral" | "good" | "warning" | "critical";
 
 function money(value: number) {
@@ -45,6 +46,8 @@ function fixtureSummary(data: ControlCenterData, view: ReturnType<typeof buildCo
     newCustomersToday: view.activeCustomersToday.length,
     pendingPayments: view.pendingPayments.length,
     missingEvidence: view.missingEvidenceOrders.length,
+    unreportedPaymentReports: data.unreportedPaymentOrders?.length ?? 0,
+    unreportedInvoiceTotal: 0,
     legacyCompleted: view.legacyOrderIds.size,
     commissionReceivable: view.driverCommissionReceivable,
     totalDriverDeposit: view.totalDriverDeposit,
@@ -66,21 +69,52 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
   const [loading, setLoading] = useState(!fixture);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(fixture ? new Date() : null);
+  const requestSequence = useRef(0);
+  const loadRef = useRef<() => Promise<void>>(async () => {});
+  const realtimeTimer = useRef<number | undefined>(undefined);
 
-  async function load() {
+  const load = useCallback(async () => {
+    const requestId = ++requestSequence.current;
     setLoading(true);
     try {
-      setData(await getControlCenterData());
+      const next = await getControlCenterData();
+      if (requestId !== requestSequence.current) return;
+      setData(next);
       setLastUpdated(new Date());
       setError("");
     } catch (loadError) {
+      if (requestId !== requestSequence.current) return;
       setError(loadError instanceof Error ? loadError.message : "Could not load CEO control center.");
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => { loadRef.current = load; }, [load]);
   useEffect(() => {
     if (!fixture) void load();
+  }, [fixture, load]);
+  useEffect(() => {
+    if (fixture) return;
+    const queueRefresh = () => {
+      window.clearTimeout(realtimeTimer.current);
+      realtimeTimer.current = window.setTimeout(() => void loadRef.current(), 700);
+    };
+    const channel = supabase.channel("admin-ceo-control-center-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_proofs" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_trip_payment_results" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_charges" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_payments" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_deposits" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "trucks" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_verification_files" }, queueRefresh)
+      .subscribe();
+    return () => {
+      window.clearTimeout(realtimeTimer.current);
+      void supabase.removeChannel(channel);
+    };
   }, [fixture]);
 
   const view = useMemo(() => data ? buildControlCenterView(data) : null, [data]);
@@ -89,7 +123,7 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
     return data.serverSummary ?? fixtureSummary(data, view);
   }, [data, view]);
 
-  if (loading) {
+  if (loading && !data) {
     return <main className="min-h-screen bg-[#f5f3ed] p-5"><p className="py-24 text-center font-mono text-sm text-steel">Loading CEO control center…</p></main>;
   }
 
@@ -102,6 +136,7 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
     + summary.unassignedOrders
     + summary.pendingPayments
     + summary.missingEvidence
+    + summary.unreportedPaymentReports
     + complianceTotal
     + summary.maintenanceAlerts;
 
@@ -117,6 +152,7 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
     { label: "Active Drivers", value: String(summary.activeDrivers), detail: `${summary.totalDrivers} registered`, to: "/admin/driver-compliance", tone: "neutral" as Tone },
     { label: "New Customers Today", value: String(summary.newCustomersToday), detail: "Accounts created today", to: "/admin/operations?section=Customers&date=today", tone: "neutral" as Tone },
     { label: "Pending Payments", value: String(summary.pendingPayments), detail: "Waiting for admin review", to: "/admin/payment-review?status=pending", tone: summary.pendingPayments ? "warning" as Tone : "good" as Tone },
+    { label: "Driver Payment Reports", value: String(summary.unreportedPaymentReports), detail: `${money(summary.unreportedInvoiceTotal)} unreported invoices`, to: "/admin/order-queue?queue=unreported-payment", tone: summary.unreportedPaymentReports ? "critical" as Tone : "good" as Tone },
     { label: "Missing Evidence", value: String(summary.missingEvidence), detail: "Delivered without POD", to: "/admin/operations?section=Orders&queue=missing-evidence", tone: summary.missingEvidence ? "warning" as Tone : "good" as Tone },
     { label: "Legacy Completed", value: String(summary.legacyCompleted), detail: "Historical released payments", to: "/admin/payment-review?queue=legacy", tone: "neutral" as Tone },
     { label: "Commission Receivable", value: money(summary.commissionReceivable), detail: "Outstanding driver commission", to: "/admin/driver-commission", tone: summary.commissionReceivable ? "warning" as Tone : "good" as Tone },
@@ -166,7 +202,7 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="break-words font-display text-lg font-semibold">{attentionTotal ? `${attentionTotal} operational items need attention` : "Operations healthy"}</p>
-            <p className="mt-1 break-words text-xs leading-5 text-steel">Delayed {summary.delayedTrips} · Unassigned {summary.unassignedOrders} · Payments {summary.pendingPayments} · Evidence {summary.missingEvidence} · Compliance {complianceTotal} · Maintenance {summary.maintenanceAlerts}</p>
+            <p className="mt-1 break-words text-xs leading-5 text-steel">Delayed {summary.delayedTrips} · Unassigned {summary.unassignedOrders} · Payments {summary.pendingPayments} · Driver reports {summary.unreportedPaymentReports} · Evidence {summary.missingEvidence} · Compliance {complianceTotal} · Maintenance {summary.maintenanceAlerts}</p>
           </div>
           <a href="#action-queues" className="self-start border border-asphalt/15 bg-white px-4 py-3 text-xs font-semibold">Review queues →</a>
         </div>
@@ -178,18 +214,19 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
 
       <section id="finance-summary" className="mt-7 scroll-mt-5">
         <SectionHeader eyebrow="FINANCE CONTROL" title="Payment and revenue summary" actionTo="/admin/payment-review" actionLabel="Open finance review" />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-7">
           <Metric label="Released" value={money(summary.releasedAmount)} tone="good" to="/admin/payment-review?status=released" />
           <Metric label="Held in escrow" value={money(summary.escrowAmount)} tone="warning" to="/admin/payment-review?status=escrow" />
           <Metric label="Refunded" value={money(summary.refundedAmount)} tone={summary.refundedAmount ? "critical" : "neutral"} to="/admin/payment-review?status=refunded" />
           <Metric label="Failed payments" value={String(summary.failedPayments)} tone={summary.failedPayments ? "critical" : "good"} to="/admin/payment-review?status=rejected" />
+          <Metric label="Unreported invoices" value={money(summary.unreportedInvoiceTotal)} tone={summary.unreportedPaymentReports ? "critical" : "good"} to="/admin/order-queue?queue=unreported-payment" />
           <Metric label="Commission receivable" value={money(summary.commissionReceivable)} tone={summary.commissionReceivable ? "warning" : "good"} to="/admin/driver-commission" />
           <Metric label="Available driver deposits" value={money(summary.availableDriverDeposit)} tone="good" to="/admin/driver-finance-search" />
         </div>
       </section>
 
       <section id="action-queues" className="mt-8 scroll-mt-5">
-        <SectionHeader eyebrow="ACTION CENTER" title="Operational exception queues" actionTo="/admin/operations" actionLabel="Open operations" />
+        <SectionHeader eyebrow="ACTION CENTER" title="Operational exception queues" actionTo="/admin/order-queue?queue=delayed-or-unassigned" actionLabel="Open server queues" />
         <div className="grid gap-5 xl:grid-cols-2">
           <QueueCard id="delayed-queue" title="Delayed and unassigned orders" count={summary.delayedTrips + summary.unassignedOrders} actionTo="/admin/operations?section=Orders&queue=delayed-or-unassigned">
             <OrderQueue rows={dedupeOrders([...view.delayedTrips, ...view.unassignedOrders])} badge={(order) => isDelayedOrder(order) ? "Delayed" : "Unassigned"} />
@@ -197,6 +234,10 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
 
           <QueueCard id="payment-queue" title="Pending payment reviews" count={summary.pendingPayments} actionTo="/admin/payment-review?status=pending">
             <PaymentQueue rows={view.pendingPayments} empty="No pending payment reviews." />
+          </QueueCard>
+
+          <QueueCard id="driver-payment-report-queue" title="Delivered waiting for driver payment report" count={summary.unreportedPaymentReports} actionTo="/admin/order-queue?queue=unreported-payment">
+            <OrderQueue rows={data.unreportedPaymentOrders ?? []} badge={() => "Report missing"} empty="No delivered orders are waiting for a driver payment report." />
           </QueueCard>
 
           <QueueCard id="evidence-queue" title="Missing delivery evidence" count={summary.missingEvidence} actionTo="/admin/operations?section=Orders&queue=missing-evidence">

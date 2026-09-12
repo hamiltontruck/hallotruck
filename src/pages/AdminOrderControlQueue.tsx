@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ADMIN_ORDER_STATUSES, type AdminOrderPageSize } from "../services/admin-orders.service";
 import {
@@ -7,12 +7,14 @@ import {
   type AdminOrderControlQueue as QueueName,
   type AdminOrderControlQueuePageResult,
 } from "../services/admin-order-control-queue.service";
+import { supabase } from "../services/supabase.client";
 
 const queueLabels: Record<QueueName, { title: string; description: string }> = {
   delayed: { title: "Delayed trips", description: "Accepted or in-transit orders running for more than 48 hours." },
   unassigned: { title: "Unassigned orders", description: "Open orders still missing a driver or truck assignment." },
   "delayed-or-unassigned": { title: "Delayed or unassigned", description: "One bounded queue for orders needing immediate operations attention." },
   "missing-evidence": { title: "Missing delivery evidence", description: "Delivered orders without proof, excluding legitimate legacy completions." },
+  "unreported-payment": { title: "Driver payment report missing", description: "Delivered pay-on-delivery orders still waiting for the assigned driver payment report." },
 };
 
 function parseQueue(value: string | null): QueueName {
@@ -32,31 +34,56 @@ export function AdminOrderControlQueue() {
   const status = params.get("status") || "all";
   const today = params.get("date") === "today";
   const search = params.get("q") || "";
+  const fixedDeliveredStatus = queue === "unreported-payment";
   const [draftSearch, setDraftSearch] = useState(search);
   const [result, setResult] = useState<AdminOrderControlQueuePageResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const requestSequence = useRef(0);
+  const loadRef = useRef<() => Promise<void>>(async () => {});
+  const realtimeTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => setDraftSearch(search), [search]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async () => {
+    const requestId = ++requestSequence.current;
     setLoading(true);
     setError("");
-    void getAdminOrderControlQueuePage({ queue, page, pageSize, status, search, today })
-      .then((next) => {
-        if (cancelled) return;
-        setResult(next);
-        if (next.page !== page) {
-          const updated = new URLSearchParams(params);
-          if (next.page <= 1) updated.delete("page"); else updated.set("page", String(next.page));
-          setParams(updated, { replace: true });
-        }
-      })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : "Could not load control queue."); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [queue, page, pageSize, status, search, today, params, setParams]);
+    try {
+      const next = await getAdminOrderControlQueuePage({ queue, page, pageSize, status: fixedDeliveredStatus ? "delivered" : status, search, today });
+      if (requestId !== requestSequence.current) return;
+      setResult(next);
+      if (next.page !== page) {
+        const updated = new URLSearchParams(params);
+        if (next.page <= 1) updated.delete("page"); else updated.set("page", String(next.page));
+        setParams(updated, { replace: true });
+      }
+    } catch (err) {
+      if (requestId !== requestSequence.current) return;
+      setError(err instanceof Error ? err.message : "Could not load control queue.");
+    } finally {
+      if (requestId === requestSequence.current) setLoading(false);
+    }
+  }, [queue, page, pageSize, status, fixedDeliveredStatus, search, today, params, setParams]);
+
+  useEffect(() => { loadRef.current = load; }, [load]);
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const queueRefresh = () => {
+      window.clearTimeout(realtimeTimer.current);
+      realtimeTimer.current = window.setTimeout(() => void loadRef.current(), 600);
+    };
+    const channel = supabase.channel("admin-order-control-queue-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_proofs" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_trip_payment_results" }, queueRefresh)
+      .subscribe();
+    return () => {
+      window.clearTimeout(realtimeTimer.current);
+      void supabase.removeChannel(channel);
+    };
+  }, []);
 
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -88,7 +115,7 @@ export function AdminOrderControlQueue() {
       <Link to="/admin/operations?section=Orders" className="min-h-11 shrink-0 border border-asphalt/15 bg-white px-4 py-3 text-center text-xs font-semibold text-asphalt">All orders</Link>
     </div>
 
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       {ADMIN_ORDER_CONTROL_QUEUES.map((name) => <Link key={name} to={`/admin/order-queue?queue=${encodeURIComponent(name)}`} className={`min-h-16 border p-4 text-sm font-semibold ${queue === name ? "border-asphalt bg-asphalt text-white" : "border-asphalt/10 bg-white text-asphalt"}`}>{queueLabels[name].title}</Link>)}
     </div>
 
@@ -97,9 +124,9 @@ export function AdminOrderControlQueue() {
         <input value={draftSearch} onChange={(event) => setDraftSearch(event.target.value)} aria-label="Search control queue" placeholder="Tracking, customer, route, truck..." className="min-h-11 min-w-0 flex-1 border border-asphalt/15 px-3 text-sm outline-none focus:border-asphalt" />
         <button className="min-h-11 bg-asphalt px-4 text-xs font-semibold text-white">Search</button>
       </form>
-      <select aria-label="Order status" value={status} onChange={(event) => update("status", event.target.value)} className="min-h-11 border border-asphalt/15 bg-white px-3 text-sm">
+      {fixedDeliveredStatus ? <select aria-label="Order status" value="delivered" disabled className="min-h-11 border border-asphalt/15 bg-[#f5f3ed] px-3 text-sm text-steel"><option value="delivered">Delivered ({result?.statusCounts.delivered ?? 0})</option></select> : <select aria-label="Order status" value={status} onChange={(event) => update("status", event.target.value)} className="min-h-11 border border-asphalt/15 bg-white px-3 text-sm">
         {ADMIN_ORDER_STATUSES.map((item) => <option key={item} value={item}>{item === "all" ? "All statuses" : `${item.replaceAll("_", " ")} (${result?.statusCounts[item] ?? 0})`}</option>)}
-      </select>
+      </select>}
       <select aria-label="Date filter" value={today ? "today" : "all"} onChange={(event) => update("date", event.target.value)} className="min-h-11 border border-asphalt/15 bg-white px-3 text-sm">
         <option value="all">All dates</option><option value="today">Today</option>
       </select>
@@ -112,7 +139,7 @@ export function AdminOrderControlQueue() {
     {loading ? <div role="status" className="bg-white p-12 text-center font-mono text-sm text-steel">Loading server queue…</div> : <>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-steel">
         <span><strong className="text-asphalt">{result?.total ?? 0}</strong> matching orders · Page {result?.page ?? 1} of {result?.totalPages ?? 1}</span>
-        <span>Queue total before status filter: <strong className="text-asphalt">{result?.statusCounts.all ?? 0}</strong></span>
+        {fixedDeliveredStatus ? <span>Unreported invoice total: <strong className="text-asphalt">{formatMoney(result?.invoiceTotal ?? 0)}</strong></span> : <span>Queue total before status filter: <strong className="text-asphalt">{result?.statusCounts.all ?? 0}</strong></span>}
       </div>
 
       <div className="overflow-hidden border border-asphalt/10 bg-white">
