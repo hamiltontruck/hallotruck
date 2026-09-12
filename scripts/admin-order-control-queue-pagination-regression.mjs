@@ -32,8 +32,8 @@ assert.match(migration, /Africa\/Addis_Ababa/);
 assert.ok(/^\d{14}$/.test(marker), "production migration marker must be a 14-digit timestamp");
 assert.ok(marker >= "20260911232422", "production migration marker must include the applied control-queue migration");
 
-// The legacy bulk branch can remain temporarily for old code paths, but the router must intercept
-// every special Orders queue before SmartLogistics mounts, so it is unreachable from the UI.
-assert.match(adminService, /shouldLoadAllOrdersForControlQueue/);
+// Dedicated queue routing is now authoritative. The legacy load-all helper must stay removed
+// so future changes cannot silently reintroduce a full Orders preload behind the paginated route.
+assert.doesNotMatch(adminService, /shouldLoadAllOrdersForControlQueue/);
 
 console.log("Admin order control queue pagination regression checks passed.");

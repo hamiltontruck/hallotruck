@@ -1,0 +1,1 @@
+Next slice: dedicated server-side Customers and Fleet/Driver pagination/search plus bounded searchable assignment lookups. This current slice only removes route-dependent load-all behavior and bounds dashboard references.

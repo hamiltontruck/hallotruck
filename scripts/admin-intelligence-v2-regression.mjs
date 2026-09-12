@@ -18,7 +18,8 @@ assert.match(migration, /private\.is_admin_or_ceo\(\)/, "RPC must enforce databa
 assert.match(migration, /revoke execute on function public\.admin_intelligence_v2\(text,text,integer,integer\) from public/i, "PUBLIC execute must stay revoked");
 assert.match(migration, /revoke execute on function public\.admin_intelligence_v2\(text,text,integer,integer\) from anon/i, "anon execute must stay revoked");
 assert.match(migration, /limit v_limit offset v_offset/i, "search rows must be bounded and offset-paginated in PostgreSQL");
-assert.equal(marker, "20260912002822", "production migration marker must match Admin Intelligence V2 migration");
+assert.ok(/^\d{14}$/.test(marker), "production migration marker must be a 14-digit timestamp");
+assert.ok(marker >= "20260912002822", "production migration marker must include the Admin Intelligence V2 migration");
 assert.match(legacyService, /allPages<AdminOrder>/, "legacy loader remains isolated for compatibility until removal is separately audited");
 
 console.log("Admin Intelligence V2 regression: PASS");

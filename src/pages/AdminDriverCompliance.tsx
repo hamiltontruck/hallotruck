@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import "../styles/admin-driver-review.css";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import type { DriverVerificationFile } from "../services/driver.service";
@@ -277,7 +278,7 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
     setBusy("");
   }
 
-  return <main className="min-h-screen bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10">
+  return <main className="admin-driver-review min-h-screen bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10">
     <div className="mx-auto max-w-7xl">
       <section className="bg-asphalt p-6 text-white sm:p-8">
         <p className="font-mono text-[10px] tracking-[.2em] text-amber">COMPLIANCE CONTROL</p>
@@ -365,12 +366,11 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
           const actionGuidance = actionGuidanceMessages.join(" ") || "Driver actions are available when verification and trip locks allow them.";
           const actionGuidanceId = `driver-compliance-action-${driver.id}`;
 
-          return <article key={driver.id} className="border border-asphalt/10 bg-white">
-            <div className="grid gap-5 border-b border-asphalt/10 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
+          return <article key={driver.id} className="driver-review-profile border border-asphalt/10 bg-white">
+            <div className="driver-review-header grid gap-5 border-b border-asphalt/10 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
               <div>
                 <div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{driver.full_name}</h2><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(driver.driver_status)}`}>{driver.driver_status ?? "pending"}</span></div>
-                <p className="mt-2 text-sm text-steel">{driver.phone}{driver.email ? ` · ${driver.email}` : ""}</p>
-                <p className="mt-1 text-xs text-steel">{driver.home_address || "Home address not supplied"}</p>
+
                 {driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <p className="mt-3 text-xs font-semibold text-amber-dim">Onboarding: {onboardingStage} · driver {submittedIdentity}/{identityRequired.length} · vehicle {submittedVehicle}/{vehicleRequired.length}</p>}
                 {activeTrip && <p className="mt-3 text-xs font-semibold text-amber-dim">Active trip: {activeTrip.tracking_id} · {activeTrip.status.replace("_", " ")}</p>}
               </div>
@@ -381,6 +381,14 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
               </div>
             </div>
 
+            <section className="driver-contact-section" aria-label="Contact and address">
+              <h3>Contact &amp; address</h3>
+              <dl className="driver-contact-card">
+                <div><dt>Phone</dt><dd>{driver.phone || "Not supplied"}</dd></div>
+                <div><dt>Home address</dt><dd>{driver.home_address || "Not supplied"}</dd></div>
+                <div><dt>Email</dt><dd>{driver.email || "Not supplied"}</dd></div>
+              </dl>
+            </section>
             <div className="grid gap-px bg-asphalt/10 sm:grid-cols-2 lg:grid-cols-4">
               <Mini label="Total trips" value={String(driverOrders.length)} />
               <Mini label="Delivered" value={String(deliveredOrders.length)} />
@@ -388,14 +396,17 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
               <Mini label="Driver net released" value={formatEtb(split.driverNetEtb)} strong />
             </div>
 
-            {assignedTruck && <div className="border-t border-asphalt/10 bg-emerald-50/40 px-5 py-4 text-sm sm:px-6"><strong>{assignedTruck.plate_number}</strong> · {assignedTruck.vehicle_type} · {assignedTruck.capacity_tons ?? "—"} tons · <span className="capitalize">{assignedTruck.status}</span></div>}
+            {assignedTruck && <div className="driver-vehicle-card border-t border-asphalt/10 bg-emerald-50/40 px-5 py-4 text-sm sm:px-6"><h3>Vehicle</h3><strong>{assignedTruck.plate_number}</strong> · {assignedTruck.vehicle_type} · {assignedTruck.capacity_tons ?? "—"} tons · <span className="capitalize">{assignedTruck.status}</span></div>}
 
             <div className="border-t border-asphalt/10 px-5 py-4 sm:px-6">
               <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{driverDocs.length} current verification records · {historyRows.length} archived versions</p></div><button onClick={() => setExpandedDriverId(expanded ? null : driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{expanded ? "Hide full history" : "View full driver history"}</button></div>
             </div>
 
             <div className="grid gap-3 bg-[#f8f7f2] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
-              {driverDocs.length === 0 ? <div className="col-span-full rounded-2xl border border-dashed border-asphalt/15 bg-white p-7 text-center text-sm text-steel">No verification files submitted yet. This driver remains visible here while completing onboarding.</div> : driverDocs.map((doc) => <DocumentCard key={doc.id} doc={doc} busy={busy === doc.id} onOpen={openFile} onReview={review} />)}
+              {driverDocs.length === 0 ? <div className="col-span-full rounded-2xl border border-dashed border-asphalt/15 bg-white p-7 text-center text-sm text-steel">No verification files submitted yet. This driver remains visible here while completing onboarding.</div> : groupDocuments(driverDocs).map((group) => <section key={group.key} className="driver-document-group">
+                <h3>{group.title}</h3>
+                <div className="driver-document-sides">{group.documents.map((doc) => <DocumentCard key={doc.id} doc={doc} busy={Boolean(busy)} onOpen={openFile} onReview={review} />)}</div>
+              </section>)}
             </div>
 
             {expanded && <div className="border-t-4 border-[#f5f3ed] bg-[#faf9f5] p-5 sm:p-6">
@@ -426,6 +437,30 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
   </main>;
 }
 
+function groupDocuments(documents: DriverVerificationFile[]) {
+  const groups = new Map<string, { key: string; title: string; documents: DriverVerificationFile[] }>();
+  for (const doc of documents) {
+    const family = doc.document_key.startsWith("national_id_") ? "national_id"
+      : doc.document_key.startsWith("license_") ? "license"
+      : ["truck_front", "truck_back", "truck_side", "truck_loading_area"].includes(doc.document_key) ? "truck_photos"
+      : doc.document_key;
+    // Keep documents belonging to different vehicles in separate cards.
+    const key = family + ":" + (doc.truck_id ?? "identity");
+    const title = family === "national_id" ? "National ID" : family === "license" ? "Driving license"
+      : family === "truck_photos" ? "Vehicle photos" : labels[family] ?? family;
+    const group = groups.get(key) ?? { key, title, documents: [] };
+    group.documents.push(doc);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    documents: [...group.documents].sort((a, b) => {
+      const rank = (key: string) => key.endsWith("_front") ? 0 : key.endsWith("_back") ? 1 : 2;
+      return rank(a.document_key) - rank(b.document_key);
+    }),
+  }));
+}
+
 function DocumentCard({
   doc,
   busy,
@@ -452,40 +487,78 @@ function DocumentCard({
       ? `Expired ${doc.expiry_date}`
       : `Expires ${doc.expiry_date}`;
 
-  return <article className="flex min-h-56 flex-col rounded-2xl border border-asphalt/10 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-asphalt/20 hover:shadow-md sm:p-5">
-    <div className="flex items-start gap-3">
-      <DocumentGlyph verified={doc.status === "verified"} rejected={doc.status === "rejected"} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <p className="font-display font-semibold leading-tight">{labels[doc.document_key] ?? doc.document_key}</p>
-          <span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide ${statusBadge(doc.status)}`}>{doc.status}</span>
-        </div>
-        <p className="mt-1 truncate text-xs text-steel" title={doc.original_name}>{doc.original_name}</p>
-      </div>
-    </div>
+  const side = doc.document_key.endsWith("_front") ? "Front"
+    : doc.document_key.endsWith("_back") ? "Back"
+    : doc.document_key.endsWith("_side") ? "Side" : labels[doc.document_key] ?? "Document";
 
-    <div className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
-      <div className="rounded-xl bg-[#f5f3ed] px-3 py-2">
-        <p className="font-mono text-[9px] uppercase tracking-wide text-steel">File</p>
-        <p className="mt-1 font-semibold text-asphalt">{isPdf ? "PDF document" : "Image file"}</p>
-      </div>
-      <div className={`rounded-xl px-3 py-2 ${expiryClass}`}>
-        <p className="font-mono text-[9px] uppercase tracking-wide opacity-70">Validity</p>
-        <p className="mt-1 font-semibold">{expiryLabel}</p>
-      </div>
+  return <article className="driver-document-tile">
+    <div className="driver-document-tile-heading">
+      <strong>{side}</strong>
+      <span className={`rounded-full border px-2 py-1 text-[9px] font-semibold uppercase ${statusBadge(doc.status)}`}>{doc.status}</span>
     </div>
-
-    <p className="mt-3 text-[11px] text-steel">Updated {updatedLabel}{doc.reviewed_at ? ` · Reviewed ${new Date(doc.reviewed_at).toLocaleDateString()}` : ""}</p>
-    {doc.rejection_reason && <p className="mt-3 rounded-xl border border-route/15 bg-route/5 px-3 py-2 text-xs leading-relaxed text-route">{doc.rejection_reason}</p>}
-
-    <div className="mt-auto flex flex-wrap gap-2 pt-4">
-      <button onClick={() => void onOpen(doc.file_path)} className="min-h-10 flex-1 rounded-xl border border-asphalt/15 px-3 py-2 text-xs font-semibold transition hover:bg-asphalt hover:text-white">Open file</button>
-      {doc.status === "pending" && <>
-        <button disabled={busy} onClick={() => void onReview(doc, "verified")} className="min-h-10 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-40">Verify</button>
-        <button disabled={busy} onClick={() => void onReview(doc, "rejected")} className="min-h-10 rounded-xl border border-route/30 px-4 py-2 text-xs font-semibold text-route transition hover:bg-route/5 disabled:opacity-40">Reject</button>
-      </>}
-    </div>
+    <DocumentThumbnail doc={doc} onOpen={onOpen} />
+    <p className={`driver-document-expiry ${expiryClass}`}>{expiryLabel}</p>
+    <details className="driver-document-details">
+      <summary>File details</summary>
+      <p>{doc.original_name}</p>
+      <p>{isPdf ? "PDF document" : "Image file"}</p>
+      <p>Updated {updatedLabel}</p>
+      {doc.reviewed_at && <p>Reviewed {new Date(doc.reviewed_at).toLocaleDateString()}</p>}
+    </details>
+    {doc.rejection_reason && <p className="text-xs text-route">{doc.rejection_reason}</p>}
+    <button type="button" onClick={() => void onOpen(doc.file_path)} className="driver-document-open">Open file</button>
+    {doc.status === "pending" && <div className="driver-document-review-actions">
+      <button type="button" disabled={busy} onClick={() => void onReview(doc, "verified")} className="bg-emerald-700 text-white disabled:opacity-40">Verify</button>
+      <button type="button" disabled={busy} onClick={() => void onReview(doc, "rejected")} className="border border-route/30 text-route disabled:opacity-40">Request re-upload</button>
+    </div>}
   </article>;
+}
+
+
+function DocumentThumbnail({ doc, onOpen }: {
+  doc: DriverVerificationFile;
+  onOpen: (path: string) => Promise<void>;
+}) {
+  const host = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [preview, setPreview] = useState<{ path: string; url: string } | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const image = /image\/(jpeg|jpg|png|webp|gif)$/i.test(doc.mime_type);
+
+  useEffect(() => {
+    const node = host.current;
+    if (!node) return;
+    if (typeof IntersectionObserver === "undefined") { setVisible(true); return; }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); observer.disconnect(); }
+    }, { rootMargin: "160px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setPreview(null);
+    setFailed(false);
+    if (!visible || !image) return;
+    void supabase.storage.from("driver-verification").createSignedUrl(doc.file_path, 300)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error || !data?.signedUrl) setFailed(true);
+        else setPreview({ path: doc.file_path, url: data.signedUrl });
+      }).catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, [doc.file_path, visible, image, attempt]);
+
+  const url = preview?.path === doc.file_path ? preview.url : null;
+  return <div ref={host} className="driver-document-preview">
+    {image && url && !failed ? <button type="button" onClick={() => void onOpen(doc.file_path)} aria-label={`Open ${labels[doc.document_key] ?? "document"}`}>
+      <img src={url} alt={labels[doc.document_key] ?? "Driver document"} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+    </button> : failed ? <button type="button" onClick={() => setAttempt((value) => value + 1)}>Preview unavailable · Retry</button>
+      : !image ? <button type="button" onClick={() => void onOpen(doc.file_path)}>{doc.mime_type === "application/pdf" ? "Open PDF" : "Open original image"}</button>
+      : <span role="status">Loading preview…</span>}
+  </div>;
 }
 
 function DocumentGlyph({ verified = false, rejected = false, muted = false }: { verified?: boolean; rejected?: boolean; muted?: boolean }) {
