@@ -21,6 +21,7 @@ import {
 import { AdminFinanceDashboardV3 } from "./pages/AdminFinanceDashboardV3";
 import { AdminIntelligence } from "./pages/AdminIntelligence";
 import { AdminReports } from "./pages/AdminReports";
+import { AdminOrderControlQueue } from "./pages/AdminOrderControlQueue";
 import { AdminAiAssistant } from "./pages/AdminAiAssistant";
 import { AdminManualDriverDocuments } from "./pages/AdminManualDriverDocuments";
 import { AdminPartnerControl } from "./pages/AdminPartnerControl";
@@ -93,7 +94,7 @@ function DriverShell({ children }: { children: React.ReactNode }) {
   return <div className="driver-mobile-flow min-h-screen bg-bone pb-24 md:pb-0"><OfflineBanner /><Header />{showPaymentAction && <DriverPaymentCollectionBanner />}{showOperationalAlerts && <DriverDocumentExpiryAlert />}{children}</div>;
 }
 function AdminWorkspace(){return <AdminToolShell><AdminCeoOverview /></AdminToolShell>}
-function AdminOperationsWorkspace(){const {search}=useLocation();const section=new URLSearchParams(search).get("section");if(section==="Reports")return <Navigate to="/admin/reports" replace />;return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
+function AdminOperationsWorkspace(){const {search}=useLocation();const params=new URLSearchParams(search);const section=params.get("section");const queue=params.get("queue");if(section==="Reports")return <Navigate to="/admin/reports" replace />;if(section==="Orders"&&queue&&queue!=="all")return <Navigate to={`/admin/order-queue${search}`} replace />;return <><SmartLogistics /><AdminSidebarLeadershipLinks /></>}
 function AdminPaymentReviewWorkspace(){return <><AdminPaymentReferenceConflictBanner /><AdminPaymentWorkspace /></>}
 function CustomerSectionIntro({ section }: { section: "orders" | "payments" }) {
   const { language } = useLanguage();
@@ -119,6 +120,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
 <Route path="/admin/operations" element={<AdminGate><AdminOperationsWorkspace /></AdminGate>} />
 <Route path="/admin/reports" element={<AdminGate><AdminToolShell><AdminReports /></AdminToolShell></AdminGate>} />
+<Route path="/admin/order-queue" element={<AdminGate><AdminToolShell><AdminOrderControlQueue /></AdminToolShell></AdminGate>} />
 <Route path="/admin/more" element={<AdminGate><AdminToolShell><AdminMore /></AdminToolShell></AdminGate>} />
 <Route path="/admin/intelligence" element={<AdminGate><AdminToolShell><AdminIntelligence /></AdminToolShell></AdminGate>} />
 <Route path="/admin/ai-assistant" element={<AdminGate><AdminToolShell><AdminAiAssistant /></AdminToolShell></AdminGate>} />
