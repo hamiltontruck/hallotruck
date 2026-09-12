@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PaymentCorrectionForm } from "./PaymentCorrectionForm";
 import { openDeliveryProof, openPaymentReceipt, type AdminOrder, type DeliveryProof, type Payment } from "../../services/admin.service";
 import {
@@ -6,6 +6,7 @@ import {
   ADMIN_PAYMENT_PAGE_SIZES,
   getAdminOrderFinancialDetails,
   getAdminPaymentLedgerPage,
+  getAdminPaymentOrder,
   type AdminPaymentLedgerItem,
   type AdminPaymentLedgerPage,
 } from "../../services/admin-payments.service";
@@ -47,6 +48,7 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
 function LedgerRow({ item, onManage, onRefresh }: { item: AdminPaymentLedgerItem; onManage: (order: AdminOrder) => void; onRefresh: () => Promise<void> }) {
   const { payment, order, driver } = item;
   const [saving, setSaving] = useState(false);
+  const [openingOrder, setOpeningOrder] = useState(false);
   const [error, setError] = useState("");
   const [correcting, setCorrecting] = useState(false);
   const [showEvidence, setShowEvidence] = useState(false);
@@ -83,6 +85,21 @@ function LedgerRow({ item, onManage, onRefresh }: { item: AdminPaymentLedgerItem
     }
   }
 
+  async function openOrder() {
+    if (!order || openingOrder) return;
+    setOpeningOrder(true);
+    setError("");
+    try {
+      const fullOrder = await getAdminPaymentOrder(payment.order_id);
+      if (!fullOrder) throw new Error("Linked order is not visible.");
+      onManage(fullOrder);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Order could not be opened.");
+    } finally {
+      setOpeningOrder(false);
+    }
+  }
+
   async function toggleEvidence() {
     if (showEvidence) {
       setShowEvidence(false);
@@ -108,7 +125,7 @@ function LedgerRow({ item, onManage, onRefresh }: { item: AdminPaymentLedgerItem
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-base">ETB {paymentAmount.toLocaleString()}</p><span className="bg-amber/15 px-2.5 py-1.5 text-[10px] font-semibold capitalize text-amber-dim">{payment.event.replace("_", " ")}</span></div>
         <p className="mt-2 break-words font-mono text-xs text-asphalt">{order?.tracking_id ?? payment.order_id}</p>
-        <p className="mt-1 break-words text-xs text-steel">{order ? `${order.pickup_address} → ${order.dropoff_address}` : "Linked order is not visible."}</p>
+        <p className="mt-1 break-words text-xs text-steel">{order ? `${order.pickup_address ?? "Unknown pickup"} → ${order.dropoff_address ?? "Unknown drop-off"}` : "Linked order is not visible."}</p>
         {order && <p className="mt-1 break-words text-xs text-steel">Customer: <span className="font-semibold text-asphalt">{order.customer_name ?? "Customer"}</span>{order.customer_phone ? ` · ${order.customer_phone}` : ""}</p>}
         <p className="mt-1 break-words text-xs text-steel">Driver: {driver?.full_name ?? driver?.phone ?? (order?.driver_id ? "Driver profile unavailable" : "Unassigned")}</p>
         <p className="mt-1 break-words text-xs text-steel">{payment.provider}{payment.provider_ref ? ` · Transaction ID: ${payment.provider_ref}` : " · No transaction ID"}</p>
@@ -118,7 +135,7 @@ function LedgerRow({ item, onManage, onRefresh }: { item: AdminPaymentLedgerItem
         {error && <p className="mt-2 text-xs text-route">{error}</p>}
       </div>
       <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col">
-        {order && <button type="button" onClick={() => onManage(order)} className="min-h-11 border border-asphalt/20 px-3 py-2 text-xs font-semibold">Open order</button>}
+        {order && <button type="button" disabled={openingOrder} onClick={() => void openOrder()} className="min-h-11 border border-asphalt/20 px-3 py-2 text-xs font-semibold disabled:opacity-40">{openingOrder ? "Opening…" : "Open order"}</button>}
         <button type="button" onClick={toggleEvidence} className="min-h-11 border border-asphalt/20 px-3 py-2 text-xs font-semibold">{showEvidence ? "Hide evidence" : "Payment / delivery evidence"}</button>
         {payment.receipt_path && <button type="button" onClick={receipt} className="min-h-11 border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800">Open receipt</button>}
         {nextEvent && <button type="button" disabled={saving || deliveryLocked} onClick={advance} className="min-h-11 bg-asphalt px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">{saving ? "Saving…" : nextEvent === "held_escrow" ? "Verify payment" : "Release payment"}</button>}
@@ -164,19 +181,29 @@ export function AdminPaymentLedgerPanel({
   const [data, setData] = useState<AdminPaymentLedgerPage>(EMPTY_PAGE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
+  const requestSequence = useRef(0);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
 
   const load = useCallback(async () => {
+    const requestId = ++requestSequence.current;
     setLoading(true);
     setError("");
     try {
-      const result = await getAdminPaymentLedgerPage({ page, pageSize, event: paymentStatus, search: searchQuery });
+      const result = await getAdminPaymentLedgerPage({ page, pageSize, event: paymentStatus, search: debouncedSearchQuery });
+      if (requestId !== requestSequence.current) return;
       setData(result);
     } catch (err) {
+      if (requestId !== requestSequence.current) return;
       setError(err instanceof Error ? err.message : "Could not load payment ledger.");
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [page, pageSize, paymentStatus, searchQuery]);
+  }, [page, pageSize, paymentStatus, debouncedSearchQuery]);
 
   useEffect(() => { void load(); }, [load]);
 
