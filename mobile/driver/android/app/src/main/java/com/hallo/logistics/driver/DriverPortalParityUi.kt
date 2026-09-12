@@ -2,7 +2,6 @@ package com.hallo.logistics.driver
 
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.card.MaterialCardView
 
@@ -10,8 +9,7 @@ import com.google.android.material.card.MaterialCardView
 object DriverPortalParityUi {
     fun apply(root: View) {
         val context = root.context
-        val ids = listOf("pageHome", "pageJobs", "pageTrip", "pageWallet", "pageProfile")
-        ids.forEach { name ->
+        listOf("pageHome", "pageJobs", "pageTrip", "pageWallet", "pageProfile").forEach { name ->
             val id = context.resources.getIdentifier(name, "id", context.packageName)
             if (id != 0) root.findViewById<View>(id)?.let(::polishTree)
         }
