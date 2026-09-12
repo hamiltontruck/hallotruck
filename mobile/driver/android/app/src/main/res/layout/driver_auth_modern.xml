@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/hallo_blue_soft"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitStart"
+            android:src="@drawable/hallo_logistics_logo" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/authLanguages"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/authEn"
+                style="@style/Widget.HalloDriver.CompactToggle"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:text="EN" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/authOr"
+                style="@style/Widget.HalloDriver.CompactToggle"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:text="OR" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/authAm"
+                style="@style/Widget.HalloDriver.CompactToggle"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:text="አማ" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+    </LinearLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.HalloDriver.ContentCard"
+        android:layout_width="match_parent"
+        android:layout_height="156dp"
+        android:layout_marginTop="12dp"
+        app:cardBackgroundColor="@color/hallo_navy_soft"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/driver_auth_hero_description"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/hallo_driver_auth_truck" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/authTitleModern"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/driver_auth_signin_title"
+        android:textColor="@color/hallo_navy"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/authSubtitleModern"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="20dp"
+        android:lineSpacingExtra="2dp"
+        android:text="@string/driver_auth_signin_subtitle"
+        android:textColor="@color/hallo_text_muted"
+        android:textSize="15sp" />
+
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.HalloDriver.ContentCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:id="@+id/authSignupFields"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.HalloDriver.AuthInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/full_name">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/authFullName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:autofillHints="personName"
+                        android:imeOptions="actionNext"
+                        android:inputType="textPersonName"
+                        android:maxLength="120"
+                        android:singleLine="true" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.HalloDriver.AuthInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/ethiopian_mobile">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/authPhone"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:autofillHints="phone"
+                        android:imeOptions="actionNext"
+                        android:inputType="phone"
+                        android:maxLength="17"
+                        android:singleLine="true" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.HalloDriver.AuthInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/email"
+                app:startIconDrawable="@drawable/ic_auth_email"
+                app:startIconTint="@color/hallo_text_muted">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/authEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="emailAddress"
+                    android:imeOptions="actionNext"
+                    android:inputType="textEmailAddress"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.HalloDriver.AuthInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/password_pin"
+                app:endIconMode="password_toggle"
+                app:startIconDrawable="@drawable/ic_auth_lock"
+                app:startIconTint="@color/hallo_text_muted">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/authPin"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="password"
+                    android:imeOptions="actionDone"
+                    android:inputType="numberPassword"
+                    android:maxLength="6"
+                    android:saveEnabled="false"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/authConfirmPinLayout"
+                style="@style/Widget.HalloDriver.AuthInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/confirm_pin"
+                android:visibility="gone"
+                app:endIconMode="password_toggle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/authConfirmPin"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="newPassword"
+                    android:imeOptions="actionDone"
+                    android:inputType="numberPassword"
+                    android:maxLength="6"
+                    android:saveEnabled="false"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/authSubmitModern"
+                style="@style/Widget.HalloDriver.AuthPrimary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/sign_in"
+                app:icon="@drawable/ic_auth_arrow"
+                app:iconGravity="textEnd"
+                app:iconPadding="12dp"
+                app:iconTint="@android:color/white" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/authPromptModern"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:text="@string/driver_auth_new_prompt"
+        android:textColor="@color/hallo_navy"
+        android:textSize="15sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/authModeModern"
+        style="@style/Widget.HalloDriver.SecondaryButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/create_driver_account" />
+</LinearLayout>
