@@ -95,11 +95,17 @@ createRoot(document.getElementById("root")).render(
 );
 
 await new Promise((resolve) => setTimeout(resolve, 250));
-const input = document.querySelector('input[type="search"]');
+const input = document.querySelector('form input');
+if (!input) throw new Error("Admin intelligence search input was not rendered.");
 const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
 setter.call(input, "TEL-NEXTGEN-001");
 input.dispatchEvent(new Event("input", { bubbles: true }));
-await new Promise((resolve) => setTimeout(resolve, 250));
+input.dispatchEvent(new Event("change", { bubbles: true }));
+await new Promise((resolve) => setTimeout(resolve, 100));
+const form = input.closest("form");
+if (!form) throw new Error("Admin intelligence search form was not rendered.");
+form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+await new Promise((resolve) => setTimeout(resolve, 350));
 
 document.documentElement.dataset.searchLink = String(Boolean(document.querySelector('a[href*="/admin/payment-review?q=TEL-NEXTGEN-001"]')));
 document.documentElement.dataset.overflow = String(
