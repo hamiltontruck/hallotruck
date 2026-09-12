@@ -9,9 +9,9 @@ const [service, page, migration, enumHotfix, unreportedMigration] = await Promis
   readFile("supabase/migrations/20260912211043_admin_unreported_delivery_payment_page.sql", "utf8"),
 ]);
 
-assert.match(service, /supabase\.rpc\("admin_control_center_v2_report"\)/, "Control Center must load through the DB report RPC.");
-assert.match(service, /supabase\.rpc\("admin_unreported_delivery_payment_page"/, "Control Center must load the delivered-but-unreported queue through its bounded server RPC.");
-assert.match(service, /slice\(0, 6\)/, "Control Center must keep the unreported-payment action preview bounded to six rows.");
+assert.ok(service.includes('supabase.rpc("admin_control_center_v2_report")'), "Control Center must load through the DB report RPC.");
+assert.ok(service.includes('supabase.rpc("admin_unreported_delivery_payment_page"'), "Control Center must load the delivered-but-unreported queue through its bounded server RPC.");
+assert.ok(service.includes("slice(0, 6)"), "Control Center must keep the unreported-payment action preview bounded to six rows.");
 assert.doesNotMatch(service, /\.from\("orders"\)/, "Control Center must not preload orders directly.");
 assert.doesNotMatch(service, /\.from\("payments"\)/, "Control Center must not preload payments directly.");
 assert.doesNotMatch(service, /\.from\("delivery_proofs"\)/, "Control Center must not preload delivery proofs directly.");
@@ -19,18 +19,22 @@ assert.doesNotMatch(service, /\.from\("driver_verification_files"\)/, "Control C
 assert.doesNotMatch(service, /driver_financial_summary/, "Control Center must not perform per-driver finance RPC calls.");
 assert.doesNotMatch(service, /\.limit\((?:200|2000|4000)\)/, "Legacy Control Center/browser bulk limits must not return.");
 
-assert.match(page, /data\.serverSummary \?\? fixtureSummary/, "Live KPI values must prefer exact server summary data while fixtures remain supported.");
-assert.match(page, /summary\.totalOrders/, "Total Orders must use the exact server count.");
-assert.match(page, /summary\.canonicalPayments/, "Header payment count must use the server canonical count.");
-assert.match(page, /summary\.commissionReceivable/, "Commission receivable must use server aggregation.");
-assert.match(page, /summary\.complianceDocumentAlerts/, "Compliance sub-counts must use exact server counts.");
-assert.match(page, /summary\.unreportedPaymentReports/, "CEO Overview must surface exact delivered-but-unreported driver payment count.");
-assert.match(page, /summary\.unreportedInvoiceTotal/, "CEO Overview must surface exact unreported invoice total.");
-assert.match(page, /driver-payment-report-queue/, "CEO Overview must expose the unreported driver-payment action queue.");
-assert.match(page, /admin-ceo-control-center-live/, "CEO Overview must keep one stable realtime channel.");
-assert.match(page, /realtimeTimer/, "CEO Overview realtime bursts must be coalesced.");
-assert.match(page, /loadRef\.current/, "CEO Overview realtime must invoke the latest load without rebuilding subscriptions.");
-assert.match(page, /requestSequence/, "CEO Overview must ignore stale async report responses.");
+for (const token of [
+  "data.serverSummary ?? fixtureSummary",
+  "summary.totalOrders",
+  "summary.canonicalPayments",
+  "summary.commissionReceivable",
+  "summary.complianceDocumentAlerts",
+  "summary.unreportedPaymentReports",
+  "summary.unreportedInvoiceTotal",
+  "driver-payment-report-queue",
+  "admin-ceo-control-center-live",
+  "realtimeTimer",
+  "loadRef.current",
+  "requestSequence",
+  'table: "driver_verification_files"',
+]) assert.ok(page.includes(token), `CEO Control Center regression token missing: ${token}`);
+assert.ok(!page.includes('table: "driver_documents"'), "CEO Control Center must not subscribe to the non-production driver_documents table.");
 
 assert.match(migration, /create or replace function public\.admin_control_center_v2_report\(\)/i);
 assert.match(migration, /security invoker/i);
@@ -43,7 +47,7 @@ assert.doesNotMatch(migration, /limit\s+(?:2000|4000)/i, "DB reporting must not 
 
 assert.match(unreportedMigration, /security invoker/i);
 assert.match(unreportedMigration, /private\.is_admin_or_ceo\(\)/i);
-assert.match(unreportedMigration, /2026-08-28T18:15:40\.000Z/i, "Unreported-payment queue must retain the trip-payment enforcement boundary.");
+assert.ok(unreportedMigration.includes("2026-08-28T18:15:40.000Z"), "Unreported-payment queue must retain the trip-payment enforcement boundary.");
 assert.match(unreportedMigration, /revoke all on function public\.admin_unreported_delivery_payment_page[\s\S]*from public, anon/i);
 assert.match(unreportedMigration, /grant execute on function public\.admin_unreported_delivery_payment_page[\s\S]*to authenticated/i);
 assert.doesNotMatch(unreportedMigration, /\b(update|delete from|insert into)\s+public\./i, "Unreported-payment reporting migration must not mutate business rows.");
