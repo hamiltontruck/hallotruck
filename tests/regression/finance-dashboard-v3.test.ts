@@ -133,6 +133,18 @@ test("Finance V3 live dashboard uses DB reporting and no 5000-row bulk caps", ()
   assert.doesNotMatch(reportingService, /\.limit\(5000\)/);
 });
 
+test("Finance V3 debounces text filters, ignores stale requests and coalesces realtime bursts", () => {
+  assert.match(dashboard, /debouncedFilters/);
+  assert.match(dashboard, /setTimeout\(\(\) => setDebouncedFilters\(\{ driver, customer, route, truck, query \}\), 300\)/);
+  assert.match(dashboard, /requestSequence/);
+  assert.match(dashboard, /requestId !== requestSequence\.current/);
+  assert.match(dashboard, /loadRef\.current = load/);
+  assert.match(dashboard, /realtimeRefreshTimer/);
+  assert.match(dashboard, /scheduleRefresh/);
+  assert.match(dashboard, /window\.setTimeout\(\(\) => \{[\s\S]*void loadRef\.current\(\);[\s\S]*\}, 500\)/);
+  assert.doesNotMatch(dashboard, /table: "payments" \}, \(\) => void load\(\)/);
+});
+
 test("Finance V3 RPC is leadership guarded, Ethiopia-day aware and paginates drill-down", () => {
   assert.match(reportingMigration, /private\.is_admin_or_ceo\(\)/i);
   assert.match(reportingMigration, /security invoker/i);

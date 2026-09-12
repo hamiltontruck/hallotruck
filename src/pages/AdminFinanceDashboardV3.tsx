@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatEtb } from "../utils/currency";
 import {
   computeFinanceSummary,
@@ -134,40 +134,70 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
   const [route, setRoute] = useState("");
   const [truck, setTruck] = useState("");
   const [query, setQuery] = useState("");
+  const [debouncedFilters, setDebouncedFilters] = useState({ driver: "", customer: "", route: "", truck: "", query: "" });
   const [activeKpi, setActiveKpi] = useState<FinanceV3KpiKey | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [updatedAt, setUpdatedAt] = useState(new Date());
+  const requestSequence = useRef(0);
+  const loadRef = useRef<() => Promise<void>>(async () => {});
+  const realtimeRefreshTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedFilters({ driver, customer, route, truck, query }), 300);
+    return () => window.clearTimeout(timer);
+  }, [driver, customer, route, truck, query]);
+
+  const effectiveDriver = fixture ? driver : debouncedFilters.driver;
+  const effectiveCustomer = fixture ? customer : debouncedFilters.customer;
+  const effectiveRoute = fixture ? route : debouncedFilters.route;
+  const effectiveTruck = fixture ? truck : debouncedFilters.truck;
+  const effectiveQuery = fixture ? query : debouncedFilters.query;
 
   const load = useCallback(async () => {
+    const requestId = ++requestSequence.current;
     setLoading(true);
     setError("");
     try {
       const next = fixture
-        ? fixtureReport(fixture, range, provider, driver, customer, route, truck, query, activeKpi, page, pageSize)
-        : await getAdminFinanceV3Report({ range, provider, driver, customer, route, truck, search: query, activeKpi, page, pageSize });
+        ? fixtureReport(fixture, range, provider, effectiveDriver, effectiveCustomer, effectiveRoute, effectiveTruck, effectiveQuery, activeKpi, page, pageSize)
+        : await getAdminFinanceV3Report({ range, provider, driver: effectiveDriver, customer: effectiveCustomer, route: effectiveRoute, truck: effectiveTruck, search: effectiveQuery, activeKpi, page, pageSize });
+      if (requestId !== requestSequence.current) return;
       setReport(next);
       if (next.drilldown.page !== page) setPage(next.drilldown.page);
       setUpdatedAt(new Date());
     } catch (err) {
+      if (requestId !== requestSequence.current) return;
       setError(`database report source failed: ${err instanceof Error ? err.message : "Unknown finance reporting error."}`);
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [fixture, range, provider, driver, customer, route, truck, query, activeKpi, page, pageSize]);
+  }, [fixture, range, provider, effectiveDriver, effectiveCustomer, effectiveRoute, effectiveTruck, effectiveQuery, activeKpi, page, pageSize]);
 
+  useEffect(() => { loadRef.current = load; }, [load]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     if (fixture) return;
+    const scheduleRefresh = () => {
+      if (realtimeRefreshTimer.current !== null) return;
+      realtimeRefreshTimer.current = window.setTimeout(() => {
+        realtimeRefreshTimer.current = null;
+        void loadRef.current();
+      }, 500);
+    };
     const channel = supabase.channel("finance-dashboard-v3-report")
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_charges" }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_payments" }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_deposits" }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "financial_corrections" }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_charges" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_payments" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_deposits" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "financial_corrections" }, scheduleRefresh)
       .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [fixture, load]);
+    return () => {
+      if (realtimeRefreshTimer.current !== null) window.clearTimeout(realtimeRefreshTimer.current);
+      realtimeRefreshTimer.current = null;
+      void supabase.removeChannel(channel);
+    };
+  }, [fixture]);
 
   const maxTrend = useMemo(() => Math.max(1, ...report.trend.flatMap((item) => [item.revenue, item.escrow, item.commission])), [report.trend]);
   const resetPage = <T,>(setter: (value: T) => void, value: T) => { setter(value); setPage(1); };
