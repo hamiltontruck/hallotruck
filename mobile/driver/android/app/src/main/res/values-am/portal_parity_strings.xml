@@ -1,0 +1,13 @@
+<resources>
+    <string name="assigned_load">የተመደበ ጭነት</string>
+    <string name="trip_progress">የጉዞ ሂደት</string>
+    <string name="location_sharing">ቀጥታ አካባቢ ማጋራት</string>
+    <string name="location_sharing_hint">ንቁ ጉዞዎ በመንገድ ላይ ሲሆን GPS መረጃ ለHALLO እና ለደንበኛው ይዘምናል።</string>
+    <string name="driver_finance">የአሽከርካሪ ፋይናንስ</string>
+    <string name="released_earnings">የተለቀቀ ገቢ</string>
+    <string name="trip_earnings_history">የጉዞ ገቢ ታሪክ</string>
+    <string name="delivery_proof">የማድረስ ማስረጃ</string>
+    <string name="delivery_proof_hint">ማድረስን ለማጠናቀቅ ተቀባይ፣ ፎቶ፣ ፊርማ እና የክፍያ ውጤት ያስፈልጋሉ።</string>
+    <string name="support_and_disputes">ድጋፍ እና ክርክር</string>
+    <string name="support_contract_unavailable">ለአሁን የHALLO ድጋፍ ማሳወቂያዎችን ይጠቀሙ። የክርክር ተግባር የተረጋገጠ backend ሲኖር ብቻ ይታያል።</string>
+</resources>
