@@ -1,7 +1,6 @@
 import { supabase } from "./supabase.client";
 import type { AdminOrder, Driver, Truck } from "./admin.service";
 
-const ORDER_COLUMNS = "id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at";
 export const ADMIN_ORDER_PAGE_SIZES = [50, 100] as const;
 export const ADMIN_ORDER_STATUSES = ["all", "quoted", "placed", "accepted", "in_transit", "delivered", "cancelled"] as const;
 
@@ -25,115 +24,81 @@ export interface AdminOrderPageResult {
   statusCounts: Record<string, number>;
 }
 
-type RawAdminOrder = Omit<AdminOrder, "driver_name" | "plate_number" | "assignment_label">;
-
-function normalizePage(value: number) {
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 1;
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-function safeSearchTerm(value: string) {
-  return value.trim().replace(/[(),.%]/g, " ").replace(/\s+/g, " ").slice(0, 120);
+function numberOf(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function localDayBounds(now = new Date()) {
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  return { start: start.toISOString(), end: end.toISOString() };
+function normalizePageSize(value: unknown): AdminOrderPageSize {
+  return numberOf(value) === 50 ? 50 : 100;
 }
 
-function searchFilter(search: string) {
-  const normalized = safeSearchTerm(search);
-  if (!normalized) return "";
-  const pattern = `*${normalized}*`;
-  return [
-    `tracking_id.ilike.${pattern}`,
-    `customer_name.ilike.${pattern}`,
-    `customer_phone.ilike.${pattern}`,
-    `pickup_address.ilike.${pattern}`,
-    `dropoff_address.ilike.${pattern}`,
-    `vehicle_type.ilike.${pattern}`,
-    `cargo_description.ilike.${pattern}`,
-  ].join(",");
-}
-
-function decorateOrders(rows: RawAdminOrder[], drivers: Driver[], trucks: Truck[]) {
-  const driverMap = new Map(drivers.map((driver) => [driver.id, driver]));
-  const truckMap = new Map(trucks.map((truck) => [truck.id, truck]));
-  return rows.map((order) => {
-    const driver = order.driver_id ? driverMap.get(order.driver_id) : undefined;
-    const truck = order.truck_id ? truckMap.get(order.truck_id) : undefined;
-    const driverName = driver?.full_name?.trim() || driver?.phone?.trim() || null;
-    const plateNumber = truck?.plate_number?.trim() || null;
-    return {
-      ...order,
-      driver_name: driverName,
-      plate_number: plateNumber,
-      assignment_label: driverName || plateNumber
-        ? `${driverName ?? "Driver profile unavailable"} · ${plateNumber ?? "Plate unavailable"}`
-        : "Driver and truck not assigned",
-      cargo_description: order.cargo_description?.trim() || order.vehicle_type,
-    } satisfies AdminOrder;
-  });
+function normalizeOrder(value: unknown): AdminOrder {
+  const row = asRecord(value);
+  return {
+    id: String(row.id ?? ""),
+    tracking_id: String(row.tracking_id ?? ""),
+    customer_name: row.customer_name == null ? null : String(row.customer_name),
+    customer_phone: row.customer_phone == null ? null : String(row.customer_phone),
+    pickup_address: String(row.pickup_address ?? ""),
+    dropoff_address: String(row.dropoff_address ?? ""),
+    cargo_description: row.cargo_description == null ? null : String(row.cargo_description),
+    vehicle_type: String(row.vehicle_type ?? ""),
+    price_etb: row.price_etb == null ? null : numberOf(row.price_etb),
+    status: String(row.status ?? ""),
+    payment_status: String(row.payment_status ?? ""),
+    driver_id: row.driver_id == null ? null : String(row.driver_id),
+    truck_id: row.truck_id == null ? null : String(row.truck_id),
+    driver_name: row.driver_name == null ? null : String(row.driver_name),
+    plate_number: row.plate_number == null ? null : String(row.plate_number),
+    assignment_label: String(row.assignment_label ?? "Driver and truck not assigned"),
+    accepted_at: row.accepted_at == null ? null : String(row.accepted_at),
+    delivered_at: row.delivered_at == null ? null : String(row.delivered_at),
+    cancellation_reason: row.cancellation_reason == null ? null : String(row.cancellation_reason),
+    cancellation_source: row.cancellation_source == null ? null : String(row.cancellation_source),
+    cancelled_at: row.cancelled_at == null ? null : String(row.cancelled_at),
+    created_at: String(row.created_at ?? ""),
+  };
 }
 
 export async function getAdminOrdersPage(
   options: AdminOrderPageOptions,
-  drivers: Driver[],
-  trucks: Truck[],
+  _drivers: Driver[],
+  _trucks: Truck[],
 ): Promise<AdminOrderPageResult> {
-  const pageSize: AdminOrderPageSize = ADMIN_ORDER_PAGE_SIZES.includes(options.pageSize) ? options.pageSize : 100;
-  const requestedPage = normalizePage(options.page);
-  const from = (requestedPage - 1) * pageSize;
-  const to = from + pageSize - 1;
-  const search = searchFilter(options.search ?? "");
-  const day = options.today ? localDayBounds() : null;
-  const selectedStatus = options.status && options.status !== "all" && ADMIN_ORDER_STATUSES.includes(options.status as AdminOrderStatus)
+  const pageSize = normalizePageSize(options.pageSize);
+  const page = Math.max(1, Math.trunc(numberOf(options.page) || 1));
+  const status = options.status && ADMIN_ORDER_STATUSES.includes(options.status as AdminOrderStatus)
     ? options.status
-    : null;
+    : "all";
+  const search = options.search?.trim().slice(0, 120) || null;
 
-  let rowsQuery = supabase
-    .from("orders")
-    .select(ORDER_COLUMNS, { count: "exact" })
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false });
-  if (selectedStatus) rowsQuery = rowsQuery.eq("status", selectedStatus);
-  if (day) rowsQuery = rowsQuery.gte("created_at", day.start).lt("created_at", day.end);
-  if (search) rowsQuery = rowsQuery.or(search);
-  const rowsPromise = rowsQuery.range(from, to);
-
-  const countPromises = ADMIN_ORDER_STATUSES.filter((status) => status !== "all").map(async (status) => {
-    let countQuery = supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", status);
-    if (day) countQuery = countQuery.gte("created_at", day.start).lt("created_at", day.end);
-    if (search) countQuery = countQuery.or(search);
-    const { count, error } = await countQuery;
-    if (error) throw new Error(error.message);
-    return [status, count ?? 0] as const;
+  const { data, error } = await supabase.rpc("admin_orders_page", {
+    p_page: page,
+    p_page_size: pageSize,
+    p_status: status,
+    p_search: search,
+    p_today: options.today === true,
   });
+  if (error) throw new Error(error.message);
 
-  let allCountQuery = supabase.from("orders").select("id", { count: "exact", head: true });
-  if (day) allCountQuery = allCountQuery.gte("created_at", day.start).lt("created_at", day.end);
-  if (search) allCountQuery = allCountQuery.or(search);
-
-  const [rowsResult, allCountResult, statusEntries] = await Promise.all([
-    rowsPromise,
-    allCountQuery,
-    Promise.all(countPromises),
-  ]);
-  if (rowsResult.error) throw new Error(rowsResult.error.message);
-  if (allCountResult.error) throw new Error(allCountResult.error.message);
-
-  const total = rowsResult.count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const page = Math.min(requestedPage, totalPages);
-  const statusCounts = Object.fromEntries(statusEntries) as Record<string, number>;
-  statusCounts.all = allCountResult.count ?? 0;
+  const report = asRecord(data);
+  const rows = Array.isArray(report.rows) ? report.rows.map(normalizeOrder) : [];
+  const rawStatusCounts = asRecord(report.statusCounts);
+  const statusCounts = Object.fromEntries(
+    ADMIN_ORDER_STATUSES.map((key) => [key, Math.max(0, numberOf(rawStatusCounts[key]))]),
+  );
 
   return {
-    orders: decorateOrders((rowsResult.data ?? []) as RawAdminOrder[], drivers, trucks),
-    total,
-    page,
-    pageSize,
-    totalPages,
+    orders: rows,
+    total: Math.max(0, numberOf(report.total)),
+    page: Math.max(1, numberOf(report.page) || 1),
+    pageSize: normalizePageSize(report.pageSize),
+    totalPages: Math.max(1, numberOf(report.totalPages) || 1),
     statusCounts,
   };
 }
