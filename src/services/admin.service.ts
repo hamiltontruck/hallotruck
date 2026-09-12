@@ -97,7 +97,6 @@ type FinanceDashboardSummary = {
 function fail(message: string): never { throw new Error(message); }
 
 const ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT = 100;
-const ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT = 100;
 const ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT = 100;
 
 type DashboardOrderPreviewRow = Omit<AdminOrder, "driver_name" | "plate_number" | "assignment_label">;
@@ -119,22 +118,12 @@ export async function getDashboardData() {
       .order("created_at", { ascending: false })
       .limit(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT)
     : Promise.resolve({ data: [] as DashboardOrderPreviewRow[], error: null });
-  const paymentsQuery = supabase.from("payments")
-    .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,raw_payload,created_at")
-    .order("created_at", { ascending: false })
-    .limit(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT);
-  const proofsQuery = supabase.from("delivery_proofs")
-    .select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at")
-    .order("delivered_at", { ascending: false })
-    .limit(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT);
 
   const [
     ordersResult,
     trucksResult,
     customersResult,
-    paymentsResult,
     driversResult,
-    proofsResult,
     totalOrdersResult,
     activeOrdersResult,
     deliveredOrdersResult,
@@ -145,9 +134,7 @@ export async function getDashboardData() {
     ordersQuery,
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
-    paymentsQuery,
     supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name").limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
-    proofsQuery,
     supabase.from("orders").select("id", { count: "exact", head: true }),
     supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["accepted", "in_transit"]),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "delivered"),
@@ -159,9 +146,7 @@ export async function getDashboardData() {
   const error = ordersResult.error
     || trucksResult.error
     || customersResult.error
-    || paymentsResult.error
     || driversResult.error
-    || proofsResult.error
     || totalOrdersResult.error
     || activeOrdersResult.error
     || deliveredOrdersResult.error
@@ -172,9 +157,7 @@ export async function getDashboardData() {
 
   const trucks = (trucksResult.data ?? []) as Truck[];
   const customers = (customersResult.data ?? []) as Customer[];
-  const payments = (paymentsResult.data ?? []) as Payment[];
   const drivers = (driversResult.data ?? []) as Driver[];
-  const deliveryProofs = (proofsResult.data ?? []) as DeliveryProof[];
   const financeSummary = ((financeSummaryResult.data ?? [])[0] ?? null) as FinanceDashboardSummary | null;
   const orders = ((ordersResult.data ?? []) as DashboardOrderPreviewRow[]).map((order) => {
     const driver = drivers.find((item) => item.id === order.driver_id);
@@ -206,7 +189,10 @@ export async function getDashboardData() {
     revenueEtb: Math.max(0, releasedTotal - refundedTotal),
   };
 
-  return { metrics, orders, trucks, customers, payments, drivers, deliveryProofs };
+  // Payment events and proof rows are intentionally not part of the Admin shell.
+  // Finance and Manage Order load those datasets from their server-paginated or
+  // order-scoped sources only when the relevant UI is opened.
+  return { metrics, orders, trucks, customers, payments: [] as Payment[], drivers, deliveryProofs: [] as DeliveryProof[] };
 }
 
 export async function assignOrder(orderId: string, truckId: string, driverId: string) {
@@ -349,12 +335,30 @@ export async function createTruck(input: { plateNumber: string; vehicleType: str
   if (error) fail(error.message);
 }
 
-export function subscribeToAdminData(onChange: () => void) {
-  return supabase.channel("admin-live-data")
-    .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "trucks" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "delivery_proofs" }, onChange)
-    .subscribe();
+export interface AdminRealtimeHandlers {
+  orders?: () => void;
+  payments?: () => void;
+  customers?: () => void;
+  trucks?: () => void;
+  deliveryProofs?: () => void;
+}
+
+export function subscribeToAdminData(onChangeOrHandlers: (() => void) | AdminRealtimeHandlers) {
+  const handlers: AdminRealtimeHandlers = typeof onChangeOrHandlers === "function"
+    ? {
+        orders: onChangeOrHandlers,
+        payments: onChangeOrHandlers,
+        customers: onChangeOrHandlers,
+        trucks: onChangeOrHandlers,
+        deliveryProofs: onChangeOrHandlers,
+      }
+    : onChangeOrHandlers;
+
+  let channel = supabase.channel("admin-live-data");
+  if (handlers.orders) channel = channel.on("postgres_changes", { event: "*", schema: "public", table: "orders" }, handlers.orders);
+  if (handlers.payments) channel = channel.on("postgres_changes", { event: "*", schema: "public", table: "payments" }, handlers.payments);
+  if (handlers.customers) channel = channel.on("postgres_changes", { event: "*", schema: "public", table: "customers" }, handlers.customers);
+  if (handlers.trucks) channel = channel.on("postgres_changes", { event: "*", schema: "public", table: "trucks" }, handlers.trucks);
+  if (handlers.deliveryProofs) channel = channel.on("postgres_changes", { event: "*", schema: "public", table: "delivery_proofs" }, handlers.deliveryProofs);
+  return channel.subscribe();
 }
