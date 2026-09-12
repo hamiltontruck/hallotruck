@@ -29,7 +29,8 @@ assert.match(migration, /revoke all on function public\.admin_order_control_queu
 assert.match(migration, /limit v_page_size/i);
 assert.match(migration, /offset \(v_page - 1\) \* v_page_size/i);
 assert.match(migration, /Africa\/Addis_Ababa/);
-assert.equal(marker, "20260911232422");
+assert.ok(/^\d{14}$/.test(marker), "production migration marker must be a 14-digit timestamp");
+assert.ok(marker >= "20260911232422", "production migration marker must include the applied control-queue migration");
 
 // The legacy bulk branch can remain temporarily for old code paths, but the router must intercept
 // every special Orders queue before SmartLogistics mounts, so it is unreachable from the UI.
