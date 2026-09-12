@@ -1,0 +1,1 @@
+Validation scope: lint, regression, TypeScript production build, Admin browser smoke, mobile widths 320/360/390/412. No production data mutation.
