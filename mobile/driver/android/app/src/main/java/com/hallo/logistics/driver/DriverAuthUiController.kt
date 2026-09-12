@@ -39,6 +39,7 @@ class DriverAuthUiController(
         host.removeAllViews()
         host.setPadding(0, 0, 0, 0)
         host.addView(root)
+        DriverUiPolisher.install(activity)
         configureLanguages()
         mode.setOnClickListener {
             signup = !signup
