@@ -39,6 +39,23 @@ test("Payment ledger RPC is leadership guarded and indexed", () => {
   assert.match(migration, /limit v_page_size/);
 });
 
+test("Payment ledger does not eagerly re-fetch all page orders", () => {
+  assert.doesNotMatch(service, /orderIds\s*=|\.in\("id",\s*orderIds\)/);
+  assert.doesNotMatch(service, /ordersResult/);
+  assert.match(service, /getAdminPaymentOrder/);
+  assert.match(service, /from\("orders"\)\.select\(ORDER_COLUMNS\)\.eq\("id", orderId\)\.maybeSingle\(\)/);
+  assert.match(panel, /getAdminPaymentOrder\(payment\.order_id\)/);
+  assert.match(panel, /openingOrder/);
+});
+
+test("Finance ledger search is debounced and stale responses are ignored", () => {
+  assert.match(panel, /debouncedSearchQuery/);
+  assert.match(panel, /setTimeout\(\(\) => setDebouncedSearchQuery\(searchQuery\), 300\)/);
+  assert.match(panel, /requestSequence/);
+  assert.match(panel, /requestId !== requestSequence\.current/);
+  assert.match(panel, /search: debouncedSearchQuery/);
+});
+
 test("Order-specific finance evidence is lazy loaded", () => {
   assert.match(service, /getAdminOrderFinancialDetails/);
   assert.match(service, /\.eq\("order_id", orderId\)/);
