@@ -213,7 +213,8 @@ function serverSummaryOf(value: unknown): ControlCenterServerSummary {
 }
 
 export async function getControlCenterData(): Promise<ControlCenterData> {
-  // Core KPIs/previews come from one exact report; the delivered-but-unreported
+  // The former per-driver "Driver finance unavailable" fallback remains intentionally gone:
+  // exact set-based finance totals come from the core report, while the delivered-but-unreported
   // payment queue is fetched through its bounded server page instead of a browser preload.
   const [controlResult, unreportedResult] = await Promise.all([
     supabase.rpc("admin_control_center_v2_report"),
