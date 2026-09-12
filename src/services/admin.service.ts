@@ -100,11 +100,25 @@ const ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT = 100;
 const ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT = 100;
 const ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT = 100;
 
+type DashboardOrderPreviewRow = Omit<AdminOrder, "driver_name" | "plate_number" | "assignment_label">;
+
+function shouldLoadDashboardOrderPreview() {
+  if (typeof window === "undefined") return true;
+  const hashQuery = window.location.hash.includes("?") ? window.location.hash.split("?")[1] ?? "" : "";
+  const params = new URLSearchParams(hashQuery || window.location.search);
+  const section = params.get("section");
+  const queue = params.get("queue") ?? "all";
+  // Normal Orders rows are owned exclusively by getAdminOrdersPage()/admin_orders_page.
+  return !(section === "Orders" && queue === "all");
+}
+
 export async function getDashboardData() {
-  const ordersQuery = supabase.from("orders")
-    .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at")
-    .order("created_at", { ascending: false })
-    .limit(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT);
+  const ordersQuery = shouldLoadDashboardOrderPreview()
+    ? supabase.from("orders")
+      .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at")
+      .order("created_at", { ascending: false })
+      .limit(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT)
+    : Promise.resolve({ data: [] as DashboardOrderPreviewRow[], error: null });
   const paymentsQuery = supabase.from("payments")
     .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,raw_payload,created_at")
     .order("created_at", { ascending: false })
@@ -162,7 +176,7 @@ export async function getDashboardData() {
   const drivers = (driversResult.data ?? []) as Driver[];
   const deliveryProofs = (proofsResult.data ?? []) as DeliveryProof[];
   const financeSummary = ((financeSummaryResult.data ?? [])[0] ?? null) as FinanceDashboardSummary | null;
-  const orders = ((ordersResult.data ?? []) as Omit<AdminOrder, "driver_name" | "plate_number" | "assignment_label">[]).map((order) => {
+  const orders = ((ordersResult.data ?? []) as DashboardOrderPreviewRow[]).map((order) => {
     const driver = drivers.find((item) => item.id === order.driver_id);
     const truck = trucks.find((item) => item.id === order.truck_id);
     const driverName = driver?.full_name?.trim() || driver?.phone?.trim() || null;
