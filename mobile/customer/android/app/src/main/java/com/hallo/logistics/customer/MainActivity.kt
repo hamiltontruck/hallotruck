@@ -736,6 +736,7 @@ class MainActivity : AppCompatActivity() {
             val recentCard = card()
             val content = vertical(14.dp)
             content.addView(textView(order.trackingId ?: getString(R.string.order_label), 15f, true))
+            content.addView(textView(orderDateLabel(order.createdAt), 12f, false, getColor(R.color.hallo_muted)))
             content.addView(textView(label(order.status), 12f, true, getColor(R.color.hallo_muted)))
             content.addView(textView("${order.pickupAddress.orEmpty()}\n→ ${order.dropoffAddress.orEmpty()}", 14f))
             content.addView(actionButton(getString(R.string.view_details)) {
@@ -756,6 +757,20 @@ class MainActivity : AppCompatActivity() {
         binding.navOrders.setBackgroundColor(if (page == CustomerPage.ORDERS) active else idle)
         binding.navTrack.setBackgroundColor(if (page == CustomerPage.TRACKING) active else idle)
         binding.navProfile.setBackgroundColor(if (page == CustomerPage.PROFILE) active else idle)
+    }
+
+    private fun orderDateLabel(createdAt: String?): String {
+        val date = createdAt?.takeIf { it.isNotBlank() }?.let { timestamp ->
+            runCatching {
+                val instant = java.time.OffsetDateTime.parse(timestamp).toInstant()
+                val locale = resources.configuration.locales[0]
+                java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)
+                    .withLocale(locale)
+                    .withZone(java.time.ZoneId.systemDefault())
+                    .format(instant)
+            }.getOrNull()
+        } ?: "—"
+        return getString(R.string.order_created_date, date)
     }
 
     private fun renderOrders(state: CustomerUiState) {
@@ -786,6 +801,7 @@ class MainActivity : AppCompatActivity() {
             item.orderRoute.text = "${order.pickupAddress.orEmpty()}\n→ ${order.dropoffAddress.orEmpty()}"
             val paymentLabel = if (summary.pendingVerification > 0) getString(R.string.pending_verification) else label(order.paymentStatus)
             item.orderMeta.text = buildString {
+                append(orderDateLabel(order.createdAt)).append("\n")
                 append("${getString(R.string.quote)}: ${money(order.priceEtb)} · ${getString(R.string.distance)}: ${formatDistance(order.distanceKm)}\n")
                 append("${getString(R.string.load)}: ${CustomerPaymentPolicy.formatLoad(order)}\n")
                 append("${getString(R.string.payment)}: $paymentLabel · ${getString(R.string.vehicle)}: ${order.vehicleType ?: getString(R.string.pending)}\n")
