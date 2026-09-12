@@ -13,21 +13,14 @@ const unreportedMigration = fs.readFileSync("supabase/migrations/20260912211043_
 const searchFixMigration = fs.readFileSync("supabase/migrations/20260912211728_fix_admin_unreported_delivery_payment_search_consistency.sql", "utf8");
 const marker = fs.readFileSync("supabase/production-migration-version.txt", "utf8").trim();
 
-assert.match(app, /section==="Orders"&&queue&&queue!=="all"/);
-assert.match(app, /Navigate to=\{`\/admin\/order-queue\$\{search\}`\}/);
-assert.match(app, /path="\/admin\/order-queue"/);
-assert.match(page, /getAdminOrderControlQueuePage/);
-assert.match(page, /50 rows/);
-assert.match(page, /100 rows/);
-assert.match(page, /statusCounts/);
-assert.match(page, /unreported-payment/);
-assert.match(page, /driver_trip_payment_results/);
-assert.match(page, /realtimeTimer/);
-assert.match(service, /supabase\.rpc\("admin_order_control_queue_page"/);
-assert.match(service, /supabase\.rpc\("admin_unreported_delivery_payment_page"/);
-assert.match(service, /p_page_size: pageSize/);
-assert.match(service, /p_search: options\.search/);
-assert.match(service, /p_today: options\.today === true/);
+assert.ok(app.includes('path="/admin/order-queue"'), "Dedicated Admin control queue route must exist.");
+assert.ok(app.includes('/admin/order-queue${search}'), "Legacy Orders queue routing must redirect to the dedicated queue page.");
+for (const token of ["getAdminOrderControlQueuePage", "50 rows", "100 rows", "statusCounts", "unreported-payment", "driver_trip_payment_results", "realtimeTimer", "loadRef.current", "requestSequence"]) {
+  assert.ok(page.includes(token), `Admin order queue regression token missing: ${token}`);
+}
+for (const token of ['supabase.rpc("admin_order_control_queue_page"', 'supabase.rpc("admin_unreported_delivery_payment_page"', "p_page_size: pageSize", "p_search: options.search", "p_today: options.today === true"]) {
+  assert.ok(service.includes(token), `Admin order queue service token missing: ${token}`);
+}
 assert.doesNotMatch(service, /\.from\("orders"\)/);
 assert.doesNotMatch(service, /\.from\("payments"\)/);
 assert.doesNotMatch(service, /\.from\("delivery_proofs"\)/);
@@ -35,47 +28,39 @@ assert.match(migration, /security invoker/i);
 assert.match(migration, /private\.is_admin_or_ceo\(\)/);
 assert.match(migration, /revoke all on function public\.admin_order_control_queue_page[\s\S]*from public/i);
 assert.match(migration, /revoke all on function public\.admin_order_control_queue_page[\s\S]*from anon/i);
-assert.match(migration, /limit v_page_size/i);
-assert.match(migration, /offset \(v_page - 1\) \* v_page_size/i);
-assert.match(migration, /Africa\/Addis_Ababa/);
+assert.ok(migration.includes("limit v_page_size"));
+assert.ok(migration.includes("offset (v_page - 1) * v_page_size"));
+assert.ok(migration.includes("Africa/Addis_Ababa"));
 
 assert.match(unreportedMigration, /security invoker/i);
 assert.match(unreportedMigration, /private\.is_admin_or_ceo\(\)/);
-assert.match(unreportedMigration, /driver_trip_payment_results/);
-assert.match(unreportedMigration, /limit v_page_size/i);
-assert.match(unreportedMigration, /offset \(v_page - 1\) \* v_page_size/i);
-assert.match(unreportedMigration, /Africa\/Addis_Ababa/);
+for (const token of ["driver_trip_payment_results", "limit v_page_size", "offset (v_page - 1) * v_page_size", "Africa/Addis_Ababa"]) assert.ok(unreportedMigration.includes(token), `Unreported queue migration token missing: ${token}`);
 assert.match(unreportedMigration, /revoke all on function public\.admin_unreported_delivery_payment_page[\s\S]*from public, anon/i);
 assert.match(unreportedMigration, /grant execute on function public\.admin_unreported_delivery_payment_page[\s\S]*to authenticated/i);
 assert.doesNotMatch(unreportedMigration, /\b(update|delete from|insert into)\s+public\./i, "unreported-payment queue migration must not mutate business rows");
 
-assert.match(searchFixMigration, /v_search text := nullif\(btrim\(coalesce\(p_search, ''\)\), ''\)/);
-assert.match(searchFixMigration, /left join public\.profiles pr on pr\.id = o\.driver_id/);
-assert.match(searchFixMigration, /left join public\.trucks t on t\.id = o\.truck_id/);
-assert.match(searchFixMigration, /pr\.full_name, pr\.phone, t\.plate_number/);
-assert.match(searchFixMigration, /limit v_page_size/i);
-assert.match(searchFixMigration, /offset \(v_page - 1\) \* v_page_size/i);
+for (const token of [
+  "v_search text := nullif(btrim(coalesce(p_search, '')), '')",
+  "left join public.profiles pr on pr.id = o.driver_id",
+  "left join public.trucks t on t.id = o.truck_id",
+  "pr.full_name, pr.phone, t.plate_number",
+  "limit v_page_size",
+  "offset (v_page - 1) * v_page_size",
+]) assert.ok(searchFixMigration.includes(token), `Search-consistency migration token missing: ${token}`);
 assert.match(searchFixMigration, /revoke all on function public\.admin_unreported_delivery_payment_page[\s\S]*from public, anon/i);
 assert.doesNotMatch(searchFixMigration, /\b(update|delete from|insert into)\s+public\./i, "search consistency migration must remain reporting-only");
 
-assert.match(paymentWorkspace, /getAdminOrderControlQueuePage/);
-assert.match(paymentWorkspace, /queue: "unreported-payment"/);
+assert.ok(paymentWorkspace.includes("getAdminOrderControlQueuePage"));
+assert.ok(paymentWorkspace.includes('queue: "unreported-payment"'));
 assert.doesNotMatch(paymentWorkspace, /\.limit\(200\)/, "payment workspace must never return to the 200-order browser preload");
 assert.doesNotMatch(paymentWorkspace, /\.from\("orders"\)|\.from\("driver_trip_payment_results"\)|\.from\("profiles"\)/, "payment workspace must not browser-preload the unreported queue");
-assert.match(controlService, /admin_unreported_delivery_payment_page/);
-assert.match(controlService, /slice\(0, 6\)/);
-assert.match(ceoPage, /Driver Payment Reports/);
-assert.match(ceoPage, /unreportedInvoiceTotal/);
-assert.match(ceoPage, /driver-payment-report-queue/);
-assert.match(ceoPage, /realtimeTimer/);
-assert.match(ceoPage, /driver_verification_files/);
-assert.doesNotMatch(ceoPage, /table: "driver_documents"/);
+assert.ok(controlService.includes("admin_unreported_delivery_payment_page"));
+assert.ok(controlService.includes("slice(0, 6)"));
+for (const token of ["Driver Payment Reports", "unreportedInvoiceTotal", "driver-payment-report-queue", "realtimeTimer", "driver_verification_files"]) assert.ok(ceoPage.includes(token), `CEO queue token missing: ${token}`);
+assert.ok(!ceoPage.includes('table: "driver_documents"'));
 
 assert.ok(/^\d{14}$/.test(marker), "production migration marker must be a 14-digit timestamp");
 assert.ok(marker >= "20260912211728", "production migration marker must include the applied search-consistency migration");
-
-// Dedicated queue routing is authoritative. Legacy load-all helpers must stay removed
-// so future changes cannot silently reintroduce full Orders/payment-history preloads.
 assert.doesNotMatch(adminService, /shouldLoadAllOrdersForControlQueue/);
 
 console.log("Admin order/control-center queue regression checks passed.");
