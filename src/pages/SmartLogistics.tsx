@@ -449,7 +449,7 @@ function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onRe
         {canCorrect && <button disabled={saving} onClick={()=>setCorrecting(value=>!value)} className="bg-route px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">{correcting?"Cancel correction":"Correct / refund"}</button>}
       </div>
     </div>
-    {correcting&&<PaymentCorrectionForm paymentId={payment.id} paymentAmountEtb={paymentAmount} onCancel={()=>setCorrecting(false)} onSubmitted={onReload}/>} 
+    {correcting&&<PaymentCorrectionForm paymentId={payment.id} paymentAmountEtb={paymentAmount} onCancel={()=>setCorrecting(false)} onSubmitted={onReload}/>}
   </div>;
 }
 
