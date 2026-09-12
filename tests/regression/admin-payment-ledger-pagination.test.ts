@@ -18,12 +18,16 @@ test("Admin Finance uses database-side payment pagination", () => {
   assert.match(page, /<AdminPaymentLedgerPanel/);
 });
 
-test("Reports and Finance no longer request the full payment ledger through Admin Operations", () => {
+test("Reports and Finance no longer request payment or proof previews through Admin Operations", () => {
   assert.match(app, /if\s*\(section\s*===\s*"Reports"\)\s*return\s*<Navigate\s+to="\/admin\/reports"\s+replace\s*\/>/);
   assert.doesNotMatch(adminService, /shouldLoadFullFinanceWorkspace/);
   assert.doesNotMatch(adminService, /getAdminSearchParams/);
   assert.doesNotMatch(adminService, /section === "Finance" \|\| section === "Reports"/);
-  assert.match(adminService, /\.limit\(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT\)/);
+  assert.doesNotMatch(adminService, /ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT/);
+  assert.doesNotMatch(adminService, /from\("payments"\)/);
+  assert.doesNotMatch(adminService, /from\("delivery_proofs"\)/);
+  assert.match(adminService, /payments: \[\] as Payment\[\]/);
+  assert.match(adminService, /deliveryProofs: \[\] as DeliveryProof\[\]/);
 });
 
 test("Payment ledger RPC is leadership guarded and indexed", () => {
