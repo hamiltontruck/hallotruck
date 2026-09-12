@@ -1,3 +1,4 @@
+import "../styles/admin-driver-review.css";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
@@ -277,7 +278,7 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
     setBusy("");
   }
 
-  return <main className="min-h-screen bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10">
+  return <main className="admin-driver-review min-h-screen bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10">
     <div className="mx-auto max-w-7xl">
       <section className="bg-asphalt p-6 text-white sm:p-8">
         <p className="font-mono text-[10px] tracking-[.2em] text-amber">COMPLIANCE CONTROL</p>
@@ -365,12 +366,11 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
           const actionGuidance = actionGuidanceMessages.join(" ") || "Driver actions are available when verification and trip locks allow them.";
           const actionGuidanceId = `driver-compliance-action-${driver.id}`;
 
-          return <article key={driver.id} className="border border-asphalt/10 bg-white">
-            <div className="grid gap-5 border-b border-asphalt/10 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
+          return <article key={driver.id} className="driver-review-profile border border-asphalt/10 bg-white">
+            <div className="driver-review-header grid gap-5 border-b border-asphalt/10 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
               <div>
                 <div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{driver.full_name}</h2><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(driver.driver_status)}`}>{driver.driver_status ?? "pending"}</span></div>
-                <p className="mt-2 text-sm text-steel">{driver.phone}{driver.email ? ` · ${driver.email}` : ""}</p>
-                <p className="mt-1 text-xs text-steel">{driver.home_address || "Home address not supplied"}</p>
+
                 {driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <p className="mt-3 text-xs font-semibold text-amber-dim">Onboarding: {onboardingStage} · driver {submittedIdentity}/{identityRequired.length} · vehicle {submittedVehicle}/{vehicleRequired.length}</p>}
                 {activeTrip && <p className="mt-3 text-xs font-semibold text-amber-dim">Active trip: {activeTrip.tracking_id} · {activeTrip.status.replace("_", " ")}</p>}
               </div>
@@ -381,6 +381,14 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
               </div>
             </div>
 
+            <section className="driver-contact-section" aria-label="Contact and address">
+              <h3>Contact &amp; address</h3>
+              <dl className="driver-contact-card">
+                <div><dt>Phone</dt><dd>{driver.phone || "Not supplied"}</dd></div>
+                <div><dt>Home address</dt><dd>{driver.home_address || "Not supplied"}</dd></div>
+                <div><dt>Email</dt><dd>{driver.email || "Not supplied"}</dd></div>
+              </dl>
+            </section>
             <div className="grid gap-px bg-asphalt/10 sm:grid-cols-2 lg:grid-cols-4">
               <Mini label="Total trips" value={String(driverOrders.length)} />
               <Mini label="Delivered" value={String(deliveredOrders.length)} />
@@ -388,14 +396,17 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
               <Mini label="Driver net released" value={formatEtb(split.driverNetEtb)} strong />
             </div>
 
-            {assignedTruck && <div className="border-t border-asphalt/10 bg-emerald-50/40 px-5 py-4 text-sm sm:px-6"><strong>{assignedTruck.plate_number}</strong> · {assignedTruck.vehicle_type} · {assignedTruck.capacity_tons ?? "—"} tons · <span className="capitalize">{assignedTruck.status}</span></div>}
+            {assignedTruck && <div className="driver-vehicle-card border-t border-asphalt/10 bg-emerald-50/40 px-5 py-4 text-sm sm:px-6"><h3>Vehicle</h3><strong>{assignedTruck.plate_number}</strong> · {assignedTruck.vehicle_type} · {assignedTruck.capacity_tons ?? "—"} tons · <span className="capitalize">{assignedTruck.status}</span></div>}
 
             <div className="border-t border-asphalt/10 px-5 py-4 sm:px-6">
               <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{driverDocs.length} current verification records · {historyRows.length} archived versions</p></div><button onClick={() => setExpandedDriverId(expanded ? null : driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{expanded ? "Hide full history" : "View full driver history"}</button></div>
             </div>
 
             <div className="grid gap-3 bg-[#f8f7f2] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
-              {driverDocs.length === 0 ? <div className="col-span-full rounded-2xl border border-dashed border-asphalt/15 bg-white p-7 text-center text-sm text-steel">No verification files submitted yet. This driver remains visible here while completing onboarding.</div> : driverDocs.map((doc) => <DocumentCard key={doc.id} doc={doc} busy={busy === doc.id} onOpen={openFile} onReview={review} />)}
+              {driverDocs.length === 0 ? <div className="col-span-full rounded-2xl border border-dashed border-asphalt/15 bg-white p-7 text-center text-sm text-steel">No verification files submitted yet. This driver remains visible here while completing onboarding.</div> : groupDocuments(driverDocs).map((group) => <section key={group.key} className="driver-document-group">
+                <h3>{group.title}</h3>
+                <div className="driver-document-sides">{group.documents.map((doc) => <DocumentCard key={doc.id} doc={doc} busy={Boolean(busy)} onOpen={openFile} onReview={review} />)}</div>
+              </section>)}
             </div>
 
             {expanded && <div className="border-t-4 border-[#f5f3ed] bg-[#faf9f5] p-5 sm:p-6">
@@ -424,6 +435,30 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
       </div>}
     </div>
   </main>;
+}
+
+function groupDocuments(documents: DriverVerificationFile[]) {
+  const groups = new Map<string, { key: string; title: string; documents: DriverVerificationFile[] }>();
+  for (const doc of documents) {
+    const family = doc.document_key.startsWith("national_id_") ? "national_id"
+      : doc.document_key.startsWith("license_") ? "license"
+      : ["truck_front", "truck_back", "truck_side", "truck_loading_area"].includes(doc.document_key) ? "truck_photos"
+      : doc.document_key;
+    // Keep documents belonging to different vehicles in separate cards.
+    const key = family + ":" + (doc.truck_id ?? "identity");
+    const title = family === "national_id" ? "National ID" : family === "license" ? "Driving license"
+      : family === "truck_photos" ? "Vehicle photos" : labels[family] ?? family;
+    const group = groups.get(key) ?? { key, title, documents: [] };
+    group.documents.push(doc);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    documents: [...group.documents].sort((a, b) => {
+      const rank = (key: string) => key.endsWith("_front") ? 0 : key.endsWith("_back") ? 1 : 2;
+      return rank(a.document_key) - rank(b.document_key);
+    }),
+  }));
 }
 
 function DocumentCard({
@@ -482,7 +517,7 @@ function DocumentCard({
       <button onClick={() => void onOpen(doc.file_path)} className="min-h-10 flex-1 rounded-xl border border-asphalt/15 px-3 py-2 text-xs font-semibold transition hover:bg-asphalt hover:text-white">Open file</button>
       {doc.status === "pending" && <>
         <button disabled={busy} onClick={() => void onReview(doc, "verified")} className="min-h-10 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-40">Verify</button>
-        <button disabled={busy} onClick={() => void onReview(doc, "rejected")} className="min-h-10 rounded-xl border border-route/30 px-4 py-2 text-xs font-semibold text-route transition hover:bg-route/5 disabled:opacity-40">Reject</button>
+        <button disabled={busy} onClick={() => void onReview(doc, "rejected")} className="min-h-10 rounded-xl border border-route/30 px-4 py-2 text-xs font-semibold text-route transition hover:bg-route/5 disabled:opacity-40">Request re-upload</button>
       </>}
     </div>
   </article>;
