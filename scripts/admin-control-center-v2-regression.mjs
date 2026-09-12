@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [service, page, migration] = await Promise.all([
+const [service, page, migration, enumHotfix] = await Promise.all([
   readFile("src/services/admin-control-center.service.ts", "utf8"),
   readFile("src/pages/AdminCeoOverview.tsx", "utf8"),
   readFile("supabase/migrations/20260911144710_admin_control_center_v2_report.sql", "utf8"),
+  readFile("supabase/migrations/20260912032500_fix_admin_control_center_driver_status_enum.sql", "utf8"),
 ]);
 
 assert.match(service, /supabase\.rpc\("admin_control_center_v2_report"\)/, "Control Center must load through the DB report RPC.");
@@ -29,5 +30,10 @@ assert.match(migration, /grant execute on function public\.admin_control_center_
 assert.match(migration, /timezone\('Africa\/Addis_Ababa', now\(\)\)/i, "Today metrics must use Ethiopia-local day boundaries.");
 assert.match(migration, /limit 6/i, "Action queue previews must stay bounded.");
 assert.doesNotMatch(migration, /limit\s+(?:2000|4000)/i, "DB reporting must not preserve legacy bulk caps.");
+
+assert.match(enumHotfix, /coalesce\(p\.driver_status::text, ''''\)/i, "Admin Overview must cast driver_status enum to text before empty-string fallback.");
+assert.match(enumHotfix, /pg_get_functiondef\('public\.admin_control_center_v2_report\(\)'::regprocedure\)/i, "Enum hotfix must patch only the existing reporting function definition.");
+assert.match(enumHotfix, /revoke all on function public\.admin_control_center_v2_report\(\) from public, anon/i);
+assert.match(enumHotfix, /grant execute on function public\.admin_control_center_v2_report\(\) to authenticated/i);
 
 console.log("Admin Control Center V2 DB reporting regression guard passed.");

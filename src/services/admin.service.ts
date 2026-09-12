@@ -98,43 +98,21 @@ function fail(message: string): never { throw new Error(message); }
 
 const ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT = 100;
 const ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT = 100;
-
-function getAdminSearchParams() {
-  if (typeof window === "undefined") return new URLSearchParams();
-  const hashQuery = window.location.hash.includes("?") ? window.location.hash.split("?")[1] ?? "" : "";
-  return new URLSearchParams(hashQuery || window.location.search);
-}
-
-function shouldLoadAllOrdersForControlQueue() {
-  const queue = getAdminSearchParams().get("queue");
-  return Boolean(queue && queue !== "all");
-}
-
-function shouldLoadFullFinanceWorkspace() {
-  return getAdminSearchParams().get("section") === "Reports";
-}
+const ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT = 100;
 
 export async function getDashboardData() {
-  const fullControlQueue = shouldLoadAllOrdersForControlQueue();
-  const fullFinanceWorkspace = shouldLoadFullFinanceWorkspace();
-  const baseOrdersQuery = supabase.from("orders")
+  const ordersQuery = supabase.from("orders")
     .select("id,tracking_id,customer_name,customer_phone,pickup_address,dropoff_address,cargo_description,vehicle_type,price_etb,status,payment_status,driver_id,truck_id,accepted_at,delivered_at,cancellation_reason,cancellation_source,cancelled_at,created_at")
-    .order("created_at", { ascending: false });
-  const ordersQuery = fullControlQueue
-    ? baseOrdersQuery
-    : baseOrdersQuery.limit(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT);
-  const basePaymentsQuery = supabase.from("payments")
+    .order("created_at", { ascending: false })
+    .limit(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT);
+  const paymentsQuery = supabase.from("payments")
     .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,raw_payload,created_at")
-    .order("created_at", { ascending: false });
-  const paymentsQuery = fullFinanceWorkspace
-    ? basePaymentsQuery
-    : basePaymentsQuery.limit(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT);
-  const baseProofsQuery = supabase.from("delivery_proofs")
+    .order("created_at", { ascending: false })
+    .limit(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT);
+  const proofsQuery = supabase.from("delivery_proofs")
     .select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at")
-    .order("delivered_at", { ascending: false });
-  const proofsQuery = fullControlQueue
-    ? baseProofsQuery
-    : baseProofsQuery.limit(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT);
+    .order("delivered_at", { ascending: false })
+    .limit(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT);
 
   const [
     ordersResult,
@@ -146,17 +124,21 @@ export async function getDashboardData() {
     totalOrdersResult,
     activeOrdersResult,
     deliveredOrdersResult,
+    availableTrucksResult,
+    totalCustomersResult,
     financeSummaryResult,
   ] = await Promise.all([
     ordersQuery,
-    supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }),
-    supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }),
+    supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
+    supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
     paymentsQuery,
-    supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name"),
+    supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name").limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
     proofsQuery,
     supabase.from("orders").select("id", { count: "exact", head: true }),
     supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["accepted", "in_transit"]),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "delivered"),
+    supabase.from("trucks").select("id", { count: "exact", head: true }).eq("status", "available"),
+    supabase.from("customers").select("id", { count: "exact", head: true }),
     supabase.rpc("admin_finance_dashboard_summary"),
   ]);
 
@@ -169,6 +151,8 @@ export async function getDashboardData() {
     || totalOrdersResult.error
     || activeOrdersResult.error
     || deliveredOrdersResult.error
+    || availableTrucksResult.error
+    || totalCustomersResult.error
     || financeSummaryResult.error;
   if (error) fail(error.message);
 
@@ -203,8 +187,8 @@ export async function getDashboardData() {
     totalOrders: totalOrdersResult.count ?? 0,
     activeOrders: activeOrdersResult.count ?? 0,
     deliveredOrders: deliveredOrdersResult.count ?? 0,
-    availableTrucks: trucks.filter((truck) => truck.status === "available").length,
-    totalCustomers: customers.length,
+    availableTrucks: availableTrucksResult.count ?? 0,
+    totalCustomers: totalCustomersResult.count ?? 0,
     revenueEtb: Math.max(0, releasedTotal - refundedTotal),
   };
 

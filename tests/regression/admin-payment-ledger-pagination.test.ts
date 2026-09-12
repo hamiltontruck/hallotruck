@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 const service = fs.readFileSync("src/services/admin-payments.service.ts", "utf8");
 const panel = fs.readFileSync("src/components/admin/AdminPaymentLedgerPanel.tsx", "utf8");
 const page = fs.readFileSync("src/pages/SmartLogistics.tsx", "utf8");
+const app = fs.readFileSync("src/App.tsx", "utf8");
 const adminService = fs.readFileSync("src/services/admin.service.ts", "utf8");
 const migration = fs.readFileSync("supabase/migrations/20260911024421_admin_payment_ledger_server_pagination.sql", "utf8");
 
@@ -17,9 +18,12 @@ test("Admin Finance uses database-side payment pagination", () => {
   assert.match(page, /<AdminPaymentLedgerPanel/);
 });
 
-test("Finance route no longer requests the full payment ledger", () => {
-  assert.match(adminService, /return getAdminSearchParams\(\)\.get\("section"\) === "Reports"/);
+test("Reports and Finance no longer request the full payment ledger through Admin Operations", () => {
+  assert.match(app, /if\s*\(section\s*===\s*"Reports"\)\s*return\s*<Navigate\s+to="\/admin\/reports"\s+replace\s*\/>/);
+  assert.doesNotMatch(adminService, /shouldLoadFullFinanceWorkspace/);
+  assert.doesNotMatch(adminService, /getAdminSearchParams/);
   assert.doesNotMatch(adminService, /section === "Finance" \|\| section === "Reports"/);
+  assert.match(adminService, /\.limit\(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT\)/);
 });
 
 test("Payment ledger RPC is leadership guarded and indexed", () => {
