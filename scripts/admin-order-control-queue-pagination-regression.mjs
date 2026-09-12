@@ -10,6 +10,7 @@ const controlService = fs.readFileSync("src/services/admin-control-center.servic
 const adminService = fs.readFileSync("src/services/admin.service.ts", "utf8");
 const migration = fs.readFileSync("supabase/migrations/20260911232422_admin_order_control_queue_pagination.sql", "utf8");
 const unreportedMigration = fs.readFileSync("supabase/migrations/20260912211043_admin_unreported_delivery_payment_page.sql", "utf8");
+const searchFixMigration = fs.readFileSync("supabase/migrations/20260912211728_fix_admin_unreported_delivery_payment_search_consistency.sql", "utf8");
 const marker = fs.readFileSync("supabase/production-migration-version.txt", "utf8").trim();
 
 assert.match(app, /section==="Orders"&&queue&&queue!=="all"/);
@@ -48,8 +49,18 @@ assert.match(unreportedMigration, /revoke all on function public\.admin_unreport
 assert.match(unreportedMigration, /grant execute on function public\.admin_unreported_delivery_payment_page[\s\S]*to authenticated/i);
 assert.doesNotMatch(unreportedMigration, /\b(update|delete from|insert into)\s+public\./i, "unreported-payment queue migration must not mutate business rows");
 
+assert.match(searchFixMigration, /v_search text := nullif\(btrim\(coalesce\(p_search, ''\)\), ''\)/);
+assert.match(searchFixMigration, /left join public\.profiles pr on pr\.id = o\.driver_id/);
+assert.match(searchFixMigration, /left join public\.trucks t on t\.id = o\.truck_id/);
+assert.match(searchFixMigration, /pr\.full_name, pr\.phone, t\.plate_number/);
+assert.match(searchFixMigration, /limit v_page_size/i);
+assert.match(searchFixMigration, /offset \(v_page - 1\) \* v_page_size/i);
+assert.match(searchFixMigration, /revoke all on function public\.admin_unreported_delivery_payment_page[\s\S]*from public, anon/i);
+assert.doesNotMatch(searchFixMigration, /\b(update|delete from|insert into)\s+public\./i, "search consistency migration must remain reporting-only");
+
 assert.match(paymentWorkspace, /getAdminOrderControlQueuePage/);
 assert.match(paymentWorkspace, /queue: "unreported-payment"/);
+assert.doesNotMatch(paymentWorkspace, /\.limit\(200\)/, "payment workspace must never return to the 200-order browser preload");
 assert.doesNotMatch(paymentWorkspace, /\.from\("orders"\)|\.from\("driver_trip_payment_results"\)|\.from\("profiles"\)/, "payment workspace must not browser-preload the unreported queue");
 assert.match(controlService, /admin_unreported_delivery_payment_page/);
 assert.match(controlService, /slice\(0, 6\)/);
@@ -57,9 +68,11 @@ assert.match(ceoPage, /Driver Payment Reports/);
 assert.match(ceoPage, /unreportedInvoiceTotal/);
 assert.match(ceoPage, /driver-payment-report-queue/);
 assert.match(ceoPage, /realtimeTimer/);
+assert.match(ceoPage, /driver_verification_files/);
+assert.doesNotMatch(ceoPage, /table: "driver_documents"/);
 
 assert.ok(/^\d{14}$/.test(marker), "production migration marker must be a 14-digit timestamp");
-assert.ok(marker >= "20260912211043", "production migration marker must include the applied unreported-payment queue migration");
+assert.ok(marker >= "20260912211728", "production migration marker must include the applied search-consistency migration");
 
 // Dedicated queue routing is authoritative. Legacy load-all helpers must stay removed
 // so future changes cannot silently reintroduce full Orders/payment-history preloads.
