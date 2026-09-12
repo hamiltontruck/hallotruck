@@ -1,0 +1,13 @@
+<resources>
+    <string name="assigned_load">Assigned load</string>
+    <string name="trip_progress">Trip progress</string>
+    <string name="location_sharing">Live location sharing</string>
+    <string name="location_sharing_hint">GPS updates are shared with HALLO and the customer while your active trip is in transit.</string>
+    <string name="driver_finance">Driver finance</string>
+    <string name="released_earnings">Released earnings</string>
+    <string name="trip_earnings_history">Trip earnings history</string>
+    <string name="delivery_proof">Delivery proof</string>
+    <string name="delivery_proof_hint">Recipient, delivery photo, signature and payment result are required to complete delivery.</string>
+    <string name="support_and_disputes">Support &amp; disputes</string>
+    <string name="support_contract_unavailable">Use HALLO support notifications for now. A dispute action will only appear when a verified backend dispute contract is available.</string>
+</resources>
