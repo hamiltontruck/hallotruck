@@ -6,9 +6,9 @@ const page = fs.readFileSync("src/pages/AdminReports.tsx", "utf8");
 const legacyPanel = fs.readFileSync("src/components/admin/AdminReportsPanel.tsx", "utf8");
 const service = fs.readFileSync("src/services/admin-reports.service.ts", "utf8");
 const legacyMigration = fs.readFileSync("supabase/migrations/20260911195014_admin_reports_db_summary.sql", "utf8");
-const v2Migration = fs.readFileSync("supabase/migrations/20260912202000_admin_reports_v2_filters.sql", "utf8");
+const v2Migration = fs.readFileSync("supabase/migrations/20260912200924_admin_reports_v2_filters.sql", "utf8");
 const marker = fs.readFileSync("supabase/production-migration-version.txt", "utf8").trim();
-const reportsV2MigrationVersion = "20260912202000";
+const reportsV2MigrationVersion = "20260912200924";
 
 assert.match(app, /section===\"Reports\"\)return <Navigate to=\"\/admin\/reports\" replace \/>/, "legacy Reports must redirect before SmartLogistics mounts");
 assert.match(app, /path=\"\/admin\/reports\"/, "DB-backed Admin Reports route must exist");
