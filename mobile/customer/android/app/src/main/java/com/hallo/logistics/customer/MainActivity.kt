@@ -94,6 +94,7 @@ class MainActivity : AppCompatActivity() {
         configureAuthLanguages()
         configureLanguageSelector()
         configureBottomInsets()
+        configureMapHeights()
         configureBookingControls()
         bindActions()
         onBackPressedDispatcher.addCallback(this, authBack)
@@ -195,6 +196,14 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         ViewCompat.requestApplyInsets(binding.bottomNavigation)
+    }
+
+    private fun configureMapHeights() {
+        // A large map on phones, bounded on tablets and landscape screens.
+        val height = (resources.configuration.screenHeightDp * 0.52f).toInt().coerceIn(220, 460).dp
+        listOf(binding.homeMap, binding.bookingMap, binding.trackingMap).forEach { map ->
+            map.layoutParams = map.layoutParams.apply { this.height = height }
+        }
     }
 
     private fun configureBookingControls() {
@@ -703,6 +712,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHomeDashboard(state: CustomerUiState, unread: Int): Unit = with(binding) {
+        // Home previews the booking route; live driver locations remain on Track.
+        homeMap.showBooking(state.selectedPickup, state.selectedDropoff, state.route)
         val activeCount = state.orders.count { CustomerPolicy.showAssignment(it.status) }
         val due = state.orders.filterNot { it.status == "cancelled" }.sumOf { order ->
             CustomerPaymentPolicy.summarize(order, paymentsFor(order, state)).remainingToSubmit
@@ -996,8 +1007,17 @@ class MainActivity : AppCompatActivity() {
         trackingFreshness.setTextColor(getColor(when (fresh) { "LIVE" -> R.color.hallo_success; "STALE" -> R.color.hallo_warning; else -> R.color.hallo_danger }))
 
         val statRow = tripStatus.parent as? LinearLayout
-        statRow?.weightSum = 4f
         val remainingView = ensureRemainingStat(statRow)
+        statRow?.orientation = LinearLayout.VERTICAL
+        statRow?.weightSum = 0f
+        listOfNotNull(tripStatus, tripEta, tripVehicle, remainingView).forEach { stat ->
+            stat.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = 6.dp
+            }
+            stat.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            stat.textSize = 14f
+            stat.setPadding(12.dp, 10.dp, 12.dp, 10.dp)
+        }
         tripStatus.text = "${getString(R.string.trip_status)}\n${label(order?.status ?: state.liveTrip?.status)}"
         tripVehicle.text = "${getString(R.string.truck_gps)}\n${gpsValue(state.liveTrip, fresh, hasTruck)}"
         tripEta.text = "${getString(R.string.eta)}\n${etaValue(state, fresh, hasTruck)}"
@@ -1017,7 +1037,9 @@ class MainActivity : AppCompatActivity() {
         messageDriver.isEnabled = phone.isNotBlank()
         callDriver.setOnClickListener { openContact(Intent.ACTION_DIAL, phone) }
         messageDriver.setOnClickListener { openContact(Intent.ACTION_SENDTO, phone) }
-        loadLegacyDriverPhoto(CustomerDisplayPolicy.verifiedDriverPhotoUrl(assignment, media), assignment?.driverName)
+        // The assignment card already presents the verified driver photo and identity.
+        (driverDetails.parent as? View)?.visibility = visible(order == null || !CustomerPolicy.showAssignment(order.status))
+        driverPhoto.visibility = View.GONE
     }
 
     private fun ensureTrackingBackButton() {
