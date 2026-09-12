@@ -37,6 +37,7 @@ class DriverAuthUiController(
 
     init {
         host.removeAllViews()
+        host.setPadding(0, 0, 0, 0)
         host.addView(root)
         configureLanguages()
         mode.setOnClickListener {
