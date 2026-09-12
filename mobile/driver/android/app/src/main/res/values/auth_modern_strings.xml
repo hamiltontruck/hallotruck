@@ -1,0 +1,9 @@
+<resources>
+    <string name="driver_auth_signin_title">Welcome back, driver</string>
+    <string name="driver_auth_signup_title">Create your driver account</string>
+    <string name="driver_auth_signin_subtitle">Sign in to manage jobs, trips, earnings and your verification documents.</string>
+    <string name="driver_auth_signup_subtitle">Join HALLO Driver with your verified contact details and a secure 6-digit PIN.</string>
+    <string name="driver_auth_new_prompt">New to HALLO Driver?</string>
+    <string name="driver_auth_existing_prompt">Already have a driver account?</string>
+    <string name="driver_auth_hero_description">HALLO Logistics driver truck</string>
+</resources>
