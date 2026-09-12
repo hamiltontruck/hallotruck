@@ -16,7 +16,7 @@ assert.match(service, /supabase\.rpc\("admin_finance_dashboard_summary"\)/, "das
 assert.match(service, /financeSummary\?\.released_total_etb/);
 assert.match(service, /financeSummary\?\.refunded_total_etb/);
 
-assert.match(paymentService, /supabase\.rpc\("admin_payment_ledger_page"\)/, "Finance ledger remains server-paginated");
+assert.match(paymentService, /supabase\.rpc\("admin_payment_ledger_page"/, "Finance ledger remains server-paginated");
 assert.match(paymentService, /supabase\.rpc\("admin_finance_dashboard_summary"\)/, "Finance summary remains database-aggregated");
 assert.match(paymentService, /getAdminOrderFinancialDetails/, "order-specific finance details have a dedicated lazy loader");
 assert.match(paymentService, /\.eq\("order_id", orderId\)/, "lazy finance/proof details are scoped to one order");
