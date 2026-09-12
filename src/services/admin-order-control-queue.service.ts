@@ -2,7 +2,7 @@ import { supabase } from "./supabase.client";
 import type { AdminOrder } from "./admin.service";
 import type { AdminOrderPageSize } from "./admin-orders.service";
 
-export const ADMIN_ORDER_CONTROL_QUEUES = ["delayed", "unassigned", "delayed-or-unassigned", "missing-evidence"] as const;
+export const ADMIN_ORDER_CONTROL_QUEUES = ["delayed", "unassigned", "delayed-or-unassigned", "missing-evidence", "unreported-payment"] as const;
 export type AdminOrderControlQueue = (typeof ADMIN_ORDER_CONTROL_QUEUES)[number];
 
 export interface AdminOrderControlQueuePageOptions {
@@ -20,6 +20,7 @@ export interface AdminOrderControlQueuePageResult {
   pageSize: AdminOrderPageSize;
   total: number;
   totalPages: number;
+  invoiceTotal: number;
   statusCounts: Record<string, number>;
   orders: AdminOrder[];
 }
@@ -67,14 +68,24 @@ function normalizeOrder(value: unknown): AdminOrder {
 
 export async function getAdminOrderControlQueuePage(options: AdminOrderControlQueuePageOptions): Promise<AdminOrderControlQueuePageResult> {
   const pageSize = normalizePageSize(options.pageSize);
-  const { data, error } = await supabase.rpc("admin_order_control_queue_page", {
-    p_queue: options.queue,
-    p_page: Math.max(1, Math.trunc(numberOf(options.page) || 1)),
-    p_page_size: pageSize,
-    p_status: options.status?.trim() || "all",
-    p_search: options.search?.trim() || null,
-    p_today: options.today === true,
-  });
+  const page = Math.max(1, Math.trunc(numberOf(options.page) || 1));
+  const isUnreportedPayment = options.queue === "unreported-payment";
+  const request = isUnreportedPayment
+    ? supabase.rpc("admin_unreported_delivery_payment_page", {
+        p_page: page,
+        p_page_size: pageSize,
+        p_search: options.search?.trim() || null,
+        p_today: options.today === true,
+      })
+    : supabase.rpc("admin_order_control_queue_page", {
+        p_queue: options.queue,
+        p_page: page,
+        p_page_size: pageSize,
+        p_status: options.status?.trim() || "all",
+        p_search: options.search?.trim() || null,
+        p_today: options.today === true,
+      });
+  const { data, error } = await request;
   if (error) throw new Error(error.message);
 
   const report = asRecord(data);
@@ -88,6 +99,7 @@ export async function getAdminOrderControlQueuePage(options: AdminOrderControlQu
     pageSize: normalizePageSize(report.pageSize),
     total: Math.max(0, numberOf(report.total)),
     totalPages: Math.max(1, numberOf(report.totalPages) || 1),
+    invoiceTotal: Math.max(0, numberOf(report.invoiceTotal)),
     statusCounts,
     orders: rows,
   };
