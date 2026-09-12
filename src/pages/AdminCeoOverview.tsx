@@ -15,6 +15,8 @@ import {
 } from "../services/admin-control-center.service";
 import { supabase } from "../services/supabase.client";
 
+// Control Center V2 removed the old partial finance data warning path: live finance
+// totals now arrive from exact leadership-guarded database reports.
 type Tone = "neutral" | "good" | "warning" | "critical";
 
 function money(value: number) {
