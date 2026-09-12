@@ -1,0 +1,9 @@
+<resources>
+<string name="dash_hero_title">ጭነትዎን\nበእርግጠኝነት ያጓጉዙ</string>
+<string name="dash_hero_help">መኪና ይምረጡ እና ለጉዞዎ ዋጋ ያግኙ።</string>
+<string name="dash_overview">አጠቃላይ እይታ</string>
+<string name="dash_recent">የቅርብ ጊዜ ትዕዛዞች</string>
+<string name="dash_all_orders">ሁሉንም ትዕዛዞች ይመልከቱ</string>
+<string name="dash_profile">የእኔ መገለጫ</string>
+<string name="dash_empty">የመጀመሪያ ትዕዛዝዎን ከፈጠሩ በኋላ መላኪያዎችዎ እዚህ ይታያሉ።</string>
+</resources>
