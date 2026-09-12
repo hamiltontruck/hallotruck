@@ -109,7 +109,7 @@ export function AdminCeoOverview({ fixture = null }: { fixture?: ControlCenterDa
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_payments" }, queueRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_commission_deposits" }, queueRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "trucks" }, queueRefresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_documents" }, queueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_verification_files" }, queueRefresh)
       .subscribe();
     return () => {
       window.clearTimeout(realtimeTimer.current);
