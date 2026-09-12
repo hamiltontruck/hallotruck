@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="hallo_gold">#FFB800</color><color name="hallo_gold_soft">#FFF1C2</color>
-    <color name="hallo_navy">#14213D</color><color name="hallo_navy_soft">#EAF0FA</color>
-    <color name="hallo_surface">#F6F7FA</color><color name="hallo_card">#FFFFFF</color>
-    <color name="hallo_text">#182033</color><color name="hallo_text_muted">#667085</color>
-    <color name="hallo_border">#E4E7EC</color><color name="hallo_success">#16794A</color>
-    <color name="hallo_success_soft">#E7F7EF</color><color name="hallo_danger">#B42318</color>
+    <color name="hallo_blue">#1769E0</color>
+    <color name="hallo_blue_dark">#0F4FB3</color>
+    <color name="hallo_blue_soft">#EAF2FF</color>
+    <color name="hallo_gold">#FFB800</color>
+    <color name="hallo_gold_soft">#FFF4D6</color>
+    <color name="hallo_navy">#14213D</color>
+    <color name="hallo_navy_soft">#EEF3FA</color>
+    <color name="hallo_surface">#F7F9FC</color>
+    <color name="hallo_card">#FFFFFF</color>
+    <color name="hallo_text">#172033</color>
+    <color name="hallo_text_muted">#667085</color>
+    <color name="hallo_border">#E3E8EF</color>
+    <color name="hallo_success">#14804A</color>
+    <color name="hallo_success_soft">#EAF8F0</color>
+    <color name="hallo_warning">#B56A00</color>
+    <color name="hallo_warning_soft">#FFF4DD</color>
+    <color name="hallo_danger">#B42318</color>
+    <color name="hallo_danger_soft">#FDECEC</color>
 </resources>
