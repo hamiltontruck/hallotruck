@@ -108,6 +108,7 @@ function shouldLoadDashboardOrderPreview() {
   const params = new URLSearchParams(hashQuery || window.location.search);
   const section = params.get("section");
   const queue = params.get("queue") ?? "all";
+  // Normal Orders rows are owned exclusively by getAdminOrdersPage()/admin_orders_page.
   return !(section === "Orders" && queue === "all");
 }
 
