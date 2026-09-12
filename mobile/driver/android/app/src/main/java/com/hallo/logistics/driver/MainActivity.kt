@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
-import android.text.InputFilter
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
@@ -32,8 +31,8 @@ import kotlinx.coroutines.launch
 
 class MainActivity:AppCompatActivity(){
     private lateinit var b:ActivityMainBinding
+    private lateinit var authUi:DriverAuthUiController
     private val vm:DriverSessionViewModel by viewModels()
-    private var signup=false
     private var pendingKey=""
     private var pendingTruck:String?=null
     private var photo:ByteArray?=null
@@ -50,6 +49,12 @@ class MainActivity:AppCompatActivity(){
         super.onCreate(savedInstanceState)
         if(savedInstanceState==null)DriverLocaleManager.applySaved(this)
         b=ActivityMainBinding.inflate(layoutInflater);setContentView(b.root)
+        authUi=DriverAuthUiController(
+            activity=this,
+            host=b.authPanel,
+            onSignIn={email,pin->vm.signIn(email,pin)},
+            onSignUp={name,phone,email,pin,confirmPin->vm.signUp(name,phone,email,pin,confirmPin)},
+        )
         ViewCompat.setOnApplyWindowInsetsListener(b.bottomNavigation){view,insets->
             val bottom=insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
             view.setPadding(view.paddingLeft,view.paddingTop,view.paddingRight,bottom.coerceAtLeast(dp(6)));insets
@@ -69,8 +74,6 @@ class MainActivity:AppCompatActivity(){
 
     private fun configureListeners(){
         b.languageAction.setOnClickListener{showLanguageDialog()}
-        b.authMode.setOnClickListener{setSignupMode(!signup)}
-        b.authSubmit.setOnClickListener{if(signup)vm.signUp(textOf(b.fullName),textOf(b.phone),textOf(b.email),textOf(b.pin),textOf(b.confirmPin)) else vm.signIn(textOf(b.email),textOf(b.pin))}
         b.signOut.setOnClickListener{vm.signOut()};b.refresh.setOnClickListener{vm.refresh()}
         b.documentsAction.setOnClickListener{vm.page(DriverPage.ONBOARDING)};b.notificationsAction.setOnClickListener{vm.page(DriverPage.NOTIFICATIONS)};b.profileDocuments.setOnClickListener{vm.page(DriverPage.ONBOARDING)}
         b.bottomNavigation.setOnItemSelectedListener{item->vm.page(when(item.itemId){R.id.nav_jobs->DriverPage.JOBS;R.id.nav_trip->DriverPage.TRIP;R.id.nav_wallet->DriverPage.WALLET;R.id.nav_profile->DriverPage.PROFILE;else->DriverPage.HOME});true}
@@ -95,16 +98,13 @@ class MainActivity:AppCompatActivity(){
     }
     private fun updateLanguageButton(){b.languageAction.text=DriverLocaleManager.compactLabel(DriverLocaleManager.saved(this))}
 
-    private fun setSignupMode(enabled:Boolean){
-        signup=enabled;b.signupFields.visibility=visible(enabled);b.confirmPinLayout.visibility=visible(enabled);b.pin.filters=if(enabled)arrayOf(InputFilter.LengthFilter(6)) else emptyArray()
-        b.authSubmit.setText(if(enabled)R.string.create_driver_account else R.string.sign_in);b.authMode.setText(if(enabled)R.string.already_registered else R.string.create_driver_account)
-    }
-
     private fun render(state:DriverUiState){
-        b.progress.visibility=visible(state.loading||state.busy)
+        val busy=state.loading||state.busy
+        b.progress.visibility=visible(busy);authUi.setBusy(busy)
         b.status.text=state.errorCode?.let(::errorText)?:messageText(state.messageKey);b.statusCard.visibility=visible(b.status.text.isNotBlank())
         b.authPanel.visibility=visible(state.access==DriverAccess.SIGNED_OUT||state.access==DriverAccess.FORBIDDEN)
         val shell=state.access in setOf(DriverAccess.APPROVED,DriverAccess.ONBOARDING,DriverAccess.REJECTED)
+        b.languageAction.visibility=visible(shell)
         b.driverShell.visibility=visible(shell);b.documentsAction.visibility=visible(shell);b.notificationsAction.visibility=visible(shell);b.bottomNavigation.visibility=visible(state.access==DriverAccess.APPROVED)
         val page=if(state.access==DriverAccess.APPROVED)state.page else DriverPage.ONBOARDING;showPage(page)
         b.accessState.text=getString(R.string.verification_format,localStatus(state.profile?.driverStatus))
@@ -135,7 +135,7 @@ class MainActivity:AppCompatActivity(){
         if(state.activeTrip!=null){b.jobsList.addView(infoCard(getString(R.string.finish_before_next,state.activeTrip.trackingId.orDash())));return}
         if(state.jobs.isEmpty()){b.jobsList.addView(infoCard(getString(R.string.no_jobs)));return}
         state.jobs.forEach{job->
-            val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10))}
+            val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(14))}
             box.addView(text(getString(R.string.job_card_format,job.trackingId.orDash(),job.pickup.orDash(),job.dropoff.orDash(),job.vehicleType.orDash(),job.distanceKm?.toString()?:"—",money(job.priceEtb)),15f))
             box.addView(button(getString(R.string.choose_truck_accept)){chooseTruck(job)});b.jobsList.addView(card(box))
         }
@@ -199,9 +199,9 @@ class MainActivity:AppCompatActivity(){
     private fun paymentLabel(value:String)=when(value){"cash_received"->getString(R.string.cash_received);"bank_telebirr"->getString(R.string.bank_telebirr);else->getString(R.string.payment_not_received)}
     private fun documentLabel(key:String)=getString(when(key){"driver_photo"->R.string.driver_photo;"license_front"->R.string.license_front;"license_back"->R.string.license_back;"national_id_front"->R.string.national_id_front;"national_id_back"->R.string.national_id_back;"vehicle_registration"->R.string.vehicle_registration;"truck_front"->R.string.truck_front;"insurance"->R.string.insurance;"transport_permit"->R.string.transport_permit;"truck_back"->R.string.truck_back;"truck_side"->R.string.truck_side;else->R.string.truck_loading_area})
     private fun infoCard(value:String)=card(text(value,14f))
-    private fun card(child:View)=MaterialCardView(this).apply{setCardBackgroundColor(ContextCompat.getColor(context,R.color.hallo_card));radius=dp(14).toFloat();strokeWidth=dp(1);strokeColor=ContextCompat.getColor(context,R.color.hallo_border);val lp=LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT);lp.setMargins(0,dp(6),0,dp(6));layoutParams=lp;addView(child)}
-    private fun text(value:String,size:Float)=TextView(this).apply{text=value;textSize=size;setTextColor(ContextCompat.getColor(context,R.color.hallo_text));setPadding(dp(12))}
-    private fun button(value:String,action:()->Unit)=MaterialButton(this).apply{text=value;isAllCaps=false;minHeight=dp(48);setOnClickListener{action()}}
+    private fun card(child:View)=MaterialCardView(this).apply{setCardBackgroundColor(ContextCompat.getColor(context,R.color.hallo_card));radius=dp(16).toFloat();strokeWidth=dp(1);strokeColor=ContextCompat.getColor(context,R.color.hallo_border);val lp=LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT);lp.setMargins(0,dp(6),0,dp(6));layoutParams=lp;addView(child)}
+    private fun text(value:String,size:Float)=TextView(this).apply{text=value;textSize=size;setTextColor(ContextCompat.getColor(context,R.color.hallo_text));setPadding(dp(14))}
+    private fun button(value:String,action:()->Unit)=MaterialButton(this).apply{text=value;isAllCaps=false;minHeight=dp(52);cornerRadius=dp(16);setOnClickListener{action()}}
     private fun textOf(view:TextView)=view.text?.toString().orEmpty();private fun visible(show:Boolean)=if(show)View.VISIBLE else View.GONE;private fun dp(value:Int)=(value*resources.displayMetrics.density).toInt();private fun money(value:Double?)=if(value==null)"—" else "ETB ${NumberFormat.getIntegerInstance().format(value)}";private fun String?.orDash()=if(this.isNullOrBlank())"—" else this
 
     companion object{
