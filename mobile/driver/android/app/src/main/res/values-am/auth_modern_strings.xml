@@ -1,0 +1,9 @@
+<resources>
+    <string name="driver_auth_signin_title">እንኳን ደህና መጡ፣ አሽከርካሪ</string>
+    <string name="driver_auth_signup_title">የአሽከርካሪ መለያዎን ይፍጠሩ</string>
+    <string name="driver_auth_signin_subtitle">ስራዎችን፣ ጉዞዎችን፣ ገቢዎችን እና የማረጋገጫ ሰነዶችን ለማስተዳደር ይግቡ።</string>
+    <string name="driver_auth_signup_subtitle">በተረጋገጠ የመገናኛ መረጃዎ እና በደህንነቱ የተጠበቀ 6 አሃዝ PIN ወደ HALLO Driver ይቀላቀሉ።</string>
+    <string name="driver_auth_new_prompt">ለHALLO Driver አዲስ ነዎት?</string>
+    <string name="driver_auth_existing_prompt">የDriver መለያ አለዎት?</string>
+    <string name="driver_auth_hero_description">HALLO Logistics የአሽከርካሪ መኪና</string>
+</resources>
