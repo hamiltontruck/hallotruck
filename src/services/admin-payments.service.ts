@@ -6,9 +6,22 @@ export const ADMIN_PAYMENT_EVENTS = ["all", "initiated", "held_escrow", "release
 
 export type AdminPaymentEvent = (typeof ADMIN_PAYMENT_EVENTS)[number];
 
+export type AdminPaymentOrderSummary = {
+  id: string;
+  tracking_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  price_etb: number | null;
+  status: string | null;
+  payment_status: string | null;
+  driver_id: string | null;
+};
+
 export type AdminPaymentLedgerItem = {
   payment: Payment;
-  order: AdminOrder | null;
+  order: AdminPaymentOrderSummary | null;
   driver: Driver | null;
 };
 
@@ -120,25 +133,6 @@ export async function getAdminPaymentLedgerPage(input: {
   if (page !== requestedPage) rpcRow = await loadLedgerRpc(page, pageSize, event, search);
 
   const rows = rpcRow?.rows ?? [];
-  const orderIds = [...new Set(rows.map((row) => row.order_id).filter(Boolean))];
-  const ordersResult = orderIds.length
-    ? await supabase.from("orders").select(ORDER_COLUMNS).in("id", orderIds)
-    : { data: [], error: null };
-  if (ordersResult.error) throw new Error(ordersResult.error.message);
-
-  const rowByOrderId = new Map(rows.map((row) => [row.order_id, row]));
-  const orders = new Map<string, AdminOrder>();
-  for (const raw of (ordersResult.data ?? []) as Omit<AdminOrder, "driver_name" | "plate_number" | "assignment_label">[]) {
-    const ledgerRow = rowByOrderId.get(raw.id);
-    const driverName = ledgerRow?.driver_name?.trim() || ledgerRow?.driver_phone?.trim() || null;
-    orders.set(raw.id, {
-      ...raw,
-      driver_name: driverName,
-      plate_number: null,
-      assignment_label: driverName ?? (raw.driver_id ? "Assigned driver" : "Unassigned"),
-    });
-  }
-
   const items = rows.map((row): AdminPaymentLedgerItem => ({
     payment: {
       id: row.id,
@@ -151,7 +145,18 @@ export async function getAdminPaymentLedgerPage(input: {
       raw_payload: row.raw_payload,
       created_at: row.created_at,
     },
-    order: orders.get(row.order_id) ?? null,
+    order: row.tracking_id ? {
+      id: row.order_id,
+      tracking_id: row.tracking_id,
+      customer_name: row.customer_name,
+      customer_phone: row.customer_phone,
+      pickup_address: row.pickup_address,
+      dropoff_address: row.dropoff_address,
+      price_etb: row.price_etb == null ? null : asNumber(row.price_etb),
+      status: row.order_status,
+      payment_status: row.payment_status,
+      driver_id: row.driver_id,
+    } : null,
     driver: row.driver_id ? {
       id: row.driver_id,
       full_name: row.driver_name,
@@ -185,6 +190,33 @@ export async function getAdminPaymentLedgerPage(input: {
       paymentCount: asNumber(summaryRow?.payment_count),
       deliveryProofCount: asNumber(summaryRow?.delivery_proof_count),
     },
+  };
+}
+
+export async function getAdminPaymentOrder(orderId: string): Promise<AdminOrder | null> {
+  const { data, error } = await supabase.from("orders").select(ORDER_COLUMNS).eq("id", orderId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  const raw = data as Omit<AdminOrder, "driver_name" | "plate_number" | "assignment_label">;
+  const [driverResult, truckResult] = await Promise.all([
+    raw.driver_id
+      ? supabase.from("profiles").select("full_name,phone").eq("id", raw.driver_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    raw.truck_id
+      ? supabase.from("trucks").select("plate_number").eq("id", raw.truck_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  const relatedError = driverResult.error || truckResult.error;
+  if (relatedError) throw new Error(relatedError.message);
+
+  const driverName = driverResult.data?.full_name?.trim() || driverResult.data?.phone?.trim() || null;
+  const plateNumber = truckResult.data?.plate_number?.trim() || null;
+  return {
+    ...raw,
+    driver_name: driverName,
+    plate_number: plateNumber,
+    assignment_label: driverName ?? plateNumber ?? (raw.driver_id || raw.truck_id ? "Assigned" : "Unassigned"),
   };
 }
 
