@@ -13,7 +13,7 @@
 .admin-driver-review dd { text-align: right; font-weight: 600; overflow-wrap: anywhere; }
 .admin-driver-review .driver-vehicle-card { margin: 0 20px 16px; border: 1px solid #e4e8ef; border-radius: 18px; background: white; }
 .admin-driver-review .driver-document-group { min-width: 0; grid-column: 1 / -1; padding: 16px; border: 1px solid #e4e8ef; border-radius: 20px; background: white; box-shadow: 0 5px 20px #14253a06; }
-.admin-driver-review .driver-document-sides { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); gap: 12px; }
+.admin-driver-review .driver-document-sides { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
 .admin-driver-review .driver-document-sides > article { min-width: 0; background: #f8f9fc; box-shadow: none; }
 .admin-driver-review button { min-height: 44px; border-radius: 12px; white-space: normal; overflow-wrap: anywhere; }
 .admin-driver-review button:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
@@ -23,3 +23,16 @@
  .admin-driver-review dd { text-align: left; }
  .admin-driver-review .driver-review-header > div:last-child { min-width: 0; }
 }
+
+.admin-driver-review .driver-document-sides > :only-child { grid-column: 1 / -1; }
+.admin-driver-review .driver-document-tile { min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; display: flex; flex-direction: column; gap: 8px; }
+.admin-driver-review .driver-document-tile-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 12px; }
+.admin-driver-review .driver-document-preview { height: 130px; background: #e9edf3; border-radius: 14px; overflow: hidden; display: grid; place-items: center; color: #596575; font-size: 12px; text-align: center; }
+.admin-driver-review .driver-document-preview button { width: 100%; height: 100%; padding: 8px; }
+.admin-driver-review .driver-document-preview img { width: 100%; height: 100%; object-fit: contain; }
+.admin-driver-review .driver-document-expiry { border-radius: 8px; padding: 6px; font-size: 11px; overflow-wrap: anywhere; }
+.admin-driver-review .driver-document-details { font-size: 11px; overflow-wrap: anywhere; color: #657180; }
+.admin-driver-review .driver-document-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.admin-driver-review .driver-document-open { border: 1px solid #dce3ec; color: #163968; font-size: 12px; margin-top: auto; }
+.admin-driver-review .driver-document-review-actions { display: grid; gap: 6px; font-size: 11px; }
+@media(min-width: 640px) { .admin-driver-review .driver-document-preview { height: 180px; } }
