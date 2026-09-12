@@ -25,6 +25,8 @@ export interface AdminOrderControlQueuePageResult {
   orders: AdminOrder[];
 }
 
+type QueueRpcResult = { data: unknown; error: { message: string } | null };
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -66,26 +68,32 @@ function normalizeOrder(value: unknown): AdminOrder {
   };
 }
 
+async function getQueueRpcResult(options: AdminOrderControlQueuePageOptions, page: number, pageSize: AdminOrderPageSize): Promise<QueueRpcResult> {
+  if (options.queue === "unreported-payment") {
+    const result = await supabase.rpc("admin_unreported_delivery_payment_page", {
+      p_page: page,
+      p_page_size: pageSize,
+      p_search: options.search?.trim() || null,
+      p_today: options.today === true,
+    });
+    return { data: result.data, error: result.error };
+  }
+
+  const result = await supabase.rpc("admin_order_control_queue_page", {
+    p_queue: options.queue,
+    p_page: page,
+    p_page_size: pageSize,
+    p_status: options.status?.trim() || "all",
+    p_search: options.search?.trim() || null,
+    p_today: options.today === true,
+  });
+  return { data: result.data, error: result.error };
+}
+
 export async function getAdminOrderControlQueuePage(options: AdminOrderControlQueuePageOptions): Promise<AdminOrderControlQueuePageResult> {
   const pageSize = normalizePageSize(options.pageSize);
   const page = Math.max(1, Math.trunc(numberOf(options.page) || 1));
-  const isUnreportedPayment = options.queue === "unreported-payment";
-  const request = isUnreportedPayment
-    ? supabase.rpc("admin_unreported_delivery_payment_page", {
-        p_page: page,
-        p_page_size: pageSize,
-        p_search: options.search?.trim() || null,
-        p_today: options.today === true,
-      })
-    : supabase.rpc("admin_order_control_queue_page", {
-        p_queue: options.queue,
-        p_page: page,
-        p_page_size: pageSize,
-        p_status: options.status?.trim() || "all",
-        p_search: options.search?.trim() || null,
-        p_today: options.today === true,
-      });
-  const { data, error } = await request;
+  const { data, error } = await getQueueRpcResult(options, page, pageSize);
   if (error) throw new Error(error.message);
 
   const report = asRecord(data);
