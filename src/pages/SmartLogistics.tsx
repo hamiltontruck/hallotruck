@@ -1,15 +1,17 @@
 import { FormEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { AdminLiveTripsPanel } from "../components/admin/AdminLiveTripsPanel";
 import { AdminCreateOrderModal } from "../components/admin/AdminCreateOrderModal";
 import { AdminMobileBottomNav } from "../components/admin/AdminMobileBottomNav";
 import { AdminPaymentLedgerPanel } from "../components/admin/AdminPaymentLedgerPanel";
+import { AdminReportsPanel } from "../components/admin/AdminReportsPanel";
 import { AdminManageOrderActionButton, AdminManageOrderActionStatus, manageOrderBusyGuidanceId, manageOrderBusyMessage } from "../components/admin/AdminManageOrderAction";
 import type { ManageOrderAction } from "../components/admin/AdminManageOrderAction";
 import { PaymentCorrectionForm } from "../components/admin/PaymentCorrectionForm";
 import { matchesAdminOrderControlQueue, sameLocalDay } from "../domain/admin-control-center";
 import { ADMIN_ORDER_PAGE_SIZES, ADMIN_ORDER_STATUSES, getAdminOrdersPage } from "../services/admin-orders.service";
+import { getAdminOrderFinancialDetails } from "../services/admin-payments.service";
 import { AdminOrder, Customer, DashboardMetrics, DeliveryProof, Driver, Payment, Truck, adminCancelOrder, assignOrder, createCustomer, createOrder, createTruck, getDashboardData, openDeliveryProof, openPaymentReceipt, printInvoice, submitDeliveryProof, subscribeToAdminData, transitionOrder } from "../services/admin.service";
 
 type IconName = "grid" | "box" | "route" | "truck" | "users" | "wallet" | "chart" | "search" | "arrow" | "pin" | "clock" | "menu" | "close";
@@ -72,6 +74,7 @@ export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFix
   const [searchQuery, setSearchQuery] = useState(requestedQuery);
   const [loading, setLoading] = useState(!fixture);
   const [error, setError] = useState("");
+  const [moduleRefreshKey, setModuleRefreshKey] = useState(0);
 
   const select = (label: string) => {
     setSection(label);
@@ -122,12 +125,42 @@ export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFix
     finally { setLoading(false); }
   }, [fixture]);
 
+  const refreshActiveModule = useCallback(async () => {
+    if (section === "Finance") {
+      setModuleRefreshKey((value) => value + 1);
+      return;
+    }
+    if (section === "Orders") {
+      await load();
+      setModuleRefreshKey((value) => value + 1);
+      return;
+    }
+    await load();
+  }, [load, section]);
+
   useEffect(() => {
-    void load();
-    if (fixture) return;
-    const channel = subscribeToAdminData(load);
+    if (fixture) {
+      void load();
+      return;
+    }
+
+    if (section === "Finance" || section === "Reports") {
+      setLoading(false);
+      setError("");
+    } else {
+      void load();
+    }
+
+    const bumpModule = () => setModuleRefreshKey((value) => value + 1);
+    const channel = subscribeToAdminData({
+      orders: section === "Orders" || section === "Finance" ? bumpModule : load,
+      payments: section === "Finance" ? bumpModule : section === "Overview" ? load : undefined,
+      customers: section === "Customers" || section === "Overview" ? load : undefined,
+      trucks: ["Overview", "Orders", "Live trips", "Fleet & drivers"].includes(section) ? load : undefined,
+      deliveryProofs: section === "Finance" ? bumpModule : undefined,
+    });
     return () => { void supabase.removeChannel(channel); };
-  }, [fixture, load]);
+  }, [fixture, load, section]);
 
   useEffect(() => {
     setSection(requestedSection && nav.some(([label]) => label === requestedSection) ? requestedSection : "Overview");
@@ -183,11 +216,11 @@ export function SmartLogistics({ fixture = null }: { fixture?: SmartLogisticsFix
         </header>
         <div className="p-3 min-[360px]:p-5 sm:p-8 max-w-[1500px] mx-auto">
           {error && <p role="alert" className="bg-route/10 border border-route/30 text-route text-sm p-3 mb-5 break-words">{error}</p>}
-          {loading ? <div role="status" aria-live="polite" className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} deliveryProofs={deliveryProofs} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} initialOrderQueue={searchParams.get("queue") ?? "all"} initialDateFilter={searchParams.get("date") ?? "all"} initialFleetStatus={searchParams.get("fleet_status") ?? "all"} initialDriverStatus={searchParams.get("driver_status") ?? "all"} initialPaymentStatus={searchParams.get("payment_status") ?? "all"} initialOrderPage={searchParams.get("page") ?? "1"} initialOrderPageSize={searchParams.get("page_size") ?? "100"} fixtureMode={Boolean(fixture)} onSearch={updateSearch} onFilter={updateFilter} onClearFilters={clearModuleFilters} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={load} />}
+          {loading ? <div role="status" aria-live="polite" className="py-20 text-center text-steel font-mono text-sm">Loading live operations…</div> : section === "Overview" ? <Overview onOpen={select} metrics={metrics} orders={orders} trucks={trucks} /> : <ModulePage section={section} orders={orders} customers={customers} trucks={trucks} payments={payments} drivers={drivers} deliveryProofs={deliveryProofs} searchQuery={searchQuery} initialOrderStatus={searchParams.get("status") ?? "all"} initialOrderQueue={searchParams.get("queue") ?? "all"} initialDateFilter={searchParams.get("date") ?? "all"} initialFleetStatus={searchParams.get("fleet_status") ?? "all"} initialDriverStatus={searchParams.get("driver_status") ?? "all"} initialPaymentStatus={searchParams.get("payment_status") ?? "all"} initialOrderPage={searchParams.get("page") ?? "1"} initialOrderPageSize={searchParams.get("page_size") ?? "100"} fixtureMode={Boolean(fixture)} refreshKey={moduleRefreshKey} onSearch={updateSearch} onFilter={updateFilter} onClearFilters={clearModuleFilters} onManage={setManagedOrder} onAdd={(kind) => setModal(kind)} onReload={refreshActiveModule} />}
         </div>
       </main>
-      {modal === "order" ? <AdminCreateOrderModal onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} /> : modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await load(); }} />}
-      {managedOrder && <ManageOrderModal order={managedOrder} trucks={trucks} drivers={drivers} payments={payments} proof={deliveryProofs.find(p=>p.order_id===managedOrder.id)} onClose={() => setManagedOrder(null)} onSaved={async () => { await load(); setManagedOrder(null); }} />}
+      {modal === "order" ? <AdminCreateOrderModal onClose={() => setModal(null)} onSaved={async () => { setModal(null); await refreshActiveModule(); }} /> : modal && <CreateModal kind={modal} onClose={() => setModal(null)} onSaved={async () => { setModal(null); await refreshActiveModule(); }} />}
+      {managedOrder && <LazyManageOrderModal order={managedOrder} trucks={trucks} drivers={drivers} initialDetails={fixture ? { payments: payments.filter((payment) => payment.order_id === managedOrder.id), proof: deliveryProofs.find((proof) => proof.order_id === managedOrder.id) ?? null } : undefined} onClose={() => setManagedOrder(null)} onSaved={async () => { await refreshActiveModule(); setManagedOrder(null); }} />}
       <AdminMobileBottomNav />
     </div>
   );
@@ -246,7 +279,7 @@ function includesQuery(values: Array<string | number | null | undefined>, query:
   return values.some((value) => String(value ?? "").toLowerCase().includes(query));
 }
 
-function ModulePage({ section, orders, customers, trucks, payments, drivers, deliveryProofs, searchQuery, initialOrderStatus, initialOrderQueue, initialDateFilter, initialFleetStatus, initialDriverStatus, initialPaymentStatus, initialOrderPage, initialOrderPageSize, fixtureMode, onSearch, onFilter, onClearFilters, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; deliveryProofs:DeliveryProof[]; searchQuery:string; initialOrderStatus:string; initialOrderQueue:string; initialDateFilter:string; initialFleetStatus:string; initialDriverStatus:string; initialPaymentStatus:string; initialOrderPage:string; initialOrderPageSize:string; fixtureMode:boolean; onSearch:(value:string)=>void; onFilter:(name:OperationsFilterName,value:string)=>void; onClearFilters:()=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
+function ModulePage({ section, orders, customers, trucks, payments, drivers, deliveryProofs, searchQuery, initialOrderStatus, initialOrderQueue, initialDateFilter, initialFleetStatus, initialDriverStatus, initialPaymentStatus, initialOrderPage, initialOrderPageSize, fixtureMode, refreshKey, onSearch, onFilter, onClearFilters, onAdd, onManage, onReload }: { section:string; orders:AdminOrder[]; customers:Customer[]; trucks:Truck[]; payments:Payment[]; drivers:Driver[]; deliveryProofs:DeliveryProof[]; searchQuery:string; initialOrderStatus:string; initialOrderQueue:string; initialDateFilter:string; initialFleetStatus:string; initialDriverStatus:string; initialPaymentStatus:string; initialOrderPage:string; initialOrderPageSize:string; fixtureMode:boolean; refreshKey:number; onSearch:(value:string)=>void; onFilter:(name:OperationsFilterName,value:string)=>void; onClearFilters:()=>void; onAdd:(kind:"order"|"customer"|"truck")=>void; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
   const allowedOrderStatuses = [...ADMIN_ORDER_STATUSES];
   const allowedFleetStatuses = ["all", "available", "assigned", "on_trip", "maintenance", "suspended", "inactive"];
   const allowedDriverStatuses = ["all", "approved", "pending", "rejected", "suspended", "active", "available"];
@@ -291,15 +324,42 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
     if(!serverOrdersEnabled) return;
     let cancelled=false;
     setPagedLoading(true); setPagedError("");
-    void getAdminOrdersPage({page:requestedPage,pageSize:requestedPageSize,status:orderStatus,search:searchQuery,today:initialDateFilter==="today"},drivers,trucks)
+    void getAdminOrdersPage({page:requestedPage,pageSize:requestedPageSize,status:orderStatus,search:searchQuery,today:initialDateFilter==="today"})
       .then((result)=>{if(cancelled)return;setPagedOrders(result.orders);setPagedTotal(result.total);setPagedTotalPages(result.totalPages);setPagedStatusCounts(result.statusCounts);if(result.page!==requestedPage)onFilter("page",String(result.page));})
       .catch((err)=>{if(cancelled)return;setPagedError(err instanceof Error?err.message:"Could not load orders.");})
       .finally(()=>{if(!cancelled)setPagedLoading(false);});
     return()=>{cancelled=true;};
-  },[serverOrdersEnabled,requestedPage,requestedPageSize,orderStatus,searchQuery,initialDateFilter,drivers,trucks,onFilter]);
+  },[serverOrdersEnabled,requestedPage,requestedPageSize,orderStatus,searchQuery,initialDateFilter,onFilter,refreshKey]);
+
+  if (section === "Orders" && !fixtureMode && initialOrderQueue !== "all") {
+    const queueParams = new URLSearchParams({ queue: initialOrderQueue });
+    if (orderStatus !== "all") queueParams.set("status", orderStatus);
+    if (searchQuery.trim()) queueParams.set("q", searchQuery.trim());
+    if (initialDateFilter === "today") queueParams.set("date", "today");
+    if (requestedPage > 1) queueParams.set("page", String(requestedPage));
+    if (requestedPageSize !== 100) queueParams.set("page_size", String(requestedPageSize));
+    return <Navigate to={`/admin/order-queue?${queueParams.toString()}`} replace />;
+  }
 
   const displayedOrders=serverOrdersEnabled?pagedOrders:filteredOrders;
   const orderCount=(status:string)=>serverOrdersEnabled?(pagedStatusCounts[status]??0):(status==="all"?orders.length:orders.filter((order)=>order.status===status).length);
+  const reportFallback = {
+    totalOrders: orders.length,
+    deliveredOrders: deliveredCount,
+    activeShipments: activeCount,
+    waitingAssignment: orders.filter((order)=>order.status==="placed").length,
+    totalTrucks: trucks.length,
+    availableTrucks: trucks.filter((truck)=>truck.status==="available").length,
+    assignedTrucks: busyFleet,
+    totalDrivers: drivers.length,
+    approvedDrivers,
+    totalCustomers: customers.length,
+    releasedGrossEtb: releasedGross,
+    refundedEtb: refunded,
+    heldEscrowEtb: heldTotal,
+    initiatedEtb: initiatedTotal,
+    paymentsNeedingVerification: payments.filter((payment)=>payment.event==="initiated").length,
+  };
 
   return <div>
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5"><div><span className="font-mono text-[10px] tracking-[.2em] text-amber-dim">HALLO SMART LOGISTICS</span><h1 className="font-display font-bold text-3xl mt-2">{section}</h1><p className="text-sm text-steel mt-2">{descriptions[section]}</p></div>{["Orders","Customers","Fleet & drivers"].includes(section) && <button onClick={() => onAdd(addKind)} className="bg-asphalt text-white px-5 py-3 text-sm font-semibold self-start">+ Add new</button>}</div>
@@ -326,13 +386,9 @@ function ModulePage({ section, orders, customers, trucks, payments, drivers, del
       <FilterButtons label="Payment status" values={allowedPaymentStatuses} selected={paymentStatus} count={(status)=>status==="all"?payments.length:payments.filter((payment)=>payment.event===status).length} onChange={(status)=>onFilter("payment_status",status)} />
       {paymentStatus!=="all"&&<button type="button" onClick={onClearFilters} className="mb-4 text-xs font-semibold text-route underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-route">Clear Finance filters</button>}
       <DataPanel title={searchQuery||paymentStatus!=="all"?"Matching payments":"Payment ledger"} empty="No matching payments.">{filteredPayments.map(p=><FinancePaymentRow key={p.id} payment={p} order={orders.find(o=>o.id===p.order_id)} driver={drivers.find(d=>d.id===orders.find(o=>o.id===p.order_id)?.driver_id)} allPayments={payments} onManage={onManage} onReload={onReload} />)}</DataPanel>
-    </> : <AdminPaymentLedgerPanel searchQuery={searchQuery} paymentStatus={paymentStatus} page={requestedPage} pageSize={requestedPageSize} onPage={(page)=>onFilter("page",String(page))} onPageSize={(size)=>onFilter("page_size",String(size))} onStatus={(status)=>onFilter("payment_status",status)} onClearFilters={onClearFilters} onManage={onManage} onParentReload={onReload} />)}
+    </> : <AdminPaymentLedgerPanel key={`finance-${refreshKey}`} searchQuery={searchQuery} paymentStatus={paymentStatus} page={requestedPage} pageSize={requestedPageSize} onPage={(page)=>onFilter("page",String(page))} onPageSize={(size)=>onFilter("page_size",String(size))} onStatus={(status)=>onFilter("payment_status",status)} onClearFilters={onClearFilters} onManage={onManage} onParentReload={async()=>{}} />)}
     {section === "Live trips" && <AdminLiveTripsPanel orders={orders} trucks={trucks} drivers={drivers} onManage={onManage} />}
-    {section === "Reports" && <>
-      <Link to="/admin/intelligence" className="mb-5 flex min-w-0 flex-col gap-4 overflow-hidden bg-asphalt p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="min-w-0"><p className="font-mono text-[10px] tracking-[.18em] text-amber">ADMIN INTELLIGENCE</p><p className="mt-2 break-words font-display text-2xl font-bold">Open next-generation Reports & Global Search</p><p className="mt-2 max-w-2xl break-words text-xs leading-5 text-white/55">Search every operational record, change report periods, inspect revenue trends, top routes and actionable smart signals.</p></div><span className="shrink-0 font-semibold text-amber">Open intelligence →</span></Link>
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4"><ReportCard label="Delivery completion" value={`${completionRate}%`} note={`${deliveredCount} delivered of ${orders.length}`}/><ReportCard label="Active shipments" value={activeCount} note="Accepted + in transit"/><ReportCard label="Fleet utilization" value={`${fleetUtilization}%`} note={`${busyFleet} assigned of ${trucks.length}`}/><ReportCard label="Approved drivers" value={approvedDrivers} note={`${drivers.length} driver profiles`}/><ReportCard label="Released revenue" value={`ETB ${compactMoney(releasedNet)}`} note="Net of recorded credit refunds"/><ReportCard label="Held escrow" value={`ETB ${compactMoney(heldTotal)}`} note="Verified, not released"/><ReportCard label="Pending verification" value={`ETB ${compactMoney(initiatedTotal)}`} note="Initiated customer payments"/><ReportCard label="Customers" value={customers.length} note="Live customer records"/></div>
-      <div className="mt-5 border border-asphalt/10 bg-white p-5"><p className="font-display text-lg font-semibold">Operational health</p><div className="mt-4 grid gap-3 sm:grid-cols-3"><HealthRow label="Orders waiting assignment" value={orders.filter((order)=>order.status==="placed").length}/><HealthRow label="Available trucks" value={trucks.filter((truck)=>truck.status==="available").length}/><HealthRow label="Payments needing verification" value={payments.filter((payment)=>payment.event==="initiated").length}/></div></div>
-    </>}
+    {section === "Reports" && <AdminReportsPanel fixtureMode={fixtureMode} fallback={reportFallback} />}
   </div>;
 }
 
@@ -341,7 +397,6 @@ function FilterButtons({label,values,selected,count,onChange}:{label:string;valu
 function DataPanel({ title, empty, children }: { title:string; empty:string; children:React.ReactNode }) { const count = Array.isArray(children) ? children.length : 0; return <div className="min-w-0 overflow-hidden bg-white border border-asphalt/10"><div className="p-4 min-[360px]:p-5 sm:px-6 border-b border-asphalt/10 flex flex-wrap items-center justify-between gap-2"><h2 className="min-w-0 break-words font-display font-semibold text-lg">{title}</h2><span className="shrink-0 font-mono text-xs text-steel">{count} {count===1?"record":"records"}</span></div>{count ? children : <Empty label={empty}/>}</div>; }
 function SimpleRow({ title, subtitle, badge }: { title:string; subtitle:string; badge:string }) { return <div className="min-w-0 p-4 sm:px-6 border-b border-asphalt/10 last:border-0 flex flex-col items-start justify-between gap-3 min-[430px]:flex-row min-[430px]:items-center"><div className="min-w-0"><p className="break-words font-semibold text-sm">{title}</p><p className="mt-1 break-words text-xs leading-5 text-steel">{subtitle}</p></div><span className="shrink-0 text-[10px] font-semibold capitalize bg-amber/15 text-amber-dim px-2.5 py-1.5">{badge.replace(/_/g," ")}</span></div>; }
 function FinanceSummaryCard({label,value,money=true}:{label:string;value:number;money?:boolean}){return <div className="border border-asphalt/10 bg-white p-4 sm:p-5"><p className="font-mono text-[10px] uppercase tracking-wide text-steel">{label}</p><p className="mt-3 font-display text-xl font-bold text-asphalt">{money?`ETB ${compactMoney(value)}`:value.toLocaleString()}</p></div>}
-function HealthRow({label,value}:{label:string;value:number}){return <div className="bg-[#f5f3ed] p-4"><p className="text-xs text-steel">{label}</p><p className="mt-2 font-display text-2xl font-bold">{value}</p></div>}
 
 function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onReload }: { payment:Payment; order?:AdminOrder; driver?:Driver; allPayments:Payment[]; onManage:(order:AdminOrder)=>void; onReload:()=>Promise<void> }) {
   const [saving,setSaving]=useState(false);
@@ -398,9 +453,32 @@ function FinancePaymentRow({ payment, order, driver, allPayments, onManage, onRe
   </div>;
 }
 
-function ReportCard({ label, value, note="Live from Supabase" }: { label:string; value:string|number; note?:string }) { return <div className="bg-white border border-asphalt/10 p-5 sm:p-7"><p className="text-xs text-steel">{label}</p><p className="font-display font-bold text-2xl sm:text-3xl mt-4 break-words">{value}</p><p className="text-[11px] text-emerald-700 mt-4">{note}</p></div>; }
 function Empty({ label }: { label:string }) { return <p className="p-8 text-center text-sm text-steel">{label}</p>; }
 function compactMoney(value:number) { return value >= 1_000_000 ? `${(value/1_000_000).toFixed(1)}M` : value >= 1_000 ? `${(value/1_000).toFixed(1)}K` : value.toLocaleString(); }
+
+type ManagedOrderDetails = { payments: Payment[]; proof: DeliveryProof | null };
+
+function LazyManageOrderModal({ order, trucks, drivers, initialDetails, onClose, onSaved }: { order:AdminOrder; trucks:Truck[]; drivers:Driver[]; initialDetails?:ManagedOrderDetails; onClose:()=>void; onSaved:()=>void }) {
+  const [details,setDetails]=useState<ManagedOrderDetails|null>(initialDetails ?? null);
+  const [loading,setLoading]=useState(!initialDetails);
+  const [error,setError]=useState("");
+  const [attempt,setAttempt]=useState(0);
+
+  useEffect(()=>{
+    if(initialDetails){setDetails(initialDetails);setLoading(false);setError("");return;}
+    let cancelled=false;
+    setLoading(true);setError("");
+    void getAdminOrderFinancialDetails(order.id)
+      .then((result)=>{if(!cancelled)setDetails({payments:result.payments,proof:result.proof as DeliveryProof|null});})
+      .catch((err)=>{if(!cancelled)setError(err instanceof Error?err.message:"Could not load order payment and delivery details.");})
+      .finally(()=>{if(!cancelled)setLoading(false);});
+    return()=>{cancelled=true;};
+  },[order.id,initialDetails,attempt]);
+
+  if(loading)return <div className="fixed inset-0 z-50 grid place-items-center bg-asphalt/70 p-3"><div role="status" className="w-full max-w-2xl bg-white p-8 text-center text-sm text-steel">Loading this order's payment and delivery details…</div></div>;
+  if(error||!details)return <div className="fixed inset-0 z-50 grid place-items-center bg-asphalt/70 p-3"><div className="w-full max-w-2xl bg-white p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="font-mono text-xs text-amber-dim">{order.tracking_id}</p><h2 className="mt-1 font-display text-2xl font-bold">Manage order</h2></div><button type="button" aria-label="Close manage order" onClick={onClose}><Icon name="close"/></button></div><p role="alert" className="mt-5 bg-route/10 p-3 text-sm text-route">{error||"Order details are unavailable."}</p><button type="button" onClick={()=>setAttempt((value)=>value+1)} className="mt-4 min-h-11 bg-asphalt px-4 py-3 text-sm font-semibold text-white">Retry details</button></div></div>;
+  return <ManageOrderModal order={order} trucks={trucks} drivers={drivers} payments={details.payments} proof={details.proof ?? undefined} onClose={onClose} onSaved={onSaved}/>;
+}
 
 function ManageOrderModal({ order, trucks, drivers, payments, proof, onClose, onSaved }: { order:AdminOrder; trucks:Truck[]; drivers:Driver[]; payments:Payment[]; proof?:DeliveryProof; onClose:()=>void; onSaved:()=>void }) {
   const [activeAction,setActiveAction]=useState<ManageOrderAction|null>(null); const [error,setError]=useState("");
