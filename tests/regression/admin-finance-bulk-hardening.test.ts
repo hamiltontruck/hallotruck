@@ -5,10 +5,12 @@ import assert from "node:assert/strict";
 const service = fs.readFileSync("src/services/admin.service.ts", "utf8");
 const migration = fs.readFileSync("supabase/migrations/20260911022227_admin_finance_aggregation_hardening.sql", "utf8");
 
-test("Admin dashboard bounds normal payment and proof previews", () => {
-  assert.match(service, /ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT = 100/);
-  assert.match(service, /basePaymentsQuery\.limit\(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT\)/);
-  assert.match(service, /baseProofsQuery\.limit\(ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT\)/);
+test("Admin dashboard does not preload payment or delivery-proof rows", () => {
+  assert.doesNotMatch(service, /ADMIN_DASHBOARD_FINANCE_PREVIEW_LIMIT/);
+  assert.doesNotMatch(service, /from\("payments"\)/);
+  assert.doesNotMatch(service, /from\("delivery_proofs"\)/);
+  assert.match(service, /payments: \[\] as Payment\[\]/);
+  assert.match(service, /deliveryProofs: \[\] as DeliveryProof\[\]/);
 });
 
 test("Admin dashboard revenue uses database-side finance aggregation", () => {
@@ -25,7 +27,7 @@ test("Finance aggregate RPC is leadership-guarded and security invoker", () => {
   assert.match(migration, /grant execute on function public\.admin_finance_dashboard_summary\(\) to authenticated/i);
 });
 
-test("Finance preview ordering has supporting indexes", () => {
+test("Legacy finance-preview indexes remain available for indexed payment and proof ordering", () => {
   assert.match(migration, /payments_created_at_desc_idx/);
   assert.match(migration, /delivery_proofs_delivered_at_desc_idx/);
 });
