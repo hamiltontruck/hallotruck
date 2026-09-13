@@ -53,7 +53,8 @@
         <item name="android:textSize">10sp</item>
         <item name="cornerRadius">12dp</item>
         <item name="strokeColor">@color/hallo_line</item>
-        <item name="android:textColor">@color/hallo_navy</item>
+        <item name="backgroundTint">@color/hallo_language_toggle_background</item>
+        <item name="android:textColor">@color/hallo_language_toggle_text</item>
     </style>
 
     <style name="Widget.Hallo.NavButton" parent="Widget.Material3.Button.TextButton">
