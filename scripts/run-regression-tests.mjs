@@ -10,6 +10,7 @@ function run(command,args){const result=spawnSync(command,args,{cwd:root,env:tes
 await rm(outputDirectory,{recursive:true,force:true});await mkdir(outputDirectory,{recursive:true});
 try{
  const suites=[
+  ["tests/regression/compact-driver-documents.test.ts",path.join(outputDirectory,"compact-driver-documents.test.mjs")],
   ["tests/regression/business-rules.test.ts",path.join(outputDirectory,"business-rules.test.mjs")],
   ["tests/regression/partner-foundation.test.ts",path.join(outputDirectory,"partner-foundation.test.mjs")],
   ["tests/regression/partner-onboarding.test.ts",path.join(outputDirectory,"partner-onboarding.test.mjs")],
