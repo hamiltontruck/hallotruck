@@ -29,8 +29,10 @@ Screenshots are real component renders using synthetic test documents, not produ
 
 ## Release boundary
 
-Migration `20260913010906_compact_driver_verification.sql` is prepared and tested locally, but has NOT been applied to production. Production storage access, authenticated field saves and document review have NOT been retested against live data. Driver Android and its upload screens are outside this change. Existing Driver web upload options are unchanged; the shared required-progress count is eight.
+Migration `20260913143748_compact_driver_verification.sql` is prepared and tested locally, but has NOT been applied to production. Production storage access, authenticated field saves and document review have NOT been retested against live data. Driver Android and its upload screens are outside this change. Existing Driver web upload options are unchanged; the shared required-progress count is eight.
 
 Before deployment, review/apply the migration and verify it, then advance `supabase/production-migration-version.txt` in a reviewed change. Do not advance that marker without applying the migration. The existing deployment gate intentionally blocks publication while production is behind.
 
 Repository publication is authorized. This review branch does not merge or deploy automatically; production migration application and the deployment marker remain pending.
+
+PR follow-up: merged main through 0b624a7, preserved narrow-screen width guards, and synchronized React fixture interactions with flushSync to avoid virtual-time scheduling races. The unapplied migration was regenerated after the latest main migration; its SQL is unchanged.

@@ -46,6 +46,7 @@ const now = new Date().toISOString();
 const fixtureSource = `
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import { HashRouter } from "react-router-dom";
 import { AdminDriverCompliance } from ${JSON.stringify(path.join(root, "src/pages/AdminDriverCompliance.tsx"))};
 const fixture = {
@@ -58,7 +59,7 @@ const fixture = {
   historyAvailable: true
 };
 function App(){return React.createElement(HashRouter,null,React.createElement(AdminDriverCompliance,{fixture,resolveDocumentPreview:async()=>"data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120"><rect width="240" height="120" fill="#e8eef8"/><text x="20" y="65" fill="#123262">Test document preview</text></svg>')}));}
-createRoot(document.getElementById("root")).render(React.createElement(App));
+flushSync(()=>createRoot(document.getElementById("root")).render(React.createElement(App)));
 await new Promise((resolve)=>setTimeout(resolve,300));
 const rootNode=document.documentElement;
 const groups=[...document.querySelectorAll('.driver-document-grid')];
@@ -66,26 +67,26 @@ rootNode.dataset.groups=String(groups.every((grid)=>grid.querySelectorAll('.driv
 rootNode.dataset.compact=String([...document.querySelectorAll('.driver-document-group')].every((card)=>card.getBoundingClientRect().height<=180));
 rootNode.dataset.metadataHidden=String(groups.every((grid)=>!grid.textContent.includes('.jpg')&&!grid.textContent.includes('Open original')));
 const trigger=groups[1].querySelector('[aria-label="View Driving license · Front"]');
-trigger.focus();trigger.click();
+trigger.focus();flushSync(()=>trigger.click());
 await new Promise((resolve)=>setTimeout(resolve,100));
 const dialog=document.querySelector('dialog[open]');
 rootNode.dataset.details=String(!!dialog&&dialog.textContent.includes('replacement.jpg')&&dialog.textContent.includes('2027-12-31'));
 rootNode.dataset.modalOverflow=String(dialog.scrollWidth>dialog.clientWidth);
-const back=[...dialog.querySelectorAll('.driver-document-tabs button')].find((button)=>button.textContent==='Back');back.click();
+const back=[...dialog.querySelectorAll('.driver-document-tabs button')].find((button)=>button.textContent==='Back');flushSync(()=>back.click());
 await new Promise((resolve)=>setTimeout(resolve,100));
 rootNode.dataset.back=String(dialog.textContent.includes('license_back.jpg')&&!dialog.textContent.includes('License expiry'));
-dialog.querySelector('[aria-label="Close document details"]').click();
+flushSync(()=>dialog.querySelector('[aria-label="Close document details"]').click());
 await new Promise((resolve)=>setTimeout(resolve,100));
 rootNode.dataset.closed=String(!dialog.open&&document.activeElement===trigger);
 const idTrigger=groups[1].querySelector('[aria-label="View National ID · Front"]');
-idTrigger.focus();idTrigger.click();
+idTrigger.focus();flushSync(()=>idTrigger.click());
 await new Promise((resolve)=>setTimeout(resolve,100));
 const idDialog=document.querySelector('dialog[open]');
 rootNode.dataset.idExpiry=String(idDialog.textContent.includes('National ID expiry')&&idDialog.textContent.includes('2028-06-30')&&!idDialog.textContent.includes('License expiry'));
-[...idDialog.querySelectorAll('.driver-document-tabs button')].find((button)=>button.textContent==='Back').click();
+flushSync(()=>[...idDialog.querySelectorAll('.driver-document-tabs button')].find((button)=>button.textContent==='Back').click());
 await new Promise((resolve)=>setTimeout(resolve,100));
 rootNode.dataset.idBack=String(idDialog.textContent.includes('national_id_back.jpg')&&!idDialog.textContent.includes('National ID expiry'));
-idDialog.querySelector('[aria-label="Close document details"]').click();
+flushSync(()=>idDialog.querySelector('[aria-label="Close document details"]').click());
 await new Promise((resolve)=>setTimeout(resolve,100));
 rootNode.dataset.overflow=String(rootNode.scrollWidth>rootNode.clientWidth||document.body.scrollWidth>document.body.clientWidth);
 document.documentElement.dataset.ready="true";
