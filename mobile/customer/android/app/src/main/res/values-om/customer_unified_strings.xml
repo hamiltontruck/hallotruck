@@ -1,3 +1,17 @@
 <resources>
     <string name="nav_book">Ajaji</string>
+    <string name="customer_brand_tagline">Waliin Gara Fuulduraatti</string>
+    <string name="dashboard_reliable_logistics">Loojistikii Amanamaa Guutuu Itoophiyaa</string>
+    <string name="dash_quick_actions">Hojii saffisaa</string>
+    <string name="dash_promo_title">Fe’umsa kee, waadaa keenya</string>
+    <string name="dash_promo_subtitle">Nageenya • Yeroo irratti • Guutuu Itoophiyaa</string>
+    <string name="booking_progress_route">Daandii</string>
+    <string name="booking_progress_cargo">Fe’umsaa</string>
+    <string name="booking_progress_truck">Konkolaataa</string>
+    <string name="booking_progress_quote">Gatii</string>
+    <string name="booking_progress_summary">Daandii → Fe’umsaa → Konkolaataa → Gatii → Mirkaneessi</string>
+    <string name="booking_success_title">Ajajni milkaa’eera!</string>
+    <string name="booking_success_body">Ajajni kee uumameera.</string>
+    <string name="booking_view_orders">Ajaja ilaali</string>
+    <string name="booking_create_another">Ajaja biraa uumi</string>
 </resources>
