@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
+import java.util.Locale
 
 class HalloCustomerApplication : Application(), Application.ActivityLifecycleCallbacks {
     private var activeMainActivity = WeakReference<MainActivity>(null)
@@ -58,13 +59,14 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        if (!newConfig.locales.isEmpty) Locale.setDefault(newConfig.locales[0])
         val activity = activeMainActivity.get() ?: return
         if (activity.isFinishing || activity.isDestroyed) return
         activity.window.decorView.post {
             if (activity.isFinishing || activity.isDestroyed) return@post
             val viewModel = ViewModelProvider(activity)[CustomerViewModel::class.java]
-            // Re-emit the current page so every visible label is rebound from the new locale
-            // without destroying/recreating the Activity (which caused the long black screen).
+            // Re-emit the same page so every visible label is rebound from the selected locale
+            // without destroying/recreating MainActivity (the source of the long black screen).
             viewModel.show(viewModel.state.value.page)
         }
     }
