@@ -24,6 +24,7 @@ object CustomerUnifiedChrome {
             ensureBottomNavigation(root)
             updateSelection(root)
             CustomerParityUiV2.install(root)
+            CustomerParityActions.install(root)
         }
         root.viewTreeObserver.addOnGlobalLayoutListener {
             if (busy[root] == true) return@addOnGlobalLayoutListener
