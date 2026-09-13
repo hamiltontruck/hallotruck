@@ -1,0 +1,24 @@
+<resources>
+    <string name="settlement_title">የኮሚሽን ክፍያ</string>
+    <string name="settlement_subtitle">የባንክ ወይም የሞባይል ገንዘብ ማስረጃ ያስገቡ</string>
+    <string name="settlement_balance_due">የሚከፈል ቀሪ</string>
+    <string name="settlement_balance_format">ETB %1$,.2f</string>
+    <string name="settlement_balance_state">የተሰላ ETB %1$,.2f · የጸደቀ ETB %2$,.2f · በመጠበቅ ላይ ETB %3$,.2f</string>
+    <string name="settlement_pay_title">የHALLO ኮሚሽን ይክፈሉ</string>
+    <string name="settlement_pay_hint">መጀመሪያ ወደ HALLO ሂሳብ ይክፈሉ፣ ከዚያ provider፣ transaction reference፣ መጠን እና ደረሰኝ ያስገቡ።</string>
+    <string name="settlement_provider">Provider</string>
+    <string name="settlement_transaction">Transaction ID / reference</string>
+    <string name="settlement_amount">መጠን ETB</string>
+    <string name="settlement_pick_receipt">ደረሰኝ / screenshot ይምረጡ</string>
+    <string name="settlement_receipt_required">JPG, PNG, WebP ወይም PDF · እስከ 10 MB</string>
+    <string name="settlement_receipt_selected">ተመርጧል: %1$s</string>
+    <string name="settlement_submit">የኮሚሽን ክፍያ ላክ</string>
+    <string name="settlement_evidence_rule">አንድ transaction ID አንድ ጊዜ ብቻ ይጠቀማል። ቀሪው የሚቀየረው Admin/Finance ክፍያውን ካረጋገጠ በኋላ ብቻ ነው።</string>
+    <string name="settlement_loading">የኮሚሽን ዋሌት በመጫን ላይ…</string>
+    <string name="settlement_no_balance">በአሁኑ ጊዜ የሚከፈል ኮሚሽን የለም።</string>
+    <string name="settlement_invalid_transaction">ትክክለኛ transaction ID ያስገቡ።</string>
+    <string name="settlement_invalid_amount">ከዜሮ በላይ እና ከአሁኑ ቀሪ ያልበለጠ መጠን ያስገቡ።</string>
+    <string name="settlement_invalid_receipt">JPG, PNG, WebP ወይም PDF ደረሰኝ እስከ 10 MB ይምረጡ።</string>
+    <string name="settlement_submitting">ደረሰኝ በመስቀል እና ክፍያ በመላክ ላይ…</string>
+    <string name="settlement_submitted">ክፍያው ተልኳል። ቀሪው ከመቀየሩ በፊት Admin/Finance ማረጋገጥ አለበት።</string>
+</resources>

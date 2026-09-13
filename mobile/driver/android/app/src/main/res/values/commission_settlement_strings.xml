@@ -1,0 +1,24 @@
+<resources>
+    <string name="settlement_title">Commission settlement</string>
+    <string name="settlement_subtitle">Submit verified bank or mobile-money evidence</string>
+    <string name="settlement_balance_due">BALANCE DUE</string>
+    <string name="settlement_balance_format">ETB %1$,.2f</string>
+    <string name="settlement_balance_state">Charged ETB %1$,.2f · Approved ETB %2$,.2f · Pending ETB %3$,.2f</string>
+    <string name="settlement_pay_title">Pay HALLO commission</string>
+    <string name="settlement_pay_hint">Pay the HALLO account first, then submit the exact provider, transaction reference, amount and receipt.</string>
+    <string name="settlement_provider">Provider</string>
+    <string name="settlement_transaction">Transaction ID / reference</string>
+    <string name="settlement_amount">Amount ETB</string>
+    <string name="settlement_pick_receipt">Choose receipt / screenshot</string>
+    <string name="settlement_receipt_required">JPG, PNG, WebP or PDF · maximum 10 MB</string>
+    <string name="settlement_receipt_selected">Selected: %1$s</string>
+    <string name="settlement_submit">Submit commission payment</string>
+    <string name="settlement_evidence_rule">A transaction ID can only be used once. Your commission balance changes only after Admin/Finance verifies and approves the payment.</string>
+    <string name="settlement_loading">Loading commission wallet…</string>
+    <string name="settlement_no_balance">No commission balance is currently due.</string>
+    <string name="settlement_invalid_transaction">Enter a valid transaction ID.</string>
+    <string name="settlement_invalid_amount">Enter an amount greater than zero and no more than the current balance due.</string>
+    <string name="settlement_invalid_receipt">Choose a JPG, PNG, WebP or PDF receipt up to 10 MB.</string>
+    <string name="settlement_submitting">Uploading receipt and submitting payment…</string>
+    <string name="settlement_submitted">Payment submitted. Admin/Finance verification is required before the balance changes.</string>
+</resources>

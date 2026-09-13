@@ -1,0 +1,20 @@
+<resources>
+    <string name="earnings_detail_title">Trip earnings</string>
+    <string name="earnings_detail_subtitle">Released, partial and pending trip payouts</string>
+    <string name="earnings_released_total">TOTAL RELEASED</string>
+    <string name="earnings_summary_format">Completed trips %1$d · Released trips %2$d
+HALLO commission %3$s · Driver net %4$s
+Pending trips %5$d · Verified pending net %6$s</string>
+    <string name="earnings_filter_all">All</string>
+    <string name="earnings_filter_released">Released</string>
+    <string name="earnings_filter_pending">Pending</string>
+    <string name="earnings_loading">Loading released and pending trip earnings…</string>
+    <string name="earnings_none">No delivered trip earnings are available yet.</string>
+    <string name="earnings_trip_format">%1$s · %2$s
+%3$s → %4$s
+Invoice %5$s · Released %6$s
+Commission %7$s · Driver net %8$s
+Held %9$s · Remaining %10$s
+%11$s · %12$s</string>
+    <string name="earnings_open_action">Trip earnings details</string>
+</resources>

@@ -1,0 +1,52 @@
+<resources>
+    <string name="comms_logo_description">HALLO Logistics</string>
+    <string name="comms_title">መልዕክት እና ድጋፍ</string>
+    <string name="comms_subtitle">ደንበኛ፣ HALLO Operations እና የጉዞ ክርክር ማዕከል</string>
+    <string name="comms_close">ዝጋ</string>
+    <string name="comms_order_context">የጉዞ መረጃ</string>
+    <string name="comms_customer">ደንበኛ</string>
+    <string name="comms_operations">HALLO Operations</string>
+    <string name="comms_message_hint">መልዕክት ይጻፉ</string>
+    <string name="comms_send">መልዕክት ላክ</string>
+    <string name="comms_dispute_title">የጉዞ ችግኝ / ክርክር</string>
+    <string name="comms_dispute_hint">ችግኙ የተፈጠረበትን ጉዞ ይምረጡ እና ያብራሩ። ሪፖርቱ አይቀየርም እና ለተፈቀደ HALLO Operations ሰራተኞች ይታያል።</string>
+    <string name="comms_dispute_details_hint">የተፈጠረውን ያብራሩ (10–2000 ቁምፊ)</string>
+    <string name="comms_submit_dispute">ክርክር ላክ</string>
+    <string name="comms_dispute_history">የክርክር ታሪክ</string>
+    <string name="comms_sign_in_required">መልዕክት እና ድጋፍ ለመጠቀም እንደ የተፈቀደ አሽከርካሪ ይግቡ።</string>
+    <string name="comms_loading">መልዕክቶችን እና ጉዞዎችን በመጫን ላይ…</string>
+    <string name="comms_no_orders">ንቁ ወይም የተጠናቀቀ የተመደበ ጉዞ የለም።</string>
+    <string name="comms_order_summary">Order %1$s
+%2$s → %3$s
+ሁኔታ: %4$s</string>
+    <string name="comms_customer_contact">ደንበኛ: %1$s
+ስልክ: %2$s</string>
+    <string name="comms_customer_unavailable">የደንበኛ መረጃ ለዚህ ጉዞ አይገኝም።</string>
+    <string name="comms_operations_hint">ደህንነቱ የተጠበቀ አሽከርካሪ ↔ HALLO Operations ውይይት። የተመረጠው ጉዞ እንደ አውድ ይጨመራል።</string>
+    <string name="comms_operations_connected">HALLO Operations ውይይት · በራስ ሰር እየታደሰ ነው</string>
+    <string name="comms_customer_connected">የደንበኛ ውይይት · በራስ ሰር እየታደሰ ነው</string>
+    <string name="comms_choose_order">ለደንበኛው መልዕክት ለመላክ የተመደበ ጉዞ ይምረጡ።</string>
+    <string name="comms_message_invalid">1 እስከ 4000 ቁምፊ ያለው መልዕክት ይጻፉ።</string>
+    <string name="comms_sending">መልዕክት በመላክ ላይ…</string>
+    <string name="comms_message_sent">መልዕክቱ ተልኳል።</string>
+    <string name="comms_no_messages">እስካሁን ምንም መልዕክት የለም።</string>
+    <string name="comms_disputes_unavailable">የክርክር ታሪክ ለጊዜው አይገኝም።</string>
+    <string name="comms_dispute_order_required">ክርክር ከመላክዎ በፊት ንቁ ወይም የደረሰ ጉዞ ይምረጡ።</string>
+    <string name="comms_dispute_invalid">ችግኙን በ10 እስከ 2000 ቁምፊ ያብራሩ።</string>
+    <string name="comms_submitting_dispute">ክርክር በመላክ ላይ…</string>
+    <string name="comms_dispute_submitted">ክርክሩ ወደ HALLO Operations ተልኳል።</string>
+    <string name="comms_no_disputes">ለዚህ ጉዞ ክርክር የለም።</string>
+    <string name="comms_dispute_row">%1$s · %2$s · %3$s
+%4$s
+የHALLO ማስታወሻ: %5$s
+ቀን: %6$s</string>
+    <string name="comms_dispute_payment">ክፍያ</string>
+    <string name="comms_dispute_delivery">ማድረስ</string>
+    <string name="comms_dispute_assignment">ምደባ</string>
+    <string name="comms_dispute_customer">ደንበኛ</string>
+    <string name="comms_dispute_safety">ደህንነት</string>
+    <string name="comms_dispute_other">ሌላ</string>
+    <string name="comms_open_messages">መልዕክት እና ድጋፍ</string>
+    <string name="comms_message_customer">ለደንበኛ መልዕክት ላክ</string>
+    <string name="comms_message_operations">HALLO Operations</string>
+</resources>
