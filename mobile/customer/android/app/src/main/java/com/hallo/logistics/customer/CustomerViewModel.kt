@@ -33,12 +33,17 @@ class CustomerViewModel(
     }
 
     fun signUp(name: String, phone: String, email: String, pin: String, confirmation: String) {
-        if (pin != confirmation) {
-            fail("PIN numbers do not match")
+        CustomerAuthPolicy.validateSignUp(name, phone, email, pin, confirmation)?.let {
+            fail(it)
             return
         }
         execute("Creating Customer account…") {
-            repository.signUp(name, phone, email, pin)
+            repository.signUp(
+                CustomerAuthPolicy.cleanName(name),
+                CustomerAuthPolicy.cleanPhone(phone),
+                CustomerAuthPolicy.cleanEmail(email),
+                pin,
+            )
             if (repository.userId() == null) {
                 signedOut("Account created. Confirm your email if requested, then sign in.")
             } else {
@@ -47,9 +52,15 @@ class CustomerViewModel(
         }
     }
 
-    fun signIn(email: String, password: String) = execute("Signing in…") {
-        repository.signIn(email, password)
-        authorizeAndLoad()
+    fun signIn(email: String, password: String) {
+        CustomerAuthPolicy.validateSignIn(email, password)?.let {
+            fail(it)
+            return
+        }
+        execute("Signing in…") {
+            repository.signIn(CustomerAuthPolicy.cleanEmail(email), password)
+            authorizeAndLoad()
+        }
     }
 
     fun signOut() = execute("Signing out…") {
@@ -151,7 +162,7 @@ class CustomerViewModel(
             delay(280)
             val result = runCatching { repository.searchPlaces(query) }
             val suggestions = result.getOrElse { emptyList() }
-            val searchMessage = result.exceptionOrNull()?.message
+            val searchMessage = result.exceptionOrNull()?.let(CustomerAuthPolicy::safeMessage)
                 ?: if (suggestions.isEmpty()) "No matching places found in the HALLO operating region" else ""
             _state.value = if (pickup) {
                 _state.value.copy(pickupSuggestions = suggestions, placeSearchMessage = searchMessage)
@@ -365,7 +376,7 @@ class CustomerViewModel(
         if (_state.value.busy) return
         _state.value = _state.value.copy(loading = false, busy = true, message = message)
         viewModelScope.launch {
-            runCatching { action() }.onFailure { fail(it.message ?: "Customer request failed") }
+            runCatching { action() }.onFailure { fail(CustomerAuthPolicy.safeMessage(it)) }
             if (_state.value.busy) _state.value = _state.value.copy(busy = false)
         }
     }
