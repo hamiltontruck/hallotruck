@@ -1,0 +1,24 @@
+<resources>
+    <string name="settlement_title">Kaffaltii komishinii</string>
+    <string name="settlement_subtitle">Ragaa baankii ykn mobile money mirkanaaessu ergi</string>
+    <string name="settlement_balance_due">KOMISHINII HAFEE</string>
+    <string name="settlement_balance_format">ETB %1$,.2f</string>
+    <string name="settlement_balance_state">Shallagame ETB %1$,.2f · Mirkanaawe ETB %2$,.2f · Eeggataa ETB %3$,.2f</string>
+    <string name="settlement_pay_title">Komishinii HALLO kaffali</string>
+    <string name="settlement_pay_hint">Dura herrega HALLOtti kaffali; achii provider, lakkoofsa transaction, hanga fi receipt sirrii ergi.</string>
+    <string name="settlement_provider">Provider</string>
+    <string name="settlement_transaction">Lakkoofsa transaction / reference</string>
+    <string name="settlement_amount">Hanga ETB</string>
+    <string name="settlement_pick_receipt">Receipt / screenshot filadhu</string>
+    <string name="settlement_receipt_required">JPG, PNG, WebP ykn PDF · hanga 10 MB</string>
+    <string name="settlement_receipt_selected">Filatame: %1$s</string>
+    <string name="settlement_submit">Kaffaltii komishinii ergi</string>
+    <string name="settlement_evidence_rule">Lakkoofsi transaction tokko yeroo tokko qofa fayyada. Hafteen komishinii Admin/Finance kaffaltii mirkaneessee raggaasisu booda qofa jijjiirama.</string>
+    <string name="settlement_loading">Wallet komishinii feaa jira…</string>
+    <string name="settlement_no_balance">Amma komishiniin kaffalamuu qabu hin jiru.</string>
+    <string name="settlement_invalid_transaction">Lakkoofsa transaction sirrii galchi.</string>
+    <string name="settlement_invalid_amount">Hanga zeeroo ol fi haftee amma jiru caalaa hin taane galchi.</string>
+    <string name="settlement_invalid_receipt">Receipt JPG, PNG, WebP ykn PDF hanga 10 MB filadhu.</string>
+    <string name="settlement_submitting">Receipt ol kaaee kaffaltii ergaa jira…</string>
+    <string name="settlement_submitted">Kaffaltiin ergameera. Hafteen jijjiiramuu dura Admin/Finance mirkaneessuu qaba.</string>
+</resources>

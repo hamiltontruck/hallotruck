@@ -2,9 +2,12 @@ package com.hallo.logistics.driver
 
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.NestedScrollView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
@@ -12,7 +15,7 @@ import com.google.android.material.textfield.TextInputLayout
 
 class DriverAuthUiController(
     private val activity: AppCompatActivity,
-    host: LinearLayout,
+    private val host: LinearLayout,
     private val onSignIn: (email: String, pin: String) -> Unit,
     private val onSignUp: (name: String, phone: String, email: String, pin: String, confirmPin: String) -> Unit,
 ) {
@@ -33,17 +36,34 @@ class DriverAuthUiController(
     private val confirmPin = root.findViewById<TextInputEditText>(R.id.authConfirmPin)
     private val submit = root.findViewById<MaterialButton>(R.id.authSubmitModern)
     private val mode = root.findViewById<MaterialButton>(R.id.authModeModern)
+    private val contentScroll = activity.findViewById<NestedScrollView>(R.id.contentScroll)
+    private val statusCard = activity.findViewById<View>(R.id.statusCard)
+    private val appHeader: View? = (activity.findViewById<ViewGroup>(android.R.id.content)?.getChildAt(0) as? ViewGroup)?.getChildAt(0)
     private var signup = false
 
     init {
         host.removeAllViews()
         host.setPadding(0, 0, 0, 0)
         host.addView(root)
+        activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        contentScroll.isFillViewport = true
+        contentScroll.clipToPadding = false
+        contentScroll.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+        contentScroll.setPadding(
+            contentScroll.paddingLeft,
+            contentScroll.paddingTop,
+            contentScroll.paddingRight,
+            dp(28),
+        )
+        syncAuthChrome()
+        host.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> syncAuthChrome() }
+        host.viewTreeObserver.addOnGlobalLayoutListener { syncAuthChrome() }
         DriverUiPolisher.install(activity)
         configureLanguages()
         mode.setOnClickListener {
             signup = !signup
             renderMode(clearConfirmation = true)
+            contentScroll.post { contentScroll.smoothScrollTo(0, 0) }
         }
         submit.setOnClickListener {
             if (signup) {
@@ -63,6 +83,12 @@ class DriverAuthUiController(
         email.isEnabled = !busy
         pin.isEnabled = !busy
         confirmPin.isEnabled = !busy
+    }
+
+    private fun syncAuthChrome() {
+        val showingAuth = host.visibility == View.VISIBLE
+        appHeader?.visibility = if (showingAuth) View.GONE else View.VISIBLE
+        if (showingAuth) statusCard.visibility = View.GONE
     }
 
     private fun configureLanguages() {
@@ -97,6 +123,8 @@ class DriverAuthUiController(
         mode.setText(if (signup) R.string.already_registered else R.string.create_driver_account)
         if (clearConfirmation) confirmPin.text?.clear()
     }
+
+    private fun dp(value: Int): Int = (value * activity.resources.displayMetrics.density).toInt()
 
     private fun text(view: TextInputEditText): String = view.text?.toString().orEmpty().trim()
 }
