@@ -6,32 +6,34 @@ Audit target: `mobile/customer/android/`, compared with the current Customer Por
 
 | Area | Current Android state | Backend/source | Gap before final unified app |
 | --- | --- | --- | --- |
-| Login / Register | Working auth, session restore, Customer DB-role check, EN/OR/AM switcher, hero art, forgot-password handoff | Supabase Auth + `profiles` | Visual polish and final safe-area consistency; Contact Support is not yet a dedicated auth action |
-| Home | Live order count, unread notifications, recent orders, active order and quick links | `orders`, notifications, payment summaries | Runtime presentation adapter differs from the newly approved dashboard; KPI/hero/quick-action composition still needs final parity pass |
-| Route / Map | Pickup/drop-off geocoding, HGV route, map line, ETA/distance | MapTiler + `quote-route` | Keep current functionality; final booking-step composition needs approved screen parity |
-| Cargo / Truck | Structured cargo category, packaging, ton/quintal conversion, truck capacity guard | Existing Customer contract | Functional; visual card hierarchy and step transitions need final pass |
-| Quote | Canonical quote calculation | `calculate_transport_quote_v2` | Working; stale-quote handling must stay authoritative |
-| Review / Create | Review dialog exists | Previously direct `orders` insert | **Fixed in this branch:** commit through production `customer-booking` Edge Function with server-side route/quote/role validation and idempotency |
-| Orders | Customer-owned orders, filters, details, cancellation, invoices | `orders`, payment RPCs | Functional; visual alignment only |
-| Tracking | Live trip map, assignment card, driver/truck photos, call/message | tracking RPCs + signed media | Functional; visual alignment only; never fake GPS |
-| Payments | Real payment/receipt state and invoice actions | payments + Customer payment contracts | Functional; visual alignment only |
-| Profile | Live profile, avatar, edit and sign-out | Customer profile RPCs/storage | Functional; visual alignment only |
-| Localization | English, Afaan Oromoo and Amharic resources exist | Android resources | Continue completeness audit for every new label/error state |
-| Bottom navigation | Five bound buttons | `MainActivity` | Approved design requires a distinct central **Book** action plus Payments; current `navBook` is actually wired to Payments, so navigation structure needs a dedicated follow-up layout change |
+| Login / Register | Working auth, session restore, Customer DB-role check, EN/OR/AM switcher, hero art, forgot-password handoff | Supabase Auth + `profiles` | Final device-level safe-area/keyboard visual smoke; Contact Support remains intentionally absent until a verified destination exists |
+| Home | Approved HALLO hero, quick actions, live KPI summary, recent orders, notification/language chrome | `orders`, notifications, payment summaries | Device visual smoke at 320/360/390/412dp |
+| Route / Map | Pickup/drop-off geocoding, HGV route, map line, ETA/distance, approved route composition | MapTiler + `quote-route` | Device visual smoke and live-data error/empty-state review |
+| Cargo / Truck | Structured cargo category, packaging, ton/quintal conversion, truck capacity guard, approved card hierarchy | Existing Customer contract | Device visual smoke only |
+| Quote | Canonical quote calculation and approved quote presentation | `calculate_transport_quote_v2` | Verify stale-quote UX on device while preserving backend authority |
+| Review / Create | Review flow commits through production `customer-booking` with stable request id/idempotency | `customer-booking` Edge Function + `customer_create_booking_v1` | Verify Review → Success transition on device |
+| Success | Explicit booking-success state with real tracking id plus View order / Create another actions | Real created order state | Device visual smoke only |
+| Orders | Customer-owned orders, filters, details, cancellation, invoices, unified HALLO visual tokens | `orders`, payment RPCs | Device visual smoke only |
+| Tracking | Live trip map, assignment card, driver/truck photos, call/message, unified visual tokens | tracking RPCs + signed media | Device visual smoke; never fake GPS |
+| Payments | Real payment/receipt state and invoice actions with unified visual tokens | payments + Customer payment contracts | Device visual smoke only |
+| Profile | Live profile, avatar, edit and sign-out with unified visual tokens | Customer profile RPCs/storage | Device visual smoke only |
+| Localization | English, Afaan Oromoo and Amharic resources for the new unified Customer UI | Android resources | Verify locale recreation on device |
+| Bottom navigation | Six destinations implemented: Home → Orders → Book → Track → Payments → Profile | Existing page handlers + unified chrome | Verify active state/touch targets on device |
 
 ## Architecture observations
 
-The current app is Kotlin/XML, but `activity_main.xml` and `MainActivity.kt` are large multi-screen shells. `CustomerReferenceUi` and `CustomerApprovedScreens` perform presentation-only runtime transformations so existing business logic remains intact. This is useful for safe visual iteration, but it also means the final visual pass should avoid mixing static XML and runtime styling indefinitely.
+The app remains native Kotlin/XML. `CustomerReferenceUi`, `CustomerApprovedScreens`, `CustomerParityUiV2` and `CustomerUnifiedChrome` are presentation adapters over the existing business handlers so auth, booking, tracking, payment and profile contracts stay intact while the approved visual language is applied consistently.
 
-For release safety, the implementation order is:
+The production Customer booking backend from PR #432 was merged to `main` on 2026-09-14. PR #433 is now retargeted to `main`, so release validation is against the same backend source that is already active in production.
 
-1. keep existing auth/session/role behavior intact;
-2. move order creation to the production `customer-booking` authority;
-3. normalize HALLO blue/navy/surface/card/input tokens;
-4. finish approved Login/Home/Booking composition without changing business rules;
-5. align Orders/Tracking/Payments/Profile to the same tokens;
-6. fix the six-destination navigation structure;
-7. run Android lint/unit/build plus 320/360/390/412dp and real-device smoke.
+For release safety, the remaining order is:
+
+1. verify fresh PR #433 CI against `main`;
+2. run Customer Android emulator/real-device visual smoke;
+3. check 320/360/390/412dp widths, safe area and keyboard behavior;
+4. verify Login → Home → Book → Orders → Track → Payments → Profile end to end;
+5. verify EN / Afaan Oromoo / Amharic after locale recreation;
+6. visually confirm Review/Success and loading/empty/error states before merge.
 
 ## Scope guard
 
