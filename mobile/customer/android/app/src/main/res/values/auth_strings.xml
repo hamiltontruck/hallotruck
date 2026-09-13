@@ -8,4 +8,22 @@
 <string name="auth_forgot">Forgot password?</string>
 <string name="auth_recovery_help">Password recovery opens the Customer Portal. Tap “Forgot password?” there to continue.</string>
 <string name="auth_open_portal">Open Customer Portal</string>
+<string name="auth_error_email_required">Enter your email address</string>
+<string name="auth_error_email_invalid">Enter a valid email address</string>
+<string name="auth_error_password_short">Password must be at least 6 characters</string>
+<string name="auth_error_password_long">Password must be 72 characters or fewer</string>
+<string name="auth_error_name_required">Enter your full name</string>
+<string name="auth_error_name_invalid">Enter a valid full name</string>
+<string name="auth_error_phone_invalid">Enter a valid Ethiopian 07/09 mobile number</string>
+<string name="auth_error_pin_invalid">PIN must be exactly 6 digits</string>
+<string name="auth_error_confirm_pin_invalid">Confirm PIN must be exactly 6 digits</string>
+<string name="auth_error_pin_mismatch">PIN numbers do not match</string>
+<string name="auth_error_credentials">Email or password is incorrect</string>
+<string name="auth_error_email_unconfirmed">Confirm your email before signing in</string>
+<string name="auth_error_account_exists">An account already exists for this email</string>
+<string name="auth_error_rate_limit">Too many attempts. Please wait and try again</string>
+<string name="auth_error_network">Network problem. Check your connection and try again</string>
+<string name="auth_error_session_expired">Your session expired. Please sign in again</string>
+<string name="auth_error_not_authorized">This account is not authorized for HALLO Customer</string>
+<string name="auth_error_generic">Customer request failed. Please try again</string>
 </resources>

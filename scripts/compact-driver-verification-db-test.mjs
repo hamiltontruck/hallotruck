@@ -39,7 +39,7 @@ try {
   const start = legacy.indexOf("create or replace function public.admin_upsert_driver_document(");
   await db.exec(legacy.slice(start, legacy.indexOf("\n$$;", start) + 4).replace("public.admin_upsert_driver_document(", "public.admin_upsert_driver_document_unchecked_188("));
   await db.exec("revoke all on function public.admin_upsert_driver_document_unchecked_188(uuid,uuid,text,text,text,text,date,boolean,text) from public,anon,authenticated;");
-  await db.exec(await sqlFile("20260913143748_compact_driver_verification"));
+  await db.exec(await sqlFile("20260913195801_compact_driver_verification"));
   await db.query("select set_config('test.actor',$1,false)", [admin]);
   const keys = ["driver_photo","license_front","license_back","national_id_front","national_id_back","vehicle_registration","truck_front","truck_side"];
   for (const [index,key] of keys.entries()) await db.query("insert into driver_verification_files(driver_id,truck_id,document_key,file_path,status,expiry_date) values($1,$2,$3,$3,'verified',$4)", [driver,index<5?null:truck,key,["license_front","national_id_front"].includes(key)?"2099-12-31":"2000-01-01"]);

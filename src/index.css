@@ -49,3 +49,11 @@ body {
     transparent 10px 18px
   );
 }
+
+@media (max-width: 639px) {
+  .partner-mobile-touch-safe button,
+  .partner-mobile-touch-safe a,
+  .partner-mobile-touch-safe select {
+    min-height: 44px;
+  }
+}

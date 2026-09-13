@@ -4,8 +4,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
+const migrationVersion = "20260913020504";
 const migration = readFileSync(
-  path.join(root, "supabase/migrations/20260913020504_production_index_review_hot_paths.sql"),
+  path.join(root, `supabase/migrations/${migrationVersion}_production_index_review_hot_paths.sql`),
   "utf8",
 );
 const marker = readFileSync(
@@ -33,5 +34,6 @@ test("index review migration never mutates business rows", () => {
   assert.doesNotMatch(migration, /\binsert\s+into\b/i);
   assert.doesNotMatch(migration, /\bupdate\s+public\./i);
   assert.doesNotMatch(migration, /\bdelete\s+from\b/i);
-  assert.match(marker, /^20260913020504$/);
+  assert.match(marker, /^\d{14}$/);
+  assert.ok(marker >= migrationVersion, "production migration marker must not precede the verified index migration");
 });

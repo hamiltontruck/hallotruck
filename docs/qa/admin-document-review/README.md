@@ -29,11 +29,13 @@ Screenshots are real component renders using synthetic test documents, not produ
 
 ## Release boundary
 
-Migration `20260913143748_compact_driver_verification.sql` is prepared and tested locally, but has NOT been applied to production. Production storage access, authenticated field saves and document review have NOT been retested against live data. Driver Android and its upload screens are outside this change. Existing Driver web upload options are unchanged; the shared required-progress count is eight.
+Migration applied to production on 2026-09-13 as `20260913195801_compact_driver_verification.sql` (Supabase-assigned version; SQL unchanged from the reviewed 20260913143748 file). All four function bodies exactly match the reviewed SQL. Anonymous execution is denied; the internal unchecked helper remains unavailable to authenticated callers. Calls without a leadership identity were denied for all four public RPCs in a rolled-back transaction. The `trucks.model` text column exists. Document and history counts remained 54 and 88. No document/profile/truck rows were intentionally modified by this migration.
 
-Before deployment, review/apply the migration and verify it, then advance `supabase/production-migration-version.txt` in a reviewed change. Do not advance that marker without applying the migration. The existing deployment gate intentionally blocks publication while production is behind.
+The three newer production security migrations were reviewed before applying and are preserved. Historical migration version/name drift was observed; old history entries were not rewritten or falsely marked applied. Runtime dependencies and the current leadership guard were verified directly. Security advisors still report unrelated PostGIS/extension/Auth findings and expected authenticated SECURITY DEFINER warnings; the four changed public RPCs retain database-backed leadership checks. Live authenticated UI saves and private storage previews remain unverified.
 
-Repository publication is authorized. This review branch does not merge or deploy automatically; production migration application and the deployment marker remain pending.
+The production marker is now advanced to the verified applied version `20260913195801`. The deployment gate remains enabled.
+
+Repository publication and merge are authorized. Final GitHub checks must pass before merging.
 
 PR follow-up: merged main through 0b624a7, preserved narrow-screen width guards, and synchronized React fixture interactions with flushSync to avoid virtual-time scheduling races. The unapplied migration was regenerated after the latest main migration; its SQL is unchanged.
 

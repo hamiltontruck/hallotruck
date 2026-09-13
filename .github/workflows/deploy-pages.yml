@@ -96,6 +96,9 @@ jobs:
       - name: Install Driver Mobile V4 dependencies
         working-directory: apps/driver-mobile-app
         run: npm install --no-audit --no-fund
+      - name: Test Driver Mobile V4
+        working-directory: apps/driver-mobile-app
+        run: npm test
       - name: Build Driver Mobile V4
         working-directory: apps/driver-mobile-app
         run: npm run build

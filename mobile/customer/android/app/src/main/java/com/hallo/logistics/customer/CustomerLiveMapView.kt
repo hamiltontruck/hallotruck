@@ -47,6 +47,7 @@ class CustomerLiveMapView @JvmOverloads constructor(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        post { CustomerReferenceUi.apply(this) }
         if (id != R.id.trackingMap) return
         post {
             val metrics = resources.displayMetrics
@@ -61,18 +62,17 @@ class CustomerLiveMapView @JvmOverloads constructor(
             }
 
             (parent as? MaterialCardView)?.apply {
-                radius = (12 * metrics.density)
+                radius = (24 * metrics.density)
                 cardElevation = 0f
                 strokeWidth = metrics.density.roundToInt().coerceAtLeast(1)
                 strokeColor = ContextCompat.getColor(context, R.color.hallo_line)
             }
 
             rootView.findViewById<MaterialButton>(R.id.refreshTracking)?.apply {
-                text = context.getString(R.string.continue_tracking)
-                minHeight = (52 * metrics.density).roundToInt()
-                cornerRadius = (8 * metrics.density).roundToInt()
-                backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.hallo_navy))
-                setTextColor(Color.WHITE)
+                minHeight = (54 * metrics.density).roundToInt()
+                cornerRadius = (18 * metrics.density).roundToInt()
+                backgroundTintList = ColorStateList.valueOf(Color.rgb(245, 248, 253))
+                setTextColor(Color.rgb(31, 98, 218))
                 strokeWidth = 0
             }
         }
@@ -129,14 +129,14 @@ class CustomerLiveMapView @JvmOverloads constructor(
             <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
             <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
             <style>
-            html,body,#map{margin:0;width:100%;height:100%;overflow:hidden;background:#eaf0f7;touch-action:none}
+            html,body,#map{margin:0;width:100%;height:100%;overflow:hidden;background:#dfe8d5;touch-action:none}
             .maplibregl-canvas{outline:none}
             .maplibregl-ctrl-top-right{top:10px;right:10px}
             .maplibregl-ctrl-group{border-radius:14px;overflow:hidden;box-shadow:0 5px 18px #10213d2e}
             .maplibregl-ctrl-group button{width:42px;height:42px}
             .pin{width:18px;height:18px;border:3px solid white;border-radius:50%;box-shadow:0 3px 10px #10213d55}
-            .pickup{background:#10213d}.dropoff{background:#f2b705}
-            .truck{width:40px;height:40px;border:3px solid white;border-radius:12px;background:#10213d;color:#f2b705;display:grid;place-items:center;font:bold 20px sans-serif;box-shadow:0 5px 14px #10213d66}
+            .pickup{background:#18a971}.dropoff{background:#eba915}
+            .truck{width:40px;height:40px;border:3px solid white;border-radius:12px;background:#0a2345;color:white;display:grid;place-items:center;font:bold 20px sans-serif;box-shadow:0 5px 14px #10213d66}
             .truck span{display:block;transform-origin:center}
             </style></head><body><div id="map"></div>
             <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script><script>
@@ -148,7 +148,7 @@ class CustomerLiveMapView @JvmOverloads constructor(
             function marker(p,c,t){if(!p)return null;const e=document.createElement('div');e.className=c;e.textContent=t||'';const m=new maplibregl.Marker({element:e,anchor:'center'}).setLngLat(p).addTo(map);markers.push(m);return e}
             function truckMarker(p,h){if(!p)return;const e=marker(p,'truck','');if(!e)return;const s=document.createElement('span');s.textContent='➤';s.style.transform='rotate('+((Number(h)||0)-90)+'deg)';e.appendChild(s)}
             function fit(points){const valid=(points||[]).filter(Boolean);if(!valid.length)return;if(valid.length===1){map.easeTo({center:valid[0],zoom:12,duration:300});return}const b=valid.slice(1).reduce((x,p)=>x.extend(p),new maplibregl.LngLatBounds(valid[0],valid[0]));map.fitBounds(b,{padding:{top:58,bottom:48,left:42,right:42},maxZoom:13,duration:350})}
-            function routeSource(points){if(map.getLayer('route'))map.removeLayer('route');if(map.getLayer('route-outline'))map.removeLayer('route-outline');if(map.getSource('route'))map.removeSource('route');if(points.length>1){map.addSource('route',{type:'geojson',data:{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:points}}});map.addLayer({id:'route-outline',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#10213d','line-width':9,'line-opacity':.72}});map.addLayer({id:'route',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1463ff','line-width':5,'line-opacity':.96}})}}
+            function routeSource(points){if(map.getLayer('route'))map.removeLayer('route');if(map.getLayer('route-outline'))map.removeLayer('route-outline');if(map.getSource('route'))map.removeSource('route');if(points.length>1){map.addSource('route',{type:'geojson',data:{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:points}}});map.addLayer({id:'route-outline',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#0a2345','line-width':9,'line-opacity':.30}});map.addLayer({id:'route',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1f62da','line-width':6,'line-opacity':.98}})}}
             function showBooking(p,d,points){const run=()=>{clearMarkers();routeSource(points||[]);const start=points&&points.length?points[0]:p;const end=points&&points.length?points[points.length-1]:d;marker(start,'pin pickup');marker(end,'pin dropoff');fit(points&&points.length?points:[p,d])};map.loaded()?run():map.once('load',run)}
             function showTrip(p,d,t,h,points){const run=()=>{clearMarkers();const route=points&&points.length>1?points:[p,d].filter(Boolean);routeSource(route);marker(p,'pin pickup');marker(d,'pin dropoff');truckMarker(t,h);fit(route.concat(t?[t]:[]))};map.loaded()?run():map.once('load',run)}
             </script></body></html>
