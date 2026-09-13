@@ -7,10 +7,7 @@ import android.util.AttributeSet
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 
-/**
- * Five-way Customer navigation item. MainActivity still owns navigation state; this view
- * translates the legacy selected-color signal into the compact Mobile V4 visual language.
- */
+/** Customer navigation item; MainActivity remains the source of page navigation state. */
 class CustomerNavButton @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -18,6 +15,7 @@ class CustomerNavButton @JvmOverloads constructor(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        post { CustomerUnifiedChrome.install(rootView) }
         if (id == R.id.navProfile) post { CustomerProfileUiPolisher.install(rootView) }
     }
 
