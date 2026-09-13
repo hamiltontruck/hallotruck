@@ -71,7 +71,7 @@ test("finance summary reconciles revenue, escrow, refunds, commission and deposi
   assert.equal(summary.outstandingCommission, 2035);
   assert.equal(summary.driverDeposits, 10000);
   assert.equal(summary.availableDriverDeposits, 7965);
-  assert.equal(summary.netPlatformRevenue, 0);
+  assert.equal(summary.netPlatformRevenue, 2535);
   assert.equal(summary.activeWallets, 1);
 });
 
@@ -131,6 +131,16 @@ test("Finance V3 live dashboard uses DB reporting and no 5000-row bulk caps", ()
   assert.match(dashboard, /Retry finance data/);
   assert.doesNotMatch(dashboard, /\.limit\(5000\)/);
   assert.doesNotMatch(reportingService, /\.limit\(5000\)/);
+});
+
+test("Finance V3 platform revenue uses canonical Driver plus correction-aware Partner commission", () => {
+  assert.match(reportingService, /Promise\.all\(\[/);
+  assert.match(reportingService, /admin_finance_v3_report/);
+  assert.match(reportingService, /admin_ceo_kpi_v1_report/);
+  assert.match(reportingService, /if \(ceoResult\.error\) throw new Error\(ceoResult\.error\.message\)/);
+  assert.match(reportingService, /const partnerCommission = numberOf\(ceo\.partnerCommission\)/);
+  assert.match(reportingService, /netPlatformRevenue: Math\.max\(0, numberOf\(summary\.commissionEarned\) \+ partnerCommission\)/);
+  assert.doesNotMatch(reportingService, /netPlatformRevenue:\s*numberOf\(summary\.netPlatformRevenue\)/);
 });
 
 test("Finance V3 debounces text filters, ignores stale requests and coalesces realtime bursts", () => {
