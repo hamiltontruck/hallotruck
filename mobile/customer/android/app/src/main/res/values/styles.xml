@@ -7,7 +7,8 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:statusBarColor">@color/hallo_navy</item>
-        <item name="android:windowBackground">@drawable/hallo_splash_background</item>
+        <item name="android:windowBackground">@color/hallo_surface</item>
+        <item name="android:windowDisablePreview">false</item>
     </style>
 
     <style name="Widget.Hallo.Card" parent="Widget.Material3.CardView.Elevated">
