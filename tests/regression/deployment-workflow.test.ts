@@ -8,6 +8,7 @@ function source(relativePath: string) {
 }
 
 const workflow = source(".github/workflows/deploy-pages.yml");
+const driverAndroidWorkflow = source(".github/workflows/driver-android.yml");
 const regressionRunner = source("scripts/run-regression-tests.mjs");
 
 function requiredStep(label: string) {
@@ -37,6 +38,18 @@ test("production workflow preserves migration, route-smoke and Pages deployment 
   assert.match(workflow, /Configure Pages[\s\S]*github\.event_name != 'pull_request'/);
   assert.match(workflow, /Upload site[\s\S]*github\.event_name != 'pull_request'/);
   assert.match(workflow, /deploy:\s+if: github\.event_name != 'pull_request'/);
+});
+
+test("Driver Android CI produces a configured, validated APK", () => {
+  assert.match(driverAndroidWorkflow, /workflow_dispatch:/);
+  assert.match(driverAndroidWorkflow, /ORG_GRADLE_PROJECT_SUPABASE_URL:\s*\$\{\{ secrets\.VITE_SUPABASE_URL \}\}/);
+  assert.match(driverAndroidWorkflow, /ORG_GRADLE_PROJECT_SUPABASE_PUBLISHABLE_KEY:\s*\$\{\{ secrets\.VITE_SUPABASE_ANON_KEY \}\}/);
+  assert.match(driverAndroidWorkflow, /Validate Driver runtime configuration[\s\S]*ORG_GRADLE_PROJECT_SUPABASE_URL[\s\S]*ORG_GRADLE_PROJECT_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(driverAndroidWorkflow, /Unit tests[\s\S]*testDebugUnitTest/);
+  assert.match(driverAndroidWorkflow, /Android lint[\s\S]*lintDebug/);
+  assert.match(driverAndroidWorkflow, /Debug APK[\s\S]*assembleDebug/);
+  assert.match(driverAndroidWorkflow, /Upload configured Driver APK[\s\S]*hallo-driver-android-debug[\s\S]*app-debug\.apk/);
+  assert.doesNotMatch(driverAndroidWorkflow, /continue-on-error:\s*true/i);
 });
 
 test("deployment workflow regression suite remains part of the business test runner", () => {
