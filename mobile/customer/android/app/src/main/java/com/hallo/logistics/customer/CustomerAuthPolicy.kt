@@ -2,6 +2,12 @@ package com.hallo.logistics.customer
 
 object CustomerAuthPolicy {
     private val emailPattern = Regex("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", RegexOption.IGNORE_CASE)
+    private val safeLocalMessages = setOf(
+        "Enter cargo weight",
+        "Cargo load exceeds the selected truck capacity",
+        "Payment receipt is not available",
+        "Customer order was not found",
+    )
 
     fun validateSignIn(email: String, password: String): String? {
         val cleanEmail = email.trim()
@@ -37,6 +43,9 @@ object CustomerAuthPolicy {
     fun cleanPhone(phone: String): String = CustomerPolicy.normalizePhone(phone)
 
     fun safeMessage(error: Throwable): String {
+        val direct = error.message?.trim().orEmpty()
+        if (direct in safeLocalMessages) return direct
+
         val text = generateSequence(error) { it.cause }
             .mapNotNull { it.message }
             .joinToString(" ")
