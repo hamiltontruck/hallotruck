@@ -90,29 +90,36 @@ function eventForKpi(kpi?: FinanceV3KpiKey | null) {
 
 export async function getAdminFinanceV3Report(query: FinanceV3Query): Promise<FinanceV3Report> {
   const pageSize = query.pageSize === 100 ? 100 : 50;
-  const { data, error } = await supabase.rpc("admin_finance_v3_report", {
-    p_range: query.range,
-    p_provider: query.provider && query.provider !== "all" ? query.provider : null,
-    p_driver_query: query.driver?.trim() || null,
-    p_customer_query: query.customer?.trim() || null,
-    p_route_query: query.route?.trim() || null,
-    p_truck_query: query.truck?.trim() || null,
-    p_search: query.search?.trim() || null,
-    p_event: eventForKpi(query.activeKpi),
-    p_page: Math.max(1, query.page ?? 1),
-    p_page_size: pageSize,
-  });
-  if (error) throw new Error(error.message);
-  const raw = (data ?? {}) as Record<string, any>;
+  const [financeResult, ceoResult] = await Promise.all([
+    supabase.rpc("admin_finance_v3_report", {
+      p_range: query.range,
+      p_provider: query.provider && query.provider !== "all" ? query.provider : null,
+      p_driver_query: query.driver?.trim() || null,
+      p_customer_query: query.customer?.trim() || null,
+      p_route_query: query.route?.trim() || null,
+      p_truck_query: query.truck?.trim() || null,
+      p_search: query.search?.trim() || null,
+      p_event: eventForKpi(query.activeKpi),
+      p_page: Math.max(1, query.page ?? 1),
+      p_page_size: pageSize,
+    }),
+    supabase.rpc("admin_ceo_kpi_v1_report"),
+  ]);
+  if (financeResult.error) throw new Error(financeResult.error.message);
+  if (ceoResult.error) throw new Error(`Partner finance reconciliation failed: ${ceoResult.error.message}`);
+  const raw = (financeResult.data ?? {}) as Record<string, any>;
+  const ceo = (ceoResult.data ?? {}) as Record<string, any>;
   const summary = raw.summary ?? {};
   const drilldown = raw.drilldown ?? {};
+  const driverCommissionEarned = numberOf(summary.commissionEarned);
+  const partnerCommissionEarned = numberOf(ceo.partnerCommission);
   return {
     summary: {
       todayRevenue: numberOf(summary.todayRevenue), weeklyRevenue: numberOf(summary.weeklyRevenue), monthlyRevenue: numberOf(summary.monthlyRevenue),
       releasedPayments: numberOf(summary.releasedPayments), heldEscrow: numberOf(summary.heldEscrow), pendingReviews: numberOf(summary.pendingReviews),
-      refundedPayments: numberOf(summary.refundedPayments), failedPayments: numberOf(summary.failedPayments), commissionEarned: numberOf(summary.commissionEarned),
+      refundedPayments: numberOf(summary.refundedPayments), failedPayments: numberOf(summary.failedPayments), commissionEarned: driverCommissionEarned,
       commissionPaid: numberOf(summary.commissionPaid), outstandingCommission: numberOf(summary.outstandingCommission), driverDeposits: numberOf(summary.driverDeposits),
-      availableDriverDeposits: numberOf(summary.availableDriverDeposits), netPlatformRevenue: numberOf(summary.netPlatformRevenue), activeWallets: numberOf(summary.activeWallets),
+      availableDriverDeposits: numberOf(summary.availableDriverDeposits), netPlatformRevenue: driverCommissionEarned + partnerCommissionEarned, activeWallets: numberOf(summary.activeWallets),
     },
     trend: Array.isArray(raw.trend) ? raw.trend.map((item: any) => ({ date: String(item.date), revenue: numberOf(item.revenue), escrow: numberOf(item.escrow), commission: numberOf(item.commission) })) : [],
     breakdowns: {
