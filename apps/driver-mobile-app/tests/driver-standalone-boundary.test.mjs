@@ -27,7 +27,7 @@ test("signup validates and normalizes HALLO contact contracts before Auth", () =
   const auth = read("../src/auth.tsx");
 
   assert.match(auth, /normalizeEmail\(email\)/);
-  assert.match(auth, /normalizeEthiopianPhone\(phone\)/);
+  assert.match(auth, /normalizePhone\(phone\)/);
   assert.match(auth, /\(\?:\\\+251\|251\|0\)\?\[79\]\\d\{8\}/);
   assert.match(auth, /full_name: normalizedName/);
   assert.match(auth, /phone: normalizedPhone/);

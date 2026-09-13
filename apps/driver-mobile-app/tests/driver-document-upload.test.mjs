@@ -43,7 +43,7 @@ test("enforces MIME, photo-only and 10 MB boundaries", () => {
     documentKey: "national_id_front",
     file: { name: "id.txt", type: "text/plain", size: 1000 },
     truckId: null,
-  }), /JPG, PNG, WebP or PDF/);
+  }), /JPG, PNG, WebP, HEIC, HEIF.*PDF/);
   assert.throws(() => validateVerificationUpload({
     documentKey: "national_id_front",
     file: { name: "id.png", type: "image/png", size: MAX_VERIFICATION_FILE_BYTES + 1 },

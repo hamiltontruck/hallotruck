@@ -6,6 +6,7 @@ on:
   push:
     branches: [main]
     paths: ["mobile/driver/android/**", ".github/workflows/driver-android.yml"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,6 +14,9 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      ORG_GRADLE_PROJECT_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      ORG_GRADLE_PROJECT_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     defaults:
       run:
         working-directory: mobile/driver/android
@@ -25,9 +29,27 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Validate Driver runtime configuration
+        shell: bash
+        run: |
+          missing=0
+          for key in ORG_GRADLE_PROJECT_SUPABASE_URL ORG_GRADLE_PROJECT_SUPABASE_PUBLISHABLE_KEY; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Required Driver Android repository secret is missing: ${key#ORG_GRADLE_PROJECT_}"
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
       - name: Unit tests
         run: gradle testDebugUnitTest --no-daemon --stacktrace
       - name: Android lint
         run: gradle lintDebug --no-daemon --stacktrace
       - name: Debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
+      - name: Upload configured Driver APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hallo-driver-android-debug
+          path: mobile/driver/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
