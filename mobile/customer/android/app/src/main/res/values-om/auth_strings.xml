@@ -8,4 +8,22 @@
 <string name="auth_forgot">Jecha icciitii irraanfatte?</string>
 <string name="auth_recovery_help">Customer Portal banama. Itti fufuuf filannoo jecha icciitii irraanfattee jedhu tuqi.</string>
 <string name="auth_open_portal">Customer Portal bani</string>
+<string name="auth_error_email_required">Imeelii kee galchi</string>
+<string name="auth_error_email_invalid">Teessoo imeelii sirrii galchi</string>
+<string name="auth_error_password_short">Jechi darbii yoo xiqqaate arfiilee 6 qabaachuu qaba</string>
+<string name="auth_error_password_long">Jechi darbii arfiilee 72 caaluu hin qabu</string>
+<string name="auth_error_name_required">Maqaa kee guutuu galchi</string>
+<string name="auth_error_name_invalid">Maqaa guutuu sirrii galchi</string>
+<string name="auth_error_phone_invalid">Lakkoofsa bilbilaa Itoophiyaa 07/09 sirrii galchi</string>
+<string name="auth_error_pin_invalid">PIN lakkoofsa 6 qofa ta\'uu qaba</string>
+<string name="auth_error_confirm_pin_invalid">PIN mirkaneessuu lakkoofsa 6 qofa ta\'uu qaba</string>
+<string name="auth_error_pin_mismatch">PIN lamaan wal hin gitu</string>
+<string name="auth_error_credentials">Imeeliin ykn jechi darbii sirrii miti</string>
+<string name="auth_error_email_unconfirmed">Osoo hin seeniin dura imeelii kee mirkaneessi</string>
+<string name="auth_error_account_exists">Imeelii kanaan herregni duraan jira</string>
+<string name="auth_error_rate_limit">Yaalii baay\'ate. Xiqqoo eegiitii irra deebi\'ii yaali</string>
+<string name="auth_error_network">Rakkoo interneetii. Walqunnamtii kee ilaalii irra deebi\'ii yaali</string>
+<string name="auth_error_session_expired">Yeroon seensaa kee dhumeera. Irra deebi\'ii seeni</string>
+<string name="auth_error_not_authorized">Herregni kun HALLO Customer fayyadamuuf hayyamama hin qabu</string>
+<string name="auth_error_generic">Gaaffiin Customer hin milkoofne. Irra deebi\'ii yaali</string>
 </resources>

@@ -74,6 +74,7 @@ object CustomerReferenceUi {
         }
         button(root, "startBooking")?.referencePrimary(root, blue)
         button(root, "homeTrack")?.referencePrimary(root, blue)
+        button(root, "authSubmit")?.referencePrimary(root, blue)
 
         view(root, "bookingMap")?.let { it.layoutParams = it.layoutParams.apply { height = dp(root, 430) } }
         card(root, "bookingMapCard")?.referenceCard(root, line, 24)
@@ -97,12 +98,14 @@ object CustomerReferenceUi {
         button(root, "signOut")?.apply { minHeight = dp(root, 54); cornerRadius = dp(root, 18) }
 
         polishTree(root, navy, line)
+        button(root, "authSubmit")?.referencePrimary(root, blue)
         listOf("trackingStatus", "orderStatus", "profileVerified").forEach { name ->
             text(root, name)?.let {
                 val value = it.text.toString()
                 if (value.contains("deliver", true) || value.contains("route", true) || value.contains("verified", true)) it.setTextColor(green)
             }
         }
+        CustomerApprovedScreens.install(root)
     }
 
     private fun polishTree(v: View, navy: Int, line: Int) {
@@ -113,7 +116,8 @@ object CustomerReferenceUi {
         }
         if (v is TextView) {
             v.includeFontPadding = false
-            if (v.textSize >= 18f) v.setTextColor(navy)
+            val textSizeSp = v.textSize / v.resources.displayMetrics.scaledDensity
+            if (v !is MaterialButton && textSizeSp >= 18f) v.setTextColor(navy)
         }
         if (v is ImageView) v.clipToOutline = true
         if (v is ViewGroup) for (i in 0 until v.childCount) polishTree(v.getChildAt(i), navy, line)
@@ -145,6 +149,7 @@ object CustomerReferenceUi {
         cornerRadius = dp(root, 16)
         backgroundTintList = android.content.res.ColorStateList.valueOf(blue)
         setTextColor(Color.WHITE)
+        iconTint = android.content.res.ColorStateList.valueOf(Color.WHITE)
         strokeWidth = 0
         insetTop = 0; insetBottom = 0
     }

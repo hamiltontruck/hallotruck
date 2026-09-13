@@ -1,5 +1,7 @@
 package com.hallo.logistics.customer
 
+import java.util.Locale
+
 object CustomerAuthPolicy {
     private val emailPattern = Regex("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", RegexOption.IGNORE_CASE)
     private val safeLocalMessages = setOf(
@@ -12,10 +14,10 @@ object CustomerAuthPolicy {
     fun validateSignIn(email: String, password: String): String? {
         val cleanEmail = email.trim()
         return when {
-            cleanEmail.isBlank() -> "Enter your email address"
-            cleanEmail.length > 254 || !emailPattern.matches(cleanEmail) -> "Enter a valid email address"
-            password.length < 6 -> "Password must be at least 6 characters"
-            password.length > 72 -> "Password must be 72 characters or fewer"
+            cleanEmail.isBlank() -> tr("Enter your email address")
+            cleanEmail.length > 254 || !emailPattern.matches(cleanEmail) -> tr("Enter a valid email address")
+            password.length < 6 -> tr("Password must be at least 6 characters")
+            password.length > 72 -> tr("Password must be 72 characters or fewer")
             else -> null
         }
     }
@@ -24,14 +26,14 @@ object CustomerAuthPolicy {
         val cleanName = name.trim().replace(Regex("\\s+"), " ")
         val cleanEmail = email.trim()
         return when {
-            cleanName.length !in 2..80 -> "Enter your full name"
-            cleanName.any { it.isISOControl() } -> "Enter a valid full name"
-            runCatching { CustomerPolicy.normalizePhone(phone) }.isFailure -> "Enter a valid Ethiopian 07/09 mobile number"
-            cleanEmail.isBlank() -> "Enter your email address"
-            cleanEmail.length > 254 || !emailPattern.matches(cleanEmail) -> "Enter a valid email address"
-            !CustomerPolicy.isSixDigitPin(pin) -> "PIN must be exactly 6 digits"
-            !CustomerPolicy.isSixDigitPin(confirmation) -> "Confirm PIN must be exactly 6 digits"
-            pin != confirmation -> "PIN numbers do not match"
+            cleanName.length !in 2..80 -> tr("Enter your full name")
+            cleanName.any { it.isISOControl() } -> tr("Enter a valid full name")
+            runCatching { CustomerPolicy.normalizePhone(phone) }.isFailure -> tr("Enter a valid Ethiopian 07/09 mobile number")
+            cleanEmail.isBlank() -> tr("Enter your email address")
+            cleanEmail.length > 254 || !emailPattern.matches(cleanEmail) -> tr("Enter a valid email address")
+            !CustomerPolicy.isSixDigitPin(pin) -> tr("PIN must be exactly 6 digits")
+            !CustomerPolicy.isSixDigitPin(confirmation) -> tr("Confirm PIN must be exactly 6 digits")
+            pin != confirmation -> tr("PIN numbers do not match")
             else -> null
         }
     }
@@ -53,26 +55,72 @@ object CustomerAuthPolicy {
 
         return when {
             "invalid login credentials" in text || "invalid_credentials" in text ->
-                "Email or password is incorrect"
+                tr("Email or password is incorrect")
             "email not confirmed" in text || "email_not_confirmed" in text ->
-                "Confirm your email before signing in"
+                tr("Confirm your email before signing in")
             "user already registered" in text || "already been registered" in text ->
-                "An account already exists for this email"
+                tr("An account already exists for this email")
             "rate limit" in text || "too many requests" in text || "429" in text ->
-                "Too many attempts. Please wait and try again"
+                tr("Too many attempts. Please wait and try again")
             "network" in text || "timeout" in text || "timed out" in text || "socket" in text || "unable to resolve host" in text ->
-                "Network problem. Check your connection and try again"
+                tr("Network problem. Check your connection and try again")
             "customer session expired" in text ->
-                "Your session expired. Please sign in again"
+                tr("Your session expired. Please sign in again")
             "not authorized for hallo customer" in text ->
-                "This account is not authorized for HALLO Customer"
+                tr("This account is not authorized for HALLO Customer")
             "pin must be exactly 6 digits" in text ->
-                "PIN must be exactly 6 digits"
+                tr("PIN must be exactly 6 digits")
             "full name" in text ->
-                "Enter your full name"
+                tr("Enter your full name")
             "valid ethiopian" in text ->
-                "Enter a valid Ethiopian 07/09 mobile number"
-            else -> "Customer request failed. Please try again"
+                tr("Enter a valid Ethiopian 07/09 mobile number")
+            else -> tr("Customer request failed. Please try again")
         }
+    }
+
+    private fun tr(english: String): String = when (Locale.getDefault().language.lowercase()) {
+        "om" -> when (english) {
+            "Enter your email address" -> "Imeelii kee galchi"
+            "Enter a valid email address" -> "Teessoo imeelii sirrii galchi"
+            "Password must be at least 6 characters" -> "Jechi darbii yoo xiqqaate arfiilee 6 qabaachuu qaba"
+            "Password must be 72 characters or fewer" -> "Jechi darbii arfiilee 72 caaluu hin qabu"
+            "Enter your full name" -> "Maqaa kee guutuu galchi"
+            "Enter a valid full name" -> "Maqaa guutuu sirrii galchi"
+            "Enter a valid Ethiopian 07/09 mobile number" -> "Lakkoofsa bilbilaa Itoophiyaa 07/09 sirrii galchi"
+            "PIN must be exactly 6 digits" -> "PIN lakkoofsa 6 qofa ta'uu qaba"
+            "Confirm PIN must be exactly 6 digits" -> "PIN mirkaneessuu lakkoofsa 6 qofa ta'uu qaba"
+            "PIN numbers do not match" -> "PIN lamaan wal hin gitu"
+            "Email or password is incorrect" -> "Imeeliin ykn jechi darbii sirrii miti"
+            "Confirm your email before signing in" -> "Osoo hin seeniin dura imeelii kee mirkaneessi"
+            "An account already exists for this email" -> "Imeelii kanaan herregni duraan jira"
+            "Too many attempts. Please wait and try again" -> "Yaalii baay'ate. Xiqqoo eegiitii irra deebi'ii yaali"
+            "Network problem. Check your connection and try again" -> "Rakkoo interneetii. Walqunnamtii kee ilaalii irra deebi'ii yaali"
+            "Your session expired. Please sign in again" -> "Yeroon seensaa kee dhumeera. Irra deebi'ii seeni"
+            "This account is not authorized for HALLO Customer" -> "Herregni kun HALLO Customer fayyadamuuf hayyamama hin qabu"
+            "Customer request failed. Please try again" -> "Gaaffiin Customer hin milkoofne. Irra deebi'ii yaali"
+            else -> english
+        }
+        "am" -> when (english) {
+            "Enter your email address" -> "ኢሜይልዎን ያስገቡ"
+            "Enter a valid email address" -> "ትክክለኛ የኢሜይል አድራሻ ያስገቡ"
+            "Password must be at least 6 characters" -> "የይለፍ ቃሉ ቢያንስ 6 ቁምፊዎች ሊኖሩት ይገባል"
+            "Password must be 72 characters or fewer" -> "የይለፍ ቃሉ 72 ቁምፊዎች ወይም ከዚያ ያነሰ መሆን አለበት"
+            "Enter your full name" -> "ሙሉ ስምዎን ያስገቡ"
+            "Enter a valid full name" -> "ትክክለኛ ሙሉ ስም ያስገቡ"
+            "Enter a valid Ethiopian 07/09 mobile number" -> "ትክክለኛ የኢትዮጵያ 07/09 ሞባይል ቁጥር ያስገቡ"
+            "PIN must be exactly 6 digits" -> "PIN በትክክል 6 አሃዞች መሆን አለበት"
+            "Confirm PIN must be exactly 6 digits" -> "የማረጋገጫ PIN በትክክል 6 አሃዞች መሆን አለበት"
+            "PIN numbers do not match" -> "የPIN ቁጥሮቹ አይዛመዱም"
+            "Email or password is incorrect" -> "ኢሜይሉ ወይም የይለፍ ቃሉ ትክክል አይደለም"
+            "Confirm your email before signing in" -> "ከመግባትዎ በፊት ኢሜይልዎን ያረጋግጡ"
+            "An account already exists for this email" -> "በዚህ ኢሜይል መለያ አስቀድሞ አለ"
+            "Too many attempts. Please wait and try again" -> "ብዙ ሙከራዎች ተደርገዋል። ትንሽ ቆይተው እንደገና ይሞክሩ"
+            "Network problem. Check your connection and try again" -> "የኔትወርክ ችግር አለ። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ"
+            "Your session expired. Please sign in again" -> "የመግቢያ ጊዜዎ አብቅቷል። እንደገና ይግቡ"
+            "This account is not authorized for HALLO Customer" -> "ይህ መለያ HALLO Customer ለመጠቀም አልተፈቀደለትም"
+            "Customer request failed. Please try again" -> "የCustomer ጥያቄው አልተሳካም። እንደገና ይሞክሩ"
+            else -> english
+        }
+        else -> english
     }
 }
