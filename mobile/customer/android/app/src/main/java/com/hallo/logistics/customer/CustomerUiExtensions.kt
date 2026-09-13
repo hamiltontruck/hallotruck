@@ -1,4 +1,5 @@
 package com.hallo.logistics.customer
 
-/** Null-safe CharSequence helper used by runtime-bound Android TextViews. */
+/** Keep String call sites strongly typed while supporting TextView CharSequence values. */
+internal fun String?.orEmpty(): String = this ?: ""
 internal fun CharSequence?.orEmpty(): CharSequence = this ?: ""
