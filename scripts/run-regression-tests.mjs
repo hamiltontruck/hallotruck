@@ -54,6 +54,7 @@ try{
   ["tests/regression/dispatch-readiness-execute-boundary.test.ts",path.join(outputDirectory,"dispatch-readiness-execute-boundary.test.mjs")],
   ["tests/regression/driver-document-review-boundary.test.ts",path.join(outputDirectory,"driver-document-review-boundary.test.mjs")],
   ["tests/regression/production-index-review.test.ts",path.join(outputDirectory,"production-index-review.test.mjs")],
+  ["tests/regression/security-rls-final-hardening.test.ts",path.join(outputDirectory,"security-rls-final-hardening.test.mjs")],
   ["tests/regression/posthog-analytics.test.ts",path.join(outputDirectory,"posthog-analytics.test.mjs")],
  ];
  for(const [source,output] of suites){const bundled=run(esbuildBinary,[source,"--bundle","--platform=node","--format=esm","--target=node22",`--outfile=${output}`]);if(!bundled)process.exit(process.exitCode||1);}
