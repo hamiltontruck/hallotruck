@@ -16,6 +16,8 @@ const driverWallet = source("src/pages/DriverWallet.tsx");
 const driverGate = source("src/components/auth/DriverGate.tsx");
 const roleHome = source("src/components/auth/RoleHome.tsx");
 const adminNav = source("src/components/admin/AdminMobileBottomNav.tsx");
+const adminShell = source("src/components/admin/AdminToolShell.tsx");
+const adminDriverReviewCss = source("src/styles/admin-driver-review.css");
 const navigationCss = source("src/styles/role-navigation.css");
 const main = source("src/main.tsx");
 
@@ -77,6 +79,26 @@ test("admin mobile navigation provides exact overview, orders, combined fleet, f
   assert.match(adminNav, /operationsSection === "Fleet & drivers"/);
   assert.match(app, /path="\/admin\/more"/);
   assert.match(app, /function AdminWorkspace\(\)\{return <AdminToolShell><AdminCeoOverview/);
+});
+
+test("admin mobile shell stays inside 320px viewports with accessible touch targets", () => {
+  assert.match(adminShell, /min-h-screen min-w-0 overflow-x-hidden/);
+  assert.match(adminShell, /w-\[280px\] max-w-\[calc\(100vw-2rem\)\]/);
+  assert.match(adminShell, /id="admin-tool-menu"/);
+  assert.match(adminShell, /aria-expanded=\{open\}/);
+  assert.match(adminShell, /aria-controls="admin-tool-menu"/);
+  assert.match(adminShell, /h-11 w-11/);
+  assert.match(adminShell, /min-h-11 min-w-0 items-center/);
+  assert.match(adminShell, /max-w-full flex-1 overflow-x-hidden/);
+});
+
+test("driver compliance cards clamp long mobile content without horizontal page overflow", () => {
+  assert.match(adminDriverReviewCss, /\.admin-driver-review \{ min-width: 0; max-width: 100%; overflow-x: hidden;/);
+  assert.match(adminDriverReviewCss, /\.driver-document-group \{ min-width: 0; max-width: 100%/);
+  assert.match(adminDriverReviewCss, /\.driver-document-preview \{ min-width: 0; width: 100%/);
+  assert.match(adminDriverReviewCss, /\.driver-document-preview img \{ width: 100%; max-width: 100%/);
+  assert.match(adminDriverReviewCss, /@media\(max-width: 380px\)/);
+  assert.match(adminDriverReviewCss, /margin-right: 12px; margin-left: 12px/);
 });
 
 test("mobile role navigation protects narrow screens, safe areas and open keyboards", () => {
