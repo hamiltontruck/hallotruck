@@ -1,3 +1,5 @@
+import { isCurrentVerifiedDocument } from "./driver-document-review";
+
 export const DRIVER_IDENTITY_DOCUMENT_KEYS = [
   "driver_photo",
   "license_front",
@@ -8,21 +10,21 @@ export const DRIVER_IDENTITY_DOCUMENT_KEYS = [
 
 export const DRIVER_VEHICLE_DOCUMENT_KEYS = [
   "vehicle_registration",
-  "insurance",
-  "transport_permit",
   "truck_front",
-  "truck_back",
   "truck_side",
-  "truck_loading_area",
 ] as const;
 
 type OnboardingDocument = {
   document_key: string;
   status: string;
+  expiry_date?: string | null;
 };
 
 function countStatus(documentsByKey: Map<string, OnboardingDocument>, keys: readonly string[], status: string) {
-  return keys.filter((key) => documentsByKey.get(key)?.status === status).length;
+  return keys.filter((key) => {
+    const doc = documentsByKey.get(key);
+    return doc?.status === status && (status !== "verified" || isCurrentVerifiedDocument({ ...doc, document_key: key, expiry_date: doc.expiry_date ?? null }));
+  }).length;
 }
 
 export function getDriverOnboardingProgress(documents: OnboardingDocument[]) {

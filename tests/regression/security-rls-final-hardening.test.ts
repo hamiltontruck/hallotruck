@@ -19,8 +19,9 @@ const productionMarker = readFileSync(
   "utf8",
 ).trim();
 
-test("production marker tracks the final security migration", () => {
-  assert.equal(productionMarker, "20260913152411");
+test("production marker includes the final security migration", () => {
+  assert.match(productionMarker, /^\d{14}$/);
+  assert.ok(productionMarker >= "20260913152411", "production must include the verified security migrations");
 });
 
 test("RLS hardening uses initPlan-safe DB-backed authorization", () => {

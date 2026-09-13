@@ -1,3 +1,4 @@
+import { documentExpiryLabel } from "../domain/driver-document-review";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { supabase } from "../services/supabase.client";
 
@@ -42,12 +43,8 @@ const identityDocuments = [
 
 const vehicleDocuments = [
   ["vehicle_registration", "Vehicle registration"],
-  ["insurance", "Insurance certificate"],
-  ["transport_permit", "Transport permit"],
   ["truck_front", "Truck photo · front"],
-  ["truck_back", "Truck photo · back"],
   ["truck_side", "Truck photo · side"],
-  ["truck_loading_area", "Loading area photo"],
 ] as const;
 
 const allDocuments = [...identityDocuments, ...vehicleDocuments] as const;
@@ -153,6 +150,9 @@ export function AdminManualDriverDocuments() {
     setNotice("");
     setError("");
 
+    if (saving) return;
+    if (documentExpiryLabel(documentKey) && !expiryDate) return setError(`Enter the ${documentExpiryLabel(documentKey)} date on the front document.`);
+    if (["driver_photo", "truck_front", "truck_side"].includes(documentKey) && file?.type === "application/pdf") return setError("Choose a photo for this document.");
     if (!driverId) return setError("Select a driver.");
     if (needsTruck && !truckId) return setError("Select the driver's truck for this vehicle document.");
     if (!file) return setError("Choose a document file.");
@@ -183,7 +183,7 @@ export function AdminManualDriverDocuments() {
         p_file_path: path,
         p_original_name: file.name,
         p_mime_type: file.type,
-        p_expiry_date: expiryDate || null,
+        p_expiry_date: documentExpiryLabel(documentKey) ? expiryDate || null : null,
         p_verify: verifyNow,
         p_source_note: sourceNote.trim() || null,
       });
@@ -222,14 +222,14 @@ export function AdminManualDriverDocuments() {
             <p className="mt-2 text-xs leading-5 text-steel">Replacing a current document automatically archives the previous version.</p>
 
             <label className="mt-5 block text-sm font-semibold">Driver
-              <select value={driverId} onChange={(event) => setDriverId(event.target.value)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3 font-normal" required>
+              <select value={driverId} onChange={(event) => { setDriverId(event.target.value); setExpiryDate(""); }} className="mt-2 block w-full border border-asphalt/20 bg-white p-3 font-normal" required>
                 <option value="" disabled>Select driver</option>
                 {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name ?? "Driver"} · {driver.phone ?? "No phone"} · {driver.driver_status ?? "pending"}</option>)}
               </select>
             </label>
 
             <label className="mt-4 block text-sm font-semibold">Document type
-              <select value={documentKey} onChange={(event) => setDocumentKey(event.target.value)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3 font-normal">
+              <select value={documentKey} onChange={(event) => { setDocumentKey(event.target.value); setExpiryDate(""); }} className="mt-2 block w-full border border-asphalt/20 bg-white p-3 font-normal">
                 <optgroup label="Driver identity">
                   {identityDocuments.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </optgroup>
@@ -252,9 +252,9 @@ export function AdminManualDriverDocuments() {
               <span className="mt-2 block text-xs font-normal text-steel">JPG, PNG, WebP or PDF · maximum 10 MB</span>
             </label>
 
-            <label className="mt-4 block text-sm font-semibold">Expiry date <span className="font-normal text-steel">(optional)</span>
-              <input type="date" value={expiryDate} onChange={(event) => setExpiryDate(event.target.value)} className="mt-2 block w-full border border-asphalt/20 p-3 font-normal" />
-            </label>
+            {documentExpiryLabel(documentKey) && <label className="mt-4 block text-sm font-semibold">{documentExpiryLabel(documentKey)} date
+              <input type="date" required value={expiryDate} onChange={(event) => setExpiryDate(event.target.value)} className="mt-2 block w-full border border-asphalt/20 p-3 font-normal" />
+            </label>}
 
             <label className="mt-4 block text-sm font-semibold">Source note
               <textarea value={sourceNote} onChange={(event) => setSourceNote(event.target.value)} rows={3} maxLength={500} className="mt-2 block w-full border border-asphalt/20 p-3 font-normal" />
@@ -287,7 +287,7 @@ export function AdminManualDriverDocuments() {
                     <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                       <p><span className="block text-steel">Source</span><strong className="mt-1 block capitalize">{document.submission_source.replace(/_/g, " ")}</strong></p>
                       <p><span className="block text-steel">Updated</span><strong className="mt-1 block">{dateTime(document.updated_at)}</strong></p>
-                      <p><span className="block text-steel">Expiry</span><strong className="mt-1 block">{document.expiry_date ?? "No expiry"}</strong></p>
+                      {documentExpiryLabel(document.document_key) && <p><span className="block text-steel">{documentExpiryLabel(document.document_key)}</span><strong className="mt-1 block">{document.expiry_date ?? "Required"}</strong></p>}
                       <p><span className="block text-steel">Note</span><strong className="mt-1 block">{document.source_note ?? "—"}</strong></p>
                     </div>
                     {document.rejection_reason && <p className="mt-3 border-l-4 border-route bg-route/5 p-3 text-xs text-route">{document.rejection_reason}</p>}

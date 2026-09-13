@@ -454,18 +454,18 @@ test("legacy delivered order is excluded from missing evidence queue", () => {
 test("driver onboarding always counts identity and vehicle requirements", () => {
   const progress = getDriverOnboardingProgress([
     { document_key: "driver_photo", status: "verified" },
-    { document_key: "license_front", status: "verified" },
+    { document_key: "license_front", status: "verified", expiry_date: "2099-12-31" },
     { document_key: "license_back", status: "verified" },
-    { document_key: "national_id_front", status: "verified" },
+    { document_key: "national_id_front", status: "verified", expiry_date: "2099-12-31" },
     { document_key: "national_id_back", status: "verified" },
   ]);
 
   assert.equal(progress.identityVerified, 5);
   assert.equal(progress.vehicleVerified, 0);
   assert.equal(progress.verified, 5);
-  assert.equal(progress.required, 12);
-  assert.equal(progress.percent, 42);
-  assert.equal(progress.missing, 7);
+  assert.equal(progress.required, 8);
+  assert.equal(progress.percent, 63);
+  assert.equal(progress.missing, 3);
 });
 
 test("CEO finance KPIs reconcile driver deposits and commission due", () => {

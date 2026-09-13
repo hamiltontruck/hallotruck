@@ -1,5 +1,8 @@
 import "../styles/admin-driver-review.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { DriverDocumentGroups } from "../components/admin/DriverDocumentGroups";
+import { DriverReviewFields } from "../components/admin/DriverReviewFields";
+import { isCurrentVerifiedDocument } from "../domain/driver-document-review";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import type { DriverVerificationFile } from "../services/driver.service";
@@ -23,6 +26,7 @@ type TruckRow = {
   id: string;
   plate_number: string;
   vehicle_type: string;
+  model?: string | null;
   capacity_tons: number | null;
   status: string;
   driver_id: string | null;
@@ -124,15 +128,7 @@ function statusBadge(status: string | null | undefined) {
   return "border-amber/30 bg-amber/10 text-amber-dim";
 }
 
-function isCurrentVerifiedDocument(doc: DriverVerificationFile, today = new Date()) {
-  if (doc.status !== "verified") return false;
-  if (!doc.expiry_date) return true;
-  const expiryDay = Date.parse(`${doc.expiry_date}T23:59:59.999Z`);
-  const currentDay = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  return Number.isFinite(expiryDay) && expiryDay >= currentDay;
-}
-
-export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverComplianceFixture } = {}) {
+export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fixture?: AdminDriverComplianceFixture; resolveDocumentPreview?: (path: string) => Promise<string> } = {}) {
   const [drivers, setDrivers] = useState<DriverRow[]>(fixture?.drivers ?? []);
   const [trucks, setTrucks] = useState<TruckRow[]>(fixture?.trucks ?? []);
   const [documents, setDocuments] = useState<DriverVerificationFile[]>(fixture?.documents ?? []);
@@ -150,7 +146,7 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
     setLoading(true);
     const [driverResult, truckResult, documentResult, orderResult, paymentResult] = await Promise.all([
       supabase.from("profiles").select("id,full_name,phone,email,home_address,driver_status").eq("role", "driver").order("full_name"),
-      supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,driver_id").order("plate_number"),
+      supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,driver_id,model").order("updated_at", { ascending: false }),
       supabase.from("driver_verification_files").select("id,driver_id,truck_id,document_key,file_path,original_name,mime_type,expiry_date,status,rejection_reason,reviewed_at,created_at,updated_at").order("updated_at", { ascending: false }),
       supabase.from("orders").select("id,tracking_id,driver_id,truck_id,pickup_address,dropoff_address,vehicle_type,price_etb,status,payment_status,accepted_at,delivered_at,created_at").not("driver_id", "is", null).order("created_at", { ascending: false }).limit(1000),
       supabase.from("payments").select("order_id,provider,amount_etb,event").order("created_at", { ascending: false }).limit(2000),
@@ -204,7 +200,7 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
   }, [fixture]);
 
   const pendingDocumentDriverIds = useMemo(
-    () => new Set(documents.filter((doc) => doc.status === "pending").map((doc) => doc.driver_id)),
+    () => new Set(documents.filter((doc) => doc.status === "pending" && [...identityRequired, ...vehicleRequired].some((key) => key === doc.document_key)).map((doc) => doc.driver_id)),
     [documents],
   );
   const driverNeedsReview = (driver: DriverRow) => (
@@ -303,7 +299,7 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
           <button onClick={() => setFilter("pending")} className={`px-4 py-2 text-xs font-semibold ${filter === "pending" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>Pending review</button>
           <button onClick={() => setFilter("all")} className={`px-4 py-2 text-xs font-semibold ${filter === "all" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>All drivers</button>
         </div>
-        <span className="font-mono text-xs text-steel">{pendingDriverCount} drivers awaiting · {documents.filter((doc) => doc.status === "pending").length} files pending</span>
+        <span className="font-mono text-xs text-steel">{pendingDriverCount} drivers awaiting · {documents.filter((doc) => doc.status === "pending" && [...identityRequired, ...vehicleRequired].some((key) => key === doc.document_key)).length} files pending</span>
       </div>
 
       {!historyAvailable && <p className="mt-4 border border-amber/30 bg-amber/10 p-3 text-xs text-amber-dim">Document version history is waiting for the new Supabase audit migration. Current verification files still work normally.</p>}
@@ -313,7 +309,7 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
         {visibleDrivers.map((driver) => {
           const driverDocs = documents.filter((doc) => doc.driver_id === driver.id);
           const identityDocs = driverDocs.filter((doc) => !doc.truck_id);
-          const assignedTruck = trucks.find((truck) => truck.driver_id === driver.id) ?? (driverDocs.find((doc) => doc.truck_id)?.truck_id ? trucks.find((truck) => truck.id === driverDocs.find((doc) => doc.truck_id)?.truck_id) : undefined);
+          const assignedTruck = trucks.find((truck) => truck.driver_id === driver.id);
           const vehicleDocs = assignedTruck ? driverDocs.filter((doc) => doc.truck_id === assignedTruck.id) : [];
           const historyRows = history.filter((item) => item.driver_id === driver.id);
           const driverOrders = orders.filter((order) => order.driver_id === driver.id);
@@ -374,13 +370,23 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
                 {driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <p className="mt-3 text-xs font-semibold text-amber-dim">Onboarding: {onboardingStage} · driver {submittedIdentity}/{identityRequired.length} · vehicle {submittedVehicle}/{vehicleRequired.length}</p>}
                 {activeTrip && <p className="mt-3 text-xs font-semibold text-amber-dim">Active trip: {activeTrip.tracking_id} · {activeTrip.status.replace("_", " ")}</p>}
               </div>
-              <div className="flex min-w-52 flex-col gap-2">
-                <div className="bg-[#f5f3ed] p-4"><p className="font-mono text-[10px] text-steel">VERIFICATION PROGRESS</p><p className="mt-1 font-display text-2xl font-bold">{verifiedIdentity + verifiedVehicle} / {identityRequired.length + vehicleRequired.length}</p><p className="mt-1 text-[11px] font-semibold text-steel">{onboardingStage}</p>{approvalVisible && <button type="button" disabled={Boolean(approvalDisabledReason)} title={approvalDisabledReason || "Approve verified driver"} aria-describedby={actionGuidanceId} onClick={() => void approveDriver(driver)} className="mt-3 w-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-35">Approve driver</button>}</div>
-                {driver.driver_status === "suspended" ? <button type="button" disabled={Boolean(restoreDisabledReason)} title={restoreDisabledReason || "Restore driver to pending review"} aria-describedby={actionGuidanceId} onClick={() => void restoreDriver(driver)} className="border border-emerald-700 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-40">Restore driver</button> : <button type="button" disabled={Boolean(removalDisabledReason)} title={removalDisabledReason || "Remove driver after confirming no active trip"} aria-describedby={actionGuidanceId} onClick={() => void removeDriver(driver)} className="border border-route/40 px-3 py-2 text-xs font-semibold text-route disabled:opacity-35">Remove driver</button>}
-                <p id={actionGuidanceId} className={`text-[11px] leading-5 ${actionGuidanceMessages.length ? "text-route" : "text-steel"}`}>{actionGuidance}</p>
-              </div>
+              <div className="driver-progress-inline"><strong>{verifiedIdentity + verifiedVehicle} / {identityRequired.length + vehicleRequired.length}</strong><span> verified</span></div>
             </div>
 
+            <div className="border-t border-asphalt/10 px-5 py-4 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{submittedIdentity + submittedVehicle} / {identityRequired.length + vehicleRequired.length} required files · 5 groups</p></div><button onClick={() => setExpandedDriverId(expanded ? null : driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{expanded ? "Hide full history" : "View full driver history"}</button></div>
+            </div>
+
+            <DriverReviewFields key={`${driver.id}:${driver.full_name}:${assignedTruck?.id}:${assignedTruck?.vehicle_type}:${assignedTruck?.model}`} driver={driver} truck={assignedTruck} onSaved={load} />
+            <DriverDocumentGroups resolvePreview={resolveDocumentPreview} documents={driverDocs} driverId={driver.id} truckId={assignedTruck?.id ?? null} busy={Boolean(busy)} error={error} onOpen={openFile} onReview={review} />
+
+            <div className="driver-lifecycle-actions">
+              {approvalVisible && <button type="button" disabled={Boolean(approvalDisabledReason)} title={approvalDisabledReason || "Approve verified driver"} aria-describedby={actionGuidanceId} onClick={() => void approveDriver(driver)}>Approve driver</button>}
+              {driver.driver_status === "suspended" ? <button type="button" disabled={Boolean(restoreDisabledReason)} title={restoreDisabledReason || "Restore driver to pending review"} aria-describedby={actionGuidanceId} onClick={() => void restoreDriver(driver)}>Restore driver</button> : <button type="button" disabled={Boolean(removalDisabledReason)} title={removalDisabledReason || "Remove driver after confirming no active trip"} aria-describedby={actionGuidanceId} onClick={() => void removeDriver(driver)}>Remove driver</button>}
+              <p id={actionGuidanceId}>{actionGuidance}</p>
+            </div>
+
+            {expanded && <div className="border-t-4 border-[#f5f3ed] bg-[#faf9f5] p-5 sm:p-6">
             <section className="driver-contact-section" aria-label="Contact and address">
               <h3>Contact &amp; address</h3>
               <dl className="driver-contact-card">
@@ -398,18 +404,7 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
 
             {assignedTruck && <div className="driver-vehicle-card border-t border-asphalt/10 bg-emerald-50/40 px-5 py-4 text-sm sm:px-6"><h3>Vehicle</h3><strong>{assignedTruck.plate_number}</strong> · {assignedTruck.vehicle_type} · {assignedTruck.capacity_tons ?? "—"} tons · <span className="capitalize">{assignedTruck.status}</span></div>}
 
-            <div className="border-t border-asphalt/10 px-5 py-4 sm:px-6">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{driverDocs.length} current verification records · {historyRows.length} archived versions</p></div><button onClick={() => setExpandedDriverId(expanded ? null : driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{expanded ? "Hide full history" : "View full driver history"}</button></div>
-            </div>
-
-            <div className="grid gap-3 bg-[#f8f7f2] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
-              {driverDocs.length === 0 ? <div className="col-span-full rounded-2xl border border-dashed border-asphalt/15 bg-white p-7 text-center text-sm text-steel">No verification files submitted yet. This driver remains visible here while completing onboarding.</div> : groupDocuments(driverDocs).map((group) => <section key={group.key} className="driver-document-group">
-                <h3>{group.title}</h3>
-                <div className="driver-document-sides">{group.documents.map((doc) => <DocumentCard key={doc.id} doc={doc} busy={Boolean(busy)} onOpen={openFile} onReview={review} />)}</div>
-              </section>)}
-            </div>
-
-            {expanded && <div className="border-t-4 border-[#f5f3ed] bg-[#faf9f5] p-5 sm:p-6">
+              <details className="driver-previous-documents"><summary>Other stored documents and vehicles</summary>{driverDocs.filter((doc) => ![...identityRequired, ...vehicleRequired].some((key) => key === doc.document_key) || (doc.truck_id && doc.truck_id !== assignedTruck?.id)).map((doc) => <div key={doc.id}><span>{labels[doc.document_key]} · {doc.status}</span><button type="button" onClick={() => void openFile(doc.file_path)}>Open original</button></div>)}</details>
               <section>
                 <div className="flex items-end justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">TRIP AUDIT</p><h3 className="mt-1 font-display text-xl font-semibold">Full trip history</h3></div><span className="font-mono text-xs text-steel">{driverOrders.length} trips</span></div>
                 <div className="mt-4 grid gap-3">
@@ -435,130 +430,6 @@ export function AdminDriverCompliance({ fixture }: { fixture?: AdminDriverCompli
       </div>}
     </div>
   </main>;
-}
-
-function groupDocuments(documents: DriverVerificationFile[]) {
-  const groups = new Map<string, { key: string; title: string; documents: DriverVerificationFile[] }>();
-  for (const doc of documents) {
-    const family = doc.document_key.startsWith("national_id_") ? "national_id"
-      : doc.document_key.startsWith("license_") ? "license"
-      : ["truck_front", "truck_back", "truck_side", "truck_loading_area"].includes(doc.document_key) ? "truck_photos"
-      : doc.document_key;
-    // Keep documents belonging to different vehicles in separate cards.
-    const key = family + ":" + (doc.truck_id ?? "identity");
-    const title = family === "national_id" ? "National ID" : family === "license" ? "Driving license"
-      : family === "truck_photos" ? "Vehicle photos" : labels[family] ?? family;
-    const group = groups.get(key) ?? { key, title, documents: [] };
-    group.documents.push(doc);
-    groups.set(key, group);
-  }
-  return [...groups.values()].map((group) => ({
-    ...group,
-    documents: [...group.documents].sort((a, b) => {
-      const rank = (key: string) => key.endsWith("_front") ? 0 : key.endsWith("_back") ? 1 : 2;
-      return rank(a.document_key) - rank(b.document_key);
-    }),
-  }));
-}
-
-function DocumentCard({
-  doc,
-  busy,
-  onOpen,
-  onReview,
-}: {
-  doc: DriverVerificationFile;
-  busy: boolean;
-  onOpen: (path: string) => Promise<void>;
-  onReview: (doc: DriverVerificationFile, status: "verified" | "rejected") => Promise<void>;
-}) {
-  const isPdf = doc.mime_type === "application/pdf";
-  const updatedLabel = new Date(doc.updated_at).toLocaleDateString();
-  const expiryDate = doc.expiry_date ? new Date(`${doc.expiry_date}T00:00:00`) : null;
-  const daysUntilExpiry = expiryDate ? Math.ceil((expiryDate.getTime() - Date.now()) / 86_400_000) : null;
-  const expiryClass = daysUntilExpiry !== null && daysUntilExpiry < 0
-    ? "bg-route/5 text-route"
-    : daysUntilExpiry !== null && daysUntilExpiry <= 30
-      ? "bg-amber/10 text-amber-dim"
-      : "bg-[#f5f3ed] text-steel";
-  const expiryLabel = !doc.expiry_date
-    ? "No expiry"
-    : daysUntilExpiry !== null && daysUntilExpiry < 0
-      ? `Expired ${doc.expiry_date}`
-      : `Expires ${doc.expiry_date}`;
-
-  const side = doc.document_key.endsWith("_front") ? "Front"
-    : doc.document_key.endsWith("_back") ? "Back"
-    : doc.document_key.endsWith("_side") ? "Side" : labels[doc.document_key] ?? "Document";
-
-  return <article className="driver-document-tile">
-    <div className="driver-document-tile-heading">
-      <strong>{side}</strong>
-      <span className={`rounded-full border px-2 py-1 text-[9px] font-semibold uppercase ${statusBadge(doc.status)}`}>{doc.status}</span>
-    </div>
-    <DocumentThumbnail doc={doc} onOpen={onOpen} />
-    <p className={`driver-document-expiry ${expiryClass}`}>{expiryLabel}</p>
-    <details className="driver-document-details">
-      <summary>File details</summary>
-      <p>{doc.original_name}</p>
-      <p>{isPdf ? "PDF document" : "Image file"}</p>
-      <p>Updated {updatedLabel}</p>
-      {doc.reviewed_at && <p>Reviewed {new Date(doc.reviewed_at).toLocaleDateString()}</p>}
-    </details>
-    {doc.rejection_reason && <p className="text-xs text-route">{doc.rejection_reason}</p>}
-    <button type="button" onClick={() => void onOpen(doc.file_path)} className="driver-document-open">Open file</button>
-    {doc.status === "pending" && <div className="driver-document-review-actions">
-      <button type="button" disabled={busy} onClick={() => void onReview(doc, "verified")} className="bg-emerald-700 text-white disabled:opacity-40">Verify</button>
-      <button type="button" disabled={busy} onClick={() => void onReview(doc, "rejected")} className="border border-route/30 text-route disabled:opacity-40">Request re-upload</button>
-    </div>}
-  </article>;
-}
-
-
-function DocumentThumbnail({ doc, onOpen }: {
-  doc: DriverVerificationFile;
-  onOpen: (path: string) => Promise<void>;
-}) {
-  const host = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  const [preview, setPreview] = useState<{ path: string; url: string } | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const image = /image\/(jpeg|jpg|png|webp|gif)$/i.test(doc.mime_type);
-
-  useEffect(() => {
-    const node = host.current;
-    if (!node) return;
-    if (typeof IntersectionObserver === "undefined") { setVisible(true); return; }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) { setVisible(true); observer.disconnect(); }
-    }, { rootMargin: "160px" });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    setPreview(null);
-    setFailed(false);
-    if (!visible || !image) return;
-    void supabase.storage.from("driver-verification").createSignedUrl(doc.file_path, 300)
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (error || !data?.signedUrl) setFailed(true);
-        else setPreview({ path: doc.file_path, url: data.signedUrl });
-      }).catch(() => { if (active) setFailed(true); });
-    return () => { active = false; };
-  }, [doc.file_path, visible, image, attempt]);
-
-  const url = preview?.path === doc.file_path ? preview.url : null;
-  return <div ref={host} className="driver-document-preview">
-    {image && url && !failed ? <button type="button" onClick={() => void onOpen(doc.file_path)} aria-label={`Open ${labels[doc.document_key] ?? "document"}`}>
-      <img src={url} alt={labels[doc.document_key] ?? "Driver document"} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
-    </button> : failed ? <button type="button" onClick={() => setAttempt((value) => value + 1)}>Preview unavailable · Retry</button>
-      : !image ? <button type="button" onClick={() => void onOpen(doc.file_path)}>{doc.mime_type === "application/pdf" ? "Open PDF" : "Open original image"}</button>
-      : <span role="status">Loading preview…</span>}
-  </div>;
 }
 
 function DocumentGlyph({ verified = false, rejected = false, muted = false }: { verified?: boolean; rejected?: boolean; muted?: boolean }) {

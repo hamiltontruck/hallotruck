@@ -1,3 +1,4 @@
+import { DRIVER_VEHICLE_TYPES } from "../domain/driver-vehicle-types";
 import { supabase } from "./supabase.client";
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
@@ -142,17 +143,7 @@ export interface DriverVerificationProfile {
   documents: DriverVerificationFile[];
 }
 
-export const DRIVER_VEHICLE_TYPES = [
-  "Pickup",
-  "Van",
-  "Isuzu 5 Ton",
-  "Dry Cargo",
-  "Refrigerated",
-  "Truck 22 Ton",
-  "Truck 25 Ton",
-  "Truck 30 Ton",
-  "Trailer",
-] as const;
+export { DRIVER_VEHICLE_TYPES } from "../domain/driver-vehicle-types";
 
 export type DriverVehicleType = (typeof DRIVER_VEHICLE_TYPES)[number];
 

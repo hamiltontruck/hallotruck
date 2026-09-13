@@ -1,0 +1,42 @@
+# Compact Admin driver documents
+
+Implemented and locally validated on main 306dabd504c78b7bfebebf1d39df10a6fb04ddfb; published for review on main 8356d19683ca8aaa00894952b4afa324da7ca368. The intervening changes concern Driver Android and its dispute migration.
+
+Five groups contain eight required files, in this order: driver photo; license front/back; National ID front/back; one vehicle registration photo/PDF; truck front/side photos. License and National ID each require one expiry date on their front record. Neither back has a second expiry field. Switching document type or driver clears the draft expiry to prevent carrying the wrong date across documents. Previous evidence and audit records remain stored and accessible through history.
+
+Driver name, canonical truck type and descriptive truck model are editable above the document groups. Save uses database-backed leadership authorization, stale-value protection and assignment checks. Truck changes are blocked during an active trip. Private previews use five-minute signed URLs. File metadata and review actions appear inside the preview dialog rather than stretching the list.
+
+## Validation
+
+| Check | Result |
+| --- | --- |
+| Strict TypeScript, script syntax, source hygiene | PASS |
+| Regression tests | 371 passed, 0 failed |
+| PostgreSQL migration contracts in isolated PGlite fixture | 35 passed |
+| Production build | PASS; existing large-bundle warning remains |
+| Admin browser smoke | PASS at 320, 360, 390, 412, 430 and 768 CSS pixels |
+| Document grouping, compact height, metadata hidden | PASS |
+| License and National ID dialogs: one expiry each, none on backs | PASS |
+| Close and focus restoration | PASS |
+| Additional 390px keyboard Tab/Escape interaction | PASS |
+
+Screenshots are real component renders using synthetic test documents, not production driver evidence. Browser checks used Chromium through Playwright with a local CLI adapter; the checked-in smoke assertions ran unchanged.
+
+- [Five compact groups](five-compact-groups-390.png)
+- [Driver and truck fields](driver-truck-fields-390.png)
+- [License detail dialog](license-details-390.png)
+- [National ID detail dialog](national-id-details-390.png)
+
+## Release boundary
+
+Migration applied to production on 2026-09-13 as `20260913195801_compact_driver_verification.sql` (Supabase-assigned version; SQL unchanged from the reviewed 20260913143748 file). All four function bodies exactly match the reviewed SQL. Anonymous execution is denied; the internal unchecked helper remains unavailable to authenticated callers. Calls without a leadership identity were denied for all four public RPCs in a rolled-back transaction. The `trucks.model` text column exists. Document and history counts remained 54 and 88. No document/profile/truck rows were intentionally modified by this migration.
+
+The three newer production security migrations were reviewed before applying and are preserved. Historical migration version/name drift was observed; old history entries were not rewritten or falsely marked applied. Runtime dependencies and the current leadership guard were verified directly. Security advisors still report unrelated PostGIS/extension/Auth findings and expected authenticated SECURITY DEFINER warnings; the four changed public RPCs retain database-backed leadership checks. Live authenticated UI saves and private storage previews remain unverified.
+
+The production marker is now advanced to the verified applied version `20260913195801`. The deployment gate remains enabled.
+
+Repository publication and merge are authorized. Final GitHub checks must pass before merging.
+
+PR follow-up: merged main through 0b624a7, preserved narrow-screen width guards, and synchronized React fixture interactions with flushSync to avoid virtual-time scheduling races. The unapplied migration was regenerated after the latest main migration; its SQL is unchanged.
+
+CI follow-up: the Chrome dump-dom virtual-time harness still exited before the asynchronous fixture completed despite flushSync. Replaced that harness with pinned playwright-core controlling the installed Chrome directly, exact viewport sizes and an explicit ready-state wait. All assertions remain enabled; failures now save screenshot, DOM and page errors. The direct Chromium run passed all six sizes locally.
