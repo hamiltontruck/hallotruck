@@ -1,3 +1,17 @@
 <resources>
     <string name="nav_book">ይዘዙ</string>
+    <string name="customer_brand_tagline">አብረን ወደፊት</string>
+    <string name="dashboard_reliable_logistics">በመላ ኢትዮጵያ አስተማማኝ ሎጂስቲክስ</string>
+    <string name="dash_quick_actions">ፈጣን ተግባራት</string>
+    <string name="dash_promo_title">ጭነትዎ፣ ቃልኪዳናችን</string>
+    <string name="dash_promo_subtitle">ደህንነት • በሰዓቱ • በመላ ኢትዮጵያ</string>
+    <string name="booking_progress_route">መንገድ</string>
+    <string name="booking_progress_cargo">ጭነት</string>
+    <string name="booking_progress_truck">መኪና</string>
+    <string name="booking_progress_quote">ዋጋ</string>
+    <string name="booking_progress_summary">መንገድ → ጭነት → መኪና → ዋጋ → ማረጋገጫ</string>
+    <string name="booking_success_title">ትዕዛዙ ተሳክቷል!</string>
+    <string name="booking_success_body">ትዕዛዝዎ ተፈጥሯል።</string>
+    <string name="booking_view_orders">ትዕዛዙን ይመልከቱ</string>
+    <string name="booking_create_another">ሌላ ትዕዛዝ ይፍጠሩ</string>
 </resources>
