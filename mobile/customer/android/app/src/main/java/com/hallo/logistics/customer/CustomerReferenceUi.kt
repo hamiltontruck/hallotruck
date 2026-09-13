@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.widget.doAfterTextChanged
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 
@@ -122,6 +123,13 @@ object CustomerReferenceUi {
         val field = view(root, name) as? EditText ?: return
         val preserved = field.filters.filterNot { it is InputFilter.LengthFilter }
         field.filters = (preserved + InputFilter.LengthFilter(max)).toTypedArray()
+        field.doAfterTextChanged { value ->
+            if (value != null && value.length > max) {
+                val truncated = value.subSequence(0, max).toString()
+                field.setText(truncated)
+                field.setSelection(truncated.length)
+            }
+        }
     }
 
     private fun MaterialCardView.referenceCard(root: View, line: Int, radiusDp: Int) {
