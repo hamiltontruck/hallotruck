@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
 const edge = await readFile("supabase/functions/customer-booking/index.ts", "utf8");
-const migration = await readFile("supabase/migrations/20260914003000_customer_booking_backend_v1.sql", "utf8");
+const migration = await readFile("supabase/migrations/20260913214312_customer_booking_backend_v1.sql", "utf8");
 const workflow = await readFile(".github/workflows/deploy-supabase-functions.yml", "utf8");
 
 const transpiled = ts.transpileModule(edge, {
