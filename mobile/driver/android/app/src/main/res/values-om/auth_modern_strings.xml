@@ -1,0 +1,9 @@
+<resources>
+    <string name="driver_auth_signin_title">Baga deebite, konkolaachisaa</string>
+    <string name="driver_auth_signup_title">Akkaawuntii Driver kee uumi</string>
+    <string name="driver_auth_signin_subtitle">Hojii, imala, galii fi sanadoota mirkaneessaa kee bulchuuf seeni.</string>
+    <string name="driver_auth_signup_subtitle">Odeeffannoo qunnamtii kee fi PIN lakkoofsa 6 nageenya qabuun HALLO Driver irratti galmaa’i.</string>
+    <string name="driver_auth_new_prompt">HALLO Driver irratti haaraa dhaa?</string>
+    <string name="driver_auth_existing_prompt">Akkaawuntii Driver qabdaa?</string>
+    <string name="driver_auth_hero_description">Konkolaataa HALLO Logistics Driver</string>
+</resources>
