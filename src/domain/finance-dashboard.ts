@@ -172,7 +172,7 @@ export function computeFinanceSummary(data: FinanceDashboardData, now = new Date
     outstandingCommission,
     driverDeposits: deposits,
     availableDriverDeposits: availableDeposits,
-    netPlatformRevenue: Math.max(commissionEarned - refunded, 0),
+    netPlatformRevenue: commissionEarned,
     activeWallets,
   };
 }
