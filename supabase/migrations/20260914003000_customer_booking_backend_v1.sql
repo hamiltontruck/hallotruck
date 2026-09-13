@@ -213,7 +213,7 @@ begin
   loop
     v_tracking_id := 'HT-' || extract(year from now())::int || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
     begin
-      insert into public.orders(
+      insert into public.orders as inserted_order(
         tracking_id,
         customer_id,
         customer_name,
@@ -257,7 +257,7 @@ begin
         'pay_driver_on_delivery',
         'placed'::public.order_status
       )
-      returning public.orders.id into v_order_id;
+      returning inserted_order.id into v_order_id;
       exit;
     exception when unique_violation then
       -- Tracking IDs are random; retry only the extremely unlikely tracking collision.
