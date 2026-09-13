@@ -3,8 +3,10 @@ package com.hallo.logistics.customer
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.InputFilter
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
@@ -41,6 +43,12 @@ object CustomerReferenceUi {
         }
         text(root, "status")?.setTextColor(Color.argb(220, 255, 255, 255))
         text(root, "headerTitle")?.apply { setTextColor(Color.WHITE); textSize = 20f; setTypeface(typeface, Typeface.BOLD) }
+
+        limit(root, "fullName", 80)
+        limit(root, "phone", 18)
+        limit(root, "email", 254)
+        limit(root, "password", 72)
+        limit(root, "confirmPin", 6)
 
         card(root, "homeMapCard")?.apply {
             radius = dpF(root, 24)
@@ -108,6 +116,12 @@ object CustomerReferenceUi {
         }
         if (v is ImageView) v.clipToOutline = true
         if (v is ViewGroup) for (i in 0 until v.childCount) polishTree(v.getChildAt(i), navy, line)
+    }
+
+    private fun limit(root: View, name: String, max: Int) {
+        val field = view(root, name) as? EditText ?: return
+        val preserved = field.filters.filterNot { it is InputFilter.LengthFilter }
+        field.filters = (preserved + InputFilter.LengthFilter(max)).toTypedArray()
     }
 
     private fun MaterialCardView.referenceCard(root: View, line: Int, radiusDp: Int) {
