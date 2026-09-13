@@ -1,3 +1,17 @@
 <resources>
     <string name="nav_book">Book</string>
+    <string name="customer_brand_tagline">Move Forward Together</string>
+    <string name="dashboard_reliable_logistics">Reliable Logistics Across Ethiopia</string>
+    <string name="dash_quick_actions">Quick actions</string>
+    <string name="dash_promo_title">Your cargo, our commitment</string>
+    <string name="dash_promo_subtitle">Safe • On time • Across Ethiopia</string>
+    <string name="booking_progress_route">Route</string>
+    <string name="booking_progress_cargo">Cargo</string>
+    <string name="booking_progress_truck">Truck</string>
+    <string name="booking_progress_quote">Quote</string>
+    <string name="booking_progress_summary">Route → Cargo → Truck → Quote → Review</string>
+    <string name="booking_success_title">Booking successful!</string>
+    <string name="booking_success_body">Your order has been created.</string>
+    <string name="booking_view_orders">View order</string>
+    <string name="booking_create_another">Create another</string>
 </resources>
