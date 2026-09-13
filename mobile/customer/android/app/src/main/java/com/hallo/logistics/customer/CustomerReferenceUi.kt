@@ -98,6 +98,7 @@ object CustomerReferenceUi {
         button(root, "signOut")?.apply { minHeight = dp(root, 54); cornerRadius = dp(root, 18) }
 
         polishTree(root, navy, line)
+        button(root, "authSubmit")?.referencePrimary(root, blue)
         listOf("trackingStatus", "orderStatus", "profileVerified").forEach { name ->
             text(root, name)?.let {
                 val value = it.text.toString()
