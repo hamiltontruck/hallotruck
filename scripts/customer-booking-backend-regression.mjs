@@ -1,9 +1,21 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import ts from "typescript";
 
 const edge = await readFile("supabase/functions/customer-booking/index.ts", "utf8");
 const migration = await readFile("supabase/migrations/20260914003000_customer_booking_backend_v1.sql", "utf8");
 const workflow = await readFile(".github/workflows/deploy-supabase-functions.yml", "utf8");
+
+const transpiled = ts.transpileModule(edge, {
+  compilerOptions: {
+    module: ts.ModuleKind.ESNext,
+    target: ts.ScriptTarget.ES2022,
+  },
+  fileName: "supabase/functions/customer-booking/index.ts",
+  reportDiagnostics: true,
+});
+const syntaxErrors = (transpiled.diagnostics ?? []).filter((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error);
+assert.equal(syntaxErrors.length, 0, `Customer booking Edge Function has TypeScript syntax errors: ${syntaxErrors.map((d) => ts.flattenDiagnosticMessageText(d.messageText, " ")).join(" | ")}`);
 
 assert.match(edge, /service\.auth\.getUser\(token\)/, "booking endpoint must verify the bearer token");
 assert.match(edge, /profile\.role !== "customer"/, "booking endpoint must reject non-Customer roles");
