@@ -105,6 +105,7 @@ object CustomerReferenceUi {
                 if (value.contains("deliver", true) || value.contains("route", true) || value.contains("verified", true)) it.setTextColor(green)
             }
         }
+        CustomerApprovedScreens.install(root)
     }
 
     private fun polishTree(v: View, navy: Int, line: Int) {
