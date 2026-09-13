@@ -1,38 +1,39 @@
 /* Scoped to Admin Driver Compliance; no other portal is restyled. */
-.admin-driver-review { background: #f5f7fa; color: #14253a; }
-.admin-driver-review .driver-review-profile { overflow: hidden; border-radius: 24px; box-shadow: 0 8px 28px #14253a08; }
-.admin-driver-review .driver-review-header { background: linear-gradient(120deg,#123262,#0d203a); color: white; }
-.admin-driver-review .driver-review-header h2 { font-size: 1.75rem; }
+.admin-driver-review { min-width: 0; max-width: 100%; overflow-x: hidden; background: #f5f7fa; color: #14253a; }
+.admin-driver-review .driver-review-profile { min-width: 0; max-width: 100%; overflow: hidden; border-radius: 24px; box-shadow: 0 8px 28px #14253a08; }
+.admin-driver-review .driver-review-header { min-width: 0; background: linear-gradient(120deg,#123262,#0d203a); color: white; }
+.admin-driver-review .driver-review-header h2 { font-size: 1.75rem; overflow-wrap: anywhere; }
 .admin-driver-review .driver-review-header > div { min-width: 0; }
-.admin-driver-review .driver-review-header > div:last-child { color: #14253a; border-radius: 16px; background: #fff; padding: 12px; }
-.admin-driver-review .driver-contact-section { padding: 24px; }
-.admin-driver-review h3 { font-size: 1rem; font-weight: 750; margin-bottom: 12px; }
-.admin-driver-review .driver-contact-card { border-radius: 18px; padding: 16px; background: #f5f7fa; }
-.admin-driver-review .driver-contact-card > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.5fr); gap: 12px; padding: 6px 0; }
-.admin-driver-review dt { color: #657180; }
-.admin-driver-review dd { text-align: right; font-weight: 600; overflow-wrap: anywhere; }
-.admin-driver-review .driver-vehicle-card { margin: 0 20px 16px; border: 1px solid #e4e8ef; border-radius: 18px; background: white; }
-.admin-driver-review .driver-document-group { min-width: 0; grid-column: 1 / -1; padding: 16px; border: 1px solid #e4e8ef; border-radius: 20px; background: white; box-shadow: 0 5px 20px #14253a06; }
-.admin-driver-review .driver-document-sides { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
-.admin-driver-review .driver-document-sides > article { min-width: 0; background: #f8f9fc; box-shadow: none; }
-.admin-driver-review button { min-height: 44px; border-radius: 12px; white-space: normal; overflow-wrap: anywhere; }
+.admin-driver-review .driver-review-header > div:last-child { min-width: 0; color: #14253a; border-radius: 16px; background: #fff; padding: 12px; }
+.admin-driver-review .driver-contact-section { min-width: 0; padding: 24px; }
+.admin-driver-review h3 { font-size: 1rem; font-weight: 750; margin-bottom: 12px; overflow-wrap: anywhere; }
+.admin-driver-review .driver-contact-card { min-width: 0; border-radius: 18px; padding: 16px; background: #f5f7fa; }
+.admin-driver-review .driver-contact-card > div { min-width: 0; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.5fr); gap: 12px; padding: 6px 0; }
+.admin-driver-review dt { min-width: 0; color: #657180; overflow-wrap: anywhere; }
+.admin-driver-review dd { min-width: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.admin-driver-review .driver-vehicle-card { min-width: 0; margin: 0 20px 16px; border: 1px solid #e4e8ef; border-radius: 18px; background: white; }
+.admin-driver-review .driver-document-group { min-width: 0; max-width: 100%; grid-column: 1 / -1; padding: 16px; border: 1px solid #e4e8ef; border-radius: 20px; background: white; box-shadow: 0 5px 20px #14253a06; }
+.admin-driver-review .driver-document-sides { min-width: 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.admin-driver-review .driver-document-sides > article { min-width: 0; max-width: 100%; background: #f8f9fc; box-shadow: none; }
+.admin-driver-review button { min-height: 44px; max-width: 100%; border-radius: 12px; white-space: normal; overflow-wrap: anywhere; }
 .admin-driver-review button:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
 @media(max-width: 380px) {
  .admin-driver-review .driver-contact-section { padding: 16px; }
  .admin-driver-review .driver-contact-card > div { grid-template-columns: 1fr; gap: 2px; }
  .admin-driver-review dd { text-align: left; }
  .admin-driver-review .driver-review-header > div:last-child { min-width: 0; }
+ .admin-driver-review .driver-vehicle-card { margin-right: 12px; margin-left: 12px; }
 }
 
 .admin-driver-review .driver-document-sides > :only-child { grid-column: 1 / -1; }
-.admin-driver-review .driver-document-tile { min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; display: flex; flex-direction: column; gap: 8px; }
-.admin-driver-review .driver-document-tile-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 12px; }
-.admin-driver-review .driver-document-preview { height: 130px; background: #e9edf3; border-radius: 14px; overflow: hidden; display: grid; place-items: center; color: #596575; font-size: 12px; text-align: center; }
+.admin-driver-review .driver-document-tile { min-width: 0; max-width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; display: flex; flex-direction: column; gap: 8px; }
+.admin-driver-review .driver-document-tile-heading { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 12px; overflow-wrap: anywhere; }
+.admin-driver-review .driver-document-preview { min-width: 0; width: 100%; height: 130px; background: #e9edf3; border-radius: 14px; overflow: hidden; display: grid; place-items: center; color: #596575; font-size: 12px; text-align: center; }
 .admin-driver-review .driver-document-preview button { width: 100%; height: 100%; padding: 8px; }
-.admin-driver-review .driver-document-preview img { width: 100%; height: 100%; object-fit: contain; }
-.admin-driver-review .driver-document-expiry { border-radius: 8px; padding: 6px; font-size: 11px; overflow-wrap: anywhere; }
-.admin-driver-review .driver-document-details { font-size: 11px; overflow-wrap: anywhere; color: #657180; }
+.admin-driver-review .driver-document-preview img { width: 100%; max-width: 100%; height: 100%; object-fit: contain; }
+.admin-driver-review .driver-document-expiry { min-width: 0; border-radius: 8px; padding: 6px; font-size: 11px; overflow-wrap: anywhere; }
+.admin-driver-review .driver-document-details { min-width: 0; font-size: 11px; overflow-wrap: anywhere; color: #657180; }
 .admin-driver-review .driver-document-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .admin-driver-review .driver-document-open { border: 1px solid #dce3ec; color: #163968; font-size: 12px; margin-top: auto; }
-.admin-driver-review .driver-document-review-actions { display: grid; gap: 6px; font-size: 11px; }
+.admin-driver-review .driver-document-review-actions { min-width: 0; display: grid; gap: 6px; font-size: 11px; }
 @media(min-width: 640px) { .admin-driver-review .driver-document-preview { height: 180px; } }
