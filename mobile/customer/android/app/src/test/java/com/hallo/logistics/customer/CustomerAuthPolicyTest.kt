@@ -1,11 +1,25 @@
 package com.hallo.logistics.customer
 
+import java.util.Locale
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class CustomerAuthPolicyTest {
+    private lateinit var originalLocale: Locale
+
+    @Before fun rememberLocale() {
+        originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.ENGLISH)
+    }
+
+    @After fun restoreLocale() {
+        Locale.setDefault(originalLocale)
+    }
+
     @Test fun signInRequiresValidEmailAndBoundedPassword() {
         assertEquals("Enter a valid email address", CustomerAuthPolicy.validateSignIn("not-an-email", "123456"))
         assertEquals("Password must be at least 6 characters", CustomerAuthPolicy.validateSignIn("user@example.com", "12345"))
@@ -43,5 +57,23 @@ class CustomerAuthPolicyTest {
     @Test fun unknownBackendErrorIsGeneric() {
         val safe = CustomerAuthPolicy.safeMessage(IllegalStateException("URL: https://secret.example Headers: Authorization=Bearer abc123"))
         assertEquals("Customer request failed. Please try again", safe)
+    }
+
+    @Test fun authValidationFollowsOromoLocale() {
+        Locale.setDefault(Locale.forLanguageTag("om"))
+        assertEquals("Teessoo imeelii sirrii galchi", CustomerAuthPolicy.validateSignIn("bad-email", "123456"))
+        assertEquals(
+            "Imeeliin ykn jechi darbii sirrii miti",
+            CustomerAuthPolicy.safeMessage(IllegalStateException("invalid_credentials URL: https://secret.supabase.co")),
+        )
+    }
+
+    @Test fun authValidationFollowsAmharicLocale() {
+        Locale.setDefault(Locale.forLanguageTag("am"))
+        assertEquals("ትክክለኛ የኢሜይል አድራሻ ያስገቡ", CustomerAuthPolicy.validateSignIn("bad-email", "123456"))
+        assertEquals(
+            "ኢሜይሉ ወይም የይለፍ ቃሉ ትክክል አይደለም",
+            CustomerAuthPolicy.safeMessage(IllegalStateException("invalid_credentials Authorization=Bearer redacted")),
+        )
     }
 }
