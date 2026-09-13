@@ -1,6 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { chromium } from "playwright-core";
 import path from "node:path";
 
 const root = process.cwd();
@@ -17,7 +17,7 @@ const html = path.join(root, "dist/admin-driver-compliance-e2e.html");
 function chromeBinary() {
   for (const candidate of [process.env.CHROME_BIN, "google-chrome", "google-chrome-stable", "chromium", "chromium-browser"].filter(Boolean)) {
     const result = spawnSync(candidate, ["--version"], { encoding: "utf8" });
-    if (!result.error && result.status === 0) return candidate;
+    if (!result.error && result.status === 0) return path.isAbsolute(candidate) ? candidate : spawnSync("which", [candidate], { encoding: "utf8" }).stdout.trim();
   }
   throw new Error("No supported Chrome/Chromium binary found.");
 }
@@ -29,14 +29,6 @@ async function waitForServer() {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error("Admin Driver Compliance preview server did not start.");
-}
-
-function render(chrome, width, profile) {
-  for (const flag of ["--headless=new", "--headless"]) {
-    const result = spawnSync(chrome, [flag, "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars", `--window-size=${width},1200`, "--virtual-time-budget=4000", `--user-data-dir=${profile}`, "--dump-dom", `${baseUrl}admin-driver-compliance-e2e.html`], { cwd: root, encoding: "utf8", maxBuffer: 30 * 1024 * 1024, timeout: 30_000 });
-    if (!result.error && result.status === 0 && result.stdout) return result.stdout;
-  }
-  throw new Error(`Chrome could not render Admin Driver Compliance at ${width}px.`);
 }
 
 await mkdir(temp, { recursive: true });
@@ -96,21 +88,35 @@ const built = spawnSync(esbuild, [entry, "--bundle", "--platform=browser", "--fo
 if (built.status !== 0) throw new Error(built.stderr || "Admin Driver Compliance fixture bundle failed.");
 await writeFile(html, `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="./assets/${css}"></head><body><div id="root"></div><script type="module" src="./admin-driver-compliance-e2e.js"></script></body></html>`, "utf8");
 
+let browser;
 const preview = spawn(vite, ["preview", "--host", host, "--port", String(port), "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
 try {
   await waitForServer();
-  const chrome = chromeBinary();
+  browser = await chromium.launch({ executablePath: chromeBinary(), headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"], timeout: 30_000 });
   for (const width of [320, 360, 390, 412, 430, 768]) {
-    const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-admin-driver-compliance-"));
+    const page = await browser.newPage({ viewport: { width, height: 1200 } });
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.stack || error.message));
     try {
-      const dom = render(chrome, width, profile);
+      await page.goto(`${baseUrl}admin-driver-compliance-e2e.html`, { waitUntil: "load", timeout: 30_000 });
+      await page.waitForFunction(() => document.documentElement.dataset.ready === "true", { }, { timeout: 15_000 });
+      if (errors.length) throw new Error(errors.join("\n"));
+      const dom = await page.content();
       for (const expected of ['data-ready="true"', 'data-overflow="false"', "Driver operations &amp; verification", "Cannot approve yet: Waiting for driver documents.", "Cannot remove while active trip HT-2026-ACTIVE-001 is accepted.", "Approved Replacement Driver", 'data-groups="true"', 'data-compact="true"', 'data-metadata-hidden="true"', 'data-details="true"', 'data-modal-overflow="false"', 'data-back="true"', 'data-closed="true"', 'data-id-expiry="true"', 'data-id-back="true"']) {
         if (!dom.includes(expected)) throw new Error(`Admin Driver Compliance ${width}px smoke missing: ${expected}`);
       }
-    } finally { await rm(profile, { recursive: true, force: true }); }
+    } catch (error) {
+      const evidence = path.join(root, "qa-evidence/admin-documents");
+      await mkdir(evidence, { recursive: true });
+      await page.screenshot({ path: path.join(evidence, `failure-${width}.png`), fullPage: true });
+      await writeFile(path.join(evidence, `failure-${width}.html`), await page.content());
+      await writeFile(path.join(evidence, `failure-${width}.log`), [String(error), ...errors].join("\n"));
+      throw error;
+    } finally { await page.close(); }
   }
   console.log("Admin Driver Compliance browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with visible disabled-action guidance.");
 } finally {
+  await browser?.close();
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2000))]);
   if (preview.exitCode === null) preview.kill("SIGKILL");

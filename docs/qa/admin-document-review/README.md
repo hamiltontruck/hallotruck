@@ -36,3 +36,5 @@ Before deployment, review/apply the migration and verify it, then advance `supab
 Repository publication is authorized. This review branch does not merge or deploy automatically; production migration application and the deployment marker remain pending.
 
 PR follow-up: merged main through 0b624a7, preserved narrow-screen width guards, and synchronized React fixture interactions with flushSync to avoid virtual-time scheduling races. The unapplied migration was regenerated after the latest main migration; its SQL is unchanged.
+
+CI follow-up: the Chrome dump-dom virtual-time harness still exited before the asynchronous fixture completed despite flushSync. Replaced that harness with pinned playwright-core controlling the installed Chrome directly, exact viewport sizes and an explicit ready-state wait. All assertions remain enabled; failures now save screenshot, DOM and page errors. The direct Chromium run passed all six sizes locally.
