@@ -69,12 +69,22 @@ function Fixture() {
   );
   return h(
     "main",
-    { className: "min-h-screen overflow-x-hidden bg-[#f5f3ed] text-asphalt" },
+    { className: "partner-mobile-touch-safe min-h-screen overflow-x-hidden bg-[#f5f3ed] text-asphalt" },
     h(
       "header",
       { className: "bg-asphalt px-4 py-6 text-white" },
       h("p", { className: "font-mono text-[10px] tracking-[.22em] text-amber" }, "HALLO LOGISTICS PARTNER"),
       h("h1", { className: "mt-2 break-words font-display text-3xl font-bold" }, "Very Long Partner Organization Name Across Mobile Widths"),
+      h(
+        "div",
+        { className: "mt-4 flex flex-wrap gap-2" },
+        h("a", { href: "#wallet", className: "border border-white/20 px-3 py-2 text-xs" }, "Wallet"),
+        h("button", { type: "button", className: "border border-amber/50 px-3 py-2 text-xs" }, "Refresh"),
+        h("select", { defaultValue: "org-1", className: "border border-white/20 bg-asphalt px-3 py-2 text-xs" },
+          h("option", { value: "org-1" }, "Hamilton Group PLC"),
+          h("option", { value: "org-2" }, "Partner Two"),
+        ),
+      ),
     ),
     h(
       "section",
@@ -106,9 +116,14 @@ function Fixture() {
 
 createRoot(document.getElementById("root")).render(h(Fixture));
 await new Promise((resolve) => setTimeout(resolve, 150));
+const touchTargets = [...document.querySelectorAll('.partner-mobile-touch-safe button, .partner-mobile-touch-safe a, .partner-mobile-touch-safe select')];
 document.documentElement.dataset.overflow = String(
   document.documentElement.scrollWidth > document.documentElement.clientWidth ||
   document.body.scrollWidth > document.body.clientWidth,
+);
+document.documentElement.dataset.touchTargets = String(touchTargets.length);
+document.documentElement.dataset.touchSafe = String(
+  touchTargets.length > 0 && touchTargets.every((element) => element.getBoundingClientRect().height >= 44),
 );
 document.documentElement.dataset.ready = "true";
 `;
@@ -128,14 +143,14 @@ try {
     const profile = await mkdtemp(path.join(os.tmpdir(), "hallotruck-partner-e2e-"));
     try {
       const dom = render(chrome, width, profile);
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "HALLO LOGISTICS PARTNER", "Projects", "Payments", "Documents", "Activity", "Chat"]) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', 'data-touch-safe="true"', "HALLO LOGISTICS PARTNER", "Projects", "Payments", "Documents", "Activity", "Chat", "Wallet", "Refresh"]) {
         if (!dom.includes(expected)) throw new Error(`Partner ${width}px smoke missing: ${expected}`);
       }
     } finally {
       await rm(profile, { recursive: true, force: true });
     }
   }
-  console.log("Partner browser smoke passed at 320px, 360px, 390px and 412px with no horizontal overflow.");
+  console.log("Partner browser smoke passed at 320px, 360px, 390px and 412px with no horizontal overflow and 44px minimum touch targets.");
 } finally {
   preview.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => preview.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 2000))]);
