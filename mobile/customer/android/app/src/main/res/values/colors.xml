@@ -1,13 +1,19 @@
 <resources>
     <color name="hallo_navy">#10213D</color>
+    <color name="hallo_blue">#0A6FF5</color>
+    <color name="hallo_blue_dark">#0957C9</color>
+    <color name="hallo_blue_soft">#EAF3FF</color>
     <color name="hallo_gold">#F5B400</color>
-    <color name="hallo_surface">#F4F7FB</color>
+    <color name="hallo_surface">#F5F8FC</color>
     <color name="hallo_text">#182033</color>
-    <color name="hallo_muted">#68778D</color>
+    <color name="hallo_muted">#6D7D91</color>
     <color name="hallo_success">#027A48</color>
-    <color name="hallo_line">#DFE7F1</color>
-    <color name="hallo_gold_soft">#FFF3C6</color>
+    <color name="hallo_success_soft">#EAF9F1</color>
+    <color name="hallo_line">#E3EAF4</color>
+    <color name="hallo_gold_soft">#FFF7DC</color>
     <color name="hallo_navy_soft">#EAF0F8</color>
+    <color name="hallo_purple">#6C4DFF</color>
+    <color name="hallo_purple_soft">#F1EDFF</color>
     <color name="hallo_danger">#B42318</color>
     <color name="hallo_warning">#B54708</color>
 </resources>

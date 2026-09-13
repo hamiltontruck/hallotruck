@@ -135,6 +135,7 @@ data class CreateOrderInput(
     val cargoDescription: String,
     val paymentMethod: String,
     val quoteEtb: Double,
+    val requestId: String = java.util.UUID.randomUUID().toString(),
 )
 
 data class CustomerProfileUpdateInput(

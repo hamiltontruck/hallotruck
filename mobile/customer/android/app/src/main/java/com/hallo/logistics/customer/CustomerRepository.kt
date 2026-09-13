@@ -21,11 +21,11 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.time.Year
 import java.util.UUID
 
 class CustomerRepository {
@@ -39,28 +39,6 @@ class CustomerRepository {
         @SerialName("cargo_tons") val cargoTons: Double,
         @SerialName("total_quote_etb") val totalQuoteEtb: Double,
     )
-    @Serializable private data class OrderInsert(
-        @SerialName("tracking_id") val trackingId: String,
-        @SerialName("customer_id") val customerId: String,
-        @SerialName("customer_name") val customerName: String,
-        @SerialName("customer_phone") val customerPhone: String,
-        @SerialName("pickup_address") val pickupAddress: String,
-        val pickup: String,
-        @SerialName("dropoff_address") val dropoffAddress: String,
-        val dropoff: String,
-        @SerialName("vehicle_type") val vehicleType: String,
-        @SerialName("distance_km") val distanceKm: Double,
-        @SerialName("cargo_quantity") val cargoQuantity: Double,
-        @SerialName("cargo_unit") val cargoUnit: String = "ton",
-        @SerialName("cargo_category") val cargoCategory: String = "general_goods",
-        @SerialName("packaging_type") val packagingType: String = "loose_bulk",
-        @SerialName("cargo_description") val cargoDescription: String,
-        @SerialName("price_etb") val priceEtb: Double,
-        @SerialName("selected_payment_method") val selectedPaymentMethod: String,
-        @SerialName("payment_terms") val paymentTerms: String = "pay_driver_on_delivery",
-        val status: String = "placed",
-    )
-    @Serializable private data class CreatedOrder(val id: String, @SerialName("tracking_id") val trackingId: String)
 
     suspend fun signUp(fullName: String, phone: String, email: String, pin: String) {
         require(CustomerPolicy.isSixDigitPin(pin)) { "PIN must be exactly 6 digits" }
@@ -267,7 +245,8 @@ class CustomerRepository {
     }
 
     suspend fun createOrder(input: CreateOrderInput): String {
-        val id = requireCustomer(); val customer = profile()
+        requireCustomer()
+        require(runCatching { UUID.fromString(input.requestId) }.isSuccess) { "Booking request is invalid" }
         require(input.quoteEtb > 0 && input.distanceKm > 0 && input.cargoTons > 0) { "Calculate a valid quote first" }
         require(input.cargoQuantity > 0 && input.cargoUnit in setOf("ton", "quintal")) { "Enter a valid cargo quantity and unit" }
         require(input.cargoCategory.isNotBlank() && input.packagingType.isNotBlank()) { "Choose cargo category and packaging" }
@@ -276,19 +255,44 @@ class CustomerRepository {
         require(input.dropoffLatitude.isFinite() && input.dropoffLatitude in -90.0..90.0 && input.dropoffLongitude.isFinite() && input.dropoffLongitude in -180.0..180.0) { "Drop-off coordinates are invalid" }
         require(input.cargoDescription.length in 3..500) { "Describe the cargo using 3–500 characters" }
         require(input.paymentMethod in setOf("cash", "bank_telebirr")) { "Choose a valid payment method" }
-        val verifiedQuote = quote(QuoteInput(input.distanceKm, input.vehicleType, input.cargoTons))
-        require(kotlin.math.abs(verifiedQuote.totalEtb - input.quoteEtb) < 0.01) { "Quote changed. Calculate it again" }
-        val tracking = "HT-${Year.now().value}-${UUID.randomUUID().toString().replace("-", "").take(6).uppercase()}"
-        val row = client.from("orders").insert(OrderInsert(
-            tracking, id, customer.fullName ?: "Customer", customer.phone.orEmpty(), input.pickupAddress,
-            "POINT(${input.pickupLongitude} ${input.pickupLatitude})", input.dropoffAddress,
-            "POINT(${input.dropoffLongitude} ${input.dropoffLatitude})", input.vehicleType, input.distanceKm,
-            input.cargoQuantity, cargoUnit = input.cargoUnit, cargoCategory = input.cargoCategory,
-            packagingType = input.packagingType, cargoDescription = input.cargoDescription,
-            priceEtb = verifiedQuote.totalEtb,
-            selectedPaymentMethod = input.paymentMethod,
-        )) { select(Columns.list("id,tracking_id")) }.decodeSingle<CreatedOrder>()
-        return row.trackingId
+
+        val session = client.auth.currentSessionOrNull() ?: error("Customer session expired")
+        val cargoNotes = input.cargoDescription.split(" · ").drop(3).joinToString(" · ").trim().take(500)
+        val payload = buildJsonObject {
+            put("requestId", input.requestId)
+            put("pickupAddress", input.pickupAddress.trim())
+            put("pickup", JsonArray(listOf(JsonPrimitive(input.pickupLongitude), JsonPrimitive(input.pickupLatitude))))
+            put("dropoffAddress", input.dropoffAddress.trim())
+            put("dropoff", JsonArray(listOf(JsonPrimitive(input.dropoffLongitude), JsonPrimitive(input.dropoffLatitude))))
+            put("vehicleType", input.vehicleType)
+            put("cargoQuantity", input.cargoQuantity)
+            put("cargoUnit", input.cargoUnit)
+            put("cargoCategory", input.cargoCategory)
+            put("packagingType", input.packagingType)
+            put("cargoNotes", cargoNotes)
+            put("paymentMethod", input.paymentMethod)
+            put("expectedQuoteEtb", input.quoteEtb)
+        }.toString()
+        val endpoint = "${BuildConfig.SUPABASE_URL.trimEnd('/')}/functions/v1/customer-booking"
+        val headers = mapOf(
+            "Authorization" to "Bearer ${session.accessToken}",
+            "apikey" to BuildConfig.SUPABASE_PUBLISHABLE_KEY,
+        )
+        val response = try {
+            postJson(endpoint, payload, headers)
+        } catch (error: IOException) {
+            // If the first request committed but the response was lost, retrying the same
+            // requestId lets the server return the original order instead of duplicating it.
+            postJson(endpoint, payload, headers)
+        }
+        val root = json.parseToJsonElement(response).jsonObject
+        val order = root["order"]?.jsonObject ?: error("Customer booking returned no order")
+        val trackingId = order["trackingId"]?.jsonPrimitive?.contentOrNull ?: error("Customer booking returned no tracking ID")
+        val status = order["status"]?.jsonPrimitive?.contentOrNull ?: error("Customer booking returned no status")
+        val returnedPrice = order["priceEtb"]?.jsonPrimitive?.doubleOrNull ?: error("Customer booking returned no price")
+        require(status == "placed") { "Customer booking returned an unexpected order status" }
+        require(kotlin.math.abs(returnedPrice - input.quoteEtb) < 0.01) { "The transport price changed. Refresh the quote and confirm again." }
+        return trackingId
     }
 
     suspend fun cancelOrder(orderId: String, reason: String) {

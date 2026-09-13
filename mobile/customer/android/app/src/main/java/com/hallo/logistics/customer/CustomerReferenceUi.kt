@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.core.widget.doAfterTextChanged
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.textfield.TextInputLayout
 
 /** Presentation-only visual parity with the approved Customer Android references. */
 object CustomerReferenceUi {
@@ -21,17 +22,18 @@ object CustomerReferenceUi {
         val root = anchor.rootView ?: return
         if (appliedRoot === root) return
         appliedRoot = root
-        val navy = Color.rgb(10, 35, 69)
-        val blue = Color.rgb(31, 98, 218)
-        val blueDark = Color.rgb(24, 75, 160)
-        val surface = Color.rgb(239, 244, 250)
-        val line = Color.rgb(222, 230, 241)
-        val muted = Color.rgb(121, 139, 165)
-        val green = Color.rgb(22, 169, 113)
+        val navy = Color.rgb(16, 33, 61)
+        val blue = Color.rgb(10, 111, 245)
+        val blueDark = Color.rgb(9, 87, 201)
+        val surface = Color.rgb(245, 248, 252)
+        val line = Color.rgb(227, 234, 244)
+        val muted = Color.rgb(109, 125, 145)
+        val green = Color.rgb(2, 122, 72)
 
         root.setBackgroundColor(surface)
         view(root, "customerShell")?.setBackgroundColor(surface)
         view(root, "bottomNavigation")?.setBackgroundColor(Color.WHITE)
+        styleAuth(root, navy, blue, surface, line, muted)
 
         view(root, "appHeader")?.apply {
             layoutParams = layoutParams.apply { height = dp(root, 82) }
@@ -69,7 +71,8 @@ object CustomerReferenceUi {
                 setTextColor(navy)
                 strokeWidth = 0
                 elevation = 0f
-                insetTop = 0; insetBottom = 0
+                insetTop = 0
+                insetBottom = 0
             }
         }
         button(root, "startBooking")?.referencePrimary(root, blue)
@@ -106,6 +109,55 @@ object CustomerReferenceUi {
             }
         }
         CustomerApprovedScreens.install(root)
+    }
+
+    private fun styleAuth(root: View, navy: Int, blue: Int, surface: Int, line: Int, muted: Int) {
+        view(root, "authPanel")?.apply {
+            setBackgroundColor(surface)
+            setPadding(dp(root, 20), dp(root, 18), dp(root, 20), dp(root, 26))
+        }
+        view(root, "authHero")?.apply {
+            layoutParams = layoutParams.apply { height = dp(root, 156) }
+        }
+        text(root, "authTitle")?.apply {
+            setTextColor(navy)
+            textSize = 30f
+            setTypeface(typeface, Typeface.BOLD)
+        }
+        text(root, "authSubtitle")?.apply {
+            setTextColor(muted)
+            textSize = 15f
+        }
+        button(root, "authForgot")?.apply {
+            minHeight = dp(root, 48)
+            setTextColor(blue)
+        }
+        button(root, "authMode")?.apply {
+            minHeight = dp(root, 54)
+            cornerRadius = dp(root, 16)
+            setTextColor(blue)
+            strokeWidth = dp(root, 1)
+            strokeColor = android.content.res.ColorStateList.valueOf(blue)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+        }
+        listOf("authEn", "authOr", "authAm").forEach { name ->
+            button(root, name)?.apply {
+                minHeight = dp(root, 44)
+                cornerRadius = dp(root, 14)
+                strokeWidth = dp(root, 1)
+                strokeColor = android.content.res.ColorStateList.valueOf(line)
+            }
+        }
+        listOf("fullName", "phone", "email", "password", "confirmPin").forEach { name ->
+            inputLayout(root, name)?.apply {
+                boxBackgroundColor = Color.WHITE
+                boxStrokeColor = line
+                boxStrokeWidth = dp(root, 1)
+                boxStrokeWidthFocused = dp(root, 2)
+                setBoxCornerRadii(dpF(root, 16), dpF(root, 16), dpF(root, 16), dpF(root, 16))
+            }
+        }
+        findAncestorCard(button(root, "authSubmit"))?.referenceCard(root, line, 22)
     }
 
     private fun polishTree(v: View, navy: Int, line: Int) {
@@ -151,7 +203,27 @@ object CustomerReferenceUi {
         setTextColor(Color.WHITE)
         iconTint = android.content.res.ColorStateList.valueOf(Color.WHITE)
         strokeWidth = 0
-        insetTop = 0; insetBottom = 0
+        insetTop = 0
+        insetBottom = 0
+    }
+
+    private fun inputLayout(root: View, name: String): TextInputLayout? {
+        val field = view(root, name) ?: return null
+        var parent = field.parent
+        while (parent is View) {
+            if (parent is TextInputLayout) return parent
+            parent = parent.parent
+        }
+        return null
+    }
+
+    private fun findAncestorCard(view: View?): MaterialCardView? {
+        var parent = view?.parent
+        while (parent is View) {
+            if (parent is MaterialCardView) return parent
+            parent = parent.parent
+        }
+        return null
     }
 
     private fun view(root: View, name: String): View? {
