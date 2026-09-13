@@ -40,6 +40,17 @@ test("production workflow preserves migration, route-smoke and Pages deployment 
   assert.match(workflow, /deploy:\s+if: github\.event_name != 'pull_request'/);
 });
 
+test("Driver Mobile V4 tests run before its production build", () => {
+  const install = requiredStep("- name: Install Driver Mobile V4 dependencies");
+  const driverTests = requiredStep("- name: Test Driver Mobile V4");
+  const driverBuild = requiredStep("- name: Build Driver Mobile V4");
+  const publish = requiredStep("- name: Publish Driver Mobile V4 into Pages artifact");
+
+  assert.ok(install < driverTests && driverTests < driverBuild && driverBuild < publish);
+  assert.match(workflow, /Test Driver Mobile V4\s+working-directory: apps\/driver-mobile-app\s+run: npm test/);
+  assert.doesNotMatch(workflow, /Test Driver Mobile V4[\s\S]{0,160}continue-on-error:\s*true/i);
+});
+
 test("Driver Android CI produces a configured, validated APK", () => {
   assert.match(driverAndroidWorkflow, /workflow_dispatch:/);
   assert.match(driverAndroidWorkflow, /ORG_GRADLE_PROJECT_SUPABASE_URL:\s*\$\{\{ secrets\.VITE_SUPABASE_URL \}\}/);
