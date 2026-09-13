@@ -8,4 +8,22 @@
 <string name="auth_forgot">የይለፍ ቃል ረሱ?</string>
 <string name="auth_recovery_help">የደንበኛ ፖርታል ይከፈታል። ለመቀጠል የይለፍ ቃል ረሱ የሚለውን ይጫኑ።</string>
 <string name="auth_open_portal">የደንበኛ ፖርታል ክፈት</string>
+<string name="auth_error_email_required">ኢሜይልዎን ያስገቡ</string>
+<string name="auth_error_email_invalid">ትክክለኛ የኢሜይል አድራሻ ያስገቡ</string>
+<string name="auth_error_password_short">የይለፍ ቃሉ ቢያንስ 6 ቁምፊዎች ሊኖሩት ይገባል</string>
+<string name="auth_error_password_long">የይለፍ ቃሉ 72 ቁምፊዎች ወይም ከዚያ ያነሰ መሆን አለበት</string>
+<string name="auth_error_name_required">ሙሉ ስምዎን ያስገቡ</string>
+<string name="auth_error_name_invalid">ትክክለኛ ሙሉ ስም ያስገቡ</string>
+<string name="auth_error_phone_invalid">ትክክለኛ የኢትዮጵያ 07/09 ሞባይል ቁጥር ያስገቡ</string>
+<string name="auth_error_pin_invalid">PIN በትክክል 6 አሃዞች መሆን አለበት</string>
+<string name="auth_error_confirm_pin_invalid">የማረጋገጫ PIN በትክክል 6 አሃዞች መሆን አለበት</string>
+<string name="auth_error_pin_mismatch">የPIN ቁጥሮቹ አይዛመዱም</string>
+<string name="auth_error_credentials">ኢሜይሉ ወይም የይለፍ ቃሉ ትክክል አይደለም</string>
+<string name="auth_error_email_unconfirmed">ከመግባትዎ በፊት ኢሜይልዎን ያረጋግጡ</string>
+<string name="auth_error_account_exists">በዚህ ኢሜይል መለያ አስቀድሞ አለ</string>
+<string name="auth_error_rate_limit">ብዙ ሙከራዎች ተደርገዋል። ትንሽ ቆይተው እንደገና ይሞክሩ</string>
+<string name="auth_error_network">የኔትወርክ ችግር አለ። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ</string>
+<string name="auth_error_session_expired">የመግቢያ ጊዜዎ አብቅቷል። እንደገና ይግቡ</string>
+<string name="auth_error_not_authorized">ይህ መለያ HALLO Customer ለመጠቀም አልተፈቀደለትም</string>
+<string name="auth_error_generic">የCustomer ጥያቄው አልተሳካም። እንደገና ይሞክሩ</string>
 </resources>
