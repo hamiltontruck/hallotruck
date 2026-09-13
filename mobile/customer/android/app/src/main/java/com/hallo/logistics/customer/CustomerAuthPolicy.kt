@@ -24,7 +24,7 @@ object CustomerAuthPolicy {
             cleanEmail.isBlank() -> "Enter your email address"
             cleanEmail.length > 254 || !emailPattern.matches(cleanEmail) -> "Enter a valid email address"
             !CustomerPolicy.isSixDigitPin(pin) -> "PIN must be exactly 6 digits"
-            confirmation.length > 6 -> "Confirm PIN must be exactly 6 digits"
+            !CustomerPolicy.isSixDigitPin(confirmation) -> "Confirm PIN must be exactly 6 digits"
             pin != confirmation -> "PIN numbers do not match"
             else -> null
         }
