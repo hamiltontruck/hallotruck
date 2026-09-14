@@ -12,19 +12,18 @@ object CustomerAuthPolicy {
     )
 
     fun validateSignIn(email: String, password: String): String? {
-        val cleanEmail = email.trim()
+        val cleanEmail = cleanEmail(email)
         return when {
             cleanEmail.isBlank() -> tr("Enter your email address")
             cleanEmail.length > 254 || !emailPattern.matches(cleanEmail) -> tr("Enter a valid email address")
-            password.length < 6 -> tr("Password must be at least 6 characters")
-            password.length > 72 -> tr("Password must be 72 characters or fewer")
+            !CustomerPolicy.isSixDigitPin(password) -> tr("PIN must be exactly 6 digits")
             else -> null
         }
     }
 
     fun validateSignUp(name: String, phone: String, email: String, pin: String, confirmation: String): String? {
-        val cleanName = name.trim().replace(Regex("\\s+"), " ")
-        val cleanEmail = email.trim()
+        val cleanName = cleanName(name)
+        val cleanEmail = cleanEmail(email)
         return when {
             cleanName.length !in 2..80 -> tr("Enter your full name")
             cleanName.any { it.isISOControl() } -> tr("Enter a valid full name")
@@ -38,7 +37,7 @@ object CustomerAuthPolicy {
         }
     }
 
-    fun cleanEmail(email: String): String = email.trim().lowercase()
+    fun cleanEmail(email: String): String = email.filterNot(Char::isWhitespace).lowercase()
 
     fun cleanName(name: String): String = name.trim().replace(Regex("\\s+"), " ")
 
@@ -82,15 +81,13 @@ object CustomerAuthPolicy {
         "om" -> when (english) {
             "Enter your email address" -> "Imeelii kee galchi"
             "Enter a valid email address" -> "Teessoo imeelii sirrii galchi"
-            "Password must be at least 6 characters" -> "Jechi darbii yoo xiqqaate arfiilee 6 qabaachuu qaba"
-            "Password must be 72 characters or fewer" -> "Jechi darbii arfiilee 72 caaluu hin qabu"
+            "PIN must be exactly 6 digits" -> "PIN lakkoofsa 6 qofa ta'uu qaba"
+            "Confirm PIN must be exactly 6 digits" -> "PIN mirkaneessuu lakkoofsa 6 qofa ta'uu qaba"
             "Enter your full name" -> "Maqaa kee guutuu galchi"
             "Enter a valid full name" -> "Maqaa guutuu sirrii galchi"
             "Enter a valid Ethiopian 07/09 mobile number" -> "Lakkoofsa bilbilaa Itoophiyaa 07/09 sirrii galchi"
-            "PIN must be exactly 6 digits" -> "PIN lakkoofsa 6 qofa ta'uu qaba"
-            "Confirm PIN must be exactly 6 digits" -> "PIN mirkaneessuu lakkoofsa 6 qofa ta'uu qaba"
             "PIN numbers do not match" -> "PIN lamaan wal hin gitu"
-            "Email or password is incorrect" -> "Imeeliin ykn jechi darbii sirrii miti"
+            "Email or password is incorrect" -> "Imeeliin ykn PIN sirrii miti"
             "Confirm your email before signing in" -> "Osoo hin seeniin dura imeelii kee mirkaneessi"
             "An account already exists for this email" -> "Imeelii kanaan herregni duraan jira"
             "Too many attempts. Please wait and try again" -> "Yaalii baay'ate. Xiqqoo eegiitii irra deebi'ii yaali"
@@ -103,15 +100,13 @@ object CustomerAuthPolicy {
         "am" -> when (english) {
             "Enter your email address" -> "ኢሜይልዎን ያስገቡ"
             "Enter a valid email address" -> "ትክክለኛ የኢሜይል አድራሻ ያስገቡ"
-            "Password must be at least 6 characters" -> "የይለፍ ቃሉ ቢያንስ 6 ቁምፊዎች ሊኖሩት ይገባል"
-            "Password must be 72 characters or fewer" -> "የይለፍ ቃሉ 72 ቁምፊዎች ወይም ከዚያ ያነሰ መሆን አለበት"
+            "PIN must be exactly 6 digits" -> "PIN በትክክል 6 አሃዞች መሆን አለበት"
+            "Confirm PIN must be exactly 6 digits" -> "የማረጋገጫ PIN በትክክል 6 አሃዞች መሆን አለበት"
             "Enter your full name" -> "ሙሉ ስምዎን ያስገቡ"
             "Enter a valid full name" -> "ትክክለኛ ሙሉ ስም ያስገቡ"
             "Enter a valid Ethiopian 07/09 mobile number" -> "ትክክለኛ የኢትዮጵያ 07/09 ሞባይል ቁጥር ያስገቡ"
-            "PIN must be exactly 6 digits" -> "PIN በትክክል 6 አሃዞች መሆን አለበት"
-            "Confirm PIN must be exactly 6 digits" -> "የማረጋገጫ PIN በትክክል 6 አሃዞች መሆን አለበት"
             "PIN numbers do not match" -> "የPIN ቁጥሮቹ አይዛመዱም"
-            "Email or password is incorrect" -> "ኢሜይሉ ወይም የይለፍ ቃሉ ትክክል አይደለም"
+            "Email or password is incorrect" -> "ኢሜይሉ ወይም PIN ትክክል አይደለም"
             "Confirm your email before signing in" -> "ከመግባትዎ በፊት ኢሜይልዎን ያረጋግጡ"
             "An account already exists for this email" -> "በዚህ ኢሜይል መለያ አስቀድሞ አለ"
             "Too many attempts. Please wait and try again" -> "ብዙ ሙከራዎች ተደርገዋል። ትንሽ ቆይተው እንደገና ይሞክሩ"
