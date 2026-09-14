@@ -108,7 +108,7 @@ class NativeCustomerChatDialog(
         container.removeAllViews()
         if (rows.isEmpty()) {
             container.addView(TextView(activity).apply {
-                text = "Message your assigned driver about this order."
+                text = activity.getString(R.string.native_chat_empty)
                 setTextColor(activity.getColor(R.color.hallo_muted))
                 textSize = 13f
                 gravity = Gravity.CENTER
@@ -150,6 +150,7 @@ class NativeCustomerChatDialog(
 
     private fun formatTime(value: String): String = runCatching {
         DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+            .withLocale(activity.resources.configuration.locales[0])
             .withZone(ZoneId.systemDefault())
             .format(Instant.parse(value))
     }.getOrDefault(value)
