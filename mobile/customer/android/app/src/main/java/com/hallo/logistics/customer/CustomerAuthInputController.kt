@@ -2,12 +2,14 @@ package com.hallo.logistics.customer
 
 import android.text.InputFilter
 import android.text.InputType
-import android.text.method.PasswordTransformationMethod
 import android.text.method.DigitsKeyListener
+import android.text.method.PasswordTransformationMethod
 import android.view.View
+import android.view.ViewParent
 import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doAfterTextChanged
+import com.google.android.material.textfield.TextInputLayout
 
 /**
  * V5 auth-field contract kept separate from backend/session logic.
@@ -19,8 +21,8 @@ object CustomerAuthInputController {
     fun install(activity: AppCompatActivity) {
         configureEmail(activity.findViewById(R.id.email))
         configurePhone(activity.findViewById(R.id.phone))
-        configurePin(activity.findViewById(R.id.password))
-        configurePin(activity.findViewById(R.id.confirmPin))
+        configurePin(activity.findViewById(R.id.password), activity.getString(R.string.v5_pin_hint))
+        configurePin(activity.findViewById(R.id.confirmPin), activity.getString(R.string.v5_confirm_pin_hint))
     }
 
     private fun configureEmail(field: EditText?) {
@@ -64,8 +66,9 @@ object CustomerAuthInputController {
         }
     }
 
-    private fun configurePin(field: EditText?) {
+    private fun configurePin(field: EditText?, hint: String) {
         field ?: return
+        parentInputLayout(field)?.hint = hint
         var changing = false
 
         fun enforceNumericPin() {
@@ -92,5 +95,14 @@ object CustomerAuthInputController {
             field.setSelection(clean.length)
             changing = false
         }
+    }
+
+    private fun parentInputLayout(view: View): TextInputLayout? {
+        var parent: ViewParent? = view.parent
+        while (parent != null) {
+            if (parent is TextInputLayout) return parent
+            parent = parent.parent
+        }
+        return null
     }
 }
