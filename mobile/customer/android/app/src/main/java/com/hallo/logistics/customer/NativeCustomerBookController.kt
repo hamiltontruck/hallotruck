@@ -86,7 +86,7 @@ class NativeCustomerBookController(
                 append(route.pickup.label).append("\n→ ").append(route.dropoff.label)
                 append("\n").append(selectedVehicle.value)
                 append(" · ").append(formatDistance(route.distanceKm))
-                append(" · ").append(route.durationMinutes).append(" min")
+                append(" · ").append(activity.getString(R.string.minutes_short, route.durationMinutes))
                 append("\n").append(formatTons(quote.cargoTons))
                 append(" · ETB ").append(number(quote.totalEtb))
             }
@@ -185,7 +185,7 @@ class NativeCustomerBookController(
             item.truckImage.setImageResource(truck.imageRes)
             item.truckImage.contentDescription = truck.label
             item.truckName.text = truck.label
-            item.truckCapacity.text = "Up to ${truck.capacity} ton"
+            item.truckCapacity.text = activity.getString(R.string.up_to_tons, truck.capacity)
             val selected = truck.value == selectedVehicle.value
             item.root.strokeWidth = if (selected) dp(3) else dp(1)
             item.root.setStrokeColor(activity.getColor(if (selected) R.color.auth_blue else R.color.hallo_line))
@@ -213,13 +213,13 @@ class NativeCustomerBookController(
         if (tons <= 0) return activity.getString(R.string.enter_valid_load)
         val capacity = CustomerBookingPolicy.truckCapacityTons(selectedVehicle.value)
         if (capacity != null && tons > capacity) {
-            return "${selectedVehicle.label} supports up to ${number(capacity)} tons."
+            return activity.getString(R.string.capacity_exceeded, formatTons(tons), formatTons(capacity))
         }
         if (selectedCategory.key == "other" && notes.text.toString().trim().length < 3) {
-            return "Describe the cargo when Other is selected."
+            return activity.getString(R.string.native_cargo_other_required)
         }
         if (selectedPackaging.key in setOf("container_20ft", "container_40ft") && selectedVehicle.value != "Trailer") {
-            return "A 20 ft or 40 ft container requires a Trailer."
+            return activity.getString(R.string.native_container_requires_trailer)
         }
         return null
     }
@@ -228,10 +228,11 @@ class NativeCustomerBookController(
         val amount = quantity.text.toString().trim().toDoubleOrNull() ?: 0.0
         val tons = CustomerBookingPolicy.cargoToTons(amount, selectedUnit.key)
         val capacity = CustomerBookingPolicy.truckCapacityTons(selectedVehicle.value)
+        val capacityText = capacity?.let(::formatTons) ?: "—"
         loadSummary.text = if (amount <= 0) {
-            "${selectedVehicle.label} · capacity ${capacity?.let(::number) ?: "—"} ton"
+            activity.getString(R.string.native_truck_capacity_summary, selectedVehicle.label, capacityText)
         } else {
-            "Load equivalent: ${formatTons(tons)} · ${selectedVehicle.label} capacity ${capacity?.let(::number) ?: "—"} ton"
+            activity.getString(R.string.native_load_capacity_summary, formatTons(tons), selectedVehicle.label, capacityText)
         }
         loadSummary.setTextColor(activity.getColor(if (validateDraft() == null || amount <= 0) R.color.hallo_muted else R.color.hallo_danger))
     }
@@ -255,11 +256,11 @@ class NativeCustomerBookController(
         )
         val summary = buildString {
             append(route.pickup.label).append("\n→ ").append(route.dropoff.label)
-            append("\n\nTruck: ").append(selectedVehicle.label)
-            append("\nLoad: ").append(formatTons(cargoTons()))
-            append("\nDistance: ").append(formatDistance(route.distanceKm))
-            append("\nPayment: ").append(activity.getString(selectedPayment.labelRes))
-            append("\n\nQuote: ETB ").append(number(quote.totalEtb))
+            append("\n\n").append(activity.getString(R.string.truck)).append(": ").append(selectedVehicle.label)
+            append("\n").append(activity.getString(R.string.load)).append(": ").append(formatTons(cargoTons()))
+            append("\n").append(activity.getString(R.string.distance)).append(": ").append(formatDistance(route.distanceKm))
+            append("\n").append(activity.getString(R.string.payment)).append(": ").append(activity.getString(selectedPayment.labelRes))
+            append("\n\n").append(activity.getString(R.string.quote)).append(": ETB ").append(number(quote.totalEtb))
         }
         AlertDialog.Builder(activity)
             .setTitle(R.string.booking_review)
@@ -310,8 +311,11 @@ class NativeCustomerBookController(
         selectedUnit.key,
     )
 
-    private fun formatTons(value: Double): String = "${number(value)} ton"
-    private fun formatDistance(value: Double): String = "${NumberFormat.getNumberInstance(Locale.US).apply { maximumFractionDigits = 1 }.format(value)} km"
+    private fun formatTons(value: Double): String = activity.getString(R.string.tons_short, number(value))
+    private fun formatDistance(value: Double): String = activity.getString(
+        R.string.distance_km,
+        NumberFormat.getNumberInstance(Locale.US).apply { maximumFractionDigits = 1 }.format(value),
+    )
     private fun number(value: Double): String = NumberFormat.getNumberInstance(Locale.US).apply { maximumFractionDigits = 2 }.format(value)
     private fun dp(value: Int): Int = (value * activity.resources.displayMetrics.density).toInt()
 
