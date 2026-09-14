@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v5_map_loading">Kaartaan kallattii fe\'amaa jira…</string>
+    <string name="v5_map_retry">Kaartaa irra deebi\'ii yaali</string>
+    <string name="v5_map_data_error">Daataan kaartaa fe\'amuu hin dandeenye.</string>
+    <string name="v5_map_slow">Kaartaan yeroo eegame caalaa fudhachaa jira.</string>
+    <string name="v5_map_start_error">Kaartaa jalqabuun hin danda\'amne.</string>
+    <string name="v5_map_library_error">Tajaajilli kaartaa hin argamne.</string>
+</resources>
