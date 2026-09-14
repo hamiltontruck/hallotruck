@@ -68,10 +68,10 @@ object CustomerAuthInputController {
 
     private fun configurePin(field: EditText?, hint: String) {
         field ?: return
-        parentInputLayout(field)?.hint = hint
         var changing = false
 
         fun enforceNumericPin() {
+            parentInputLayout(field)?.hint = hint
             field.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             field.keyListener = DigitsKeyListener.getInstance("0123456789")
             field.transformationMethod = PasswordTransformationMethod.getInstance()
@@ -79,10 +79,16 @@ object CustomerAuthInputController {
         }
 
         enforceNumericPin()
+        // MainActivity may rebind auth-mode presentation after initial inflation. Re-apply the
+        // authoritative V5 input contract after that first render and whenever the field is focused.
+        field.post { enforceNumericPin() }
         field.onFocusChangeListener = View.OnFocusChangeListener { _, focused ->
             if (focused) {
                 enforceNumericPin()
-                field.post { field.setSelection(field.text?.length ?: 0) }
+                field.post {
+                    enforceNumericPin()
+                    field.setSelection(field.text?.length ?: 0)
+                }
             }
         }
         field.doAfterTextChanged { editable ->
