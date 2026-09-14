@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.Hallo.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:id="@+id/nativeOrderTracking" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
+                <TextView android:id="@+id/nativeOrderCreated" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/hallo_muted" android:textSize="11sp" />
+            </LinearLayout>
+            <TextView android:id="@+id/nativeOrderStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_step_idle" android:paddingStart="10dp" android:paddingTop="6dp" android:paddingEnd="10dp" android:paddingBottom="6dp" android:textColor="@color/hallo_navy" android:textSize="11sp" android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/nativeOrderRoute" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:lineSpacingExtra="2dp" android:textColor="@color/hallo_text" android:textSize="15sp" android:textStyle="bold" />
+
+        <TextView android:id="@+id/nativeOrderFacts" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:lineSpacingExtra="2dp" android:textColor="@color/hallo_muted" android:textSize="12sp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/nativeOrderDetails" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:text="@string/view_details" android:textSize="11sp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/nativeOrderTrack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="6dp" android:layout_weight="1" android:text="@string/nav_track" android:textSize="11sp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/nativeOrderCancel" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="6dp" android:layout_weight="1" android:text="@string/cancel_order" android:textColor="@color/hallo_danger" android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nativeOrderDetailsPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@color/hallo_navy_soft"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:visibility="gone">
+            <TextView android:id="@+id/nativeOrderDetailsText" android:layout_width="match_parent" android:layout_height="wrap_content" android:lineSpacingExtra="2dp" android:textColor="@color/hallo_text" android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
