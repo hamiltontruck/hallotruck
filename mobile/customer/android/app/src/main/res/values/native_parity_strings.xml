@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="native_home_hero_title">Move cargo with confidence</string>
+    <string name="native_home_overview">Your overview</string>
+    <string name="native_quick_actions">Quick actions</string>
+    <string name="native_book_intro">Search both places, choose the truck and cargo, then confirm the secure server quote.</string>
+    <string name="native_refresh">Refresh</string>
+    <string name="native_tracking_eyebrow">CARGO TRACKING</string>
+    <string name="native_step_assigned">1\nAssigned</string>
+    <string name="native_step_pickup">2\nPickup</string>
+    <string name="native_step_route">3\nOn route</string>
+    <string name="native_step_delivered">4\nDelivered</string>
+    <string name="native_chat">Chat</string>
+    <string name="native_location_privacy_eyebrow">LOCATION &amp; PRIVACY</string>
+    <string name="native_location_privacy_title">Share location only when you choose</string>
+    <string name="native_location_privacy_description">Your device location can start booking near you. It is kept only for this app session and is not written to your customer profile.</string>
+    <string name="native_share_current_location">Share current location</string>
+    <string name="native_clear">Clear</string>
+    <string name="native_account_security_eyebrow">ACCOUNT SECURITY</string>
+    <string name="native_account_security_title">Secure customer session</string>
+    <string name="native_account_security_description">Profile updates use the signed-in customer identity. Sign out before giving this device to another person.</string>
+    <string name="native_message_driver">Message driver</string>
+    <string name="native_send">Send</string>
     <string name="native_cargo_other_required">Describe the cargo when Other is selected.</string>
     <string name="native_container_requires_trailer">A 20 ft or 40 ft container requires a Trailer.</string>
     <string name="native_truck_capacity_summary">%1$s · capacity %2$s</string>
