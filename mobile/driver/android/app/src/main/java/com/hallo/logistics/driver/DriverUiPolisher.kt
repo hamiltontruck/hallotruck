@@ -37,6 +37,7 @@ object DriverUiPolisher {
         val content = activity.findViewById<ViewGroup>(android.R.id.content)
         val root = content?.getChildAt(0)
         if (root != null) DriverPortalParityUi.apply(root)
+        DriverAuthenticatedUi.install(activity)
         installCommunicationsActions(activity)
     }
 
