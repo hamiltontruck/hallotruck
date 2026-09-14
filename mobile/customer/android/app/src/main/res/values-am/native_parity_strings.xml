@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="native_cargo_other_required">ሌላ ሲመረጥ ጭነቱን ይግለጹ።</string>
+    <string name="native_container_requires_trailer">20 ft ወይም 40 ft ኮንቴነር Trailer ያስፈልገዋል።</string>
+    <string name="native_truck_capacity_summary">%1$s · አቅም %2$s</string>
+    <string name="native_load_capacity_summary">ተመጣጣኝ ጭነት፦ %1$s · የ%2$s አቅም %3$s</string>
+    <string name="native_status_quote_ready">ዋጋው ዝግጁ ነው</string>
+    <string name="native_status_order_placed">ትዕዛዙ ተመዝግቧል</string>
+    <string name="native_status_driver_assigned">አሽከርካሪ ተመድቧል</string>
+    <string name="native_status_driver_accepted">አሽከርካሪው ተቀብሏል</string>
+    <string name="native_cancellation">ስረዛ</string>
+    <string name="native_payment_submitted_title">ክፍያው ተልኳል</string>
+    <string name="native_payment_submitted_message">የክፍያ ደረሰኝዎ የHALLO ማረጋገጫን እየጠበቀ ነው። የተረጋገጠው ቀሪ መጠን ከማረጋገጫ በኋላ ብቻ ይዘምናል።</string>
+    <string name="native_no_outstanding_payment">አዲስ ክፍያ ለመላክ የሚጠበቅ ቀሪ መጠን የለም።</string>
+    <string name="native_transaction_reference">የግብይት / ማጣቀሻ ቁጥር</string>
+    <string name="native_amount_etb">መጠን ETB</string>
+    <string name="native_provider">የክፍያ አቅራቢ</string>
+    <string name="native_reference">ማጣቀሻ</string>
+    <string name="native_amount">መጠን</string>
+    <string name="native_submit_payment_receipt">የክፍያ ደረሰኝ ያስገቡ</string>
+    <string name="native_payment_receipt_help">JPG፣ PNG፣ WebP ወይም PDF እስከ 10 MB ይስቀሉ። የተላከው ገንዘብ HALLO እስኪያረጋግጠው ድረስ በመጠባበቅ ላይ ይቆያል።</string>
+    <string name="native_choose_receipt">ደረሰኝ ይምረጡ</string>
+    <string name="native_enter_payment_reference">የክፍያ ማጣቀሻ ቁጥር ያስገቡ</string>
+    <string name="native_enter_positive_amount">ከዜሮ በላይ መጠን ያስገቡ</string>
+    <string name="native_amount_exceeds_remaining">መጠኑ ለመላክ ከቀረው መጠን ይበልጣል</string>
+    <string name="native_profile_invalid">የመገለጫ መረጃው ትክክል አይደለም።</string>
+    <string name="native_chat_empty">ስለዚህ ትዕዛዝ ለተመደበው አሽከርካሪዎ መልዕክት ይላኩ።</string>
+</resources>
