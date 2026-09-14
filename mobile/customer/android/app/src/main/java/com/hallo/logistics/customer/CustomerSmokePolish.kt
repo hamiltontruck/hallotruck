@@ -1,11 +1,15 @@
 package com.hallo.logistics.customer
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -34,6 +38,7 @@ object CustomerSmokePolish {
         polishTopChrome(root)
         polishBottomBook(root)
         polishBottomNavigation(root)
+        polishKeyboardDismissal(root)
         polishRouteActions(root)
         polishTruckSelection(root)
         polishTrackingHeader(root)
@@ -83,6 +88,37 @@ object CustomerSmokePolish {
     }
 
     /**
+     * A booking text field kept IME focus while the user navigated to Tracking, Payments,
+     * Notifications and Profile during the real-device smoke, leaving half of each page hidden.
+     * Dismiss the IME before non-text navigation/actions while preserving every existing click
+     * handler by returning false from the touch listener.
+     */
+    private fun polishKeyboardDismissal(root: View) {
+        val targets = mutableListOf<View>()
+        intArrayOf(
+            R.id.navHome,
+            R.id.navOrders,
+            R.id.navTrack,
+            R.id.navBook,
+            R.id.navProfile,
+            R.id.navNotifications,
+            R.id.dashOrders,
+            R.id.dashAllOrders,
+            R.id.dashActive,
+            R.id.dashPayments,
+            R.id.dashNotifications,
+            R.id.dashProfile,
+            R.id.startBooking,
+            R.id.homeTrack,
+            R.id.calculateQuote,
+            R.id.createOrder,
+            R.id.signOut,
+        ).forEach { id -> root.findViewById<View>(id)?.let(targets::add) }
+        root.findViewWithTag<View>(TAG_BOTTOM_BOOK)?.let(targets::add)
+        targets.distinct().forEach { target -> installKeyboardDismissOnTouch(target, root) }
+    }
+
+    /**
      * The older approved-screen adapter collapsed My location / Swap / Reset into one emoji.
      * Restore all three existing actions as compact localized controls; handlers remain owned by
      * MainActivity.
@@ -120,6 +156,7 @@ object CustomerSmokePolish {
                 marginStart = if (index == 0) 0 else dp(root, 3)
                 marginEnd = if (index == labels.lastIndex) 0 else dp(root, 3)
             }
+            installKeyboardDismissOnTouch(button, root)
         }
     }
 
@@ -144,6 +181,11 @@ object CustomerSmokePolish {
             card.strokeWidth = dp(root, if (selected) 2 else 1)
             card.strokeColor = if (selected) blue else line
             card.setCardBackgroundColor(if (selected) blueSoft else Color.WHITE)
+            installKeyboardDismissOnTouch(card, root) {
+                // MainActivity rebuilds truck cards inside its click handler. Re-polish the newly
+                // created cards after that click so the selected state does not flash/revert gold.
+                polishTruckSelection(root)
+            }
         }
     }
 
@@ -162,6 +204,23 @@ object CustomerSmokePolish {
         root.findViewById<TextView>(R.id.profileTitle)?.apply {
             setPadding(dp(root, 18), dp(root, 14), dp(root, 18), dp(root, 56))
         }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun installKeyboardDismissOnTouch(view: View, root: View, afterTap: (() -> Unit)? = null) {
+        view.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> dismissKeyboard(root)
+                MotionEvent.ACTION_UP -> afterTap?.let { callback -> root.post { callback() } }
+            }
+            false
+        }
+    }
+
+    private fun dismissKeyboard(root: View) {
+        root.findFocus()?.clearFocus()
+        val input = root.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        input?.hideSoftInputFromWindow(root.windowToken, 0)
     }
 
     private fun cleanOpaqueLogoEdge(image: ImageView) {
