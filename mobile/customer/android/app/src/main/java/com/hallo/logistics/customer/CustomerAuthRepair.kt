@@ -5,9 +5,11 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.core.view.WindowCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
@@ -48,11 +50,14 @@ object CustomerAuthRepair {
             styleLogo(root)
             stylePasswordFields(root)
             stylePrimaryAction(root)
+            styleSessionPresentation(root)
+            styleValidationCopy(root)
         } finally {
             busy[root] = false
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun styleSystemBars(root: View) {
         val activity = root.context as? Activity ?: return
         val surface = root.context.getColor(R.color.hallo_surface)
@@ -62,6 +67,16 @@ object CustomerAuthRepair {
         WindowCompat.getInsetsController(activity.window, activity.window.decorView).apply {
             isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = true
+        }
+
+        // Keep dark system-bar icons deterministic on API levels where locale recreation can
+        // briefly restore decor flags before WindowInsetsControllerCompat is reapplied.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            var flags = activity.window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            }
+            activity.window.decorView.systemUiVisibility = flags
         }
     }
 
@@ -104,6 +119,20 @@ object CustomerAuthRepair {
             iconTint = ColorStateList.valueOf(Color.WHITE)
             isAllCaps = false
         }
+    }
+
+    /** Presentation guard only: auth/session ownership remains in MainActivity/ViewModel. */
+    private fun styleSessionPresentation(root: View) {
+        val loggedOut = root.findViewById<View>(R.id.authPanel)?.visibility == View.VISIBLE
+        root.findViewById<View>(R.id.signOut)?.visibility = if (loggedOut) View.GONE else View.VISIBLE
+    }
+
+    /** Re-localize a retained validation message after AppCompat locale recreation. */
+    private fun styleValidationCopy(root: View) {
+        val feedback = root.findViewById<TextView>(R.id.authFeedback) ?: return
+        val current = feedback.text?.toString().orEmpty()
+        val localized = CustomerAuthPolicy.localizeKnownMessage(current)
+        if (current != localized) feedback.text = localized
     }
 
     private fun inputLayout(view: View?): TextInputLayout? {
