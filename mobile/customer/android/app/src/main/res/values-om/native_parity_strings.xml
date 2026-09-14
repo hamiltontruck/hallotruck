@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="native_home_hero_title">Feʼumsa kee amanamummaadhaan geessi</string>
+    <string name="native_home_overview">Cuunfaa kee</string>
+    <string name="native_quick_actions">Tarkaanfii saffisaa</string>
+    <string name="native_book_intro">Bakka lamaanuu barbaadi, konkolaataa fi feʼumsa fili, achiis gatii server nageenya qabu mirkaneessi.</string>
+    <string name="native_refresh">Haaromsi</string>
+    <string name="native_tracking_eyebrow">HORDOFFII FEʼUMSAA</string>
+    <string name="native_step_assigned">1\nRamadame</string>
+    <string name="native_step_pickup">2\nFeʼumsaa</string>
+    <string name="native_step_route">3\nDaandii irra</string>
+    <string name="native_step_delivered">4\nGeessifame</string>
+    <string name="native_chat">Chat</string>
+    <string name="native_location_privacy_eyebrow">BAKKA FI ICCITII</string>
+    <string name="native_location_privacy_title">Bakka kee yeroo ati filatte qofa qoodi</string>
+    <string name="native_location_privacy_description">Bakki device kee booking naannoo kee irraa akka jalqabu gargaara. Session app kana keessatti qofa tura; piroofaayila Customer kee irratti hin barreeffamu.</string>
+    <string name="native_share_current_location">Bakka amma jiru qoodi</string>
+    <string name="native_clear">Haqi</string>
+    <string name="native_account_security_eyebrow">NAGEENYA AKKAAWUNTII</string>
+    <string name="native_account_security_title">Session Customer nageenya qabu</string>
+    <string name="native_account_security_description">Fooyyaʼinsi piroofaayilaa eenyummaa Customer seenee jiru fayyadama. Device kana nama biraaf kennuu dura keessaa baʼi.</string>
+    <string name="native_message_driver">Konkolaachisaaf ergaa</string>
+    <string name="native_send">Ergi</string>
     <string name="native_cargo_other_required">Kan biraa yoo filatte feʼumsa ibsi.</string>
     <string name="native_container_requires_trailer">Container 20 ft ykn 40 ft Trailer barbaada.</string>
     <string name="native_truck_capacity_summary">%1$s · dandeettii %2$s</string>
