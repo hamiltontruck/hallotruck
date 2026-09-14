@@ -25,6 +25,7 @@ object CustomerUnifiedChrome {
             updateSelection(root)
             CustomerParityUiV2.install(root)
             CustomerParityActions.install(root)
+            CustomerSmokePolish.install(root)
         }
         root.viewTreeObserver.addOnGlobalLayoutListener {
             if (busy[root] == true) return@addOnGlobalLayoutListener
