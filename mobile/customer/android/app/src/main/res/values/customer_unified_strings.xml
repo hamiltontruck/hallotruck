@@ -14,4 +14,6 @@
     <string name="booking_success_body">Your order has been created.</string>
     <string name="booking_view_orders">View order</string>
     <string name="booking_create_another">Create another</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_signup_pin">6-digit signup PIN</string>
 </resources>
