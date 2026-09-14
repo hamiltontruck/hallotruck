@@ -69,9 +69,14 @@ class CustomerLiveMapView @JvmOverloads constructor(
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
-        if (visibility == View.VISIBLE && isShown && lastScript != null) {
-            ensureLoaded()
-            flushPendingScript()
+        if (visibility == View.VISIBLE && isShown) {
+            // MainActivity still sizes legacy map slots during initial setup. The visible V5 map owns
+            // its final compact height so page switches cannot restore oversized/blank map panels.
+            applyResponsiveHeight()
+            if (lastScript != null) {
+                ensureLoaded()
+                flushPendingScript()
+            }
         }
     }
 
@@ -110,6 +115,7 @@ class CustomerLiveMapView @JvmOverloads constructor(
         lastScript = script
         pendingScript = script
         if (!isShown) return
+        applyResponsiveHeight()
         ensureLoaded()
         flushPendingScript()
     }
@@ -144,7 +150,11 @@ class CustomerLiveMapView @JvmOverloads constructor(
             R.id.trackingMap -> (widthDp * 0.86f).toInt().coerceIn(260, 350)
             else -> (widthDp * 0.72f).toInt().coerceIn(220, 320)
         }
-        layoutParams = layoutParams.apply { height = (targetDp * resources.displayMetrics.density).toInt() }
+        val targetPx = (targetDp * resources.displayMetrics.density).toInt()
+        if (layoutParams.height != targetPx) {
+            layoutParams = layoutParams.apply { height = targetPx }
+            requestLayout()
+        }
     }
 
     private fun mapHtml(): String {
@@ -154,8 +164,17 @@ class CustomerLiveMapView @JvmOverloads constructor(
         } else {
             "https://api.maptiler.com/maps/streets-v2/style.json?key=$mapKey"
         }
-        return MAP_HTML.replace("__HALLO_MAP_STYLE__", style)
+        return MAP_HTML
+            .replace("__HALLO_MAP_STYLE__", style)
+            .replace("__MAP_LOADING__", jsonString(context.getString(R.string.v5_map_loading)))
+            .replace("__MAP_RETRY__", jsonString(context.getString(R.string.v5_map_retry)))
+            .replace("__MAP_DATA_ERROR__", jsonString(context.getString(R.string.v5_map_data_error)))
+            .replace("__MAP_SLOW__", jsonString(context.getString(R.string.v5_map_slow)))
+            .replace("__MAP_START_ERROR__", jsonString(context.getString(R.string.v5_map_start_error)))
+            .replace("__MAP_LIBRARY_ERROR__", jsonString(context.getString(R.string.v5_map_library_error)))
     }
+
+    private fun jsonString(value: String): String = JsonPrimitive(value).toString()
 
     private companion object {
         const val RETRY_URL = "hallo-map://retry"
@@ -174,10 +193,12 @@ class CustomerLiveMapView @JvmOverloads constructor(
             .pin{width:18px;height:18px;border:3px solid white;border-radius:50%;box-shadow:0 3px 10px #10213d55}.pickup{background:#18a971}.dropoff{background:#eba915}
             .truck{width:40px;height:40px;border:3px solid white;border-radius:12px;background:#0a2345;color:white;display:grid;place-items:center;font:bold 20px sans-serif;box-shadow:0 5px 14px #10213d66}.truck span{display:block;transform-origin:center}
             </style></head><body>
-            <div id="map"></div><div id="status"><div class="spinner" id="spinner"></div><div id="statusText">Loading live map…</div><a id="retry" href="hallo-map://retry">Retry map</a></div>
+            <div id="map"></div><div id="status"><div class="spinner" id="spinner"></div><div id="statusText"></div><a id="retry" href="hallo-map://retry"></a></div>
             <script>
+            const copy={loading:__MAP_LOADING__,retry:__MAP_RETRY__,dataError:__MAP_DATA_ERROR__,slow:__MAP_SLOW__,startError:__MAP_START_ERROR__,libraryError:__MAP_LIBRARY_ERROR__};
             let map=null, mapLoaded=false, markers=[], pendingAction=null, fallbackTried=false;
             const status=document.getElementById('status'), statusText=document.getElementById('statusText'), retry=document.getElementById('retry'), spinner=document.getElementById('spinner');
+            statusText.textContent=copy.loading;retry.textContent=copy.retry;
             function setStatus(message,canRetry){status.classList.remove('hidden');statusText.textContent=message;retry.style.display=canRetry?'inline-block':'none';spinner.style.display=canRetry?'none':'block'}
             function hideStatus(){status.classList.add('hidden')}
             function clearMarkers(){markers.forEach(m=>m.remove());markers=[]}
@@ -188,8 +209,8 @@ class CustomerLiveMapView @JvmOverloads constructor(
             function whenReady(action){pendingAction=action;if(mapLoaded&&map){const run=pendingAction;pendingAction=null;run()}}
             function showBooking(p,d,points){whenReady(()=>{clearMarkers();routeSource(points||[]);const start=points&&points.length?points[0]:p;const end=points&&points.length?points[points.length-1]:d;marker(start,'pin pickup');marker(end,'pin dropoff');fit(points&&points.length?points:[p,d])})}
             function showTrip(p,d,t,h,points){whenReady(()=>{clearMarkers();const route=points&&points.length>1?points:[p,d].filter(Boolean);routeSource(route);marker(p,'pin pickup');marker(d,'pin dropoff');truckMarker(t,h);fit(route.concat(t?[t]:[]))})}
-            function bootMap(){if(map||typeof maplibregl==='undefined')return;try{map=new maplibregl.Map({container:'map',style:'__HALLO_MAP_STYLE__',center:[39.6,8.8],zoom:5.2,attributionControl:false,dragRotate:false,pitchWithRotate:false});map.addControl(new maplibregl.NavigationControl({showCompass:false,visualizePitch:false}),'top-right');map.dragPan.enable();map.scrollZoom.enable();map.touchZoomRotate.enable();map.touchZoomRotate.disableRotation();map.doubleClickZoom.enable();map.once('load',()=>{mapLoaded=true;hideStatus();if(pendingAction){const run=pendingAction;pendingAction=null;run()}});map.on('error',()=>{if(!mapLoaded)setStatus('Map data could not load.',true)});setTimeout(()=>{if(!mapLoaded)setStatus('Map is taking longer than expected.',true)},12000)}catch(e){setStatus('Map could not start.',true)}}
-            function fallbackLibrary(){if(fallbackTried)return;fallbackTried=true;const script=document.createElement('script');script.src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';script.onload=bootMap;script.onerror=()=>setStatus('Map library is unavailable.',true);document.head.appendChild(script)}
+            function bootMap(){if(map||typeof maplibregl==='undefined')return;try{map=new maplibregl.Map({container:'map',style:'__HALLO_MAP_STYLE__',center:[39.6,8.8],zoom:5.2,attributionControl:false,dragRotate:false,pitchWithRotate:false});map.addControl(new maplibregl.NavigationControl({showCompass:false,visualizePitch:false}),'top-right');map.dragPan.enable();map.scrollZoom.enable();map.touchZoomRotate.enable();map.touchZoomRotate.disableRotation();map.doubleClickZoom.enable();map.once('load',()=>{mapLoaded=true;hideStatus();if(pendingAction){const run=pendingAction;pendingAction=null;run()}});map.on('error',()=>{if(!mapLoaded)setStatus(copy.dataError,true)});setTimeout(()=>{if(!mapLoaded)setStatus(copy.slow,true)},12000)}catch(e){setStatus(copy.startError,true)}}
+            function fallbackLibrary(){if(fallbackTried)return;fallbackTried=true;const script=document.createElement('script');script.src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';script.onload=bootMap;script.onerror=()=>setStatus(copy.libraryError,true);document.head.appendChild(script)}
             </script>
             <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js" onload="bootMap()" onerror="fallbackLibrary()"></script>
             </body></html>
