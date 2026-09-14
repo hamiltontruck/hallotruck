@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.widget.addTextChangedListener
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -22,6 +23,8 @@ import kotlin.math.roundToInt
  * authoritative and this layer only improves visual hierarchy and responsive behavior.
  */
 object DriverAuthenticatedUi {
+    private const val HOME_QUICK_ACTIONS_TAG = "driver-home-quick-actions"
+
     fun install(activity: AppCompatActivity) {
         polishHome(activity)
         polishJobs(activity)
@@ -36,6 +39,8 @@ object DriverAuthenticatedUi {
         val page = activity.findViewById<LinearLayout>(R.id.pageHome) ?: return
         page.clipChildren = false
         page.clipToPadding = false
+        installHomeIdentity(activity)
+        polishHomeQuickActions(activity, page)
 
         activity.findViewById<TextView>(R.id.accessState)?.apply {
             includeFontPadding = false
@@ -84,6 +89,46 @@ object DriverAuthenticatedUi {
         }
 
         activity.findViewById<MaterialButton>(R.id.refresh)?.applyPrimaryOrOutline(activity, primary = false)
+    }
+
+    private fun installHomeIdentity(activity: AppCompatActivity) {
+        val summary = activity.findViewById<TextView>(R.id.homeSummary) ?: return
+        summary.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply { topMargin = dp(activity, 8) }
+        summary.includeFontPadding = false
+        summary.setTextColor(ContextCompat.getColor(activity, R.color.hallo_navy))
+        summary.textSize = 17f
+        summary.setTypeface(summary.typeface, Typeface.BOLD)
+        summary.visibility = View.GONE
+
+        val profileDetails = activity.findViewById<TextView>(R.id.profileDetails) ?: return
+        fun renderIdentity(value: CharSequence?) {
+            val name = value?.toString()?.lineSequence()?.firstOrNull()?.trim().orEmpty()
+            val available = name.isNotBlank() && name != "—"
+            summary.visibility = if (available) View.VISIBLE else View.GONE
+            if (available) summary.text = activity.getString(R.string.home_greeting_format, name)
+        }
+        renderIdentity(profileDetails.text)
+        profileDetails.addTextChangedListener { renderIdentity(it) }
+    }
+
+    private fun polishHomeQuickActions(activity: AppCompatActivity, page: LinearLayout) {
+        if (activity.resources.configuration.screenWidthDp > 360) return
+        val host = page.findViewWithTag<LinearLayout>(HOME_QUICK_ACTIONS_TAG) ?: return
+        for (rowIndex in 0 until host.childCount) {
+            val row = host.getChildAt(rowIndex) as? LinearLayout ?: continue
+            row.orientation = LinearLayout.VERTICAL
+            row.weightSum = 0f
+            for (buttonIndex in 0 until row.childCount) {
+                val button = row.getChildAt(buttonIndex)
+                button.layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(activity, 52),
+                ).apply { topMargin = if (buttonIndex == 0) 0 else dp(activity, 8) }
+            }
+        }
     }
 
     private fun polishJobs(activity: AppCompatActivity) {
