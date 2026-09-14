@@ -54,7 +54,7 @@ object CustomerAuthPolicy {
 
         return when {
             "invalid login credentials" in text || "invalid_credentials" in text ->
-                tr("Email or password is incorrect")
+                tr("Email or PIN is incorrect")
             "email not confirmed" in text || "email_not_confirmed" in text ->
                 tr("Confirm your email before signing in")
             "user already registered" in text || "already been registered" in text ->
@@ -87,7 +87,7 @@ object CustomerAuthPolicy {
             "Enter a valid full name" -> "Maqaa guutuu sirrii galchi"
             "Enter a valid Ethiopian 07/09 mobile number" -> "Lakkoofsa bilbilaa Itoophiyaa 07/09 sirrii galchi"
             "PIN numbers do not match" -> "PIN lamaan wal hin gitu"
-            "Email or password is incorrect" -> "Imeeliin ykn PIN sirrii miti"
+            "Email or PIN is incorrect" -> "Imeeliin ykn PIN sirrii miti"
             "Confirm your email before signing in" -> "Osoo hin seeniin dura imeelii kee mirkaneessi"
             "An account already exists for this email" -> "Imeelii kanaan herregni duraan jira"
             "Too many attempts. Please wait and try again" -> "Yaalii baay'ate. Xiqqoo eegiitii irra deebi'ii yaali"
@@ -106,7 +106,7 @@ object CustomerAuthPolicy {
             "Enter a valid full name" -> "ትክክለኛ ሙሉ ስም ያስገቡ"
             "Enter a valid Ethiopian 07/09 mobile number" -> "ትክክለኛ የኢትዮጵያ 07/09 ሞባይል ቁጥር ያስገቡ"
             "PIN numbers do not match" -> "የPIN ቁጥሮቹ አይዛመዱም"
-            "Email or password is incorrect" -> "ኢሜይሉ ወይም PIN ትክክል አይደለም"
+            "Email or PIN is incorrect" -> "ኢሜይሉ ወይም PIN ትክክል አይደለም"
             "Confirm your email before signing in" -> "ከመግባትዎ በፊት ኢሜይልዎን ያረጋግጡ"
             "An account already exists for this email" -> "በዚህ ኢሜይል መለያ አስቀድሞ አለ"
             "Too many attempts. Please wait and try again" -> "ብዙ ሙከራዎች ተደርገዋል። ትንሽ ቆይተው እንደገና ይሞክሩ"
