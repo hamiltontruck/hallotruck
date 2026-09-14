@@ -45,6 +45,8 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
                 viewModel.state.collect { state ->
                     page?.post {
                         avatarController.render(state.profile, state.profileAvatarUrl, page, details, state.busy)
+                        stripLegacyProfileNote(host, details)
+                        details?.postDelayed({ stripLegacyProfileNote(host, details) }, 120)
                         when (state.message) {
                             "Uploading profile photo…" -> status?.text = host.getString(R.string.profile_photo_uploading)
                             "Removing profile photo…" -> status?.text = host.getString(R.string.profile_photo_removing)
@@ -56,6 +58,15 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
                 }
             }
         }
+    }
+
+    private fun stripLegacyProfileNote(activity: AppCompatActivity, details: TextView?) {
+        details ?: return
+        val unsupported = activity.getString(R.string.profile_avatar_initials)
+        details.text = details.text.toString()
+            .replace("\n\n$unsupported", "")
+            .replace(unsupported, "")
+            .trimEnd()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
