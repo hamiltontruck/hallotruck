@@ -79,6 +79,35 @@ object CustomerAuthPolicy {
         }
     }
 
+    /**
+     * Converts a retained auth validation/error message to the currently active app locale.
+     * This is presentation-only and is used after AppCompat recreates the Activity for EN/OR/AM.
+     */
+    fun localizeKnownMessage(message: String): String {
+        val canonical = when (message.trim()) {
+            "Imeelii kee galchi", "ኢሜይልዎን ያስገቡ" -> "Enter your email address"
+            "Teessoo imeelii sirrii galchi", "ትክክለኛ የኢሜይል አድራሻ ያስገቡ" -> "Enter a valid email address"
+            "Jechi darbii yoo xiqqaate arfiilee 6 qabaachuu qaba", "የይለፍ ቃሉ ቢያንስ 6 ቁምፊዎች ሊኖሩት ይገባል" -> "Password must be at least 6 characters"
+            "Jechi darbii arfiilee 72 caaluu hin qabu", "የይለፍ ቃሉ 72 ቁምፊዎች ወይም ከዚያ ያነሰ መሆን አለበት" -> "Password must be 72 characters or fewer"
+            "Maqaa kee guutuu galchi", "ሙሉ ስምዎን ያስገቡ" -> "Enter your full name"
+            "Maqaa guutuu sirrii galchi", "ትክክለኛ ሙሉ ስም ያስገቡ" -> "Enter a valid full name"
+            "Lakkoofsa bilbilaa Itoophiyaa 07/09 sirrii galchi", "ትክክለኛ የኢትዮጵያ 07/09 ሞባይል ቁጥር ያስገቡ" -> "Enter a valid Ethiopian 07/09 mobile number"
+            "PIN lakkoofsa 6 qofa ta'uu qaba", "PIN በትክክል 6 አሃዞች መሆን አለበት" -> "PIN must be exactly 6 digits"
+            "PIN mirkaneessuu lakkoofsa 6 qofa ta'uu qaba", "የማረጋገጫ PIN በትክክል 6 አሃዞች መሆን አለበት" -> "Confirm PIN must be exactly 6 digits"
+            "PIN lamaan wal hin gitu", "የPIN ቁጥሮቹ አይዛመዱም" -> "PIN numbers do not match"
+            "Imeeliin ykn jechi darbii sirrii miti", "ኢሜይሉ ወይም የይለፍ ቃሉ ትክክል አይደለም" -> "Email or password is incorrect"
+            "Osoo hin seeniin dura imeelii kee mirkaneessi", "ከመግባትዎ በፊት ኢሜይልዎን ያረጋግጡ" -> "Confirm your email before signing in"
+            "Imeelii kanaan herregni duraan jira", "በዚህ ኢሜይል መለያ አስቀድሞ አለ" -> "An account already exists for this email"
+            "Yaalii baay'ate. Xiqqoo eegiitii irra deebi'ii yaali", "ብዙ ሙከራዎች ተደርገዋል። ትንሽ ቆይተው እንደገና ይሞክሩ" -> "Too many attempts. Please wait and try again"
+            "Rakkoo interneetii. Walqunnamtii kee ilaalii irra deebi'ii yaali", "የኔትወርክ ችግር አለ። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ" -> "Network problem. Check your connection and try again"
+            "Yeroon seensaa kee dhumeera. Irra deebi'ii seeni", "የመግቢያ ጊዜዎ አብቅቷል። እንደገና ይግቡ" -> "Your session expired. Please sign in again"
+            "Herregni kun HALLO Customer fayyadamuuf hayyamama hin qabu", "ይህ መለያ HALLO Customer ለመጠቀም አልተፈቀደለትም" -> "This account is not authorized for HALLO Customer"
+            "Gaaffiin Customer hin milkoofne. Irra deebi'ii yaali", "የCustomer ጥያቄው አልተሳካም። እንደገና ይሞክሩ" -> "Customer request failed. Please try again"
+            else -> message
+        }
+        return tr(canonical)
+    }
+
     private fun tr(english: String): String {
         val appLanguage = AppCompatDelegate.getApplicationLocales().get(0)?.language
             ?.takeIf { it.isNotBlank() }
