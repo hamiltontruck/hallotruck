@@ -1,5 +1,31 @@
 <resources>
-<color name="auth_blue">#0864ED</color><color name="auth_background">#F5F9FF</color>
-<style name="Widget.Hallo.AuthPrimary" parent="Widget.Hallo.Primary"><item name="backgroundTint">@color/auth_blue</item><item name="android:textColor">@android:color/white</item><item name="iconTint">@android:color/white</item><item name="android:textSize">16sp</item></style>
-<style name="Widget.Hallo.AuthInput" parent="Widget.Hallo.Input"><item name="boxBackgroundColor">@android:color/white</item><item name="boxStrokeColor">@color/auth_blue</item></style>
+    <color name="auth_blue">#1478F2</color>
+    <color name="auth_blue_pressed">#0F67D5</color>
+    <color name="auth_background">#F4F8FE</color>
+
+    <style name="Widget.Hallo.AuthPrimary" parent="Widget.Hallo.Primary">
+        <item name="backgroundTint">@color/auth_blue</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="iconTint">@android:color/white</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <style name="Widget.Hallo.AuthInput" parent="Widget.Hallo.Input">
+        <item name="boxBackgroundColor">@android:color/white</item>
+        <item name="boxStrokeColor">@color/hallo_line</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="hintTextColor">@color/hallo_muted</item>
+        <item name="android:textColorHint">@color/hallo_muted</item>
+        <item name="startIconTint">@color/hallo_muted</item>
+        <item name="endIconTint">@color/hallo_muted</item>
+        <item name="boxCornerRadiusTopStart">18dp</item>
+        <item name="boxCornerRadiusTopEnd">18dp</item>
+        <item name="boxCornerRadiusBottomStart">18dp</item>
+        <item name="boxCornerRadiusBottomEnd">18dp</item>
+        <item name="android:layout_marginTop">10dp</item>
+    </style>
 </resources>
