@@ -1,0 +1,162 @@
+package com.hallo.logistics.customer
+
+import android.app.Activity
+import android.content.res.ColorStateList
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import androidx.core.view.WindowCompat
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.textfield.TextInputLayout
+import java.util.ArrayDeque
+import java.util.WeakHashMap
+
+/**
+ * Deterministic auth-only repair for the PR #433 real-device regressions.
+ *
+ * The authenticated presentation adapters are intentionally kept separate. This repair owns only
+ * the signed-out Login/Register chrome so MainActivity localization/state rendering cannot leave
+ * stale signup hints, hidden password toggles, light system-bar icons, or opaque logo corners.
+ */
+object CustomerAuthRepair {
+    private val installed = WeakHashMap<View, Boolean>()
+    private val busy = WeakHashMap<View, Boolean>()
+
+    fun install(root: View) {
+        if (installed.put(root, true) == true) return
+        val authPanel = root.findViewById<View>(R.id.authPanel) ?: return
+
+        root.post { refresh(root) }
+        authPanel.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
+                authPanel.post { refresh(root) }
+            }
+        }
+        root.findViewById<View>(R.id.signupFields)?.addOnLayoutChangeListener { field, _, _, _, _, _, _, _, _ ->
+            field.post { refresh(root) }
+        }
+    }
+
+    fun refresh(root: View) {
+        if (busy[root] == true) return
+        busy[root] = true
+        try {
+            styleSystemBars(root)
+            styleLogo(root)
+            stylePasswordFields(root)
+            stylePrimaryAction(root)
+        } finally {
+            busy[root] = false
+        }
+    }
+
+    private fun styleSystemBars(root: View) {
+        val activity = root.context as? Activity ?: return
+        val surface = root.context.getColor(R.color.hallo_surface)
+        activity.window.statusBarColor = surface
+        activity.window.navigationBarColor = Color.WHITE
+        WindowCompat.setDecorFitsSystemWindows(activity.window, true)
+        WindowCompat.getInsetsController(activity.window, activity.window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+    }
+
+    private fun styleLogo(root: View) {
+        val panel = root.findViewById<ViewGroup>(R.id.authPanel) ?: return
+        val header = panel.getChildAt(0) as? ViewGroup ?: return
+        val logo = header.getChildAt(0) as? ImageView ?: return
+        logo.scaleType = ImageView.ScaleType.FIT_CENTER
+        logo.imageTintList = null
+        logo.clearColorFilter()
+        cleanOpaqueEdgeBackground(logo)
+        logo.post { cleanOpaqueEdgeBackground(logo) }
+    }
+
+    private fun stylePasswordFields(root: View) {
+        val signup = root.findViewById<View>(R.id.signupFields)?.visibility == View.VISIBLE
+        val muted = root.context.getColor(R.color.hallo_muted)
+        val password = root.findViewById<View>(R.id.password)
+        inputLayout(password)?.apply {
+            hint = root.context.getString(if (signup) R.string.auth_signup_pin else R.string.auth_password)
+            if (endIconMode != TextInputLayout.END_ICON_PASSWORD_TOGGLE) {
+                endIconMode = TextInputLayout.END_ICON_PASSWORD_TOGGLE
+            }
+            setEndIconTintList(ColorStateList.valueOf(muted))
+            setEndIconVisible(true)
+        }
+        root.findViewById<TextInputLayout>(R.id.confirmPinLayout)?.apply {
+            if (endIconMode != TextInputLayout.END_ICON_PASSWORD_TOGGLE) {
+                endIconMode = TextInputLayout.END_ICON_PASSWORD_TOGGLE
+            }
+            setEndIconTintList(ColorStateList.valueOf(muted))
+            setEndIconVisible(signup)
+        }
+    }
+
+    private fun stylePrimaryAction(root: View) {
+        root.findViewById<MaterialButton>(R.id.authSubmit)?.apply {
+            backgroundTintList = ColorStateList.valueOf(root.context.getColor(R.color.hallo_blue))
+            setTextColor(Color.WHITE)
+            iconTint = ColorStateList.valueOf(Color.WHITE)
+            isAllCaps = false
+        }
+    }
+
+    private fun inputLayout(view: View?): TextInputLayout? {
+        var parent = view?.parent
+        while (parent is View) {
+            if (parent is TextInputLayout) return parent
+            parent = parent.parent
+        }
+        return null
+    }
+
+    /** Remove only near-black pixels connected to the bitmap edge; internal logo detail is kept. */
+    private fun cleanOpaqueEdgeBackground(image: ImageView) {
+        val source = (image.drawable as? BitmapDrawable)?.bitmap ?: return
+        if (source.width <= 0 || source.height <= 0) return
+        if (Color.alpha(source.getPixel(0, 0)) < 32) return
+
+        val bitmap = source.copy(Bitmap.Config.ARGB_8888, true) ?: return
+        val width = bitmap.width
+        val height = bitmap.height
+        val visited = BooleanArray(width * height)
+        val queue = ArrayDeque<Int>()
+
+        fun enqueue(x: Int, y: Int) {
+            if (x !in 0 until width || y !in 0 until height) return
+            val index = y * width + x
+            if (visited[index]) return
+            val pixel = bitmap.getPixel(x, y)
+            val edgeDark = Color.alpha(pixel) < 32 || maxOf(Color.red(pixel), Color.green(pixel), Color.blue(pixel)) <= 96
+            if (!edgeDark) return
+            visited[index] = true
+            queue.addLast(index)
+        }
+
+        for (x in 0 until width) {
+            enqueue(x, 0)
+            enqueue(x, height - 1)
+        }
+        for (y in 0 until height) {
+            enqueue(0, y)
+            enqueue(width - 1, y)
+        }
+
+        while (queue.isNotEmpty()) {
+            val index = queue.removeFirst()
+            val x = index % width
+            val y = index / width
+            bitmap.setPixel(x, y, Color.TRANSPARENT)
+            enqueue(x - 1, y)
+            enqueue(x + 1, y)
+            enqueue(x, y - 1)
+            enqueue(x, y + 1)
+        }
+        image.setImageBitmap(bitmap)
+    }
+}
