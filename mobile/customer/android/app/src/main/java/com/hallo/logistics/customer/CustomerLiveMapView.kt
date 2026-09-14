@@ -2,19 +2,21 @@ package com.hallo.logistics.customer
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.net.Uri
 import android.util.AttributeSet
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.core.content.ContextCompat
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
-import kotlin.math.roundToInt
 
+/**
+ * Customer map surface only.
+ *
+ * V5 deliberately keeps this view isolated from the rest of the screen tree: attaching a map must
+ * never restyle Login, Home, navigation, Profile, or any sibling screen. Screen presentation now
+ * belongs to XML/MainActivity instead of runtime whole-tree adapters.
+ */
 @SuppressLint("SetJavaScriptEnabled")
 class CustomerLiveMapView @JvmOverloads constructor(
     context: Context,
@@ -43,39 +45,6 @@ class CustomerLiveMapView @JvmOverloads constructor(
             }
         }
         loadDataWithBaseURL("https://api.maptiler.com", mapHtml(), "text/html", "UTF-8", null)
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        post { CustomerReferenceUi.apply(this) }
-        if (id != R.id.trackingMap) return
-        post {
-            val metrics = resources.displayMetrics
-            val target = (metrics.heightPixels * 0.56f).roundToInt()
-            val minimum = (320 * metrics.density).roundToInt()
-            val maximum = (480 * metrics.density).roundToInt()
-            val params = layoutParams ?: return@post
-            val bounded = target.coerceIn(minimum, maximum)
-            if (params.height != bounded) {
-                params.height = bounded
-                layoutParams = params
-            }
-
-            (parent as? MaterialCardView)?.apply {
-                radius = (24 * metrics.density)
-                cardElevation = 0f
-                strokeWidth = metrics.density.roundToInt().coerceAtLeast(1)
-                strokeColor = ContextCompat.getColor(context, R.color.hallo_line)
-            }
-
-            rootView.findViewById<MaterialButton>(R.id.refreshTracking)?.apply {
-                minHeight = (54 * metrics.density).roundToInt()
-                cornerRadius = (18 * metrics.density).roundToInt()
-                backgroundTintList = ColorStateList.valueOf(Color.rgb(245, 248, 253))
-                setTextColor(Color.rgb(31, 98, 218))
-                strokeWidth = 0
-            }
-        }
     }
 
     fun showBooking(pickup: CustomerPlace?, dropoff: CustomerPlace?, route: CustomerRoute?) {
