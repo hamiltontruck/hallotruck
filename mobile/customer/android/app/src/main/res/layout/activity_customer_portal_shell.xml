@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    android:fitsSystemWindows="true">
+
+    <WebView
+        android:id="@+id/customerPortalWebView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAutofill="noExcludeDescendants"
+        android:overScrollMode="never" />
+
+    <ProgressBar
+        android:id="@+id/customerPortalProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_gravity="top"
+        android:max="100"
+        android:progressTint="@color/hallo_blue"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/customerPortalError"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/white"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:contentDescription="@string/app_name"
+            android:src="@mipmap/ic_launcher" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:text="@string/portal_shell_error_title"
+            android:textColor="@color/hallo_navy"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/customerPortalErrorText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="@string/portal_shell_network_error"
+            android:textColor="@color/hallo_muted"
+            android:textSize="15sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/customerPortalRetry"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="24dp"
+            android:text="@string/portal_shell_retry"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            app:cornerRadius="16dp" />
+    </LinearLayout>
+
+</FrameLayout>
