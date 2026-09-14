@@ -275,7 +275,7 @@ class NativeCustomerActivity : AppCompatActivity() {
     }
 
     private fun configureHeaderNotifications() {
-        notificationsButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonTextButtonStyle).apply {
+        notificationsButton = MaterialButton(this).apply {
             minWidth = dp(48)
             minimumWidth = 0
             minHeight = dp(48)
@@ -434,7 +434,7 @@ class NativeCustomerActivity : AppCompatActivity() {
             AuthMode.REQUEST_RESET -> copy(
                 "Enter your Customer email. We will send the existing secure recovery link.",
                 "Imeelii Customer kee galchi. Link recovery nageenya qabu siif ergina.",
-                "የCustomer ኢሜይልዎን ያስገቡ። የደህንነት መልሶ ማግኛ ሊንክ እንልካለን።",
+                "የCustomer ኢሜይልዎን ያስገቡ። የደህነት መልሶ ማግኛ ሊንክ እንልካለን።",
             )
             AuthMode.UPDATE_RESET -> copy(
                 "Use exactly 6 numeric digits, matching the Customer Portal recovery policy.",
@@ -520,9 +520,14 @@ class NativeCustomerActivity : AppCompatActivity() {
                 CustomerPage.BOOK -> bookController = NativeCustomerBookController(this, page, viewModel, ::requestCurrentLocation)
                 CustomerPage.ORDERS -> ordersController = NativeCustomerOrdersController(this, page, viewModel)
                 CustomerPage.TRACKING -> trackingController = NativeCustomerTrackingController(this, page, viewModel)
-                CustomerPage.PAYMENTS -> paymentsController = NativeCustomerPaymentsController(this, page, viewModel) {
-                    receiptPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp", "application/pdf"))
-                }
+                CustomerPage.PAYMENTS -> paymentsController = NativeCustomerPaymentsController(
+                    activity = this,
+                    root = page,
+                    viewModel = viewModel,
+                    requestReceipt = {
+                        receiptPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp", "application/pdf"))
+                    },
+                )
                 CustomerPage.PROFILE -> profileController = NativeCustomerProfileController(this, page, viewModel, ::requestCurrentLocation, ::clearSharedLocation)
                 CustomerPage.NOTIFICATIONS -> notificationsController = NativeCustomerNotificationsController(this, page, viewModel)
             }
