@@ -14,4 +14,6 @@
     <string name="booking_success_body">ትዕዛዝዎ ተፈጥሯል።</string>
     <string name="booking_view_orders">ትዕዛዙን ይመልከቱ</string>
     <string name="booking_create_another">ሌላ ትዕዛዝ ይፍጠሩ</string>
+    <string name="auth_password">የይለፍ ቃል</string>
+    <string name="auth_signup_pin">ባለ 6 አሃዝ የምዝገባ PIN</string>
 </resources>
