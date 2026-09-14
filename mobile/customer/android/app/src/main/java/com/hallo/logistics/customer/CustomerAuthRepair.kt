@@ -44,16 +44,17 @@ object CustomerAuthRepair {
             field.post { refresh(root) }
         }
 
-        // Logged-out MainActivity.render returns before the shared authenticated chrome refresh.
-        // Guard the real rendered auth layout so a later state render/sign-out cannot re-expose
-        // the authenticated Sign out action or leave the auth field affordances stale.
-        root.viewTreeObserver.addOnGlobalLayoutListener {
-            if (
-                authPanel.visibility == View.VISIBLE &&
-                root.findViewById<View>(R.id.signOut)?.visibility != View.GONE
-            ) {
-                refresh(root)
+        // MainActivity returns early for logged-out renders, so the normal authenticated chrome
+        // refresh is not guaranteed to run. Enforce the signed-out presentation immediately before
+        // each draw; this is presentation-only and never changes auth/session state.
+        root.viewTreeObserver.addOnPreDrawListener {
+            styleSessionPresentation(root)
+            if (authPanel.visibility == View.VISIBLE) {
+                styleAuthFieldIcons(root)
+                stylePasswordFields(root)
+                styleValidationCopy(root)
             }
+            true
         }
     }
 
