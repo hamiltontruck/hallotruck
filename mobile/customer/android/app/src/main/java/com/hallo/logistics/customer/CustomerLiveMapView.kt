@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.util.AttributeSet
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.content.ContextCompat
@@ -45,7 +46,33 @@ class CustomerLiveMapView @JvmOverloads constructor(
                 ready = true
                 lastScript?.let { evaluateJavascript(it, null) }
             }
+
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                if (request == null || !request.isForMainFrame) return false
+                return handleMainFrameNavigation(request.url)
+            }
+
+            @Suppress("DEPRECATION")
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                val parsed = url?.let(Uri::parse) ?: return true
+                return handleMainFrameNavigation(parsed)
+            }
         }
+        reloadMapDocument()
+    }
+
+    private fun handleMainFrameNavigation(uri: Uri): Boolean {
+        if (uri.scheme == "hallo-map" && uri.host == "retry") {
+            post { reloadMapDocument() }
+            return true
+        }
+        // The map must never navigate its main frame to MapTiler/API documentation or another
+        // external page. Tiles, styles and scripts are subresources and remain allowed.
+        return true
+    }
+
+    private fun reloadMapDocument() {
+        ready = false
         loadDataWithBaseURL("https://api.maptiler.com", mapHtml(), "text/html", "UTF-8", null)
     }
 
@@ -161,7 +188,7 @@ class CustomerLiveMapView @JvmOverloads constructor(
             const stateText=document.getElementById('stateText');
             const retryButton=document.getElementById('retry');
             retryButton.textContent=HALLO_RETRY;
-            retryButton.addEventListener('click',()=>location.reload());
+            retryButton.addEventListener('click',()=>{showState(HALLO_LOADING,false);window.location.href='hallo-map://retry'});
             function showState(message,retry){stateText.textContent=message;retryButton.style.display=retry?'block':'none';stateBox.style.display='flex'}
             function hideState(){stateBox.style.display='none';retryButton.style.display='none'}
             function mapLibraryFailed(){showState(HALLO_ERROR,true)}
