@@ -20,7 +20,7 @@
         android:layout_height="3dp"
         android:layout_gravity="top"
         android:max="100"
-        android:progressTint="@color/hallo_blue"
+        android:progressTint="@color/hallo_navy"
         android:visibility="gone" />
 
     <LinearLayout
