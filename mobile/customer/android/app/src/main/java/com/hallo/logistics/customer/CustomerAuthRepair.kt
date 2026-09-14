@@ -31,6 +31,9 @@ object CustomerAuthRepair {
         if (installed.put(root, true) == true) return
         val authPanel = root.findViewById<View>(R.id.authPanel) ?: return
 
+        // Apply once immediately to avoid the first-frame visual mismatch seen before the posted
+        // parity pass, then repeat after layout/locale recreation has settled.
+        refresh(root)
         root.post { refresh(root) }
         authPanel.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
@@ -48,6 +51,7 @@ object CustomerAuthRepair {
         try {
             styleSystemBars(root)
             styleLogo(root)
+            styleAuthFieldIcons(root)
             stylePasswordFields(root)
             stylePrimaryAction(root)
             styleSessionPresentation(root)
@@ -91,6 +95,26 @@ object CustomerAuthRepair {
         logo.post { cleanOpaqueEdgeBackground(logo) }
     }
 
+    /** Keep Login/Register field affordances identical before and after locale recreation. */
+    private fun styleAuthFieldIcons(root: View) {
+        val muted = root.context.getColor(R.color.hallo_muted)
+        inputLayout(root.findViewById(R.id.email))?.apply {
+            setStartIconDrawable(R.drawable.ic_auth_email)
+            setStartIconTintList(ColorStateList.valueOf(muted))
+            setStartIconVisible(true)
+        }
+        inputLayout(root.findViewById(R.id.password))?.apply {
+            setStartIconDrawable(R.drawable.ic_auth_lock)
+            setStartIconTintList(ColorStateList.valueOf(muted))
+            setStartIconVisible(true)
+        }
+        root.findViewById<TextInputLayout>(R.id.confirmPinLayout)?.apply {
+            setStartIconDrawable(R.drawable.ic_auth_lock)
+            setStartIconTintList(ColorStateList.valueOf(muted))
+            setStartIconVisible(visibility == View.VISIBLE)
+        }
+    }
+
     private fun stylePasswordFields(root: View) {
         val signup = root.findViewById<View>(R.id.signupFields)?.visibility == View.VISIBLE
         val muted = root.context.getColor(R.color.hallo_muted)
@@ -109,6 +133,7 @@ object CustomerAuthRepair {
             }
             setEndIconTintList(ColorStateList.valueOf(muted))
             setEndIconVisible(signup)
+            setStartIconVisible(signup)
         }
     }
 
