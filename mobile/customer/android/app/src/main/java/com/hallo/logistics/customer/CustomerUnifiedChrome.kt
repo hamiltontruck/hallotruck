@@ -20,6 +20,7 @@ object CustomerUnifiedChrome {
 
     fun install(root: View) {
         if (installed.put(root, true) == true) return
+        CustomerAuthRepair.install(root)
         CustomerParityUiV2.install(root)
         CustomerParityActions.install(root)
         CustomerSmokePolish.install(root)
@@ -43,6 +44,9 @@ object CustomerUnifiedChrome {
             CustomerParityActions.refresh(root)
             updateSelection(root)
             CustomerSmokePolish.refresh(root)
+            // Auth is refreshed last because MainActivity's localized state render may update
+            // TextInputLayout hints after the one-time reference styling pass.
+            CustomerAuthRepair.refresh(root)
         } finally {
             busy[root] = false
         }
