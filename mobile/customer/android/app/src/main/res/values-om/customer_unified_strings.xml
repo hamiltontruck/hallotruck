@@ -14,4 +14,6 @@
     <string name="booking_success_body">Ajajni kee uumameera.</string>
     <string name="booking_view_orders">Ajaja ilaali</string>
     <string name="booking_create_another">Ajaja biraa uumi</string>
+    <string name="auth_password">Jecha icciitii</string>
+    <string name="auth_signup_pin">PIN galmee dijiitii 6</string>
 </resources>
