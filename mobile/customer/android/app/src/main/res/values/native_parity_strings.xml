@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="native_cargo_other_required">Describe the cargo when Other is selected.</string>
+    <string name="native_container_requires_trailer">A 20 ft or 40 ft container requires a Trailer.</string>
+    <string name="native_truck_capacity_summary">%1$s · capacity %2$s</string>
+    <string name="native_load_capacity_summary">Load equivalent: %1$s · %2$s capacity %3$s</string>
+    <string name="native_status_quote_ready">Quote ready</string>
+    <string name="native_status_order_placed">Order placed</string>
+    <string name="native_status_driver_assigned">Driver assigned</string>
+    <string name="native_status_driver_accepted">Driver accepted</string>
+    <string name="native_cancellation">Cancellation</string>
+    <string name="native_payment_submitted_title">Payment submitted</string>
+    <string name="native_payment_submitted_message">Your receipt is pending HALLO verification. Verified balance will update only after confirmation.</string>
+    <string name="native_no_outstanding_payment">There is no outstanding amount ready for a new payment submission.</string>
+    <string name="native_transaction_reference">Transaction / reference number</string>
+    <string name="native_amount_etb">Amount ETB</string>
+    <string name="native_provider">Provider</string>
+    <string name="native_reference">Reference</string>
+    <string name="native_amount">Amount</string>
+    <string name="native_submit_payment_receipt">Submit payment receipt</string>
+    <string name="native_payment_receipt_help">Upload JPG, PNG, WebP or PDF up to 10 MB. Submitted money remains pending until HALLO verifies it.</string>
+    <string name="native_choose_receipt">Choose receipt</string>
+    <string name="native_enter_payment_reference">Enter the payment reference</string>
+    <string name="native_enter_positive_amount">Enter an amount greater than zero</string>
+    <string name="native_amount_exceeds_remaining">Amount exceeds the remaining amount to submit</string>
+    <string name="native_profile_invalid">Profile details are invalid.</string>
+    <string name="native_chat_empty">Message your assigned driver about this order.</string>
+</resources>
