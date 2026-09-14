@@ -16,4 +16,9 @@
     <string name="booking_create_another">ሌላ ትዕዛዝ ይፍጠሩ</string>
     <string name="auth_password">የይለፍ ቃል</string>
     <string name="auth_signup_pin">ባለ 6 አሃዝ የምዝገባ PIN</string>
+    <string name="map_loading">ካርታው በመጫን ላይ…</string>
+    <string name="map_error">ካርታው አሁን አይገኝም። ግንኙነትዎን ይፈትሹና እንደገና ይሞክሩ።</string>
+    <string name="map_retry">እንደገና ይሞክሩ</string>
+    <string name="map_booking_empty">እውነተኛውን መንገድ ለማየት መነሻና መድረሻ ይምረጡ።</string>
+    <string name="map_tracking_empty">እውነተኛ የጉዞ/GPS ውሂብ ሲገኝ የቀጥታ ክትትል እዚህ ይታያል።</string>
 </resources>
