@@ -80,13 +80,13 @@ class NativeCustomerTrackingController(
         waiting.visibility = if (hasTruck) View.GONE else View.VISIBLE
         gps.text = when {
             !hasTruck -> activity.getString(R.string.gps_offline)
-            freshness == "LIVE" && trip?.speedKmh != null -> "${activity.getString(R.string.gps_live)}\n${number(trip.speedKmh)} km/h"
+            freshness == "LIVE" && trip?.speedKmh != null -> "${activity.getString(R.string.gps_live)}\n${activity.getString(R.string.speed_kmh, trip.speedKmh.toInt())}"
             freshness == "LIVE" -> activity.getString(R.string.gps_live)
             freshness == "STALE" -> activity.getString(R.string.gps_stale)
             else -> activity.getString(R.string.gps_offline)
         }
         remaining.text = if (freshness == "LIVE") {
-            state.remainingRoute?.distanceKm?.let { "${number(it)} km" } ?: "—"
+            state.remainingRoute?.distanceKm?.let { activity.getString(R.string.distance_km, number(it)) } ?: "—"
         } else {
             activity.getString(R.string.last_known_only)
         }
@@ -165,7 +165,11 @@ class NativeCustomerTrackingController(
         val minutes = (seconds / 60.0).toInt().coerceAtLeast(0)
         val hours = minutes / 60
         val rest = minutes % 60
-        return if (hours > 0) "${hours}h ${rest}m" else "${rest}m"
+        return if (hours > 0) {
+            activity.getString(R.string.hours_minutes_short, hours, rest)
+        } else {
+            activity.getString(R.string.minutes_only_short, rest)
+        }
     }
 
     private fun number(value: Double): String = NumberFormat.getNumberInstance(Locale.US).apply { maximumFractionDigits = 1 }.format(value)
