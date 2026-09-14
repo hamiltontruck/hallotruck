@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="portal_shell_error_title">HALLO Customer</string>
+    <string name="portal_shell_network_error">The Customer Portal could not load. Check your connection and try again.</string>
+    <string name="portal_shell_retry">Retry</string>
+</resources>
