@@ -5,7 +5,6 @@
         <item name="colorSecondary">@color/hallo_gold</item>
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
         <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:statusBarColor">@color/hallo_surface</item>
         <item name="android:windowBackground">@color/hallo_surface</item>
@@ -63,14 +62,14 @@
     <style name="Widget.Hallo.NavButton" parent="Widget.Material3.Button.TextButton">
         <item name="android:minWidth">0dp</item>
         <item name="android:minHeight">56dp</item>
-        <item name="android:textSize">10sp</item>
+        <item name="android:textSize">9sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="cornerRadius">14dp</item>
-        <item name="iconSize">21dp</item>
+        <item name="iconSize">20dp</item>
         <item name="iconGravity">textTop</item>
-        <item name="iconPadding">2dp</item>
-        <item name="android:paddingLeft">1dp</item>
-        <item name="android:paddingRight">1dp</item>
+        <item name="iconPadding">1dp</item>
+        <item name="android:paddingLeft">0dp</item>
+        <item name="android:paddingRight">0dp</item>
         <item name="android:paddingTop">4dp</item>
         <item name="android:paddingBottom">3dp</item>
     </style>
