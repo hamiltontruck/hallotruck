@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="portal_shell_error_title">HALLO Customer</string>
+    <string name="portal_shell_network_error">Customer Portal fe\'amuu hin dandeenye. Interneetii kee ilaalii irra deebi\'ii yaali.</string>
+    <string name="portal_shell_retry">Irra deebi\'ii yaali</string>
+</resources>
