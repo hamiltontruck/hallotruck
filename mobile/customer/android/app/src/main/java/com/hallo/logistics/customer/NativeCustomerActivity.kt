@@ -1,19 +1,39 @@
 package com.hallo.logistics.customer
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.net.Uri
 import android.os.Bundle
+import android.os.Looper
+import android.provider.OpenableColumns
 import android.text.InputFilter
 import android.text.InputType
 import android.view.View
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
+import android.webkit.MimeTypeMap
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -23,16 +43,20 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputLayout
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * Clean native Customer Android parity workbench.
+ * Clean native Customer Android portal-parity workspace.
  *
- * This Activity intentionally stays off the launcher until every Customer Portal capability
- * required by NATIVE_PARITY_AUDIT.md is implemented and device-smoked. It reuses the existing
- * CustomerViewModel/Repository backend contracts and owns presentation only.
+ * The production Customer Portal remains the functional source of truth. This Activity reuses
+ * the existing CustomerViewModel/Repository/RPC/storage contracts and owns Android presentation
+ * only. It stays off the launcher until the complete parity smoke gate passes.
  */
 class NativeCustomerActivity : AppCompatActivity() {
     private enum class AuthMode { LOGIN, SIGNUP, REQUEST_RESET, UPDATE_RESET }
@@ -65,28 +89,53 @@ class NativeCustomerActivity : AppCompatActivity() {
     private lateinit var authPrompt: TextView
     private lateinit var authModeButton: MaterialButton
     private lateinit var headerTitle: TextView
+    private lateinit var nativeHeader: LinearLayout
     private lateinit var shellProgress: View
     private lateinit var pageHost: FrameLayout
+    private lateinit var bottomNavigation: View
     private lateinit var navHome: MaterialButton
     private lateinit var navOrders: MaterialButton
     private lateinit var navBook: MaterialButton
     private lateinit var navTrack: MaterialButton
     private lateinit var navPayments: MaterialButton
     private lateinit var navProfile: MaterialButton
+    private lateinit var notificationsButton: MaterialButton
 
     private var language = CustomerLanguage.EN
     private var authMode = AuthMode.LOGIN
     private var renderedPage: CustomerPage? = null
     private var fieldMutation = false
+    private var sharedLocation: CustomerPlace? = null
+    private var bookController: NativeCustomerBookController? = null
+    private var ordersController: NativeCustomerOrdersController? = null
+    private var trackingController: NativeCustomerTrackingController? = null
+    private var paymentsController: NativeCustomerPaymentsController? = null
+    private var profileController: NativeCustomerProfileController? = null
+    private var notificationsController: NativeCustomerNotificationsController? = null
+    private var lastSuccessMessage: String? = null
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        val granted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) captureCurrentLocation() else showLocationError()
+    }
+
+    private val receiptPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) {
+            paymentsController?.clearPendingReceipt()
+            return@registerForActivityResult
+        }
+        consumeReceipt(uri)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         val callbackUri = intent?.dataString.orEmpty()
-        if (HalloSupabase.configured && intent != null) {
-            HalloSupabase.client.handleDeeplinks(intent)
-        }
+        if (HalloSupabase.configured && intent != null) HalloSupabase.client.handleDeeplinks(intent)
         val awaitingRecovery = prefs.getBoolean(KEY_AWAITING_RECOVERY, false)
         authMode = when {
             savedInstanceState != null -> runCatching {
@@ -101,6 +150,8 @@ class NativeCustomerActivity : AppCompatActivity() {
         language = CustomerLanguage.fromTag(AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag())
         configureLanguages()
         configureInputSanitizers()
+        configureHeaderNotifications()
+        configureInsets()
         configureActions()
         renderAuthMode(clearSecrets = false)
 
@@ -109,6 +160,36 @@ class NativeCustomerActivity : AppCompatActivity() {
                 viewModel.state.collect(::render)
             }
         }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        is CustomerUiEvent.OpenUrl -> openSecureUrl(event.url)
+                    }
+                }
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (isActive) {
+                    delay(8_000)
+                    if (viewModel.state.value.page == CustomerPage.TRACKING && !viewModel.state.value.busy) {
+                        viewModel.refreshTracking()
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (HalloSupabase.configured) HalloSupabase.client.handleDeeplinks(intent)
+        if (prefs.getBoolean(KEY_AWAITING_RECOVERY, false) && !intent.dataString.isNullOrBlank()) {
+            authMode = AuthMode.UPDATE_RESET
+            renderAuthMode(clearSecrets = true)
+        }
+        viewModel.restoreSession()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -141,8 +222,10 @@ class NativeCustomerActivity : AppCompatActivity() {
         authPrompt = findViewById(R.id.nativeAuthPrompt)
         authModeButton = findViewById(R.id.nativeAuthMode)
         headerTitle = findViewById(R.id.nativeHeaderTitle)
+        nativeHeader = findViewById(R.id.nativeHeader)
         shellProgress = findViewById(R.id.nativeShellProgress)
         pageHost = findViewById(R.id.nativePageHost)
+        bottomNavigation = findViewById(R.id.nativeBottomNavigation)
         navHome = findViewById(R.id.nativeNavHome)
         navOrders = findViewById(R.id.nativeNavOrders)
         navBook = findViewById(R.id.nativeNavBook)
@@ -191,11 +274,34 @@ class NativeCustomerActivity : AppCompatActivity() {
         }
     }
 
-    private fun replaceText(field: EditText, value: String) {
-        fieldMutation = true
-        field.setText(value)
-        field.setSelection(value.length)
-        fieldMutation = false
+    private fun configureHeaderNotifications() {
+        notificationsButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonTextButtonStyle).apply {
+            minWidth = dp(48)
+            minimumWidth = 0
+            minHeight = dp(48)
+            text = "0"
+            textSize = 10f
+            setTextColor(getColor(R.color.hallo_navy))
+            icon = ContextCompat.getDrawable(this@NativeCustomerActivity, R.drawable.ic_notifications)
+            iconTint = ColorStateList.valueOf(getColor(R.color.hallo_navy))
+            iconGravity = MaterialButton.ICON_GRAVITY_TOP
+            iconPadding = 0
+            contentDescription = getString(R.string.notifications)
+            setOnClickListener { navigate(CustomerPage.NOTIFICATIONS) }
+        }
+        nativeHeader.addView(notificationsButton, nativeHeader.childCount - 1)
+    }
+
+    private fun configureInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(customerShell) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            nativeHeader.updatePadding(top = bars.top, left = dp(16), right = dp(12))
+            nativeHeader.layoutParams = nativeHeader.layoutParams.apply { height = dp(68) + bars.top }
+            bottomNavigation.updatePadding(bottom = bars.bottom)
+            bottomNavigation.layoutParams = bottomNavigation.layoutParams.apply { height = dp(64) + bars.bottom }
+            insets
+        }
+        ViewCompat.requestApplyInsets(customerShell)
     }
 
     private fun configureActions() {
@@ -218,12 +324,20 @@ class NativeCustomerActivity : AppCompatActivity() {
             }
         }
 
-        navHome.setOnClickListener { viewModel.show(CustomerPage.HOME) }
-        navOrders.setOnClickListener { viewModel.show(CustomerPage.ORDERS) }
-        navBook.setOnClickListener { viewModel.show(CustomerPage.BOOK) }
-        navTrack.setOnClickListener { openTracking() }
-        navPayments.setOnClickListener { viewModel.show(CustomerPage.PAYMENTS) }
-        navProfile.setOnClickListener { viewModel.show(CustomerPage.PROFILE) }
+        navHome.setOnClickListener { navigate(CustomerPage.HOME) }
+        navOrders.setOnClickListener { navigate(CustomerPage.ORDERS) }
+        navBook.setOnClickListener { navigate(CustomerPage.BOOK) }
+        navTrack.setOnClickListener {
+            hideKeyboard()
+            openTracking()
+        }
+        navPayments.setOnClickListener { navigate(CustomerPage.PAYMENTS) }
+        navProfile.setOnClickListener { navigate(CustomerPage.PROFILE) }
+    }
+
+    private fun navigate(page: CustomerPage) {
+        hideKeyboard()
+        viewModel.show(page)
     }
 
     private fun submitAuth() {
@@ -378,21 +492,40 @@ class NativeCustomerActivity : AppCompatActivity() {
             return
         }
 
+        val unread = state.notifications.count { it.readAt == null }
+        notificationsButton.text = if (unread > 99) "99+" else unread.toString()
         renderPage(state)
         highlightNavigation(state.page)
+        maybeShowOrderSuccess(state)
     }
 
     private fun renderPage(state: CustomerUiState) {
         if (renderedPage != state.page || pageHost.childCount == 0) {
             pageHost.removeAllViews()
-            val layout = if (state.page == CustomerPage.HOME) {
-                R.layout.page_customer_home_native
-            } else {
-                R.layout.page_customer_placeholder_native
+            resetControllers()
+            val layout = when (state.page) {
+                CustomerPage.HOME -> R.layout.page_customer_home_native
+                CustomerPage.BOOK -> R.layout.page_customer_book_native
+                CustomerPage.ORDERS -> R.layout.page_customer_orders_native
+                CustomerPage.TRACKING -> R.layout.page_customer_tracking_native
+                CustomerPage.PAYMENTS -> R.layout.page_customer_payments_native
+                CustomerPage.PROFILE -> R.layout.page_customer_profile_native
+                CustomerPage.NOTIFICATIONS -> R.layout.page_customer_notifications_native
             }
-            pageHost.addView(layoutInflater.inflate(layout, pageHost, false))
+            val page = layoutInflater.inflate(layout, pageHost, false)
+            pageHost.addView(page)
             renderedPage = state.page
-            if (state.page == CustomerPage.HOME) bindHomeActions()
+            when (state.page) {
+                CustomerPage.HOME -> bindHomeActions()
+                CustomerPage.BOOK -> bookController = NativeCustomerBookController(this, page, viewModel, ::requestCurrentLocation)
+                CustomerPage.ORDERS -> ordersController = NativeCustomerOrdersController(this, page, viewModel)
+                CustomerPage.TRACKING -> trackingController = NativeCustomerTrackingController(this, page, viewModel)
+                CustomerPage.PAYMENTS -> paymentsController = NativeCustomerPaymentsController(this, page, viewModel) {
+                    receiptPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp", "application/pdf"))
+                }
+                CustomerPage.PROFILE -> profileController = NativeCustomerProfileController(this, page, viewModel, ::requestCurrentLocation, ::clearSharedLocation)
+                CustomerPage.NOTIFICATIONS -> notificationsController = NativeCustomerNotificationsController(this, page, viewModel)
+            }
         }
 
         headerTitle.text = when (state.page) {
@@ -405,13 +538,33 @@ class NativeCustomerActivity : AppCompatActivity() {
             CustomerPage.NOTIFICATIONS -> getString(R.string.header_notifications)
         }
 
-        if (state.page == CustomerPage.HOME) renderHome(state) else renderPlaceholder(state.page)
+        when (state.page) {
+            CustomerPage.HOME -> renderHome(state)
+            CustomerPage.BOOK -> bookController?.render(state)
+            CustomerPage.ORDERS -> ordersController?.render(state)
+            CustomerPage.TRACKING -> trackingController?.render(state)
+            CustomerPage.PAYMENTS -> paymentsController?.render(state)
+            CustomerPage.PROFILE -> profileController?.render(state, sharedLocation)
+            CustomerPage.NOTIFICATIONS -> notificationsController?.render(state)
+        }
+    }
+
+    private fun resetControllers() {
+        bookController = null
+        ordersController = null
+        trackingController = null
+        paymentsController = null
+        profileController = null
+        notificationsController = null
     }
 
     private fun bindHomeActions() {
-        pageHost.findViewById<MaterialButton>(R.id.nativeHomeBook)?.setOnClickListener { viewModel.show(CustomerPage.BOOK) }
-        pageHost.findViewById<MaterialButton>(R.id.nativeQuickOrders)?.setOnClickListener { viewModel.show(CustomerPage.ORDERS) }
-        pageHost.findViewById<MaterialButton>(R.id.nativeQuickTrack)?.setOnClickListener { openTracking() }
+        pageHost.findViewById<MaterialButton>(R.id.nativeHomeBook)?.setOnClickListener { navigate(CustomerPage.BOOK) }
+        pageHost.findViewById<MaterialButton>(R.id.nativeQuickOrders)?.setOnClickListener { navigate(CustomerPage.ORDERS) }
+        pageHost.findViewById<MaterialButton>(R.id.nativeQuickTrack)?.setOnClickListener {
+            hideKeyboard()
+            openTracking()
+        }
     }
 
     private fun renderHome(state: CustomerUiState) {
@@ -449,16 +602,21 @@ class NativeCustomerActivity : AppCompatActivity() {
         pageHost.findViewById<TextView>(R.id.nativeMetricToPay)?.text = "ETB ${NumberFormat.getNumberInstance(Locale.US).format(toPay.toLong())}"
     }
 
-    private fun renderPlaceholder(page: CustomerPage) {
-        pageHost.findViewById<TextView>(R.id.nativePlaceholderTitle)?.text = when (page) {
-            CustomerPage.ORDERS -> getString(R.string.header_orders)
-            CustomerPage.BOOK -> getString(R.string.header_book)
-            CustomerPage.TRACKING -> getString(R.string.header_tracking)
-            CustomerPage.PAYMENTS -> getString(R.string.header_payments)
-            CustomerPage.PROFILE -> getString(R.string.header_profile)
-            CustomerPage.NOTIFICATIONS -> getString(R.string.header_notifications)
-            CustomerPage.HOME -> getString(R.string.header_home)
-        }
+    private fun maybeShowOrderSuccess(state: CustomerUiState) {
+        val message = state.message
+        if (!message.startsWith("Order ") || !message.endsWith(" created") || message == lastSuccessMessage) return
+        lastSuccessMessage = message
+        val tracking = message.removePrefix("Order ").removeSuffix(" created")
+        AlertDialog.Builder(this)
+            .setTitle(copy("Order created", "Order uumame", "ትዕዛዝ ተፈጥሯል"))
+            .setMessage(copy(
+                "$tracking was created successfully. You can open your orders or create another delivery.",
+                "$tracking milkaa'inaan uumameera. Ajajoota kee ilaali ykn geessinsa biraa uumi.",
+                "$tracking በተሳካ ሁኔታ ተፈጥሯል። ትዕዛዞችዎን ይመልከቱ ወይም ሌላ ማድረሻ ይፍጠሩ።",
+            ))
+            .setNegativeButton(copy("Create another", "Kan biraa uumi", "ሌላ ፍጠር")) { _, _ -> navigate(CustomerPage.BOOK) }
+            .setPositiveButton(copy("View order", "Order ilaali", "ትዕዛዝ ይመልከቱ")) { _, _ -> navigate(CustomerPage.ORDERS) }
+            .show()
     }
 
     private fun openTracking() {
@@ -486,6 +644,122 @@ class NativeCustomerActivity : AppCompatActivity() {
         }
     }
 
+    private fun requestCurrentLocation() {
+        val fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!fine && !coarse) {
+            locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            return
+        }
+        captureCurrentLocation()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun captureCurrentLocation() {
+        val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val providers = manager.getProviders(true)
+        val best = providers.mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }
+            .maxByOrNull(Location::getTime)
+        if (best != null) {
+            acceptLocation(best)
+            return
+        }
+        val provider = providers.firstOrNull { it == LocationManager.GPS_PROVIDER }
+            ?: providers.firstOrNull { it == LocationManager.NETWORK_PROVIDER }
+            ?: providers.firstOrNull()
+        if (provider == null) {
+            showLocationError()
+            return
+        }
+        val listener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                runCatching { manager.removeUpdates(this) }
+                acceptLocation(location)
+            }
+            override fun onProviderEnabled(provider: String) = Unit
+            override fun onProviderDisabled(provider: String) = Unit
+            @Deprecated("Deprecated in API 29")
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
+        }
+        runCatching { manager.requestSingleUpdate(provider, listener, Looper.getMainLooper()) }
+            .onFailure { showLocationError() }
+    }
+
+    private fun acceptLocation(location: Location) {
+        sharedLocation = CustomerPlace(
+            label = copy("My location", "Bakka ani jiru", "ያለሁበት ቦታ"),
+            longitude = location.longitude,
+            latitude = location.latitude,
+        )
+        bookController?.setCurrentPickup(sharedLocation!!)
+        profileController?.render(viewModel.state.value, sharedLocation)
+    }
+
+    private fun clearSharedLocation() {
+        sharedLocation = null
+        profileController?.render(viewModel.state.value, null)
+    }
+
+    private fun showLocationError() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.my_location))
+            .setMessage(getString(R.string.location_unavailable))
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun consumeReceipt(uri: Uri) {
+        lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val size = contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) cursor.getLong(0) else null
+                    }
+                    require(size == null || size <= 10L * 1024L * 1024L) { "Receipt must be 10 MB or smaller" }
+                    val mime = contentResolver.getType(uri) ?: "application/octet-stream"
+                    require(mime in CustomerPaymentSubmissionRepository.allowedTypes) { "Receipt must be JPG, PNG, WebP or PDF" }
+                    val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mime)
+                        ?: if (mime == "application/pdf") "pdf" else "jpg"
+                    val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: error("Receipt could not be read")
+                    Triple(bytes, mime, extension)
+                }
+            }.onSuccess { (bytes, mime, extension) ->
+                paymentsController?.consumeReceipt(bytes, mime, extension)
+            }.onFailure {
+                paymentsController?.clearPendingReceipt()
+                AlertDialog.Builder(this@NativeCustomerActivity)
+                    .setTitle(getString(R.string.payments_title))
+                    .setMessage(it.message ?: getString(R.string.receipt_unavailable))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            }
+        }
+    }
+
+    private fun openSecureUrl(url: String) {
+        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return
+        if (uri.scheme != "https") return
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+            .onFailure {
+                AlertDialog.Builder(this).setMessage(getString(R.string.receipt_unavailable)).setPositiveButton(android.R.string.ok, null).show()
+            }
+    }
+
+    private fun hideKeyboard() {
+        currentFocus?.let { focused ->
+            (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                .hideSoftInputFromWindow(focused.windowToken, 0)
+            focused.clearFocus()
+        }
+    }
+
+    private fun replaceText(field: EditText, value: String) {
+        fieldMutation = true
+        field.setText(value)
+        field.setSelection(value.length)
+        fieldMutation = false
+    }
+
     private fun showFeedback(message: String, error: Boolean) {
         authFeedback.text = message
         authFeedback.setTextColor(getColor(if (error) R.color.hallo_danger else R.color.hallo_success))
@@ -497,6 +771,8 @@ class NativeCustomerActivity : AppCompatActivity() {
         CustomerLanguage.OR -> om
         CustomerLanguage.AM -> am
     }
+
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     companion object {
         private const val KEY_AUTH_MODE = "native_auth_mode"
