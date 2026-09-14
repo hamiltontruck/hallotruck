@@ -20,11 +20,13 @@ class CustomerAuthPolicyTest {
         Locale.setDefault(originalLocale)
     }
 
-    @Test fun signInRequiresValidEmailAndBoundedPassword() {
+    @Test fun signInRequiresValidEmailAndExactlySixNumericPin() {
         assertEquals("Enter a valid email address", CustomerAuthPolicy.validateSignIn("not-an-email", "123456"))
-        assertEquals("Password must be at least 6 characters", CustomerAuthPolicy.validateSignIn("user@example.com", "12345"))
-        assertEquals("Password must be 72 characters or fewer", CustomerAuthPolicy.validateSignIn("user@example.com", "x".repeat(73)))
-        assertNull(CustomerAuthPolicy.validateSignIn(" User@Example.com ", "123456"))
+        listOf("12345", "1234567", "12a456", "abcdef", "").forEach { invalidPin ->
+            assertEquals("PIN must be exactly 6 digits", CustomerAuthPolicy.validateSignIn("user@example.com", invalidPin))
+        }
+        assertNull(CustomerAuthPolicy.validateSignIn(" User @ Example.com ", "123456"))
+        assertEquals("user@example.com", CustomerAuthPolicy.cleanEmail(" User @ Example.com "))
     }
 
     @Test fun signUpRequiresValidPhoneEmailAndSixDigitPin() {
@@ -62,8 +64,9 @@ class CustomerAuthPolicyTest {
     @Test fun authValidationFollowsOromoLocale() {
         Locale.setDefault(Locale.forLanguageTag("om"))
         assertEquals("Teessoo imeelii sirrii galchi", CustomerAuthPolicy.validateSignIn("bad-email", "123456"))
+        assertEquals("PIN lakkoofsa 6 qofa ta'uu qaba", CustomerAuthPolicy.validateSignIn("user@example.com", "12a456"))
         assertEquals(
-            "Imeeliin ykn jechi darbii sirrii miti",
+            "Imeeliin ykn PIN sirrii miti",
             CustomerAuthPolicy.safeMessage(IllegalStateException("invalid_credentials URL: https://secret.supabase.co")),
         )
     }
@@ -71,8 +74,9 @@ class CustomerAuthPolicyTest {
     @Test fun authValidationFollowsAmharicLocale() {
         Locale.setDefault(Locale.forLanguageTag("am"))
         assertEquals("ትክክለኛ የኢሜይል አድራሻ ያስገቡ", CustomerAuthPolicy.validateSignIn("bad-email", "123456"))
+        assertEquals("PIN በትክክል 6 አሃዞች መሆን አለበት", CustomerAuthPolicy.validateSignIn("user@example.com", "12a456"))
         assertEquals(
-            "ኢሜይሉ ወይም የይለፍ ቃሉ ትክክል አይደለም",
+            "ኢሜይሉ ወይም PIN ትክክል አይደለም",
             CustomerAuthPolicy.safeMessage(IllegalStateException("invalid_credentials Authorization=Bearer redacted")),
         )
     }
