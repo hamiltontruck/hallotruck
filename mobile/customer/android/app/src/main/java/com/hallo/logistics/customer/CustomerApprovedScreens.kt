@@ -301,8 +301,8 @@ object CustomerApprovedScreens {
             setPadding(dp(root, 18), dp(root, 16), dp(root, 18), dp(root, 16))
         }
         root.findViewById<TextView>(R.id.trackingFreshness)?.apply {
-            background = rounded(Color.rgb(30, 181, 122), dp(root, 18))
-            setTextColor(Color.WHITE)
+            // MainActivity supplies freshness; reapply its semantic style after layout.
+            CustomerTrackingBadgeStyle.apply(this)
             setPadding(dp(root, 12), dp(root, 7), dp(root, 12), dp(root, 7))
         }
         root.findViewById<View>(R.id.trackingMap)?.layoutParams = root.findViewById<View>(R.id.trackingMap)?.layoutParams?.apply { height = dp(root, 340) }

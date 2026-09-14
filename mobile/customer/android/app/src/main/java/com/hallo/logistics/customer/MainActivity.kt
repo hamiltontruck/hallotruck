@@ -1020,7 +1020,7 @@ class MainActivity : AppCompatActivity() {
         val hasTruck = state.liveTrip?.truckLatitude != null && state.liveTrip.truckLongitude != null
         val fresh = CustomerPolicy.trackingFreshness(state.liveTrip?.recordedAt, hasTruck)
         trackingFreshness.text = trackingFreshnessLabel(fresh, hasTruck)
-        trackingFreshness.setTextColor(getColor(when (fresh) { "LIVE" -> R.color.hallo_success; "STALE" -> R.color.hallo_warning; else -> R.color.hallo_danger }))
+        CustomerTrackingBadgeStyle.apply(trackingFreshness, fresh)
 
         val statRow = tripStatus.parent as? LinearLayout
         val remainingView = ensureRemainingStat(statRow)
@@ -1282,8 +1282,7 @@ class MainActivity : AppCompatActivity() {
                 if (it.customerType == "business") append("${getString(R.string.company)}: ${it.companyName ?: "—"}\n")
                 append("${getString(R.string.customer_status)}: ${getString(R.string.verified_customer)}\n")
                 append("${getString(R.string.language)}: ${language.tag.uppercase()}\n")
-                append("${getString(R.string.joined)}: ${it.createdAt ?: "—"}\n\n")
-                append(getString(R.string.profile_avatar_initials))
+                append("${getString(R.string.joined)}: ${CustomerUiDateFormatter.format(it.createdAt, resources.configuration.locales[0])}")
             }
         }.orEmpty()
         val edit = actionButton(getString(R.string.edit_profile)) {

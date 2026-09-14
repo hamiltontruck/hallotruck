@@ -54,6 +54,7 @@ object CustomerUnifiedChrome {
             iconPadding = dp(root, 2)
             isAllCaps = false
             maxLines = 1
+            setPadding(0, 0, 0, 0)
             textSize = 10f
             minWidth = 0
             minimumWidth = 0

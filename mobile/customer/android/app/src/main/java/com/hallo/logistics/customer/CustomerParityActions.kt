@@ -2,7 +2,7 @@ package com.hallo.logistics.customer
 
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -30,8 +30,8 @@ object CustomerParityActions {
 
     private fun wire(root: View) {
         val success = root.findViewWithTag<MaterialCardView>(TAG_SUCCESS) ?: return
-        val activity = root.context as? AppCompatActivity ?: return
-        val viewModel = ViewModelProvider(activity)[CustomerViewModel::class.java]
+        val owner = root.findViewTreeViewModelStoreOwner() ?: return
+        val viewModel = ViewModelProvider(owner)[CustomerViewModel::class.java]
         val viewOrder = findButton(success, root.context.getString(R.string.booking_view_orders))
         val createAnother = findButton(success, root.context.getString(R.string.booking_create_another))
 

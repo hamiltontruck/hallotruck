@@ -10,7 +10,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -78,6 +78,9 @@ object CustomerParityUiV2 {
             setCardBackgroundColor(Color.WHITE)
             setContentPadding(dp(root, 12), dp(root, 10), dp(root, 10), dp(root, 10))
 
+            val column = LinearLayout(root.context).apply {
+                orientation = LinearLayout.VERTICAL
+            }
             val row = LinearLayout(root.context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -97,6 +100,8 @@ object CustomerParityUiV2 {
                     textSize = 15f
                     setTypeface(typeface, Typeface.BOLD)
                     letterSpacing = 0.04f
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
                 })
                 addView(TextView(root.context).apply {
                     text = root.context.getString(R.string.customer_brand_tagline)
@@ -134,10 +139,17 @@ object CustomerParityUiV2 {
                 marginEnd = dp(root, 3)
             })
 
-            row.addView(languageMirror(root, "EN", R.id.languageEn), LinearLayout.LayoutParams(dp(root, 38), dp(root, 40)))
-            row.addView(languageMirror(root, "OR", R.id.languageOr), LinearLayout.LayoutParams(dp(root, 38), dp(root, 40)).apply { marginStart = dp(root, 3) })
-            row.addView(languageMirror(root, "አማ", R.id.languageAm), LinearLayout.LayoutParams(dp(root, 42), dp(root, 40)).apply { marginStart = dp(root, 3) })
-            addView(row)
+            val languages = LinearLayout(root.context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.END
+                setPadding(0, dp(root, 8), 0, 0)
+            }
+            languages.addView(languageMirror(root, "EN", R.id.languageEn), LinearLayout.LayoutParams(dp(root, 48), dp(root, 48)))
+            languages.addView(languageMirror(root, "OR", R.id.languageOr), LinearLayout.LayoutParams(dp(root, 48), dp(root, 48)).apply { marginStart = dp(root, 6) })
+            languages.addView(languageMirror(root, "አማ", R.id.languageAm), LinearLayout.LayoutParams(dp(root, 48), dp(root, 48)).apply { marginStart = dp(root, 6) })
+            column.addView(row)
+            column.addView(languages)
+            addView(column)
         }.also { shell.addView(it, 0, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(root, 12) }) }
 
         if (chrome.parent === shell && shell.indexOfChild(chrome) != 0) {
@@ -158,7 +170,9 @@ object CustomerParityUiV2 {
         text = label
         minWidth = 0
         minimumWidth = 0
-        minHeight = dp(root, 40)
+        minHeight = dp(root, 48)
+        setPadding(0, 0, 0, 0)
+        maxLines = 1
         cornerRadius = dp(root, 13)
         insetTop = 0
         insetBottom = 0
@@ -349,6 +363,7 @@ object CustomerParityUiV2 {
             })
             addView(TextView(root.context).apply {
                 tag = "customer-metric-$key"
+                text = "—"
                 textSize = if (key == "due") 16f else 22f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(color(root, R.color.hallo_navy))
@@ -358,8 +373,13 @@ object CustomerParityUiV2 {
         addView(content)
     }
 
-    private fun updateMetrics(root: View, metrics: View) {
-        val state = state(root) ?: return
+    internal fun updateMetrics(root: View, metrics: View, state: CustomerUiState? = state(root)) {
+        if (state == null || state.loading || !state.authorized) {
+            listOf("orders", "active", "due", "delivered").forEach { key ->
+                metrics.findViewWithTag<TextView>("customer-metric-$key")?.text = "—"
+            }
+            return
+        }
         val active = state.orders.count { CustomerPolicy.showAssignment(it.status) }
         val delivered = state.orders.count { it.status == "delivered" }
         val due = state.orders.filterNot { it.status == "cancelled" }.sumOf { order ->
@@ -367,7 +387,7 @@ object CustomerParityUiV2 {
         }
         metrics.findViewWithTag<TextView>("customer-metric-orders")?.text = state.orders.size.toString()
         metrics.findViewWithTag<TextView>("customer-metric-active")?.text = active.toString()
-        metrics.findViewWithTag<TextView>("customer-metric-due")?.text = "ETB ${NumberFormat.getIntegerInstance().format(due)}"
+        metrics.findViewWithTag<TextView>("customer-metric-due")?.text = "ETB ${NumberFormat.getIntegerInstance(root.resources.configuration.locales[0]).format(due)}"
         metrics.findViewWithTag<TextView>("customer-metric-delivered")?.text = delivered.toString()
     }
 
@@ -783,8 +803,8 @@ object CustomerParityUiV2 {
     }
 
     private fun state(root: View): CustomerUiState? {
-        val activity = root.context as? AppCompatActivity ?: return null
-        return ViewModelProvider(activity)[CustomerViewModel::class.java].state.value
+        val owner = root.findViewTreeViewModelStoreOwner() ?: return null
+        return ViewModelProvider(owner)[CustomerViewModel::class.java].state.value
     }
 
     private fun placeAfter(parent: LinearLayout, child: View, anchor: View) {
