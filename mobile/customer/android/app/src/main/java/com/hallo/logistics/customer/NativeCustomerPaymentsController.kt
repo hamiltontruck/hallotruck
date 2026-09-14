@@ -10,7 +10,6 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -76,8 +75,8 @@ class NativeCustomerPaymentsController(
                 )
             }.onSuccess {
                 AlertDialog.Builder(activity)
-                    .setTitle("Payment submitted")
-                    .setMessage("Your receipt is pending HALLO verification. Verified balance will update only after confirmation.")
+                    .setTitle(R.string.native_payment_submitted_title)
+                    .setMessage(R.string.native_payment_submitted_message)
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
                 viewModel.refresh()
@@ -97,7 +96,7 @@ class NativeCustomerPaymentsController(
             order.status != "cancelled" && CustomerPaymentPolicy.summarize(order, paymentsFor(order, state)).remainingToSubmit > 0
         }
         if (payable.isEmpty()) {
-            showError("There is no outstanding amount ready for a new payment submission.")
+            showError(activity.getString(R.string.native_no_outstanding_payment))
             return
         }
 
@@ -109,22 +108,26 @@ class NativeCustomerPaymentsController(
         val orderLabels = payable.map { "${it.trackingId ?: it.id} · ${money(CustomerPaymentPolicy.summarize(it, paymentsFor(it, state)).remainingToSubmit)}" }
         orderSpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, orderLabels)
         val provider = Spinner(activity).apply {
-            adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, listOf("Bank", "Telebirr"))
+            adapter = ArrayAdapter(
+                activity,
+                android.R.layout.simple_spinner_dropdown_item,
+                listOf(activity.getString(R.string.native_bank), "Telebirr"),
+            )
         }
         val reference = EditText(activity).apply {
-            hint = "Transaction / reference number"
+            hint = activity.getString(R.string.native_transaction_reference)
             maxLines = 1
         }
         val amount = EditText(activity).apply {
-            hint = "Amount ETB"
+            hint = activity.getString(R.string.native_amount_etb)
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
             maxLines = 1
         }
         listOf(
-            "Order" to orderSpinner,
-            "Provider" to provider,
-            "Reference" to reference,
-            "Amount" to amount,
+            activity.getString(R.string.order_label) to orderSpinner,
+            activity.getString(R.string.native_provider) to provider,
+            activity.getString(R.string.native_reference) to reference,
+            activity.getString(R.string.native_amount) to amount,
         ).forEach { (label, field) ->
             container.addView(TextView(activity).apply {
                 text = label
@@ -136,11 +139,11 @@ class NativeCustomerPaymentsController(
         }
 
         val dialog = AlertDialog.Builder(activity)
-            .setTitle("Submit payment receipt")
-            .setMessage("Upload JPG, PNG, WebP or PDF up to 10 MB. Submitted money remains pending until HALLO verifies it.")
+            .setTitle(R.string.native_submit_payment_receipt)
+            .setMessage(R.string.native_payment_receipt_help)
             .setView(container)
             .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton("Choose receipt", null)
+            .setPositiveButton(R.string.native_choose_receipt, null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
@@ -148,9 +151,9 @@ class NativeCustomerPaymentsController(
                 val value = amount.text.toString().trim().toDoubleOrNull() ?: 0.0
                 val summary = CustomerPaymentPolicy.summarize(order, paymentsFor(order, state))
                 when {
-                    reference.text.toString().trim().isBlank() -> reference.error = "Enter the payment reference"
-                    value <= 0 -> amount.error = "Enter an amount greater than zero"
-                    value > summary.remainingToSubmit + 0.01 -> amount.error = "Amount exceeds the remaining amount to submit"
+                    reference.text.toString().trim().isBlank() -> reference.error = activity.getString(R.string.native_enter_payment_reference)
+                    value <= 0 -> amount.error = activity.getString(R.string.native_enter_positive_amount)
+                    value > summary.remainingToSubmit + 0.01 -> amount.error = activity.getString(R.string.native_amount_exceeds_remaining)
                     else -> {
                         pendingDraft = Draft(
                             order = order,
@@ -188,14 +191,19 @@ class NativeCustomerPaymentsController(
             setTypeface(typeface, Typeface.BOLD)
         })
         content.addView(TextView(activity).apply {
-            text = "Invoice ${money(summary.invoiceTotal)} · Verified ${money(summary.verifiedPaid)}\nPending ${money(summary.pendingVerification)} · Balance ${money(summary.balanceToPay)}"
+            text = buildString {
+                append(activity.getString(R.string.invoice_total)).append(" ").append(money(summary.invoiceTotal))
+                append(" · ").append(activity.getString(R.string.verified_paid)).append(" ").append(money(summary.verifiedPaid))
+                append("\n").append(activity.getString(R.string.pending_amount)).append(" ").append(money(summary.pendingVerification))
+                append(" · ").append(activity.getString(R.string.balance_to_pay)).append(" ").append(money(summary.balanceToPay))
+            }
             textSize = 12f
             setTextColor(activity.getColor(R.color.hallo_muted))
             setPadding(0, dp(7), 0, 0)
         })
         payments.forEach { payment ->
             content.addView(TextView(activity).apply {
-                text = "${payment.event?.replace('_', ' ') ?: "payment"} · ${money(payment.amountEtb ?: 0.0)}\n${payment.provider ?: "—"} · ${payment.providerRef ?: "—"}"
+                text = "${paymentEventLabel(payment.event)} · ${money(payment.amountEtb ?: 0.0)}\n${payment.provider ?: "—"} · ${payment.providerRef ?: "—"}"
                 textSize = 11f
                 setTextColor(activity.getColor(R.color.hallo_text))
                 setPadding(0, dp(9), 0, 0)
@@ -220,6 +228,19 @@ class NativeCustomerPaymentsController(
         return card
     }
 
+    private fun paymentEventLabel(event: String?): String = when (event?.trim()?.lowercase()) {
+        "initiated" -> activity.getString(R.string.status_initiated)
+        "held_escrow" -> activity.getString(R.string.status_held_escrow)
+        "released" -> activity.getString(R.string.status_released)
+        "refunded" -> activity.getString(R.string.status_refunded)
+        "rejected" -> activity.getString(R.string.status_rejected)
+        "verified" -> activity.getString(R.string.status_verified)
+        "unpaid" -> activity.getString(R.string.status_unpaid)
+        "paid" -> activity.getString(R.string.status_paid)
+        null, "" -> activity.getString(R.string.payment)
+        else -> event.replace('_', ' ').replaceFirstChar { it.uppercase() }
+    }
+
     private fun shareInvoice(order: CustomerOrder, payments: List<CustomerPayment>) {
         runCatching {
             val file = CustomerInvoiceWriter.create(activity, order, payments)
@@ -230,7 +251,7 @@ class NativeCustomerPaymentsController(
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             activity.startActivity(Intent.createChooser(intent, activity.getString(R.string.invoice_receipt_pdf)))
-        }.onFailure { showError("PDF could not be opened.") }
+        }.onFailure { showError(activity.getString(R.string.pdf_open_error)) }
     }
 
     private fun paymentsFor(order: CustomerOrder, state: CustomerUiState) = state.payments.filter { it.orderId == order.id }
