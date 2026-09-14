@@ -17,6 +17,7 @@
     <string name="native_provider">Tajaajila kaffaltii</string>
     <string name="native_reference">Wabii</string>
     <string name="native_amount">Hanga</string>
+    <string name="native_bank">Baankii</string>
     <string name="native_submit_payment_receipt">Ragaa kaffaltii ergi</string>
     <string name="native_payment_receipt_help">JPG, PNG, WebP ykn PDF hanga 10 MB olkaaʼi. Maallaqni ergame hanga HALLO mirkaneessutti eegamaa taʼee tura.</string>
     <string name="native_choose_receipt">Ragaa kaffaltii fili</string>
