@@ -8,12 +8,12 @@ import io.github.jan.supabase.auth.auth
  */
 class CustomerPasswordRecovery {
     private val client get() = HalloSupabase.client
+    private val emailPattern = Regex("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", RegexOption.IGNORE_CASE)
 
     suspend fun sendRecoveryEmail(email: String) {
         val cleanEmail = CustomerAuthPolicy.cleanEmail(email)
-        val validation = CustomerAuthPolicy.validateSignIn(cleanEmail, "123456")
-        require(validation == null || !validation.contains("email", ignoreCase = true)) {
-            validation ?: "Enter a valid email address"
+        require(cleanEmail.length <= 254 && emailPattern.matches(cleanEmail)) {
+            "Enter a valid email address"
         }
         // Auth is configured with hallocustomer://auth-callback in HalloSupabase.
         // Omitting redirectUrl intentionally uses that platform-native callback.
