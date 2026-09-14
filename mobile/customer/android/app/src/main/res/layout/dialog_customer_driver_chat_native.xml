@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/white"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ASSIGNED DRIVER" android:textColor="@color/hallo_gold" android:textSize="10sp" android:textStyle="bold" />
+    <TextView android:id="@+id/nativeChatDriverName" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/hallo_navy" android:textSize="20sp" android:textStyle="bold" />
+
+    <ScrollView
+        android:id="@+id/nativeChatScroll"
+        android:layout_width="match_parent"
+        android:layout_height="320dp"
+        android:layout_marginTop="12dp"
+        android:background="@color/hallo_surface"
+        android:fillViewport="true"
+        android:padding="10dp">
+        <LinearLayout android:id="@+id/nativeChatMessages" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+    </ScrollView>
+
+    <TextView android:id="@+id/nativeChatError" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/hallo_danger" android:textSize="12sp" android:visibility="gone" />
+
+    <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="Message driver">
+        <com.google.android.material.textfield.TextInputEditText android:id="@+id/nativeChatInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:imeOptions="actionSend" android:inputType="textCapSentences|textMultiLine" android:maxLength="4000" android:maxLines="4" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton android:id="@+id/nativeChatSend" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:text="Send" />
+</LinearLayout>
