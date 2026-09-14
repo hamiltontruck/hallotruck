@@ -112,7 +112,7 @@ class NativeCustomerProfileController(
                 )
                 val validated = runCatching { CustomerProfilePolicy.validate(input) }
                 if (validated.isFailure) {
-                    error.text = validated.exceptionOrNull()?.message ?: "Profile details are invalid"
+                    error.text = validated.exceptionOrNull()?.message ?: activity.getString(R.string.native_profile_invalid)
                     error.visibility = View.VISIBLE
                     return@setOnClickListener
                 }
