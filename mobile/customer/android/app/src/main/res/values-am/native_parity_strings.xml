@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="native_home_hero_title">ጭነትዎን በእምነት ያጓጉዙ</string>
+    <string name="native_home_overview">አጠቃላይ እይታዎ</string>
+    <string name="native_quick_actions">ፈጣን እርምጃዎች</string>
+    <string name="native_book_intro">ሁለቱንም ቦታዎች ይፈልጉ፣ መኪናውንና ጭነቱን ይምረጡ፣ ከዚያም ደህንነቱ የተጠበቀውን የሰርቨር ዋጋ ያረጋግጡ።</string>
+    <string name="native_refresh">አድስ</string>
+    <string name="native_tracking_eyebrow">የጭነት ክትትል</string>
+    <string name="native_step_assigned">1\nተመድቧል</string>
+    <string name="native_step_pickup">2\nመጫኛ</string>
+    <string name="native_step_route">3\nበመንገድ ላይ</string>
+    <string name="native_step_delivered">4\nደርሷል</string>
+    <string name="native_chat">ቻት</string>
+    <string name="native_location_privacy_eyebrow">አካባቢ እና ግላዊነት</string>
+    <string name="native_location_privacy_title">አካባቢዎን ሲመርጡ ብቻ ያጋሩ</string>
+    <string name="native_location_privacy_description">የመሣሪያዎ አካባቢ ቦታዎ አጠገብ ማስያዝ እንዲጀምር ይረዳል። ለዚህ የመተግበሪያ ክፍለ ጊዜ ብቻ ይቀመጣል፤ ወደ ደንበኛ መገለጫዎ አይጻፍም።</string>
+    <string name="native_share_current_location">የአሁኑን አካባቢ አጋራ</string>
+    <string name="native_clear">አጽዳ</string>
+    <string name="native_account_security_eyebrow">የመለያ ደህንነት</string>
+    <string name="native_account_security_title">ደህንነቱ የተጠበቀ የደንበኛ ክፍለ ጊዜ</string>
+    <string name="native_account_security_description">የመገለጫ ለውጦች የገባውን ደንበኛ ማንነት ይጠቀማሉ። መሣሪያውን ለሌላ ሰው ከመስጠትዎ በፊት ይውጡ።</string>
+    <string name="native_message_driver">ለአሽከርካሪ መልዕክት</string>
+    <string name="native_send">ላክ</string>
     <string name="native_cargo_other_required">ሌላ ሲመረጥ ጭነቱን ይግለጹ።</string>
     <string name="native_container_requires_trailer">20 ft ወይም 40 ft ኮንቴነር Trailer ያስፈልገዋል።</string>
     <string name="native_truck_capacity_summary">%1$s · አቅም %2$s</string>
