@@ -43,6 +43,18 @@ object CustomerAuthRepair {
         root.findViewById<View>(R.id.signupFields)?.addOnLayoutChangeListener { field, _, _, _, _, _, _, _, _ ->
             field.post { refresh(root) }
         }
+
+        // Logged-out MainActivity.render returns before the shared authenticated chrome refresh.
+        // Guard the real rendered auth layout so a later state render/sign-out cannot re-expose
+        // the authenticated Sign out action or leave the auth field affordances stale.
+        root.viewTreeObserver.addOnGlobalLayoutListener {
+            if (
+                authPanel.visibility == View.VISIBLE &&
+                root.findViewById<View>(R.id.signOut)?.visibility != View.GONE
+            ) {
+                refresh(root)
+            }
+        }
     }
 
     fun refresh(root: View) {
