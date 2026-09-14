@@ -24,7 +24,7 @@
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/orders_title" android:textColor="@color/hallo_navy" android:textSize="27sp" android:textStyle="bold" />
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/orders_subtitle" android:textColor="@color/hallo_muted" android:textSize="13sp" />
             </LinearLayout>
-            <com.google.android.material.button.MaterialButton android:id="@+id/nativeOrdersRefresh" style="@style/Widget.Hallo.Secondary" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Refresh" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/nativeOrdersRefresh" style="@style/Widget.Hallo.Secondary" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/native_refresh" />
         </LinearLayout>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="horizontal">
