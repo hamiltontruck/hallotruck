@@ -28,6 +28,7 @@ object CustomerSmokePolish {
     private const val TAG_ROUTE_ACTIONS = "customer-route-actions"
     private val installed = WeakHashMap<View, Boolean>()
     private val cleanedLogos = WeakHashMap<ImageView, Boolean>()
+    private val watchedTruckContainers = WeakHashMap<View, Boolean>()
 
     fun install(root: View) {
         if (installed.put(root, true) == true) return
@@ -41,6 +42,7 @@ object CustomerSmokePolish {
         polishKeyboardDismissal(root)
         polishRouteActions(root)
         polishTruckSelection(root)
+        enforceKeyboardAfterPageRender(root)
         polishTrackingHeader(root)
         polishProfileHeader(root)
     }
@@ -88,10 +90,9 @@ object CustomerSmokePolish {
     }
 
     /**
-     * A booking text field kept IME focus while the user navigated to Tracking, Payments,
-     * Notifications and Profile during the real-device smoke, leaving half of each page hidden.
-     * Dismiss the IME before non-text navigation/actions while preserving every existing click
-     * handler by returning false from the touch listener.
+     * Keep an immediate touch fallback for navigation, then enforce the same rule again after the
+     * authoritative MainActivity render. The second pass is what closes an IME whose focused Book
+     * field survives while pageBook is switched to GONE.
      */
     private fun polishKeyboardDismissal(root: View) {
         val targets = mutableListOf<View>()
@@ -116,6 +117,29 @@ object CustomerSmokePolish {
         ).forEach { id -> root.findViewById<View>(id)?.let(targets::add) }
         root.findViewWithTag<View>(TAG_BOTTOM_BOOK)?.let(targets::add)
         targets.distinct().forEach { target -> installKeyboardDismissOnTouch(target, root) }
+    }
+
+    /**
+     * MainActivity always calls CustomerUnifiedChrome.refresh after an authorized page render.
+     * If the focus still belongs to a Book descendant after leaving Book, clear that exact focus
+     * and hide the IME. This avoids touching legitimate editable fields on other pages.
+     */
+    private fun enforceKeyboardAfterPageRender(root: View) {
+        val bookPage = root.findViewById<View>(R.id.pageBook) ?: return
+        if (bookPage.visibility == View.VISIBLE) return
+        val focused = root.findFocus() ?: return
+        if (!isDescendantOf(focused, bookPage)) return
+        focused.clearFocus()
+        root.post { dismissKeyboard(root) }
+    }
+
+    private fun isDescendantOf(child: View, ancestor: View): Boolean {
+        var current: Any? = child
+        while (current is View) {
+            if (current === ancestor) return true
+            current = current.parent
+        }
+        return false
     }
 
     /**
@@ -161,12 +185,18 @@ object CustomerSmokePolish {
     }
 
     /**
-     * On high-density devices 1dp is several px, so using `strokeWidth > 1` made every truck look
-     * selected. MainActivity already exposes the selected state in the card content description;
-     * use that semantic signal and render exactly one selected truck.
+     * MainActivity rebuilds every truck card after each selection. Watch that container so every
+     * newly-created set gets the same semantic selected-state treatment after layout, rather than
+     * falling back to the older gold styling until another unrelated render happens.
      */
     private fun polishTruckSelection(root: View) {
         val trucks = root.findViewById<LinearLayout>(R.id.truckOptions) ?: return
+        if (watchedTruckContainers.put(trucks, true) != true) {
+            trucks.addOnLayoutChangeListener { container, _, _, _, _, _, _, _, _ ->
+                container.post { polishTruckSelection(root) }
+            }
+        }
+
         val selectedSuffix = ", ${root.context.getString(R.string.selected)}"
         val blue = root.context.getColor(R.color.hallo_blue)
         val line = root.context.getColor(R.color.hallo_line)
@@ -182,9 +212,8 @@ object CustomerSmokePolish {
             card.strokeColor = if (selected) blue else line
             card.setCardBackgroundColor(if (selected) blueSoft else Color.WHITE)
             installKeyboardDismissOnTouch(card, root) {
-                // MainActivity rebuilds truck cards inside its click handler. Re-polish the newly
-                // created cards after that click so the selected state does not flash/revert gold.
-                polishTruckSelection(root)
+                root.post { polishTruckSelection(root) }
+                root.postOnAnimation { polishTruckSelection(root) }
             }
         }
     }
@@ -218,9 +247,10 @@ object CustomerSmokePolish {
     }
 
     private fun dismissKeyboard(root: View) {
-        root.findFocus()?.clearFocus()
+        val focused = root.findFocus()
+        focused?.clearFocus()
         val input = root.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        input?.hideSoftInputFromWindow(root.windowToken, 0)
+        input?.hideSoftInputFromWindow((focused ?: root).windowToken, 0)
     }
 
     private fun cleanOpaqueLogoEdge(image: ImageView) {
