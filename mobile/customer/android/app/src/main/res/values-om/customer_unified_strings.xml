@@ -16,4 +16,9 @@
     <string name="booking_create_another">Ajaja biraa uumi</string>
     <string name="auth_password">Jecha icciitii</string>
     <string name="auth_signup_pin">PIN galmee dijiitii 6</string>
+    <string name="map_loading">Kaartaan fe’amaa jira…</string>
+    <string name="map_error">Kaartaan amma hin argamu. Walqunnamtii kee ilaalii irra deebi’i yaali.</string>
+    <string name="map_retry">Irra deebi’i</string>
+    <string name="map_booking_empty">Daandii dhugaa ilaaluuf bakka ka’umsaa fi gahumsaa filadhu.</string>
+    <string name="map_tracking_empty">Daataan imalaa/GPS dhugaa yeroo argamutti hordoffiin kallattii ni mul’ata.</string>
 </resources>
