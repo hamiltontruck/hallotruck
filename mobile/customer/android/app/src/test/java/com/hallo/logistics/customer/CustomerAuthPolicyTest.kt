@@ -50,7 +50,7 @@ class CustomerAuthPolicyTest {
             "invalid_credentials URL: https://project.supabase.co/auth/v1/token Headers: Authorization=[Bearer sb_publishable_secret] X-Client-Info=supabase-kt",
         )
         val safe = CustomerAuthPolicy.safeMessage(raw)
-        assertEquals("Email or password is incorrect", safe)
+        assertEquals("Email or PIN is incorrect", safe)
         assertTrue("supabase" !in safe.lowercase())
         assertTrue("bearer" !in safe.lowercase())
         assertTrue("http" !in safe.lowercase())
