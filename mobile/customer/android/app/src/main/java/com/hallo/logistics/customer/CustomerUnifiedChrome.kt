@@ -91,6 +91,10 @@ object CustomerUnifiedChrome {
         // layout passes within the same Activity instance.
         book.text = root.context.getString(R.string.nav_book)
         book.contentDescription = root.context.getString(R.string.nav_book)
+        book.visibility = View.VISIBLE
+        book.backgroundTintList = ColorStateList.valueOf(root.context.getColor(R.color.hallo_blue))
+        book.setTextColor(Color.WHITE)
+        book.iconTint = ColorStateList.valueOf(Color.WHITE)
 
         val ordered = listOfNotNull(
             root.findViewById<View>(R.id.navHome),
@@ -120,14 +124,30 @@ object CustomerUnifiedChrome {
 
     private fun updateSelection(root: View) {
         val book = root.findViewWithTag<MaterialButton>(TAG_BOOK) ?: return
+        val homeVisible = root.findViewById<View>(R.id.pageHome)?.visibility == View.VISIBLE
         val bookingVisible = root.findViewById<View>(R.id.pageBook)?.visibility == View.VISIBLE
-        if (bookingVisible) {
-            root.findViewById<CustomerNavButton>(R.id.navHome)?.setBackgroundColor(Color.TRANSPARENT)
-        }
-        book.alpha = if (bookingVisible) 1f else 0.94f
+        val ordersVisible = root.findViewById<View>(R.id.pageOrders)?.visibility == View.VISIBLE
+        val trackingVisible = root.findViewById<View>(R.id.pageTracking)?.visibility == View.VISIBLE
+        val paymentsVisible = root.findViewById<View>(R.id.pagePayments)?.visibility == View.VISIBLE
+        val profileVisible = root.findViewById<View>(R.id.pageProfile)?.visibility == View.VISIBLE
+        val selectedMarker = root.context.getColor(R.color.hallo_gold)
+
+        root.findViewById<CustomerNavButton>(R.id.navHome)?.setBackgroundColor(if (homeVisible) selectedMarker else Color.TRANSPARENT)
+        root.findViewById<CustomerNavButton>(R.id.navOrders)?.setBackgroundColor(if (ordersVisible) selectedMarker else Color.TRANSPARENT)
+        root.findViewById<CustomerNavButton>(R.id.navTrack)?.setBackgroundColor(if (trackingVisible) selectedMarker else Color.TRANSPARENT)
+        root.findViewById<CustomerNavButton>(R.id.navBook)?.setBackgroundColor(if (paymentsVisible) selectedMarker else Color.TRANSPARENT)
+        root.findViewById<CustomerNavButton>(R.id.navProfile)?.setBackgroundColor(if (profileVisible) selectedMarker else Color.TRANSPARENT)
+
+        // Book remains the blue central CTA on every authenticated page. Its gold outline and
+        // selected semantics make the active booking page unambiguous without hiding the CTA.
+        book.visibility = View.VISIBLE
+        book.isSelected = bookingVisible
+        book.alpha = 1f
         book.scaleX = if (bookingVisible) 1.04f else 1f
         book.scaleY = if (bookingVisible) 1.04f else 1f
         book.elevation = dp(root, if (bookingVisible) 6 else 3).toFloat()
+        book.strokeWidth = if (bookingVisible) dp(root, 2) else 0
+        book.strokeColor = ColorStateList.valueOf(selectedMarker)
     }
 
     private fun dp(view: View, value: Int): Int =
