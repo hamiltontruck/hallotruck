@@ -17,6 +17,7 @@
     <string name="native_provider">Provider</string>
     <string name="native_reference">Reference</string>
     <string name="native_amount">Amount</string>
+    <string name="native_bank">Bank</string>
     <string name="native_submit_payment_receipt">Submit payment receipt</string>
     <string name="native_payment_receipt_help">Upload JPG, PNG, WebP or PDF up to 10 MB. Submitted money remains pending until HALLO verifies it.</string>
     <string name="native_choose_receipt">Choose receipt</string>
