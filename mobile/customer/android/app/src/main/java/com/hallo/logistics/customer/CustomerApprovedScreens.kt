@@ -23,24 +23,15 @@ import java.util.WeakHashMap
  */
 object CustomerApprovedScreens {
     private val installed = WeakHashMap<View, Boolean>()
-    private val busy = WeakHashMap<View, Boolean>()
 
     fun install(root: View) {
         if (installed.put(root, true) == true) return
-        root.post {
-            transformOnce(root)
-            restyle(root)
-        }
-        root.viewTreeObserver.addOnGlobalLayoutListener {
-            if (busy[root] == true) return@addOnGlobalLayoutListener
-            busy[root] = true
-            try {
-                transformOnce(root)
-                restyle(root)
-            } finally {
-                busy[root] = false
-            }
-        }
+        root.post { CustomerUnifiedChrome.refresh(root) }
+    }
+
+    internal fun refresh(root: View) {
+        transformOnce(root)
+        restyle(root)
     }
 
     private fun transformOnce(root: View) {

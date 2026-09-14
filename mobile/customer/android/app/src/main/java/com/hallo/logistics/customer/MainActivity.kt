@@ -89,6 +89,7 @@ class MainActivity : AppCompatActivity() {
         if (HalloSupabase.configured) HalloSupabase.client.handleDeeplinks(intent)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         language = CustomerLanguage.fromTag(AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag())
         signupMode = savedInstanceState?.getBoolean("authSignupMode") ?: false
         configureAuthLanguages()
@@ -439,6 +440,7 @@ class MainActivity : AppCompatActivity() {
         renderNotifications(state.notifications)
         renderTracking(state)
         renderProfile(state.profile)
+        CustomerUnifiedChrome.refresh(binding.root.rootView)
     }
 
     private fun localizedStatus(state: CustomerUiState): String {
@@ -817,6 +819,7 @@ class MainActivity : AppCompatActivity() {
             item.orderActions.addView(actionButton(getString(if (expandedOrders.contains(order.id)) R.string.hide_details else R.string.view_details)) {
                 if (!expandedOrders.add(order.id)) expandedOrders.remove(order.id)
                 renderOrders(viewModel.state.value)
+                CustomerUnifiedChrome.refresh(binding.root.rootView)
             })
             item.orderActions.addView(actionButton(getString(R.string.view_payment_status)) { viewModel.show(CustomerPage.PAYMENTS) })
             if (CustomerPolicy.canCancel(order.status)) {
@@ -887,6 +890,7 @@ class MainActivity : AppCompatActivity() {
                 setOnClickListener {
                     orderFilter = filter
                     renderOrders(viewModel.state.value)
+                CustomerUnifiedChrome.refresh(binding.root.rootView)
                 }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44.dp).apply { marginEnd = 6.dp })
         }

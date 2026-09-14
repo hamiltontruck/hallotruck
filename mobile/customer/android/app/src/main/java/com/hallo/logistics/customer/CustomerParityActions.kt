@@ -12,23 +12,13 @@ import java.util.WeakHashMap
 object CustomerParityActions {
     private const val TAG_SUCCESS = "customer-parity-book-success"
     private val installed = WeakHashMap<View, Boolean>()
-    private val busy = WeakHashMap<View, Boolean>()
 
     fun install(root: View) {
         if (installed.put(root, true) == true) return
-        root.post { wire(root) }
-        root.viewTreeObserver.addOnGlobalLayoutListener {
-            if (busy[root] == true) return@addOnGlobalLayoutListener
-            busy[root] = true
-            try {
-                wire(root)
-            } finally {
-                busy[root] = false
-            }
-        }
+        root.post { CustomerUnifiedChrome.refresh(root) }
     }
 
-    private fun wire(root: View) {
+    internal fun refresh(root: View) {
         val success = root.findViewWithTag<MaterialCardView>(TAG_SUCCESS) ?: return
         val owner = root.findViewTreeViewModelStoreOwner() ?: return
         val viewModel = ViewModelProvider(owner)[CustomerViewModel::class.java]

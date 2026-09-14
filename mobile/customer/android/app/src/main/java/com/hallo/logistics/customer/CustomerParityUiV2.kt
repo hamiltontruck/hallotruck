@@ -39,24 +39,14 @@ object CustomerParityUiV2 {
     private const val TAG_TOP_BADGE = "customer-parity-top-badge"
 
     private val installed = WeakHashMap<View, Boolean>()
-    private val busy = WeakHashMap<View, Boolean>()
     private val dismissedSuccess = WeakHashMap<View, String>()
 
     fun install(root: View) {
         if (installed.put(root, true) == true) return
-        root.post { apply(root) }
-        root.viewTreeObserver.addOnGlobalLayoutListener {
-            if (busy[root] == true) return@addOnGlobalLayoutListener
-            busy[root] = true
-            try {
-                apply(root)
-            } finally {
-                busy[root] = false
-            }
-        }
+        root.post { CustomerUnifiedChrome.refresh(root) }
     }
 
-    private fun apply(root: View) {
+    internal fun refresh(root: View) {
         ensureTopChrome(root)
         styleHome(root)
         styleBooking(root)

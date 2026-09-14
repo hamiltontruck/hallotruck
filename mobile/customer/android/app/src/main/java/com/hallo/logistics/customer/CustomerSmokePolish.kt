@@ -7,15 +7,8 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.lifecycle.findViewTreeLifecycleOwner
-import androidx.lifecycle.findViewTreeViewModelStoreOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import kotlinx.coroutines.launch
 import java.util.ArrayDeque
 import java.util.WeakHashMap
 
@@ -30,28 +23,13 @@ object CustomerSmokePolish {
     private val cleanedLogos = WeakHashMap<ImageView, Boolean>()
 
     fun install(root: View) {
-        if (installed[root] == true) return
-        val owner = root.findViewTreeViewModelStoreOwner() ?: return
-        val lifecycleOwner = root.findViewTreeLifecycleOwner() ?: return
-        installed[root] = true
-        val viewModel = ViewModelProvider(owner)[CustomerViewModel::class.java]
-
-        root.post { refresh(root, viewModel.state.value) }
-        root.postDelayed({ refresh(root, viewModel.state.value) }, 350)
-
-        lifecycleOwner.lifecycleScope.launch {
-            lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.state.collect { state ->
-                    root.post { refresh(root, state) }
-                }
-            }
-        }
+        if (installed.put(root, true) == true) return
+        root.post { CustomerUnifiedChrome.refresh(root) }
     }
 
-    private fun refresh(root: View, state: CustomerUiState) {
+    internal fun refresh(root: View) {
         polishTopChrome(root)
         polishBottomBook(root)
-        refreshHomeMetrics(root, state)
     }
 
     private fun polishTopChrome(root: View) {
@@ -76,10 +54,6 @@ object CustomerSmokePolish {
             insetTop = 0
             insetBottom = 0
         }
-    }
-
-    private fun refreshHomeMetrics(root: View, state: CustomerUiState) {
-        CustomerParityUiV2.updateMetrics(root, root, state)
     }
 
     private fun cleanOpaqueLogoEdge(image: ImageView) {

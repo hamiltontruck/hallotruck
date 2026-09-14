@@ -20,22 +20,31 @@ object CustomerUnifiedChrome {
 
     fun install(root: View) {
         if (installed.put(root, true) == true) return
-        root.post {
-            ensureBottomNavigation(root)
-            updateSelection(root)
-            CustomerParityUiV2.install(root)
-            CustomerParityActions.install(root)
-            CustomerSmokePolish.install(root)
-        }
-        root.viewTreeObserver.addOnGlobalLayoutListener {
-            if (busy[root] == true) return@addOnGlobalLayoutListener
-            busy[root] = true
-            try {
-                ensureBottomNavigation(root)
-                updateSelection(root)
-            } finally {
-                busy[root] = false
+        CustomerParityUiV2.install(root)
+        CustomerParityActions.install(root)
+        CustomerSmokePolish.install(root)
+        root.post { refresh(root) }
+        root.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+                root.post { refresh(root) }
             }
+        }
+    }
+
+    /** Apply legacy structure before final presentation, once per state/size change. */
+    internal fun refresh(root: View) {
+        if (busy[root] == true) return
+        busy[root] = true
+        try {
+            CustomerReferenceUi.apply(root)
+            CustomerApprovedScreens.refresh(root)
+            ensureBottomNavigation(root)
+            CustomerParityUiV2.refresh(root)
+            CustomerParityActions.refresh(root)
+            updateSelection(root)
+            CustomerSmokePolish.refresh(root)
+        } finally {
+            busy[root] = false
         }
     }
 
