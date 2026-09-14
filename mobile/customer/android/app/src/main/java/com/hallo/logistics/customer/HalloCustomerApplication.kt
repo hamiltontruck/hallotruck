@@ -27,6 +27,7 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
         if (activity !is MainActivity) return
         activeMainActivity = WeakReference(activity)
         val host = activity as AppCompatActivity
+        CustomerAuthInputController.install(host)
         val viewModel = ViewModelProvider(host)[CustomerViewModel::class.java]
         val status = host.findViewById<TextView>(R.id.status)
         val page = host.findViewById<LinearLayout>(R.id.pageProfile)
@@ -65,8 +66,6 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
         activity.window.decorView.post {
             if (activity.isFinishing || activity.isDestroyed) return@post
             val viewModel = ViewModelProvider(activity)[CustomerViewModel::class.java]
-            // Re-emit the same page so every visible label is rebound from the selected locale
-            // without destroying/recreating MainActivity (the source of the long black screen).
             viewModel.show(viewModel.state.value.page)
         }
     }
