@@ -81,7 +81,7 @@ class NativeCustomerOrdersController(
         card.findViewById<TextView>(R.id.nativeOrderRoute).text = "${order.pickupAddress.orEmpty()}\n→ ${order.dropoffAddress.orEmpty()}"
         card.findViewById<TextView>(R.id.nativeOrderFacts).text = buildString {
             append(order.vehicleType ?: "—")
-            append(" · ").append(order.distanceKm?.let { "${number(it)} km" } ?: "—")
+            append(" · ").append(order.distanceKm?.let(::formatDistance) ?: "—")
             append(" · ").append(order.priceEtb?.let { "ETB ${number(it)}" } ?: "—")
         }
         val detailsPanel = card.findViewById<View>(R.id.nativeOrderDetailsPanel)
@@ -91,12 +91,14 @@ class NativeCustomerOrdersController(
         detailsPanel.visibility = if (isExpanded) View.VISIBLE else View.GONE
         detailsButton.text = activity.getString(if (isExpanded) R.string.hide_details else R.string.view_details)
         details.text = buildString {
-            append("Load: ").append(CustomerPaymentPolicy.formatLoad(order))
-            append("\nPayment method: ").append(paymentMethod(order.paymentMethod))
-            append("\nVerified paid: ETB ").append(number(paymentSummary.verifiedPaid))
-            append("\nPending verification: ETB ").append(number(paymentSummary.pendingVerification))
-            append("\nTo pay: ETB ").append(number(paymentSummary.remainingToSubmit))
-            if (!order.cancellationReason.isNullOrBlank()) append("\nCancellation: ").append(order.cancellationReason)
+            append(activity.getString(R.string.load)).append(": ").append(CustomerPaymentPolicy.formatLoad(order))
+            append("\n").append(activity.getString(R.string.payment_method)).append(": ").append(paymentMethod(order.paymentMethod))
+            append("\n").append(activity.getString(R.string.verified_paid)).append(": ETB ").append(number(paymentSummary.verifiedPaid))
+            append("\n").append(activity.getString(R.string.pending_verification)).append(": ETB ").append(number(paymentSummary.pendingVerification))
+            append("\n").append(activity.getString(R.string.to_pay)).append(": ETB ").append(number(paymentSummary.remainingToSubmit))
+            if (!order.cancellationReason.isNullOrBlank()) {
+                append("\n").append(activity.getString(R.string.native_cancellation)).append(": ").append(order.cancellationReason)
+            }
         }
         detailsButton.setOnClickListener {
             if (order.id in expanded) expanded.remove(order.id) else expanded.add(order.id)
@@ -134,10 +136,10 @@ class NativeCustomerOrdersController(
     private fun paymentsFor(order: CustomerOrder, state: CustomerUiState) = state.payments.filter { it.orderId == order.id }
 
     private fun statusLabel(status: String?): String = when (status?.lowercase()) {
-        "quoted" -> "Quote ready"
-        "placed" -> "Order placed"
-        "assigned" -> "Driver assigned"
-        "accepted" -> "Driver accepted"
+        "quoted" -> activity.getString(R.string.native_status_quote_ready)
+        "placed" -> activity.getString(R.string.native_status_order_placed)
+        "assigned" -> activity.getString(R.string.native_status_driver_assigned)
+        "accepted" -> activity.getString(R.string.native_status_driver_accepted)
         "in_transit" -> activity.getString(R.string.in_transit)
         "delivered" -> activity.getString(R.string.delivered)
         "cancelled" -> activity.getString(R.string.filter_cancelled)
@@ -160,6 +162,7 @@ class NativeCustomerOrdersController(
         }.getOrDefault(value)
     }
 
+    private fun formatDistance(value: Double): String = activity.getString(R.string.distance_km, number(value))
     private fun number(value: Double): String = NumberFormat.getNumberInstance(Locale.US).apply { maximumFractionDigits = 2 }.format(value)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
 
