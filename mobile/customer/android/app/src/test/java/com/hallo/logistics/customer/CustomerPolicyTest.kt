@@ -2,6 +2,7 @@ package com.hallo.logistics.customer
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -15,6 +16,14 @@ class CustomerPolicyTest {
     @Test fun signupPinIsExactlySixNumericDigits() {
         assertTrue(CustomerPolicy.isSixDigitPin("012345"))
         listOf("12345", "1234567", "12a456", "").forEach { assertFalse(CustomerPolicy.isSixDigitPin(it)) }
+    }
+
+    @Test fun customerSignInUsesSixDigitNumericPinAndWhitespaceFreeEmail() {
+        assertEquals("sofihusse@gmail.com", CustomerAuthPolicy.cleanEmail(" sofi husse @gmail.com "))
+        assertNull(CustomerAuthPolicy.validateSignIn("customer@example.com", "012345"))
+        listOf("12345", "1234567", "12a456", "abcdef", "").forEach { pin ->
+            assertTrue(CustomerAuthPolicy.validateSignIn("customer@example.com", pin) != null)
+        }
     }
 
     @Test fun EthiopianPhonesNormalizeToNationalForm() {
