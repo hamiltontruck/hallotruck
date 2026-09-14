@@ -2,8 +2,10 @@ package com.hallo.logistics.customer
 
 import android.app.Activity
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
 import android.text.InputFilter
 import android.view.View
@@ -14,8 +16,10 @@ import android.widget.TextView
 import androidx.core.view.WindowCompat
 import androidx.core.widget.doAfterTextChanged
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textfield.TextInputLayout
+import java.util.ArrayDeque
 
 /** Presentation-only visual parity with the approved Customer Android references. */
 object CustomerReferenceUi {
@@ -116,7 +120,8 @@ object CustomerReferenceUi {
     }
 
     private fun styleAuth(root: View, navy: Int, blue: Int, surface: Int, line: Int, muted: Int) {
-        view(root, "authPanel")?.apply {
+        val authPanel = view(root, "authPanel")
+        authPanel?.apply {
             setBackgroundColor(surface)
             setPadding(dp(root, 20), dp(root, 18), dp(root, 20), dp(root, 26))
         }
@@ -169,8 +174,20 @@ object CustomerReferenceUi {
             }
         }
         updateAuthPasswordHint(root)
+        ensurePasswordToggle(root, muted)
+        authPanel?.post {
+            updateAuthPasswordHint(root)
+            ensurePasswordToggle(root, muted)
+        }
         view(root, "signupFields")?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateAuthPasswordHint(root)
+            ensurePasswordToggle(root, muted)
+        }
+        (view(root, "authLanguages") as? MaterialButtonToggleGroup)?.addOnButtonCheckedListener { group, _, isChecked ->
+            if (isChecked) group.post {
+                updateAuthPasswordHint(root)
+                ensurePasswordToggle(root, muted)
+            }
         }
         findAncestorCard(button(root, "authSubmit"))?.referenceCard(root, line, 22)
     }
@@ -185,13 +202,75 @@ object CustomerReferenceUi {
             imageTintList = null
             clearColorFilter()
         }
+        removeOpaqueLogoEdgeBackground(logo)
+    }
+
+    /**
+     * The shared WebP brand asset is opaque, so its formerly transparent corners render black.
+     * Remove only near-black pixels connected to the bitmap edge; internal navy/black logo detail
+     * is left untouched because it is not connected to the outer background.
+     */
+    private fun removeOpaqueLogoEdgeBackground(image: ImageView) {
+        val drawable = image.drawable as? BitmapDrawable ?: return
+        val source = drawable.bitmap ?: return
+        if (source.width <= 0 || source.height <= 0) return
+        val bitmap = source.copy(Bitmap.Config.ARGB_8888, true) ?: return
+        val width = bitmap.width
+        val height = bitmap.height
+        val visited = BooleanArray(width * height)
+        val queue = ArrayDeque<Int>()
+
+        fun enqueue(x: Int, y: Int) {
+            if (x !in 0 until width || y !in 0 until height) return
+            val index = y * width + x
+            if (visited[index]) return
+            if (!isOpaqueEdgeBackground(bitmap.getPixel(x, y))) return
+            visited[index] = true
+            queue.addLast(index)
+        }
+
+        for (x in 0 until width) {
+            enqueue(x, 0)
+            enqueue(x, height - 1)
+        }
+        for (y in 0 until height) {
+            enqueue(0, y)
+            enqueue(width - 1, y)
+        }
+
+        while (queue.isNotEmpty()) {
+            val index = queue.removeFirst()
+            val x = index % width
+            val y = index / width
+            bitmap.setPixel(x, y, Color.TRANSPARENT)
+            enqueue(x - 1, y)
+            enqueue(x + 1, y)
+            enqueue(x, y - 1)
+            enqueue(x, y + 1)
+        }
+        image.setImageBitmap(bitmap)
+    }
+
+    private fun isOpaqueEdgeBackground(pixel: Int): Boolean {
+        if (Color.alpha(pixel) < 32) return true
+        return maxOf(Color.red(pixel), Color.green(pixel), Color.blue(pixel)) <= 65
     }
 
     private fun updateAuthPasswordHint(root: View) {
         val signup = view(root, "signupFields")?.visibility == View.VISIBLE
-        inputLayout(root, "password")?.hint = root.context.getString(
-            if (signup) R.string.auth_signup_pin else R.string.auth_password,
-        )
+        val layout = inputLayout(root, "password") ?: return
+        val expected = root.context.getString(if (signup) R.string.auth_signup_pin else R.string.auth_password)
+        if (layout.hint?.toString() != expected) layout.hint = expected
+    }
+
+    private fun ensurePasswordToggle(root: View, muted: Int) {
+        inputLayout(root, "password")?.apply {
+            if (endIconMode != TextInputLayout.END_ICON_PASSWORD_TOGGLE) {
+                endIconMode = TextInputLayout.END_ICON_PASSWORD_TOGGLE
+            }
+            setEndIconTintList(ColorStateList.valueOf(muted))
+            setEndIconVisible(true)
+        }
     }
 
     @Suppress("DEPRECATION")
