@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v5_map_loading">የቀጥታ ካርታ በመጫን ላይ…</string>
+    <string name="v5_map_retry">ካርታውን እንደገና ሞክር</string>
+    <string name="v5_map_data_error">የካርታ ውሂብ መጫን አልተቻለም።</string>
+    <string name="v5_map_slow">ካርታው ከተጠበቀው በላይ ጊዜ እየወሰደ ነው።</string>
+    <string name="v5_map_start_error">ካርታውን ማስጀመር አልተቻለም።</string>
+    <string name="v5_map_library_error">የካርታ አገልግሎት አልተገኘም።</string>
+</resources>
