@@ -19,6 +19,7 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
@@ -89,6 +90,7 @@ class MainActivity : AppCompatActivity() {
         if (HalloSupabase.configured) HalloSupabase.client.handleDeeplinks(intent)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         language = CustomerLanguage.fromTag(AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag())
         signupMode = savedInstanceState?.getBoolean("authSignupMode") ?: false
         configureAuthLanguages()
@@ -132,11 +134,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configureAuthLanguages() = with(binding) {
-        authLanguages.check(when (language) {
-            CustomerLanguage.EN -> authEn.id
-            CustomerLanguage.OR -> authOr.id
-            CustomerLanguage.AM -> authAm.id
-        })
+        authLanguages.check(
+            when (language) {
+                CustomerLanguage.EN -> authEn.id
+                CustomerLanguage.OR -> authOr.id
+                CustomerLanguage.AM -> authAm.id
+            },
+        )
         authLanguages.addOnButtonCheckedListener { _, id, checked ->
             if (checked) {
                 val requested = when (id) {
@@ -181,12 +185,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configureBottomInsets() {
-        val buttons = listOf(binding.navHome, binding.navBook, binding.navOrders, binding.navTrack, binding.navProfile)
+        val buttons = listOf(
+            binding.navHome,
+            binding.navOrders,
+            binding.navBook,
+            binding.navTrack,
+            binding.navPayments,
+            binding.navProfile,
+        )
         buttons.forEach {
             it.minWidth = 0
             it.minimumWidth = 0
             it.setPadding(0, 0, 0, 0)
-            it.textSize = 10f
+            it.textSize = 9f
             it.maxLines = 1
         }
         ViewCompat.setOnApplyWindowInsetsListener(binding.bottomNavigation) { view, insets ->
@@ -199,7 +210,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configureMapHeights() {
-        // A large map on phones, bounded on tablets and landscape screens.
         val height = (resources.configuration.screenHeightDp * 0.52f).toInt().coerceIn(220, 460).dp
         listOf(binding.homeMap, binding.bookingMap, binding.trackingMap).forEach { map ->
             map.layoutParams = map.layoutParams.apply { this.height = height }
@@ -249,9 +259,9 @@ class MainActivity : AppCompatActivity() {
             item.truckName.text = visibleName
             item.truckCapacity.text = getString(R.string.up_to_tons, truck.capacity)
             val selected = truck.backendValue == selectedVehicle.backendValue
-            item.root.strokeWidth = if (selected) 3.dp else 1.dp
-            item.root.setStrokeColor(getColor(if (selected) R.color.hallo_gold else R.color.hallo_line))
-            item.root.setCardBackgroundColor(getColor(if (selected) R.color.hallo_gold_soft else android.R.color.white))
+            item.root.strokeWidth = if (selected) 2.dp else 1.dp
+            item.root.setStrokeColor(getColor(if (selected) R.color.auth_blue else R.color.hallo_line))
+            item.root.setCardBackgroundColor(getColor(if (selected) R.color.hallo_navy_soft else android.R.color.white))
             item.root.contentDescription = "$visibleName, ${getString(R.string.up_to_tons, truck.capacity)}${if (selected) ", ${getString(R.string.selected)}" else ""}"
             item.root.setOnClickListener {
                 if (selectedVehicle.backendValue != truck.backendValue) {
@@ -272,14 +282,18 @@ class MainActivity : AppCompatActivity() {
                 .setMessage(R.string.auth_recovery_help)
                 .setPositiveButton(R.string.auth_open_portal) { _, _ ->
                     openSecureUrl("https://hamiltontruck.github.io/hallotruck/#/customer/login")
-                }.setNegativeButton(android.R.string.cancel, null).show()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
         }
         listOf(password, confirmPin).forEach { field ->
             field.setOnEditorActionListener { _, action, _ ->
                 if (action == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
                     authSubmit.performClick()
                     true
-                } else false
+                } else {
+                    false
+                }
             }
         }
         authMode.setOnClickListener {
@@ -288,6 +302,7 @@ class MainActivity : AppCompatActivity() {
         }
         authSubmit.setOnClickListener {
             if (viewModel.state.value.busy || viewModel.state.value.loading) return@setOnClickListener
+            dismissKeyboard()
             if (signupMode) {
                 viewModel.signUp(
                     fullName.text.toString(),
@@ -302,28 +317,33 @@ class MainActivity : AppCompatActivity() {
         }
         dashOrders.setOnClickListener {
             orderFilter = CustomerOrderFilter.ALL
-            viewModel.show(CustomerPage.ORDERS)
+            navigate(CustomerPage.ORDERS)
         }
         dashAllOrders.setOnClickListener { dashOrders.performClick() }
         dashActive.setOnClickListener {
             orderFilter = CustomerOrderFilter.ACTIVE
-            viewModel.show(CustomerPage.ORDERS)
+            navigate(CustomerPage.ORDERS)
         }
-        dashPayments.setOnClickListener { viewModel.show(CustomerPage.PAYMENTS) }
-        dashNotifications.setOnClickListener { viewModel.show(CustomerPage.NOTIFICATIONS) }
-        dashProfile.setOnClickListener { viewModel.show(CustomerPage.PROFILE) }
-        navHome.setOnClickListener { viewModel.show(CustomerPage.HOME) }
-        navBook.setOnClickListener { viewModel.show(CustomerPage.PAYMENTS) }
-        navOrders.setOnClickListener { viewModel.show(CustomerPage.ORDERS) }
+        dashPayments.setOnClickListener { navigate(CustomerPage.PAYMENTS) }
+        dashNotifications.setOnClickListener { navigate(CustomerPage.NOTIFICATIONS) }
+        dashProfile.setOnClickListener { navigate(CustomerPage.PROFILE) }
+        navHome.setOnClickListener { navigate(CustomerPage.HOME) }
+        navOrders.setOnClickListener { navigate(CustomerPage.ORDERS) }
+        navBook.setOnClickListener { navigate(CustomerPage.BOOK) }
         navTrack.setOnClickListener { openActiveTracking() }
-        navProfile.setOnClickListener { viewModel.show(CustomerPage.PROFILE) }
-        navNotifications.setOnClickListener { viewModel.show(CustomerPage.NOTIFICATIONS) }
-        startBooking.setOnClickListener { viewModel.show(CustomerPage.BOOK) }
+        navPayments.setOnClickListener { navigate(CustomerPage.PAYMENTS) }
+        navProfile.setOnClickListener { navigate(CustomerPage.PROFILE) }
+        navNotifications.setOnClickListener { navigate(CustomerPage.NOTIFICATIONS) }
+        startBooking.setOnClickListener { navigate(CustomerPage.BOOK) }
         homeTrack.setOnClickListener { openActiveTracking() }
         refresh.setOnClickListener { viewModel.refresh() }
         refreshTracking.setOnClickListener { viewModel.refreshTracking() }
-        signOut.setOnClickListener { viewModel.signOut() }
+        signOut.setOnClickListener {
+            dismissKeyboard()
+            viewModel.signOut()
+        }
         calculateQuote.setOnClickListener {
+            dismissKeyboard()
             viewModel.calculateAutomaticRoute(
                 pickupAddress.text.toString(),
                 dropoffAddress.text.toString(),
@@ -331,7 +351,10 @@ class MainActivity : AppCompatActivity() {
                 currentCargoTons(),
             )
         }
-        createOrder.setOnClickListener { showBookingReview() }
+        createOrder.setOnClickListener {
+            dismissKeyboard()
+            showBookingReview()
+        }
         pickupAddress.doAfterTextChanged { value -> viewModel.placeInputChanged(value?.toString().orEmpty(), true) }
         dropoffAddress.doAfterTextChanged { value -> viewModel.placeInputChanged(value?.toString().orEmpty(), false) }
         cargoQuantity.doAfterTextChanged {
@@ -343,10 +366,28 @@ class MainActivity : AppCompatActivity() {
         dropoffAddress.setOnItemClickListener { _, _, position, _ -> statePlace(position, false)?.let { viewModel.selectPlace(it, false) } }
     }
 
+    private fun navigate(page: CustomerPage) {
+        dismissKeyboard()
+        viewModel.show(page)
+        binding.contentScroll.post { binding.contentScroll.scrollTo(0, 0) }
+    }
+
+    private fun dismissKeyboard() {
+        binding.root.findFocus()?.clearFocus()
+        val input = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        input?.hideSoftInputFromWindow(binding.root.windowToken, 0)
+    }
+
     private fun openActiveTracking() {
+        dismissKeyboard()
         val order = viewModel.state.value.orders.firstOrNull { CustomerPolicy.showAssignment(it.status) }
             ?: viewModel.state.value.orders.firstOrNull { it.status == "delivered" }
-        if (order == null) viewModel.show(CustomerPage.TRACKING) else viewModel.track(order)
+        if (order == null) {
+            viewModel.show(CustomerPage.TRACKING)
+        } else {
+            viewModel.track(order)
+        }
+        binding.contentScroll.post { binding.contentScroll.scrollTo(0, 0) }
     }
 
     private fun renderAuthMode(resetSecrets: Boolean): Unit = with(binding) {
@@ -359,7 +400,7 @@ class MainActivity : AppCompatActivity() {
         authPrompt.text = getString(if (signupMode) R.string.auth_existing else R.string.auth_new)
         authSubtitle.text = getString(if (signupMode) R.string.auth_create_description else R.string.auth_login_description)
         authForgot.visibility = visible(!signupMode)
-        authHero.layoutParams = authHero.layoutParams.apply { height = (if (signupMode) 100 else 144).dp }
+        authHero.layoutParams = authHero.layoutParams.apply { height = (if (signupMode) 120 else 164).dp }
         password.setAutofillHints(if (signupMode) "newPassword" else "password")
         val authInputType = if (signupMode) {
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -393,7 +434,7 @@ class MainActivity : AppCompatActivity() {
         customerShell.visibility = visible(state.authorized)
         bottomNavigation.visibility = visible(state.authorized)
         navNotifications.visibility = visible(state.authorized)
-        languageSelector.visibility = View.VISIBLE
+        languageSelector.visibility = visible(state.authorized)
         val unread = state.notifications.count { it.readAt == null }
         notificationBadge.visibility = visible(state.authorized && unread > 0)
         notificationBadge.text = if (unread > 99) "99+" else unread.toString()
@@ -482,11 +523,11 @@ class MainActivity : AppCompatActivity() {
                 CustomerPage.PROFILE -> R.string.header_profile
             },
         )
-        authSubtitle.text = getString(R.string.auth_subtitle)
         navHome.text = getString(R.string.nav_home)
-        navBook.text = getString(R.string.nav_payments)
         navOrders.text = getString(R.string.nav_orders)
+        navBook.text = getString(R.string.nav_book)
         navTrack.text = getString(R.string.nav_track)
+        navPayments.text = getString(R.string.nav_payments)
         navProfile.text = getString(R.string.nav_profile)
         navNotifications.contentDescription = getString(R.string.notifications)
         homeActiveLabel.text = getString(R.string.active_delivery)
@@ -577,7 +618,10 @@ class MainActivity : AppCompatActivity() {
         insetBottom = 0
         backgroundTintList = ColorStateList.valueOf(getColor(R.color.hallo_navy_soft))
         setTextColor(getColor(R.color.hallo_navy))
-        setOnClickListener { action() }
+        setOnClickListener {
+            dismissKeyboard()
+            action()
+        }
     }
 
     private fun swapBookingRoute() = with(binding) {
@@ -712,7 +756,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHomeDashboard(state: CustomerUiState, unread: Int): Unit = with(binding) {
-        // Home previews the booking route; live driver locations remain on Track.
         homeMap.showBooking(state.selectedPickup, state.selectedDropoff, state.route)
         val activeCount = state.orders.count { CustomerPolicy.showAssignment(it.status) }
         val due = state.orders.filterNot { it.status == "cancelled" }.sumOf { order ->
@@ -732,30 +775,33 @@ class MainActivity : AppCompatActivity() {
         }.take(3)
         if (recent.isEmpty()) {
             dashRecentOrders.addView(text(getString(R.string.dash_empty)))
-        } else recent.forEach { order ->
-            val recentCard = card()
-            val content = vertical(14.dp)
-            content.addView(textView(order.trackingId ?: getString(R.string.order_label), 15f, true))
-            content.addView(textView(orderDateLabel(order.createdAt), 12f, false, getColor(R.color.hallo_muted)))
-            content.addView(textView(label(order.status), 12f, true, getColor(R.color.hallo_muted)))
-            content.addView(textView("${order.pickupAddress.orEmpty()}\n→ ${order.dropoffAddress.orEmpty()}", 14f))
-            content.addView(actionButton(getString(R.string.view_details)) {
-                orderFilter = CustomerOrderFilter.ALL
-                expandedOrders.add(order.id)
-                viewModel.show(CustomerPage.ORDERS)
-            })
-            recentCard.addView(content)
-            dashRecentOrders.addView(recentCard, marginParams())
+        } else {
+            recent.forEach { order ->
+                val recentCard = card()
+                val content = vertical(14.dp)
+                content.addView(textView(order.trackingId ?: getString(R.string.order_label), 15f, true))
+                content.addView(textView(orderDateLabel(order.createdAt), 12f, false, getColor(R.color.hallo_muted)))
+                content.addView(textView(label(order.status), 12f, true, getColor(R.color.hallo_muted)))
+                content.addView(textView("${order.pickupAddress.orEmpty()}\n→ ${order.dropoffAddress.orEmpty()}", 14f))
+                content.addView(actionButton(getString(R.string.view_details)) {
+                    orderFilter = CustomerOrderFilter.ALL
+                    expandedOrders.add(order.id)
+                    navigate(CustomerPage.ORDERS)
+                })
+                recentCard.addView(content)
+                dashRecentOrders.addView(recentCard, marginParams())
+            }
         }
     }
 
     private fun highlightNavigation(page: CustomerPage) {
-        val active = getColor(R.color.hallo_gold)
+        val active = getColor(R.color.auth_blue)
         val idle = Color.TRANSPARENT
-        binding.navHome.setBackgroundColor(if (page == CustomerPage.HOME || page == CustomerPage.BOOK) active else idle)
-        binding.navBook.setBackgroundColor(if (page == CustomerPage.PAYMENTS) active else idle)
+        binding.navHome.setBackgroundColor(if (page == CustomerPage.HOME) active else idle)
         binding.navOrders.setBackgroundColor(if (page == CustomerPage.ORDERS) active else idle)
+        binding.navBook.setBackgroundColor(if (page == CustomerPage.BOOK) active else idle)
         binding.navTrack.setBackgroundColor(if (page == CustomerPage.TRACKING) active else idle)
+        binding.navPayments.setBackgroundColor(if (page == CustomerPage.PAYMENTS) active else idle)
         binding.navProfile.setBackgroundColor(if (page == CustomerPage.PROFILE) active else idle)
     }
 
@@ -818,7 +864,7 @@ class MainActivity : AppCompatActivity() {
                 if (!expandedOrders.add(order.id)) expandedOrders.remove(order.id)
                 renderOrders(viewModel.state.value)
             })
-            item.orderActions.addView(actionButton(getString(R.string.view_payment_status)) { viewModel.show(CustomerPage.PAYMENTS) })
+            item.orderActions.addView(actionButton(getString(R.string.view_payment_status)) { navigate(CustomerPage.PAYMENTS) })
             if (CustomerPolicy.canCancel(order.status)) {
                 item.orderActions.addView(actionButton(getString(R.string.cancel_order)) { cancellationDialog(order) })
             }
@@ -834,7 +880,7 @@ class MainActivity : AppCompatActivity() {
         val content = vertical(15.dp)
         val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         header.addView(textView(getString(R.string.logistics_overview), 20f, true), weightParams())
-        header.addView(actionButton(getString(R.string.new_order)) { viewModel.show(CustomerPage.BOOK) })
+        header.addView(actionButton(getString(R.string.new_order)) { navigate(CustomerPage.BOOK) })
         content.addView(header)
         val activeCount = state.orders.count { CustomerPolicy.showAssignment(it.status) }
         val deliveredCount = state.orders.count { it.status == "delivered" }
@@ -1053,14 +1099,13 @@ class MainActivity : AppCompatActivity() {
         messageDriver.isEnabled = phone.isNotBlank()
         callDriver.setOnClickListener { openContact(Intent.ACTION_DIAL, phone) }
         messageDriver.setOnClickListener { openContact(Intent.ACTION_SENDTO, phone) }
-        // The assignment card already presents the verified driver photo and identity.
         (driverDetails.parent as? View)?.visibility = visible(order == null || !CustomerPolicy.showAssignment(order.status))
         driverPhoto.visibility = View.GONE
     }
 
     private fun ensureTrackingBackButton() {
         if (binding.pageTracking.findViewWithTag<View>(TRACKING_BACK_TAG) != null) return
-        val back = actionButton(getString(R.string.back_orders)) { viewModel.show(CustomerPage.ORDERS) }.apply { tag = TRACKING_BACK_TAG }
+        val back = actionButton(getString(R.string.back_orders)) { navigate(CustomerPage.ORDERS) }.apply { tag = TRACKING_BACK_TAG }
         binding.pageTracking.addView(back, 1)
     }
 
@@ -1269,7 +1314,7 @@ class MainActivity : AppCompatActivity() {
             textSize = 26f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(getColor(R.color.hallo_navy))
-            background = roundedBackground(getColor(R.color.hallo_gold_soft), 100.dp)
+            background = roundedBackground(getColor(R.color.hallo_navy_soft), 100.dp)
         }
         binding.pageProfile.addView(avatar, 1, LinearLayout.LayoutParams(76.dp, 76.dp).apply { topMargin = 12.dp; bottomMargin = 6.dp })
         binding.profileDetails.text = profile?.let {
@@ -1529,7 +1574,10 @@ class MainActivity : AppCompatActivity() {
         minHeight = 48.dp
         backgroundTintList = ColorStateList.valueOf(getColor(R.color.hallo_navy_soft))
         setTextColor(getColor(R.color.hallo_navy))
-        setOnClickListener { action() }
+        setOnClickListener {
+            dismissKeyboard()
+            action()
+        }
     }
 
     private fun roundedBackground(color: Int, radius: Int) = GradientDrawable().apply {
@@ -1611,4 +1659,3 @@ class MainActivity : AppCompatActivity() {
         )
     }
 }
-
