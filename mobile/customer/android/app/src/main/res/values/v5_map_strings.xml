@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v5_map_loading">Loading live map…</string>
+    <string name="v5_map_retry">Retry map</string>
+    <string name="v5_map_data_error">Map data could not load.</string>
+    <string name="v5_map_slow">Map is taking longer than expected.</string>
+    <string name="v5_map_start_error">Map could not start.</string>
+    <string name="v5_map_library_error">Map service is unavailable.</string>
+</resources>
