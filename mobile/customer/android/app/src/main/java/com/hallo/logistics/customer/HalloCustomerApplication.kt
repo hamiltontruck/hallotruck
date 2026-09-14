@@ -12,12 +12,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
-import java.lang.ref.WeakReference
 import java.util.Locale
 
 class HalloCustomerApplication : Application(), Application.ActivityLifecycleCallbacks {
-    private var activeMainActivity = WeakReference<MainActivity>(null)
-
     override fun onCreate() {
         super.onCreate()
         registerActivityLifecycleCallbacks(this)
@@ -25,7 +22,6 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
         if (activity !is MainActivity) return
-        activeMainActivity = WeakReference(activity)
         val host = activity as AppCompatActivity
         CustomerAuthInputController.install(host)
         val viewModel = ViewModelProvider(host)[CustomerViewModel::class.java]
@@ -72,23 +68,12 @@ class HalloCustomerApplication : Application(), Application.ActivityLifecycleCal
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (!newConfig.locales.isEmpty) Locale.setDefault(newConfig.locales[0])
-        val activity = activeMainActivity.get() ?: return
-        if (activity.isFinishing || activity.isDestroyed) return
-        activity.window.decorView.post {
-            if (activity.isFinishing || activity.isDestroyed) return@post
-            val viewModel = ViewModelProvider(activity)[CustomerViewModel::class.java]
-            viewModel.show(viewModel.state.value.page)
-        }
     }
 
     override fun onActivityStarted(activity: Activity) = Unit
-    override fun onActivityResumed(activity: Activity) {
-        if (activity is MainActivity) activeMainActivity = WeakReference(activity)
-    }
+    override fun onActivityResumed(activity: Activity) = Unit
     override fun onActivityPaused(activity: Activity) = Unit
     override fun onActivityStopped(activity: Activity) = Unit
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
-    override fun onActivityDestroyed(activity: Activity) {
-        if (activeMainActivity.get() === activity) activeMainActivity.clear()
-    }
+    override fun onActivityDestroyed(activity: Activity) = Unit
 }
