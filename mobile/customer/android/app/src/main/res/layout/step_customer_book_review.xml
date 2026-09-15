@@ -14,8 +14,8 @@
                 <TextView android:id="@+id/flowReviewRoute" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
                 <TextView android:id="@+id/flowReviewCargo" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
                 <TextView android:id="@+id/flowReviewTruck" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
-                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:hint="@string/payment_method">
-                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowReviewPayment" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Dropdown" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:hint="@string/payment_method">
+                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowReviewPayment" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp" />
                 </com.google.android.material.textfield.TextInputLayout>
                 <TextView android:id="@+id/flowReviewTotal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:textColor="@color/auth_blue" android:textSize="27sp" android:textStyle="bold" />
             </LinearLayout>
@@ -25,8 +25,8 @@
         <TextView android:id="@+id/flowReviewError" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/hallo_danger" android:textSize="12sp" android:visibility="gone" />
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowReviewBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:text="@string/flow_back_quote" />
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowReviewConfirm" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="@string/flow_confirm_booking" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowReviewBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:maxLines="1" android:text="@string/flow_back_quote" android:textSize="13sp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowReviewConfirm" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:maxLines="1" android:text="@string/flow_confirm_booking" android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
