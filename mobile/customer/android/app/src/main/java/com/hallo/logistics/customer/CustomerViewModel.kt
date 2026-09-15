@@ -33,247 +33,126 @@ class CustomerViewModel(
     }
 
     fun signUp(name: String, phone: String, email: String, pin: String, confirmation: String) {
-        CustomerAuthPolicy.validateSignUp(name, phone, email, pin, confirmation)?.let {
-            fail(it)
-            return
-        }
+        CustomerAuthPolicy.validateSignUp(name, phone, email, pin, confirmation)?.let { fail(it); return }
         execute("Creating Customer account…") {
-            repository.signUp(
-                CustomerAuthPolicy.cleanName(name),
-                CustomerAuthPolicy.cleanPhone(phone),
-                CustomerAuthPolicy.cleanEmail(email),
-                pin,
-            )
-            if (repository.userId() == null) {
-                signedOut("Account created. Confirm your email if requested, then sign in.")
-            } else {
-                authorizeAndLoad()
-            }
+            repository.signUp(CustomerAuthPolicy.cleanName(name), CustomerAuthPolicy.cleanPhone(phone), CustomerAuthPolicy.cleanEmail(email), pin)
+            if (repository.userId() == null) signedOut("Account created. Confirm your email if requested, then sign in.") else authorizeAndLoad()
         }
     }
 
     fun signIn(email: String, password: String) {
-        CustomerAuthPolicy.validateSignIn(email, password)?.let {
-            fail(it)
-            return
-        }
+        CustomerAuthPolicy.validateSignIn(email, password)?.let { fail(it); return }
         execute("Signing in…") {
             repository.signIn(CustomerAuthPolicy.cleanEmail(email), password)
             authorizeAndLoad()
         }
     }
 
-    fun signOut() = execute("Signing out…") {
-        repository.signOut()
-        signedOut("Signed out")
-    }
+    fun signOut() = execute("Signing out…") { repository.signOut(); signedOut("Signed out") }
 
-    fun show(page: CustomerPage) {
-        _state.value = _state.value.copy(page = page, message = "")
-    }
-
-    fun bookingInputChanged() {
-        _state.value = _state.value.copy(route = null, quote = null)
-    }
+    fun show(page: CustomerPage) { _state.value = _state.value.copy(page = page, message = "") }
+    fun bookingInputChanged() { _state.value = _state.value.copy(route = null, quote = null) }
 
     fun swapRoute() {
-        pickupSearch?.cancel()
-        dropoffSearch?.cancel()
+        pickupSearch?.cancel(); dropoffSearch?.cancel()
         val current = _state.value
-        _state.value = current.copy(
-            route = null,
-            quote = null,
-            selectedPickup = current.selectedDropoff,
-            selectedDropoff = current.selectedPickup,
-            pickupSuggestions = emptyList(),
-            dropoffSuggestions = emptyList(),
-            placeSearchMessage = "",
-        )
+        _state.value = current.copy(route = null, quote = null, selectedPickup = current.selectedDropoff, selectedDropoff = current.selectedPickup, pickupSuggestions = emptyList(), dropoffSuggestions = emptyList(), placeSearchMessage = "")
     }
 
     fun resetRoute() {
-        pickupSearch?.cancel()
-        dropoffSearch?.cancel()
-        val current = _state.value
-        _state.value = current.copy(
-            route = null,
-            quote = null,
-            selectedPickup = null,
-            selectedDropoff = null,
-            pickupSuggestions = emptyList(),
-            dropoffSuggestions = emptyList(),
-            placeSearchMessage = "",
-        )
+        pickupSearch?.cancel(); dropoffSearch?.cancel()
+        _state.value = _state.value.copy(route = null, quote = null, selectedPickup = null, selectedDropoff = null, pickupSuggestions = emptyList(), dropoffSuggestions = emptyList(), placeSearchMessage = "")
     }
 
     fun placeInputChanged(value: String, pickup: Boolean) {
-        val clean = value.trim()
-        val current = _state.value
-        _state.value = if (pickup) {
-            current.copy(
-                route = null,
-                quote = null,
-                selectedPickup = current.selectedPickup?.takeIf { it.label.equals(clean, ignoreCase = true) },
-            )
-        } else {
-            current.copy(
-                route = null,
-                quote = null,
-                selectedDropoff = current.selectedDropoff?.takeIf { it.label.equals(clean, ignoreCase = true) },
-            )
-        }
+        val clean = value.trim(); val current = _state.value
+        _state.value = if (pickup) current.copy(route = null, quote = null, selectedPickup = current.selectedPickup?.takeIf { it.label.equals(clean, ignoreCase = true) })
+        else current.copy(route = null, quote = null, selectedDropoff = current.selectedDropoff?.takeIf { it.label.equals(clean, ignoreCase = true) })
         searchPlaces(value, pickup)
     }
 
     fun selectPlace(place: CustomerPlace, pickup: Boolean) {
         if (pickup) pickupSearch?.cancel() else dropoffSearch?.cancel()
         val current = _state.value
-        _state.value = if (pickup) {
-            current.copy(
-                route = null,
-                quote = null,
-                selectedPickup = place,
-                pickupSuggestions = emptyList(),
-                placeSearchMessage = "",
-            )
-        } else {
-            current.copy(
-                route = null,
-                quote = null,
-                selectedDropoff = place,
-                dropoffSuggestions = emptyList(),
-                placeSearchMessage = "",
-            )
-        }
+        _state.value = if (pickup) current.copy(route = null, quote = null, selectedPickup = place, pickupSuggestions = emptyList(), placeSearchMessage = "")
+        else current.copy(route = null, quote = null, selectedDropoff = place, dropoffSuggestions = emptyList(), placeSearchMessage = "")
     }
 
     fun searchPlaces(query: String, pickup: Boolean) {
-        val previous = if (pickup) pickupSearch else dropoffSearch
-        previous?.cancel()
+        (if (pickup) pickupSearch else dropoffSearch)?.cancel()
         if (query.trim().length < 2) {
-            _state.value = if (pickup) {
-                _state.value.copy(pickupSuggestions = emptyList())
-            } else {
-                _state.value.copy(dropoffSuggestions = emptyList())
-            }
+            _state.value = if (pickup) _state.value.copy(pickupSuggestions = emptyList()) else _state.value.copy(dropoffSuggestions = emptyList())
             return
         }
         val job = viewModelScope.launch {
             delay(280)
             val result = runCatching { repository.searchPlaces(query) }
             val suggestions = result.getOrElse { emptyList() }
-            val searchMessage = result.exceptionOrNull()?.let(CustomerAuthPolicy::safeMessage)
-                ?: if (suggestions.isEmpty()) "No matching places found in the HALLO operating region" else ""
-            _state.value = if (pickup) {
-                _state.value.copy(pickupSuggestions = suggestions, placeSearchMessage = searchMessage)
-            } else {
-                _state.value.copy(dropoffSuggestions = suggestions, placeSearchMessage = searchMessage)
-            }
+            val searchMessage = result.exceptionOrNull()?.let(CustomerAuthPolicy::safeMessage) ?: if (suggestions.isEmpty()) "No matching places found in the HALLO operating region" else ""
+            _state.value = if (pickup) _state.value.copy(pickupSuggestions = suggestions, placeSearchMessage = searchMessage)
+            else _state.value.copy(dropoffSuggestions = suggestions, placeSearchMessage = searchMessage)
         }
         if (pickup) pickupSearch = job else dropoffSearch = job
     }
 
-    fun refresh() = execute("Refreshing…") {
-        authorizeAndLoad(preservePage = true)
-    }
+    fun refresh() = execute("Refreshing…") { authorizeAndLoad(preservePage = true) }
 
     fun calculateQuote(distanceKm: Double, vehicleType: String, cargoTons: Double) = execute("Calculating secure quote…") {
         CustomerBookingPolicy.requireWithinCapacity(cargoTons, vehicleType)
         val quote = repository.quote(QuoteInput(distanceKm, vehicleType, cargoTons))
-        _state.value = _state.value.copy(
-            busy = false,
-            quote = quote,
-            message = "Quote ready: ETB ${quote.totalQuoteEtbCompat()}",
-        )
+        _state.value = _state.value.copy(busy = false, quote = quote, message = "Quote ready: ETB ${quote.totalQuoteEtbCompat()}")
     }
 
-    fun calculateAutomaticRoute(
-        pickup: String,
-        dropoff: String,
-        vehicleType: String,
-        cargoTons: Double,
-    ) = execute("Finding places and calculating the truck route…") {
+    fun calculateAutomaticRoute(pickup: String, dropoff: String, vehicleType: String, cargoTons: Double) = execute("Finding places and calculating the truck route…") {
         CustomerBookingPolicy.requireWithinCapacity(cargoTons, vehicleType)
         val current = _state.value
-        val route = repository.route(
-            pickup,
-            dropoff,
-            vehicleType,
-            current.selectedPickup,
-            current.selectedDropoff,
-        )
-        _state.value = _state.value.copy(
-            route = route,
-            quote = null,
-            message = "Route ready: ${route.distanceKm} km · ${route.durationMinutes} min · calculating secure quote…",
-        )
+        val route = repository.route(pickup, dropoff, vehicleType, current.selectedPickup, current.selectedDropoff)
+        _state.value = _state.value.copy(route = route, quote = null, message = "Route ready: ${route.distanceKm} km · ${route.durationMinutes} min · calculating secure quote…")
         val quote = repository.quote(QuoteInput(route.distanceKm, vehicleType, cargoTons))
-        _state.value = _state.value.copy(
-            busy = false,
-            route = route,
-            quote = quote,
-            message = "Route ready: ${route.distanceKm} km · ${route.durationMinutes} min · ETB ${quote.totalQuoteEtbCompat()}",
-        )
+        _state.value = _state.value.copy(busy = false, route = route, quote = quote, message = "Route ready: ${route.distanceKm} km · ${route.durationMinutes} min · ETB ${quote.totalQuoteEtbCompat()}")
     }
 
     fun createOrder(input: CreateOrderInput) = execute("Creating order…") {
         CustomerBookingPolicy.requireWithinCapacity(input.cargoTons, input.vehicleType)
         val tracking = repository.createOrder(input)
         authorizeAndLoad(preservePage = true)
-        _state.value = _state.value.copy(page = CustomerPage.ORDERS, message = "Order $tracking created")
+        _state.value = _state.value.copy(page = CustomerPage.BOOK, message = "Booking $tracking created")
     }
 
     fun cancelOrder(order: CustomerOrder, reason: String) {
-        if (!CustomerPolicy.canCancel(order.status)) {
-            fail("This order can no longer be cancelled")
-            return
-        }
-        execute("Cancelling order…") {
-            repository.cancelOrder(order.id, reason)
-            authorizeAndLoad(preservePage = true)
-        }
+        if (!CustomerPolicy.canCancel(order.status)) { fail("This order can no longer be cancelled"); return }
+        execute("Cancelling order…") { repository.cancelOrder(order.id, reason); authorizeAndLoad(preservePage = true) }
     }
 
     fun updateProfile(input: CustomerProfileUpdateInput) = execute("Saving customer profile…") {
-        parityService.updateProfile(input)
-        authorizeAndLoad(preservePage = true)
+        parityService.updateProfile(input); authorizeAndLoad(preservePage = true)
         _state.value = _state.value.copy(page = CustomerPage.PROFILE, message = "Customer profile updated")
     }
 
     fun uploadProfileAvatar(jpegBytes: ByteArray) = execute("Uploading profile photo…") {
-        parityService.uploadProfileAvatar(jpegBytes)
-        authorizeAndLoad(preservePage = true)
+        parityService.uploadProfileAvatar(jpegBytes); authorizeAndLoad(preservePage = true)
         _state.value = _state.value.copy(page = CustomerPage.PROFILE, message = "Profile photo updated")
     }
 
     fun removeProfileAvatar() = execute("Removing profile photo…") {
-        parityService.removeProfileAvatar()
-        authorizeAndLoad(preservePage = true)
+        parityService.removeProfileAvatar(); authorizeAndLoad(preservePage = true)
         _state.value = _state.value.copy(page = CustomerPage.PROFILE, message = "Profile photo removed")
     }
 
     fun openReceipt(payment: CustomerPayment) = execute("Opening receipt…") {
         val url = parityService.signedReceipt(payment.receiptPath) ?: error("Payment receipt is not available")
-        _events.emit(CustomerUiEvent.OpenUrl(url))
-        _state.value = _state.value.copy(busy = false, message = "")
+        _events.emit(CustomerUiEvent.OpenUrl(url)); _state.value = _state.value.copy(busy = false, message = "")
     }
 
-    fun track(order: CustomerOrder) = execute("Loading live tracking…") {
-        refreshTrackedOrder(order.id, openTracking = true)
-    }
+    fun track(order: CustomerOrder) = execute("Loading live tracking…") { refreshTrackedOrder(order.id, openTracking = true) }
 
     fun refreshTracking() {
-        val order = _state.value.trackingOrder
-            ?: _state.value.orders.firstOrNull { CustomerPolicy.showAssignment(it.status) }
-            ?: return
-        execute("Refreshing live tracking…") {
-            refreshTrackedOrder(order.id, openTracking = true)
-        }
+        val order = _state.value.trackingOrder ?: _state.value.orders.firstOrNull { CustomerPolicy.showAssignment(it.status) } ?: return
+        execute("Refreshing live tracking…") { refreshTrackedOrder(order.id, openTracking = true) }
     }
 
     fun markNotificationRead(item: CustomerNotification) = execute("Updating notification…") {
-        repository.markNotificationRead(item.id)
-        authorizeAndLoad(preservePage = true)
+        repository.markNotificationRead(item.id); authorizeAndLoad(preservePage = true)
     }
 
     private suspend fun refreshTrackedOrder(orderId: String, openTracking: Boolean) {
@@ -282,62 +161,18 @@ class CustomerViewModel(
         val assignments = repository.assignments()
         val assignment = assignments.firstOrNull { it.orderId == orderId }
         val currentMedia = _state.value.assignmentMedia[orderId]
-        val media = if (assignment != null && currentMedia == null) {
-            parityService.assignmentMedia(listOf(assignment))[orderId]
-        } else {
-            currentMedia
-        }
-
-        val route = if (_state.value.trackingOrder?.id == orderId && _state.value.trackingRoute != null) {
-            _state.value.trackingRoute
-        } else {
-            runCatching {
-                parityService.roadRoute(
-                    live?.pickupLongitude,
-                    live?.pickupLatitude,
-                    live?.dropoffLongitude,
-                    live?.dropoffLatitude,
-                    freshOrder.vehicleType,
-                )
-            }.getOrNull()
-        }
-
+        val media = if (assignment != null && currentMedia == null) parityService.assignmentMedia(listOf(assignment))[orderId] else currentMedia
+        val route = if (_state.value.trackingOrder?.id == orderId && _state.value.trackingRoute != null) _state.value.trackingRoute else runCatching {
+            parityService.roadRoute(live?.pickupLongitude, live?.pickupLatitude, live?.dropoffLongitude, live?.dropoffLatitude, freshOrder.vehicleType)
+        }.getOrNull()
         val hasTruck = live?.truckLongitude != null && live.truckLatitude != null
         val freshness = CustomerPolicy.trackingFreshness(live?.recordedAt, hasTruck)
-        val remaining = if (freshness == "LIVE") {
-            runCatching {
-                parityService.roadRoute(
-                    live?.truckLongitude,
-                    live?.truckLatitude,
-                    live?.dropoffLongitude,
-                    live?.dropoffLatitude,
-                    freshOrder.vehicleType,
-                )
-            }.getOrNull()
-        } else {
-            null
-        }
-
+        val remaining = if (freshness == "LIVE") runCatching {
+            parityService.roadRoute(live?.truckLongitude, live?.truckLatitude, live?.dropoffLongitude, live?.dropoffLatitude, freshOrder.vehicleType)
+        }.getOrNull() else null
         val updatedOrders = _state.value.orders.map { if (it.id == freshOrder.id) freshOrder else it }
-        val updatedMedia = _state.value.assignmentMedia.toMutableMap().apply {
-            if (media != null) put(orderId, media)
-        }
-        _state.value = _state.value.copy(
-            busy = false,
-            page = if (openTracking) CustomerPage.TRACKING else _state.value.page,
-            orders = updatedOrders,
-            trackingOrder = freshOrder,
-            liveTrip = live,
-            assignments = assignments,
-            assignmentMedia = updatedMedia,
-            trackingRoute = route,
-            remainingRoute = remaining,
-            message = if (live == null || !hasTruck) {
-                "Waiting for the driver to share the first GPS location"
-            } else {
-                "Tracking updated"
-            },
-        )
+        val updatedMedia = _state.value.assignmentMedia.toMutableMap().apply { if (media != null) put(orderId, media) }
+        _state.value = _state.value.copy(busy = false, page = if (openTracking) CustomerPage.TRACKING else _state.value.page, orders = updatedOrders, trackingOrder = freshOrder, liveTrip = live, assignments = assignments, assignmentMedia = updatedMedia, trackingRoute = route, remainingRoute = remaining, message = if (live == null || !hasTruck) "Waiting for the driver to share the first GPS location" else "Tracking updated")
     }
 
     private suspend fun authorizeAndLoad(preservePage: Boolean = false) {
@@ -353,28 +188,7 @@ class CustomerViewModel(
         val profile = profileDeferred.await()
         val avatarUrl = runCatching { parityService.signedProfileAvatar(profile.avatarPath) }.getOrNull()
         val current = _state.value
-
-        _state.value = CustomerUiState(
-            loading = false,
-            authorized = true,
-            page = if (preservePage) current.page else CustomerPage.HOME,
-            message = "Customer workspace",
-            profile = profile,
-            profileAvatarUrl = avatarUrl,
-            orders = orderRows,
-            payments = payments,
-            notifications = notifications.await(),
-            quote = current.quote,
-            assignments = assignments,
-            assignmentMedia = media,
-            trackingOrder = current.trackingOrder?.let { tracked -> orderRows.firstOrNull { it.id == tracked.id } },
-            liveTrip = current.liveTrip,
-            trackingRoute = current.trackingRoute,
-            remainingRoute = current.remainingRoute,
-            route = current.route,
-            selectedPickup = current.selectedPickup,
-            selectedDropoff = current.selectedDropoff,
-        )
+        _state.value = CustomerUiState(loading = false, authorized = true, page = if (preservePage) current.page else CustomerPage.HOME, message = "Customer workspace", profile = profile, profileAvatarUrl = avatarUrl, orders = orderRows, payments = payments, notifications = notifications.await(), quote = current.quote, assignments = assignments, assignmentMedia = media, trackingOrder = current.trackingOrder?.let { tracked -> orderRows.firstOrNull { it.id == tracked.id } }, liveTrip = current.liveTrip, trackingRoute = current.trackingRoute, remainingRoute = current.remainingRoute, route = current.route, selectedPickup = current.selectedPickup, selectedDropoff = current.selectedDropoff)
     }
 
     private fun execute(message: String, action: suspend () -> Unit) {
@@ -386,13 +200,7 @@ class CustomerViewModel(
         }
     }
 
-    private fun signedOut(message: String) {
-        _state.value = CustomerUiState(loading = false, message = message)
-    }
-
-    private fun fail(message: String) {
-        _state.value = _state.value.copy(loading = false, busy = false, message = message)
-    }
-
+    private fun signedOut(message: String) { _state.value = CustomerUiState(loading = false, message = message) }
+    private fun fail(message: String) { _state.value = _state.value.copy(loading = false, busy = false, message = message) }
     private fun QuoteResult.totalQuoteEtbCompat(): Long = totalEtb.toLong()
 }
