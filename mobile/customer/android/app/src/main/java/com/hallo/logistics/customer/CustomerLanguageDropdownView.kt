@@ -17,7 +17,7 @@ class CustomerLanguageDropdownView @JvmOverloads constructor(
     private val languages = listOf(CustomerLanguage.EN, CustomerLanguage.OR, CustomerLanguage.AM)
 
     init {
-        isAllCaps = false
+        setAllCaps(false)
         setOnClickListener { showLanguageDialog() }
         refreshLabel()
     }
