@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="native_nav_book">Ajaji</string>
     <string name="native_home_hero_title">Feʼumsa kee amanamummaadhaan geessi</string>
     <string name="native_home_overview">Cuunfaa kee</string>
     <string name="native_quick_actions">Tarkaanfii saffisaa</string>
@@ -25,6 +26,8 @@
     <string name="native_container_requires_trailer">Container 20 ft ykn 40 ft Trailer barbaada.</string>
     <string name="native_truck_capacity_summary">%1$s · dandeettii %2$s</string>
     <string name="native_load_capacity_summary">Feʼumsa waliigalaa: %1$s · dandeettii %2$s %3$s</string>
+    <string name="native_route_only_summary">%1$s\n→ %2$s\n%3$s · %4$s</string>
+    <string name="native_route_failed">Daandii / gatiin shallagamuu hin dandeenye.</string>
     <string name="native_status_quote_ready">Gatiin qophaaʼeera</string>
     <string name="native_status_order_placed">Ajajni galmaaʼeera</string>
     <string name="native_status_driver_assigned">Konkolaachisaan ramadameera</string>
