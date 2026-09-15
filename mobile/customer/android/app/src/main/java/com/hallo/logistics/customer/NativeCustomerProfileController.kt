@@ -112,7 +112,7 @@ class NativeCustomerProfileController(
                 )
                 val validated = runCatching { CustomerProfilePolicy.validate(input) }
                 if (validated.isFailure) {
-                    error.text = validated.exceptionOrNull()?.message ?: activity.getString(R.string.native_profile_invalid)
+                    error.text = profileValidationMessage(validated.exceptionOrNull())
                     error.visibility = View.VISIBLE
                     return@setOnClickListener
                 }
@@ -121,6 +121,15 @@ class NativeCustomerProfileController(
             }
         }
         dialog.show()
+    }
+
+    private fun profileValidationMessage(error: Throwable?): String = when (error?.message) {
+        "Enter your full name" -> activity.getString(R.string.native_profile_name_required)
+        "Phone must be 09xxxxxxxx or +2519xxxxxxxx" -> activity.getString(R.string.native_profile_phone_invalid)
+        "Enter a valid email address" -> activity.getString(R.string.native_profile_email_invalid)
+        "Choose a valid customer type" -> activity.getString(R.string.native_profile_type_invalid)
+        "Company name is required for a business account" -> activity.getString(R.string.native_profile_company_required)
+        else -> activity.getString(R.string.native_profile_invalid)
     }
 
     private fun field(hint: String, value: String?, type: Int = InputType.TYPE_CLASS_TEXT) = EditText(activity).apply {
