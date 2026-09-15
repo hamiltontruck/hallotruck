@@ -359,7 +359,7 @@
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
-                android:text="Book"
+                android:text="@string/native_nav_book"
                 app:icon="@drawable/ic_hallo_truck" />
 
             <com.google.android.material.button.MaterialButton
