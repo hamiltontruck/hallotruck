@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="native_nav_book">Book</string>
     <string name="native_home_hero_title">Move cargo with confidence</string>
     <string name="native_home_overview">Your overview</string>
     <string name="native_quick_actions">Quick actions</string>
@@ -25,6 +26,8 @@
     <string name="native_container_requires_trailer">A 20 ft or 40 ft container requires a Trailer.</string>
     <string name="native_truck_capacity_summary">%1$s · capacity %2$s</string>
     <string name="native_load_capacity_summary">Load equivalent: %1$s · %2$s capacity %3$s</string>
+    <string name="native_route_only_summary">%1$s\n→ %2$s\n%3$s · %4$s</string>
+    <string name="native_route_failed">Route / quote could not be calculated.</string>
     <string name="native_status_quote_ready">Quote ready</string>
     <string name="native_status_order_placed">Order placed</string>
     <string name="native_status_driver_assigned">Driver assigned</string>
