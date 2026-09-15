@@ -46,6 +46,15 @@
         <item name="android:layout_marginTop">8dp</item>
     </style>
 
+    <style name="Widget.Hallo.Dropdown" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxCornerRadiusTopStart">14dp</item>
+        <item name="boxCornerRadiusTopEnd">14dp</item>
+        <item name="boxCornerRadiusBottomStart">14dp</item>
+        <item name="boxCornerRadiusBottomEnd">14dp</item>
+        <item name="boxStrokeColor">@color/hallo_line</item>
+        <item name="android:layout_marginTop">8dp</item>
+    </style>
+
     <style name="Widget.Hallo.CompactToggle" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:minWidth">0dp</item>
         <item name="android:minHeight">36dp</item>
