@@ -73,6 +73,10 @@ const documentKeySet = new Set<VerificationDocumentKey>([
   ...identityDocumentKeys,
   ...vehicleDocumentKeys,
 ]);
+const expiryDocumentKeySet = new Set<VerificationDocumentKey>([
+  "license_front",
+  "national_id_front",
+]);
 const previewMimeTypes = new Set([
   "image/jpeg",
   "image/png",
@@ -198,7 +202,7 @@ export function documentExpiryWarning(
   warningDays = 30,
   criticalDays = 7,
 ): DocumentExpiryWarning {
-  if (!record || record.status === "rejected" || !record.expiryDate) {
+  if (!record || record.status === "rejected" || !expiryDocumentKeySet.has(record.documentKey) || !record.expiryDate) {
     return { level: "none", daysRemaining: null };
   }
   const expiryDay = Date.parse(`${record.expiryDate}T00:00:00Z`);
