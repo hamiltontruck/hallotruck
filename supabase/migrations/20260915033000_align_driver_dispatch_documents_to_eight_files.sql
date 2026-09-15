@@ -61,8 +61,10 @@ as $$
     );
 $$;
 
-revoke all on function public.dispatch_documents_valid(uuid, uuid) from public, anon;
-grant execute on function public.dispatch_documents_valid(uuid, uuid) to authenticated, service_role;
+-- Preserve the production hardening boundary: this helper is internal to
+-- security-definer dispatch RPCs and is not directly executable by clients.
+revoke all on function public.dispatch_documents_valid(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.dispatch_documents_valid(uuid, uuid) to service_role;
 
 commit;
 notify pgrst, 'reload schema';
