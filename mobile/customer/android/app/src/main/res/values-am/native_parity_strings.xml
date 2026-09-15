@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="native_nav_book">ይዘዙ</string>
     <string name="native_home_hero_title">ጭነትዎን በእምነት ያጓጉዙ</string>
     <string name="native_home_overview">አጠቃላይ እይታዎ</string>
     <string name="native_quick_actions">ፈጣን እርምጃዎች</string>
@@ -25,6 +26,8 @@
     <string name="native_container_requires_trailer">20 ft ወይም 40 ft ኮንቴነር Trailer ያስፈልገዋል።</string>
     <string name="native_truck_capacity_summary">%1$s · አቅም %2$s</string>
     <string name="native_load_capacity_summary">ተመጣጣኝ ጭነት፦ %1$s · የ%2$s አቅም %3$s</string>
+    <string name="native_route_only_summary">%1$s\n→ %2$s\n%3$s · %4$s</string>
+    <string name="native_route_failed">መንገድ / ዋጋ ማስላት አልተቻለም።</string>
     <string name="native_status_quote_ready">ዋጋው ዝግጁ ነው</string>
     <string name="native_status_order_placed">ትዕዛዙ ተመዝግቧል</string>
     <string name="native_status_driver_assigned">አሽከርካሪ ተመድቧል</string>
