@@ -19,17 +19,12 @@ const allowedMimeTypeSet = new Set<string>(allowedVerificationMimeTypes);
 export const photoOnlyDocumentKeys = new Set<VerificationDocumentKey>([
   "driver_photo",
   "truck_front",
-  "truck_back",
   "truck_side",
-  "truck_loading_area",
 ]);
 
 export const expiryDocumentKeys = new Set<VerificationDocumentKey>([
   "license_front",
-  "license_back",
-  "vehicle_registration",
-  "insurance",
-  "transport_permit",
+  "national_id_front",
 ]);
 
 export type VerificationUploadFile = {
@@ -92,6 +87,9 @@ export function validateVerificationUpload(input: VerificationUploadInput): Veri
   }
 
   const expiryDate = input.expiryDate?.trim() || null;
+  if (expiryDocumentKeys.has(documentKey) && !expiryDate) {
+    throw new Error("License ykn National ID front irratti expiry date galchi.");
+  }
   if (expiryDate && !expiryDocumentKeys.has(documentKey)) {
     throw new Error("Expiry date item kanaaf hin barbaachisu.");
   }
