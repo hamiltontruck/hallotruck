@@ -149,11 +149,11 @@
                     android:textStyle="bold" />
 
                 <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/cargo_category">
-                    <AutoCompleteTextView android:id="@+id/nativeBookCategory" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
+                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/nativeBookCategory" android:layout_width="match_parent" android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/packaging_type">
-                    <AutoCompleteTextView android:id="@+id/nativeBookPackaging" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
+                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/nativeBookPackaging" android:layout_width="match_parent" android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
@@ -161,7 +161,7 @@
                         <com.google.android.material.textfield.TextInputEditText android:id="@+id/nativeBookQuantity" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:maxLines="1" />
                     </com.google.android.material.textfield.TextInputLayout>
                     <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:layout_weight="1" android:hint="@string/unit">
-                        <AutoCompleteTextView android:id="@+id/nativeBookUnit" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
+                        <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/nativeBookUnit" android:layout_width="match_parent" android:layout_height="wrap_content" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -172,7 +172,7 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/payment_method">
-                    <AutoCompleteTextView android:id="@+id/nativeBookPayment" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
+                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/nativeBookPayment" android:layout_width="match_parent" android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
