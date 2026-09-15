@@ -46,5 +46,10 @@
     <string name="native_enter_positive_amount">Hanga zeeroo caalu galchi</string>
     <string name="native_amount_exceeds_remaining">Hangi kun haftee erguu qabdu caala</string>
     <string name="native_profile_invalid">Odeeffannoon piroofaayilaa sirrii miti.</string>
+    <string name="native_profile_name_required">Maqaa kee guutuu galchi.</string>
+    <string name="native_profile_phone_invalid">Bilbilli 09xxxxxxxx ykn +2519xxxxxxxx taʼuu qaba.</string>
+    <string name="native_profile_email_invalid">Teessoo imeelii sirrii galchi.</string>
+    <string name="native_profile_type_invalid">Gosa Customer sirrii fili.</string>
+    <string name="native_profile_company_required">Akkaawuntii dhaabbataaf maqaan dhaabbataa barbaachisa.</string>
     <string name="native_chat_empty">Ajaja kana irratti konkolaachisaa ramadameef ergaa barreessi.</string>
 </resources>
