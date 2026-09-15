@@ -21,7 +21,7 @@ class CustomerPasswordRecovery {
     }
 
     suspend fun updateRecoveredPin(pin: String, confirmation: String) {
-        require(CustomerPolicy.isSixDigitPin(pin)) { "Password must be exactly 6 numeric digits." }
+        require(CustomerPolicy.isSixDigitPin(pin)) { "PIN must be exactly 6 digits" }
         require(pin == confirmation) { "PIN numbers do not match" }
         client.auth.updateUser {
             password = pin
