@@ -202,6 +202,11 @@ class CustomerViewModel(
             current.selectedPickup,
             current.selectedDropoff,
         )
+        _state.value = _state.value.copy(
+            route = route,
+            quote = null,
+            message = "Route ready: ${route.distanceKm} km · ${route.durationMinutes} min · calculating secure quote…",
+        )
         val quote = repository.quote(QuoteInput(route.distanceKm, vehicleType, cargoTons))
         _state.value = _state.value.copy(
             busy = false,
