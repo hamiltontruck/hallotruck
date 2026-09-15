@@ -9,12 +9,17 @@ object CustomerBookingPolicy {
         return if (unit == "quintal") quantity / 10.0 else quantity
     }
 
-    fun truckCapacityTons(vehicleType: String): Double? = when (vehicleType.trim()) {
-        "Isuzu 5 Ton" -> 5.0
-        "Dry Cargo" -> 10.0
-        "Truck 22 Ton" -> 22.0
-        "Truck 25 Ton" -> 25.0
-        "Truck 30 Ton" -> 30.0
+    /** Matches src/domain/cargo-load.ts in the production Customer Portal. */
+    fun truckCapacityTons(vehicleType: String): Double? = when (vehicleType.trim().lowercase()) {
+        "pickup" -> 3.0
+        "van" -> 5.0
+        "isuzu 5 ton" -> 5.0
+        "dry cargo" -> 10.0
+        "refrigerated" -> 15.0
+        "truck 22 ton" -> 22.0
+        "truck 25 ton" -> 25.0
+        "truck 30 ton" -> 30.0
+        "trailer" -> 45.0
         else -> null
     }
 

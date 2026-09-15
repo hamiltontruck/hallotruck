@@ -27,8 +27,10 @@ class CustomerPolicyTest {
     fun nonEthiopianPhoneFailsClosed() { CustomerPolicy.normalizePhone("123") }
 
     @Test fun cancellationMatchesRootCustomerPortalLifecycle() {
-        listOf("quoted", "placed").forEach { assertTrue(CustomerPolicy.canCancel(it)) }
-        listOf("assigned", "accepted", "in_transit", "delivered", "cancelled", null).forEach {
+        listOf("quoted", "placed", "accepted", "in_transit").forEach {
+            assertTrue(CustomerPolicy.canCancel(it))
+        }
+        listOf("assigned", "delivered", "cancelled", null).forEach {
             assertFalse(CustomerPolicy.canCancel(it))
         }
     }
@@ -57,10 +59,21 @@ class CustomerPolicyTest {
         assertEquals(0.0, CustomerBookingPolicy.cargoToTons(0.0, "ton"), 0.0)
     }
 
-    @Test fun selectedTruckCapacityIsEnforcedBeforeQuoteOrOrderCreation() {
-        assertEquals(5.0, CustomerBookingPolicy.truckCapacityTons("Isuzu 5 Ton") ?: 0.0, 0.0)
-        assertEquals(10.0, CustomerBookingPolicy.truckCapacityTons("Dry Cargo") ?: 0.0, 0.0)
-        assertEquals(30.0, CustomerBookingPolicy.truckCapacityTons("Truck 30 Ton") ?: 0.0, 0.0)
+    @Test fun selectedTruckCapacityMatchesRootCustomerPortal() {
+        val expected = mapOf(
+            "Pickup" to 3.0,
+            "Van" to 5.0,
+            "Isuzu 5 Ton" to 5.0,
+            "Dry Cargo" to 10.0,
+            "Refrigerated" to 15.0,
+            "Truck 22 Ton" to 22.0,
+            "Truck 25 Ton" to 25.0,
+            "Truck 30 Ton" to 30.0,
+            "Trailer" to 45.0,
+        )
+        expected.forEach { (vehicle, capacity) ->
+            assertEquals(capacity, CustomerBookingPolicy.truckCapacityTons(vehicle) ?: 0.0, 0.0)
+        }
         CustomerBookingPolicy.requireWithinCapacity(5.0, "Isuzu 5 Ton")
         val failure = runCatching { CustomerBookingPolicy.requireWithinCapacity(5.01, "Isuzu 5 Ton") }.exceptionOrNull()
         assertTrue(failure is IllegalArgumentException)

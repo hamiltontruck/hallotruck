@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:paddingBottom="24dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/flow_quote_title" android:textColor="@color/hallo_navy" android:textSize="24sp" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/flow_quote_subtitle" android:textColor="@color/hallo_muted" android:textSize="13sp" />
+
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" app:cardCornerRadius="20dp">
+            <com.hallo.logistics.customer.CustomerLiveMapView android:id="@+id/flowQuoteMap" android:layout_width="match_parent" android:layout_height="260dp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                <TextView android:id="@+id/flowQuoteRoute" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="17sp" android:textStyle="bold" />
+                <TextView android:id="@+id/flowQuoteDetails" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:lineSpacingExtra="3dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
+                <TextView android:id="@+id/flowQuoteTotal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="@color/auth_blue" android:textSize="27sp" android:textStyle="bold" />
+                <ProgressBar android:id="@+id/flowQuoteProgress" android:layout_width="30dp" android:layout_height="30dp" android:layout_gravity="center_horizontal" android:layout_marginTop="12dp" android:visibility="gone" />
+                <TextView android:id="@+id/flowQuoteError" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textColor="@color/hallo_danger" android:textSize="13sp" android:visibility="gone" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/flowQuoteRetry" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="50dp" android:layout_marginTop="10dp" android:text="@string/retry" android:visibility="gone" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowQuoteBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:text="@string/flow_back_truck" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowQuoteNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:enabled="false" android:text="@string/flow_review_order" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

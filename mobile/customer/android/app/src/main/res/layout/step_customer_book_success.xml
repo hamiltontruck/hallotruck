@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:paddingBottom="24dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_horizontal" android:orientation="vertical" android:padding="20dp">
+        <TextView android:layout_width="82dp" android:layout_height="82dp" android:background="@color/hallo_navy_soft" android:gravity="center" android:text="✓" android:textColor="@color/auth_blue" android:textSize="44sp" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:gravity="center" android:text="@string/flow_success_title" android:textColor="@color/hallo_navy" android:textSize="26sp" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:gravity="center" android:text="@string/flow_success_subtitle" android:textColor="@color/hallo_muted" android:textSize="14sp" />
+
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.Hallo.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <TextView android:id="@+id/flowSuccessOrder" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="18sp" android:textStyle="bold" />
+                <TextView android:id="@+id/flowSuccessRoute" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
+                <TextView android:id="@+id/flowSuccessTruck" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
+                <TextView android:id="@+id/flowSuccessTotal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textColor="@color/auth_blue" android:textSize="24sp" android:textStyle="bold" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton android:id="@+id/flowSuccessViewOrder" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="16dp" android:text="@string/flow_view_order" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/flowSuccessAnother" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:text="@string/flow_create_another" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

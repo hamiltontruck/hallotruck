@@ -9,6 +9,16 @@ object CustomerAuthPolicy {
         "Cargo load exceeds the selected truck capacity",
         "Payment receipt is not available",
         "Customer order was not found",
+        "Place was not found in the HALLO operating region",
+        "Pickup and drop-off must be different places",
+        "Truck routing is temporarily unavailable",
+        "Truck routing service is temporarily unavailable",
+        "No safe truck route could be calculated for those places",
+        "No truck route was found between those places",
+        "Truck routing returned an invalid route",
+        "Transport quote is temporarily unavailable",
+        "Quote calculation returned no result",
+        "Quote total is invalid",
     )
 
     fun validateSignIn(email: String, password: String): String? {
@@ -46,7 +56,7 @@ object CustomerAuthPolicy {
 
     fun safeMessage(error: Throwable): String {
         val direct = error.message?.trim().orEmpty()
-        if (direct in safeLocalMessages) return direct
+        if (direct in safeLocalMessages) return tr(direct)
 
         val text = generateSequence(error) { it.cause }
             .mapNotNull { it.message }
@@ -70,10 +80,24 @@ object CustomerAuthPolicy {
                 tr("This account is not authorized for HALLO Customer")
             "pin must be exactly 6 digits" in text ->
                 tr("PIN must be exactly 6 digits")
+            "pin numbers do not match" in text ->
+                tr("PIN numbers do not match")
+            "valid email address" in text ->
+                tr("Enter a valid email address")
             "full name" in text ->
                 tr("Enter your full name")
             "valid ethiopian" in text ->
                 tr("Enter a valid Ethiopian 07/09 mobile number")
+            "place was not found" in text ->
+                tr("Place was not found in the HALLO operating region")
+            "pickup and drop-off must be different" in text ->
+                tr("Pickup and drop-off must be different places")
+            "no safe truck route" in text || "no truck route was found" in text || "route_not_found" in text ->
+                tr("No safe truck route could be calculated for those places")
+            "truck routing" in text || "routing_unavailable" in text ->
+                tr("Truck routing is temporarily unavailable")
+            "quote calculation returned no result" in text || "quote total is invalid" in text || "transport quote" in text ->
+                tr("Transport quote is temporarily unavailable")
             else -> tr("Customer request failed. Please try again")
         }
     }
@@ -97,6 +121,15 @@ object CustomerAuthPolicy {
             "Network problem. Check your connection and try again" -> "Rakkoo interneetii. Walqunnamtii kee ilaalii irra deebi'ii yaali"
             "Your session expired. Please sign in again" -> "Yeroon seensaa kee dhumeera. Irra deebi'ii seeni"
             "This account is not authorized for HALLO Customer" -> "Herregni kun HALLO Customer fayyadamuuf hayyamama hin qabu"
+            "Enter cargo weight" -> "Ulfaatina fe'umsaa galchi"
+            "Cargo load exceeds the selected truck capacity" -> "Fe'umsi dandeettii konkolaataa filatamee caala"
+            "Payment receipt is not available" -> "Ragaan kaffaltii hin jiru"
+            "Customer order was not found" -> "Ajajni Customer hin argamne"
+            "Place was not found in the HALLO operating region" -> "Bakki sun naannoo hojii HALLO keessatti hin argamne"
+            "Pickup and drop-off must be different places" -> "Bakki fe'umsaa fi bakka buusaa adda ta'uu qabu"
+            "Truck routing is temporarily unavailable", "Truck routing service is temporarily unavailable", "Truck routing returned an invalid route" -> "Tajaajilli daandii konkolaataa yeroo ammaa hin argamu. Irra deebi'ii yaali"
+            "No safe truck route could be calculated for those places", "No truck route was found between those places" -> "Bakka lamaan kana gidduutti daandii konkolaataa nageenya qabu shallaguun hin danda'amne"
+            "Transport quote is temporarily unavailable", "Quote calculation returned no result", "Quote total is invalid" -> "Gatiin geejjibaa yeroo ammaa shallagamuu hin dandeenye. Irra deebi'ii yaali"
             "Customer request failed. Please try again" -> "Gaaffiin Customer hin milkoofne. Irra deebi'ii yaali"
             else -> english
         }
@@ -118,6 +151,15 @@ object CustomerAuthPolicy {
             "Network problem. Check your connection and try again" -> "የኔትወርክ ችግር አለ። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ"
             "Your session expired. Please sign in again" -> "የመግቢያ ጊዜዎ አብቅቷል። እንደገና ይግቡ"
             "This account is not authorized for HALLO Customer" -> "ይህ መለያ HALLO Customer ለመጠቀም አልተፈቀደለትም"
+            "Enter cargo weight" -> "የጭነት ክብደት ያስገቡ"
+            "Cargo load exceeds the selected truck capacity" -> "ጭነቱ የተመረጠውን መኪና አቅም ይበልጣል"
+            "Payment receipt is not available" -> "የክፍያ ደረሰኝ የለም"
+            "Customer order was not found" -> "የCustomer ትዕዛዝ አልተገኘም"
+            "Place was not found in the HALLO operating region" -> "ቦታው በHALLO የስራ ክልል ውስጥ አልተገኘም"
+            "Pickup and drop-off must be different places" -> "መጫኛ እና መድረሻ ቦታዎች የተለያዩ መሆን አለባቸው"
+            "Truck routing is temporarily unavailable", "Truck routing service is temporarily unavailable", "Truck routing returned an invalid route" -> "የጭነት መኪና መንገድ አገልግሎት ለጊዜው አይገኝም። እንደገና ይሞክሩ"
+            "No safe truck route could be calculated for those places", "No truck route was found between those places" -> "በእነዚህ ቦታዎች መካከል ደህንነቱ የተጠበቀ የጭነት መኪና መንገድ ማስላት አልተቻለም"
+            "Transport quote is temporarily unavailable", "Quote calculation returned no result", "Quote total is invalid" -> "የመጓጓዣ ዋጋ ለጊዜው ማስላት አልተቻለም። እንደገና ይሞክሩ"
             "Customer request failed. Please try again" -> "የCustomer ጥያቄው አልተሳካም። እንደገና ይሞክሩ"
             else -> english
         }

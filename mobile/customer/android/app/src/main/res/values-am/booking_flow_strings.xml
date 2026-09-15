@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="flow_route">መንገድ</string><string name="flow_cargo">ጭነት</string><string name="flow_truck">መኪና</string><string name="flow_quote">ዋጋ</string><string name="flow_review">ግምገማ</string>
+    <string name="flow_route_title">መንገድ</string><string name="flow_route_subtitle">መነሻና መድረሻ ቦታን በቀጥታ ካርታ ላይ ይምረጡ።</string><string name="flow_route_hint">ለመቀጠል ሁለቱንም ቦታዎች ይምረጡ።</string><string name="flow_next_cargo">ቀጣይ፦ ጭነት</string>
+    <string name="flow_cargo_title">የጭነት ዝርዝር</string><string name="flow_cargo_subtitle">ምን እየጫኑ እንደሆነና እንዴት እንደታሸገ ያስገቡ።</string><string name="flow_cargo_notes">የጭነት መግለጫ / ልዩ መስፈርቶች (አማራጭ)</string><string name="flow_back_route">መንገድ</string><string name="flow_next_truck">ቀጣይ፦ መኪና</string>
+    <string name="flow_truck_title">መኪና ይምረጡ</string><string name="flow_truck_subtitle">ይህን ጭነት በደህና የሚሸከም መኪና ይምረጡ።</string><string name="flow_back_cargo">ጭነት</string><string name="flow_calculate_quote">ዋጋ አስላ</string>
+    <string name="flow_quote_title">ዋጋዎ</string><string name="flow_quote_subtitle">ርቀትና ዋጋ ከHALLO ደህንነታማ backend ይመጣሉ።</string><string name="flow_back_truck">መኪና</string><string name="flow_review_order">ትዕዛዝ ይገምግሙ</string>
+    <string name="flow_review_title">ትዕዛዝ ይገምግሙ</string><string name="flow_review_subtitle">መንገድ፣ ጭነት፣ መኪና እና የክፍያ ዘዴ ያረጋግጡ።</string><string name="flow_review_server_note">ትዕዛዙ ሲፈጠር server መንገድና ዋጋን እንደገና ያረጋግጣል።</string><string name="flow_back_quote">ዋጋ</string><string name="flow_confirm_booking">ትዕዛዙን ያረጋግጡ</string>
+    <string name="flow_success_title">ትዕዛዝ ተረጋግጧል!</string><string name="flow_success_subtitle">ትዕዛዝዎ በተሳካ ሁኔታ ተፈጥሯል።</string><string name="flow_view_order">ትዕዛዝ ይመልከቱ</string><string name="flow_create_another">ሌላ ትዕዛዝ ይፍጠሩ</string>
+    <string name="flow_route_required">መነሻና መድረሻን ከቦታ ምርጫዎች ይምረጡ።</string><string name="flow_cargo_summary">%1$s · %2$s · %3$s</string><string name="flow_route_line">%1$s → %2$s</string><string name="flow_quote_details">%1$s · %2$s\n%3$s · %4$s</string><string name="flow_total_etb">ጠቅላላ  ETB %1$s</string><string name="flow_order_number">ትዕዛዝ %1$s</string>
+</resources>

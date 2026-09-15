@@ -4,7 +4,9 @@ import java.time.Duration
 import java.time.Instant
 
 object CustomerPolicy {
-    private val cancellable = setOf("quoted", "placed")
+    // Matches the production Customer Portal cancellation presentation. The authoritative
+    // customer_cancel_order RPC/RLS still decides whether a requested cancellation is allowed.
+    private val cancellable = setOf("quoted", "placed", "accepted", "in_transit")
     private val assignmentVisible = setOf("assigned", "accepted", "in_transit")
     private val trackable = assignmentVisible + "delivered"
 
