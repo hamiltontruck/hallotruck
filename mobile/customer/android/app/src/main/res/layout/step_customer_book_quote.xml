@@ -26,8 +26,8 @@
         </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowQuoteBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:text="@string/flow_back_truck" />
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowQuoteNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:enabled="false" android:text="@string/flow_review_order" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowQuoteBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:maxLines="1" android:text="@string/flow_back_truck" android:textSize="13sp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowQuoteNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:enabled="false" android:maxLines="1" android:text="@string/flow_review_order" android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
