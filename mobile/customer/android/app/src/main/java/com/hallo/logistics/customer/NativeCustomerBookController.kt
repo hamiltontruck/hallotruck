@@ -1,6 +1,5 @@
 package com.hallo.logistics.customer
 
-import android.content.res.ColorStateList
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
@@ -54,6 +53,7 @@ class NativeCustomerBookController(
     private var pickupSuggestions: List<CustomerPlace> = emptyList()
     private var dropoffSuggestions: List<CustomerPlace> = emptyList()
     private var suppressTextCallbacks = false
+    private var calculationRequested = false
 
     init {
         configureDropdowns()
@@ -78,55 +78,92 @@ class NativeCustomerBookController(
         pickupLayout.error = state.placeSearchMessage.takeIf { pickup.hasFocus() }
         dropoffLayout.error = state.placeSearchMessage.takeIf { dropoff.hasFocus() }
         map.showBooking(state.selectedPickup, state.selectedDropoff, state.route)
-
-        val quote = state.quote
-        val route = state.route
-        quoteText.text = if (quote != null && route != null) {
-            buildString {
-                append(route.pickup.label).append("\n→ ").append(route.dropoff.label)
-                append("\n").append(selectedVehicle.value)
-                append(" · ").append(formatDistance(route.distanceKm))
-                append(" · ").append(activity.getString(R.string.minutes_short, route.durationMinutes))
-                append("\n").append(formatTons(quote.cargoTons))
-                append(" · ETB ").append(number(quote.totalEtb))
-            }
-        } else {
-            activity.getString(R.string.secure_quote_placeholder)
-        }
+        renderQuoteState(state)
 
         val validation = validateDraft()
         calculate.isEnabled = !state.busy && pickup.text.isNotBlank() && dropoff.text.isNotBlank() && validation == null
-        review.isEnabled = !state.busy && quote != null && route != null && validation == null
+        review.isEnabled = !state.busy && state.quote != null && state.route != null && validation == null
         updateLoadSummary()
     }
 
     fun setCurrentPickup(place: CustomerPlace) {
+        calculationRequested = false
         replaceText(pickup, place.label)
         viewModel.selectPlace(place, pickup = true)
     }
 
+    private fun renderQuoteState(state: CustomerUiState) {
+        val quote = state.quote
+        val route = state.route
+        val danger = calculationRequested && !state.busy && quote == null
+        quoteText.setTextColor(activity.getColor(if (danger) R.color.hallo_danger else R.color.hallo_text))
+        quoteText.text = when {
+            quote != null && route != null -> {
+                calculationRequested = false
+                buildString {
+                    append(route.pickup.label).append("\n→ ").append(route.dropoff.label)
+                    append("\n").append(selectedVehicle.value)
+                    append(" · ").append(formatDistance(route.distanceKm))
+                    append(" · ").append(activity.getString(R.string.minutes_short, route.durationMinutes))
+                    append("\n").append(formatTons(quote.cargoTons))
+                    append(" · ETB ").append(number(quote.totalEtb))
+                }
+            }
+            calculationRequested && state.busy && route == null -> activity.getString(R.string.route_calculating)
+            calculationRequested && route != null -> buildString {
+                append(activity.getString(
+                    R.string.native_route_only_summary,
+                    route.pickup.label,
+                    route.dropoff.label,
+                    formatDistance(route.distanceKm),
+                    activity.getString(R.string.minutes_short, route.durationMinutes),
+                ))
+                if (state.message.isNotBlank()) append("\n\n").append(state.message)
+            }
+            calculationRequested && !state.busy -> state.message.ifBlank { activity.getString(R.string.native_route_failed) }
+            else -> activity.getString(R.string.secure_quote_placeholder)
+        }
+    }
+
     private fun bindActions() {
         pickup.doAfterTextChanged { value ->
-            if (!suppressTextCallbacks) viewModel.placeInputChanged(value?.toString().orEmpty(), pickup = true)
+            if (!suppressTextCallbacks) {
+                calculationRequested = false
+                viewModel.placeInputChanged(value?.toString().orEmpty(), pickup = true)
+            }
         }
         dropoff.doAfterTextChanged { value ->
-            if (!suppressTextCallbacks) viewModel.placeInputChanged(value?.toString().orEmpty(), pickup = false)
+            if (!suppressTextCallbacks) {
+                calculationRequested = false
+                viewModel.placeInputChanged(value?.toString().orEmpty(), pickup = false)
+            }
         }
         quantity.doAfterTextChanged {
+            calculationRequested = false
             viewModel.bookingInputChanged()
             updateLoadSummary()
         }
-        notes.doAfterTextChanged { viewModel.bookingInputChanged() }
+        notes.doAfterTextChanged { updateLoadSummary() }
 
         pickup.setOnItemClickListener { _, _, position, _ ->
-            pickupSuggestions.getOrNull(position)?.let { viewModel.selectPlace(it, pickup = true) }
+            pickupSuggestions.getOrNull(position)?.let {
+                calculationRequested = false
+                viewModel.selectPlace(it, pickup = true)
+            }
         }
         dropoff.setOnItemClickListener { _, _, position, _ ->
-            dropoffSuggestions.getOrNull(position)?.let { viewModel.selectPlace(it, pickup = false) }
+            dropoffSuggestions.getOrNull(position)?.let {
+                calculationRequested = false
+                viewModel.selectPlace(it, pickup = false)
+            }
         }
 
-        root.findViewById<MaterialButton>(R.id.nativeBookMyLocation).setOnClickListener { requestMyLocation() }
+        root.findViewById<MaterialButton>(R.id.nativeBookMyLocation).setOnClickListener {
+            calculationRequested = false
+            requestMyLocation()
+        }
         root.findViewById<MaterialButton>(R.id.nativeBookSwap).setOnClickListener {
+            calculationRequested = false
             val oldPickup = pickup.text.toString()
             val oldDropoff = dropoff.text.toString()
             replaceText(pickup, oldDropoff)
@@ -134,6 +171,7 @@ class NativeCustomerBookController(
             viewModel.swapRoute()
         }
         root.findViewById<MaterialButton>(R.id.nativeBookReset).setOnClickListener {
+            calculationRequested = false
             replaceText(pickup, "")
             replaceText(dropoff, "")
             quantity.setText("")
@@ -147,6 +185,9 @@ class NativeCustomerBookController(
                 showError(error)
                 return@setOnClickListener
             }
+            calculationRequested = true
+            quoteText.setTextColor(activity.getColor(R.color.hallo_muted))
+            quoteText.text = activity.getString(R.string.route_calculating)
             viewModel.calculateAutomaticRoute(
                 pickup.text.toString(),
                 dropoff.text.toString(),
@@ -158,9 +199,20 @@ class NativeCustomerBookController(
     }
 
     private fun configureDropdowns() {
-        bindOptions(category, categories, selectedCategory) { selectedCategory = it; viewModel.bookingInputChanged() }
-        bindOptions(packaging, packagingTypes, selectedPackaging) { selectedPackaging = it; viewModel.bookingInputChanged() }
-        bindOptions(unit, units, selectedUnit) { selectedUnit = it; viewModel.bookingInputChanged(); updateLoadSummary() }
+        bindOptions(category, categories, selectedCategory) {
+            selectedCategory = it
+            updateLoadSummary()
+        }
+        bindOptions(packaging, packagingTypes, selectedPackaging) {
+            selectedPackaging = it
+            updateLoadSummary()
+        }
+        bindOptions(unit, units, selectedUnit) {
+            selectedUnit = it
+            calculationRequested = false
+            viewModel.bookingInputChanged()
+            updateLoadSummary()
+        }
         bindOptions(payment, paymentMethods, selectedPayment) { selectedPayment = it }
     }
 
@@ -170,11 +222,16 @@ class NativeCustomerBookController(
         selected: Option,
         onSelected: (Option) -> Unit,
     ) {
-        val labels = values.map { activity.getString(it.labelRes) }
+        fun label(option: Option) = activity.getString(option.labelRes)
+        val labels = values.map(::label)
+        view.threshold = 0
         view.setAdapter(ArrayAdapter(activity, android.R.layout.simple_dropdown_item_1line, labels))
-        view.setText(activity.getString(selected.labelRes), false)
+        view.setText(label(selected), false)
         view.setOnItemClickListener { _, _, position, _ ->
-            values.getOrNull(position)?.let(onSelected)
+            values.getOrNull(position)?.let { option ->
+                view.setText(label(option), false)
+                onSelected(option)
+            }
         }
     }
 
@@ -193,6 +250,7 @@ class NativeCustomerBookController(
             item.root.setOnClickListener {
                 if (selectedVehicle.value != truck.value) {
                     selectedVehicle = truck
+                    calculationRequested = false
                     viewModel.bookingInputChanged()
                     renderTruckOptions()
                     updateLoadSummary()
