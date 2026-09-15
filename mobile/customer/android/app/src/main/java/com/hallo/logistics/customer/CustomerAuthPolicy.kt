@@ -46,7 +46,7 @@ object CustomerAuthPolicy {
 
     fun safeMessage(error: Throwable): String {
         val direct = error.message?.trim().orEmpty()
-        if (direct in safeLocalMessages) return direct
+        if (direct in safeLocalMessages) return tr(direct)
 
         val text = generateSequence(error) { it.cause }
             .mapNotNull { it.message }
@@ -70,6 +70,10 @@ object CustomerAuthPolicy {
                 tr("This account is not authorized for HALLO Customer")
             "pin must be exactly 6 digits" in text ->
                 tr("PIN must be exactly 6 digits")
+            "pin numbers do not match" in text ->
+                tr("PIN numbers do not match")
+            "valid email address" in text ->
+                tr("Enter a valid email address")
             "full name" in text ->
                 tr("Enter your full name")
             "valid ethiopian" in text ->
@@ -97,6 +101,10 @@ object CustomerAuthPolicy {
             "Network problem. Check your connection and try again" -> "Rakkoo interneetii. Walqunnamtii kee ilaalii irra deebi'ii yaali"
             "Your session expired. Please sign in again" -> "Yeroon seensaa kee dhumeera. Irra deebi'ii seeni"
             "This account is not authorized for HALLO Customer" -> "Herregni kun HALLO Customer fayyadamuuf hayyamama hin qabu"
+            "Enter cargo weight" -> "Ulfaatina fe'umsaa galchi"
+            "Cargo load exceeds the selected truck capacity" -> "Fe'umsi dandeettii konkolaataa filatamee caala"
+            "Payment receipt is not available" -> "Ragaan kaffaltii hin jiru"
+            "Customer order was not found" -> "Ajajni Customer hin argamne"
             "Customer request failed. Please try again" -> "Gaaffiin Customer hin milkoofne. Irra deebi'ii yaali"
             else -> english
         }
@@ -118,6 +126,10 @@ object CustomerAuthPolicy {
             "Network problem. Check your connection and try again" -> "የኔትወርክ ችግር አለ። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ"
             "Your session expired. Please sign in again" -> "የመግቢያ ጊዜዎ አብቅቷል። እንደገና ይግቡ"
             "This account is not authorized for HALLO Customer" -> "ይህ መለያ HALLO Customer ለመጠቀም አልተፈቀደለትም"
+            "Enter cargo weight" -> "የጭነት ክብደት ያስገቡ"
+            "Cargo load exceeds the selected truck capacity" -> "ጭነቱ የተመረጠውን መኪና አቅም ይበልጣል"
+            "Payment receipt is not available" -> "የክፍያ ደረሰኝ የለም"
+            "Customer order was not found" -> "የCustomer ትዕዛዝ አልተገኘም"
             "Customer request failed. Please try again" -> "የCustomer ጥያቄው አልተሳካም። እንደገና ይሞክሩ"
             else -> english
         }
