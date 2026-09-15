@@ -34,13 +34,13 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="LOCATION &amp; PRIVACY" android:textColor="@color/hallo_gold" android:textSize="10sp" android:textStyle="bold" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Share location only when you choose" android:textColor="@color/hallo_navy" android:textSize="18sp" android:textStyle="bold" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Your device location can start booking near you. It is kept only for this app session and is not written to your customer profile." android:textColor="@color/hallo_muted" android:textSize="12sp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/native_location_privacy_eyebrow" android:textColor="@color/hallo_gold" android:textSize="10sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/native_location_privacy_title" android:textColor="@color/hallo_navy" android:textSize="18sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/native_location_privacy_description" android:textColor="@color/hallo_muted" android:textSize="12sp" />
                 <TextView android:id="@+id/nativeProfileLocationStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textColor="@color/hallo_muted" android:textSize="12sp" />
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="horizontal">
-                    <com.google.android.material.button.MaterialButton android:id="@+id/nativeProfileShareLocation" style="@style/Widget.Hallo.Primary" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="Share current location" android:textSize="11sp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/nativeProfileClearLocation" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="50dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="Clear" android:textSize="11sp" android:visibility="gone" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/nativeProfileShareLocation" style="@style/Widget.Hallo.Primary" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="@string/native_share_current_location" android:textSize="11sp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/nativeProfileClearLocation" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="50dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="@string/native_clear" android:textSize="11sp" android:visibility="gone" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -51,9 +51,9 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ACCOUNT SECURITY" android:textColor="@color/hallo_gold" android:textSize="10sp" android:textStyle="bold" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Secure customer session" android:textColor="@color/hallo_navy" android:textSize="18sp" android:textStyle="bold" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Profile updates use the signed-in customer identity. Sign out before giving this device to another person." android:textColor="@color/hallo_muted" android:textSize="12sp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/native_account_security_eyebrow" android:textColor="@color/hallo_gold" android:textSize="10sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/native_account_security_title" android:textColor="@color/hallo_navy" android:textSize="18sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/native_account_security_description" android:textColor="@color/hallo_muted" android:textSize="12sp" />
                 <com.google.android.material.button.MaterialButton android:id="@+id/nativeProfileSignOut" style="@style/Widget.Hallo.Secondary" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="12dp" android:text="@string/sign_out" android:textColor="@color/hallo_danger" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
