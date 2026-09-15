@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+    <TextView style="@style/TextAppearance.HalloDriver.PageTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/driver_home" />
+    <TextView style="@style/TextAppearance.HalloDriver.PageSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/workday_glance" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="horizontal">
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.MetricCard" android:layout_width="0dp" android:layout_height="96dp" android:layout_marginEnd="4dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                <TextView android:id="@+id/homeAvailableJobs" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/hallo_navy" android:textSize="22sp" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:maxLines="2" android:text="@string/available_jobs" android:textColor="@color/hallo_text_muted" android:textSize="11sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.MetricCard" android:layout_width="0dp" android:layout_height="96dp" android:layout_marginStart="4dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                <TextView android:id="@+id/homeActiveTrip" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:gravity="center" android:maxLines="2" android:text="—" android:textColor="@color/hallo_navy" android:textSize="15sp" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/active_trip" android:textColor="@color/hallo_text_muted" android:textSize="11sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.ContentCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="64dp" android:orientation="horizontal" android:paddingHorizontal="14dp" android:paddingVertical="10dp">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/documents" android:textColor="@color/hallo_text" android:textSize="13sp" android:textStyle="bold" />
+            <TextView android:id="@+id/homeDocuments" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_status_chip" android:gravity="center" android:minWidth="54dp" android:paddingHorizontal="10dp" android:paddingVertical="6dp" android:text="0/0" android:textColor="@color/hallo_success" android:textSize="13sp" android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+    <TextView style="@style/TextAppearance.HalloDriver.SectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="@string/ready_to_move" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnFindJobs" style="@style/Widget.HalloDriver.PrimaryButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_marginEnd="4dp" android:layout_weight="1" android:text="@string/available_jobs" android:textAllCaps="false" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnActiveTrip" style="@style/Widget.HalloDriver.SecondaryButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_marginStart="4dp" android:layout_weight="1" android:text="@string/active_trip" android:textAllCaps="false" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnWallet" style="@style/Widget.HalloDriver.SecondaryButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_marginEnd="4dp" android:layout_weight="1" android:text="@string/earnings" android:textAllCaps="false" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnDocuments" style="@style/Widget.HalloDriver.SecondaryButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_marginStart="4dp" android:layout_weight="1" android:text="@string/documents" android:textAllCaps="false" />
+    </LinearLayout>
+    <TextView style="@style/TextAppearance.HalloDriver.SectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="@string/active_trip" />
+    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.DarkCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+        <TextView android:id="@+id/homeAssignment" android:layout_width="match_parent" android:layout_height="wrap_content" android:lineSpacingExtra="4dp" android:minHeight="96dp" android:padding="16dp" android:textColor="@android:color/white" android:textSize="14sp" />
+    </com.google.android.material.card.MaterialCardView>
+    <TextView style="@style/TextAppearance.HalloDriver.SectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="@string/earnings" />
+    <com.google.android.material.card.MaterialCardView style="@style/Widget.HalloDriver.ContentCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+        <TextView android:id="@+id/homeEarnings" android:layout_width="match_parent" android:layout_height="wrap_content" android:lineSpacingExtra="4dp" android:minHeight="88dp" android:padding="16dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
+    </com.google.android.material.card.MaterialCardView>
+    <com.google.android.material.button.MaterialButton android:id="@+id/refresh" style="@style/Widget.HalloDriver.SecondaryButton" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="12dp" android:text="@string/refresh_driver_data" android:textAllCaps="false" />
+</LinearLayout>
