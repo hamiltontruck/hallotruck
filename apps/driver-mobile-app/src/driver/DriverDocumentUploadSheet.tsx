@@ -124,14 +124,14 @@ export function DriverDocumentUploadSheet({
           <span className="mt-2 break-all text-[10px] leading-4 text-halo-muted">{selectedSummary || (photoOnly ? "JPG, PNG, WebP, HEIC/HEIF · max 10 MB" : "JPG, PNG, WebP, HEIC/HEIF, PDF · max 10 MB")}</span>
         </button>
 
-        {supportsExpiry && <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">Expiry date — optional</span><input type="date" value={expiryDate} disabled={submitting} onChange={(event) => setExpiryDate(event.target.value)} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" /></label>}
+        {supportsExpiry && <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">Expiry date — required</span><input required type="date" value={expiryDate} disabled={submitting} onChange={(event) => setExpiryDate(event.target.value)} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" /></label>}
 
         <div className="rounded-2xl bg-halo-soft p-3 text-[10px] leading-5 text-halo-muted"><strong className="text-halo-navy">Security:</strong> Mobile app file kana verify hin godhu. Submission hundi Pending ta'ee Admin/CEO review eeggata; service-role key browser keessa hin jiru.</div>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         <button type="button" onClick={onClose} disabled={submitting} className="min-h-13 rounded-2xl border border-halo-line bg-white px-4 text-sm font-black text-halo-navy disabled:opacity-50">Dhiisi</button>
-        <button type="button" onClick={() => void submit()} disabled={submitting || !file} className="min-h-13 rounded-2xl bg-halo-blue px-4 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "Galchaa jira…" : currentRecord ? "Jijjiiri" : "Galchi"}</button>
+        <button type="button" onClick={() => void submit()} disabled={submitting || !file || (supportsExpiry && !expiryDate)} className="min-h-13 rounded-2xl bg-halo-blue px-4 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "Galchaa jira…" : currentRecord ? "Jijjiiri" : "Galchi"}</button>
       </div>
     </section>
   </div>;

@@ -30,19 +30,15 @@ type DocumentSpec = {
 const DRIVER_DOCS: DocumentSpec[] = [
   { key: "driver_photo", label: "Driver profile photo", help: "Clear recent face photo used for operations identification.", scope: "driver", photoOnly: true },
   { key: "license_front", label: "Driving license · front", help: "Front side of the current driving license.", scope: "driver", expiry: true },
-  { key: "license_back", label: "Driving license · back", help: "Back side of the same driving license.", scope: "driver", expiry: true },
-  { key: "national_id_front", label: "National ID · front", help: "Fayda / national identity card front side.", scope: "driver" },
+  { key: "license_back", label: "Driving license · back", help: "Back side of the same driving license.", scope: "driver" },
+  { key: "national_id_front", label: "National ID · front", help: "Fayda / national identity card front side.", scope: "driver", expiry: true },
   { key: "national_id_back", label: "National ID · back", help: "Fayda / national identity card back side.", scope: "driver" },
 ];
 
 const TRUCK_DOCS: DocumentSpec[] = [
   { key: "vehicle_registration", label: "Vehicle registration", help: "Registration booklet/card as PDF or clear scan/photo.", scope: "truck" },
   { key: "truck_front", label: "Truck photo · front", help: "Front photo with the plate clearly visible.", scope: "truck", photoOnly: true },
-  { key: "insurance", label: "Insurance certificate", help: "Current insurance certificate.", scope: "truck", expiry: true },
-  { key: "transport_permit", label: "Transport permit", help: "Commercial transport permit or operating certificate.", scope: "truck", expiry: true },
-  { key: "truck_back", label: "Truck photo · back", help: "Rear photo with the plate clearly visible.", scope: "truck", photoOnly: true },
   { key: "truck_side", label: "Truck photo · side", help: "Full side profile of the vehicle.", scope: "truck", photoOnly: true },
-  { key: "truck_loading_area", label: "Loading area photo", help: "Clear cargo/loading-bed or container interior photo.", scope: "truck", photoOnly: true },
 ];
 
 const statusClass: Record<string, string> = {
@@ -58,6 +54,33 @@ const statusDotClass: Record<string, string> = {
   rejected: "bg-route shadow-[0_0_18px_rgba(239,98,55,.5)]",
   missing: "bg-white/25",
 };
+
+function compactVehicleCopy(language: string, linked: boolean) {
+  const copy: Record<string, readonly [string, string]> = {
+    en: [
+      "Vehicle registration plus front and side truck photos are linked to this plate number.",
+      "Upload vehicle registration plus clear front and side truck photos. These three vehicle files complete the eight-file verification set.",
+    ],
+    om: [
+      "Galmeen konkolaataa fi suuraaleen truck fuulduraa/cinaa plate kana waliin walqabatu.",
+      "Galmee konkolaataa, suuraa truck fuulduraa fi cinaa olkaa'i. Faayiloonni konkolaataa sadeen kun galmee dirqamaa 8 keessaa qaama dhumaa dha.",
+    ],
+    am: [
+      "የተሽከርካሪ ምዝገባ እና የጭነት መኪና የፊት/የጎን ፎቶዎች ከዚህ ሰሌዳ ጋር ተያይዘዋል።",
+      "የተሽከርካሪ ምዝገባ፣ ግልጽ የፊት እና የጎን ፎቶ ይጫኑ። እነዚህ 3 የተሽከርካሪ ፋይሎች 8ቱን አስፈላጊ ፋይሎች ያሟላሉ።",
+    ],
+    so: [
+      "Diiwaangelinta gaadhiga iyo sawirrada hore/dhinaca baabuurka waxay ku xiran yihiin taarikadan.",
+      "Soo geli diiwaangelinta gaadhiga iyo sawirro cad oo hore iyo dhinac ah. Saddexdan fayl waxay dhammeystiraan 8-da fayl ee waajibka ah.",
+    ],
+    ti: [
+      "ምዝገባ መኪናን ስእሊ ቅድሚት/ጎኒ ትራክን ምስዚ ታርጋ ዝተኣሳሰሩ እዮም።",
+      "ምዝገባ መኪና፣ ጽሩይ ስእሊ ቅድሚትን ጎንን ስቐል። እዞም 3 ፋይላት መኪና ነቶም 8 ኣድለይቲ ፋይላት ይምልኡ።",
+    ],
+  };
+  const selected = copy[language] ?? copy.en;
+  return linked ? selected[0] : selected[1];
+}
 
 export function Documents() {
   const { language } = useLanguage();
@@ -126,13 +149,19 @@ export function Documents() {
       setError(c.truckRequiredError);
       return;
     }
+    const existing = docsByKey.get(spec.key);
+    const expiryDate = spec.expiry ? (expiry[spec.key] ?? existing?.expiry_date ?? "").trim() : "";
+    if (spec.expiry && !expiryDate) {
+      setError(`${spec.label}: ${c.expiryDate} is required.`);
+      return;
+    }
     setBusyKey(spec.key); setError(""); setNotice("");
     try {
       await replaceVerificationDocument({
         documentKey: spec.key,
         file,
         truckId: spec.scope === "truck" ? data?.truck?.id : null,
-        expiryDate: spec.expiry ? expiry[spec.key] || null : null,
+        expiryDate: spec.expiry ? expiryDate : null,
       });
       const translated = (copy.docSpec as Record<string, readonly [string, string]>)[spec.key]?.[0] ?? spec.label;
       setNotice(`${translated} ${c.uploadedForReview}`);
@@ -226,7 +255,7 @@ export function Documents() {
         <form key={data?.truck?.id ?? "new-vehicle"} onSubmit={saveVehicle} className="relative overflow-hidden border border-asphalt/10 bg-white p-5 shadow-sm sm:p-6">
           <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber/10" />
           <SectionTitle eyebrow={c.currentVehicle} title={c.vehicleDetails} badge={data?.truck ? localStatus(data.truck.status, c) : c.inProgress} badgeClass={data?.truck?.status === "available" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber/30 bg-amber/10 text-amber-dim"} />
-          <p className="relative mt-3 text-xs leading-5 text-steel">{data?.truck ? c.linkedHelp : c.vehicleDetailsHelp}</p>
+          <p className="relative mt-3 text-xs leading-5 text-steel">{data?.truck ? compactVehicleCopy(language, true) : c.vehicleDetailsHelp}</p>
           <div className="relative mt-5 grid gap-4 sm:grid-cols-2">
             <Field name="plateNumber" label={c.plateNumber} defaultValue={data?.truck?.plate_number ?? ""} placeholder="3-A12345" />
             <label className="text-sm font-medium">{c.vehicleType}<select name="vehicleType" required defaultValue={data?.truck?.vehicle_type ?? ""} className="mt-2 block min-h-12 w-full border border-asphalt/15 bg-white px-4 py-3 font-normal outline-none transition focus:border-amber focus:ring-2 focus:ring-amber/10"><option value="" disabled>{c.chooseType}</option>{DRIVER_VEHICLE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
@@ -237,7 +266,7 @@ export function Documents() {
         </form>
       </section>
 
-      <p className="mt-6 border border-amber/25 bg-amber/10 p-4 text-sm leading-6 text-amber-dim">{c.vehicleUploadHelp}</p>
+      <p className="mt-6 border border-amber/25 bg-amber/10 p-4 text-sm leading-6 text-amber-dim">{compactVehicleCopy(language, false)}</p>
       <DocumentSection title={c.vehicleCompliance} eyebrow={c.truckDocsPhotos} specs={TRUCK_DOCS} docsByKey={docsByKey} expiry={expiry} setExpiry={setExpiry} busyKey={busyKey} onUpload={upload} truckLocked={!data?.truck} />
       <DocumentSection title={c.driverIdentity} eyebrow={c.personalVerification} specs={DRIVER_DOCS} docsByKey={docsByKey} expiry={expiry} setExpiry={setExpiry} busyKey={busyKey} onUpload={upload} />
 
@@ -295,6 +324,7 @@ function DocumentSection({ title, eyebrow, specs, docsByKey, expiry, setExpiry, 
         const doc = docsByKey.get(spec.key);
         const state = doc?.status ?? "missing";
         const [label, help] = translatedSpecs[spec.key] ?? [spec.label, spec.help];
+        const expiryValue = expiry[spec.key] ?? doc?.expiry_date ?? "";
         return <article key={spec.key} className="group relative bg-white p-5 transition hover:bg-[#fbfaf7] sm:p-6">
           <span className={`absolute inset-y-0 left-0 w-1 ${state === "verified" ? "bg-emerald-400" : state === "pending" ? "bg-amber" : state === "rejected" ? "bg-route" : "bg-asphalt/10"}`} />
           <div className="flex items-start justify-between gap-4">
@@ -311,11 +341,11 @@ function DocumentSection({ title, eyebrow, specs, docsByKey, expiry, setExpiry, 
             {doc.rejection_reason && <p className="mt-2 border-l-2 border-route pl-3 leading-5 text-route">{c.reviewNote}: {doc.rejection_reason}</p>}
           </div>}
 
-          {spec.expiry && <label className="mt-4 block text-xs font-medium text-steel">{c.expiryDate}<input type="date" value={expiry[spec.key] ?? doc?.expiry_date ?? ""} onChange={(event) => setExpiry((current) => ({ ...current, [spec.key]: event.target.value }))} className="mt-2 block w-full border border-asphalt/15 bg-white px-3 py-2.5 text-sm text-asphalt outline-none focus:border-amber" /></label>}
+          {spec.expiry && <label className="mt-4 block text-xs font-medium text-steel">{c.expiryDate} · required<input required type="date" value={expiryValue} onChange={(event) => setExpiry((current) => ({ ...current, [spec.key]: event.target.value }))} className="mt-2 block w-full border border-asphalt/15 bg-white px-3 py-2.5 text-sm text-asphalt outline-none focus:border-amber" /></label>}
 
-          <label className={`mt-4 flex min-h-12 items-center justify-center border px-4 py-3 text-sm font-semibold transition ${truckLocked ? "cursor-not-allowed border-asphalt/10 bg-[#f5f3ed] text-steel" : "cursor-pointer border-asphalt bg-asphalt text-white hover:border-amber hover:bg-line"}`}>
-            <input disabled={truckLocked || busyKey === spec.key} type="file" accept={spec.photoOnly ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,application/pdf"} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; void onUpload(spec, file); event.currentTarget.value = ""; }} />
-            {truckLocked ? c.truckAssignmentRequired : busyKey === spec.key ? c.uploading : doc ? c.replace : c.uploadReview}
+          <label className={`mt-4 flex min-h-12 items-center justify-center border px-4 py-3 text-sm font-semibold transition ${truckLocked || (spec.expiry && !expiryValue) ? "cursor-not-allowed border-asphalt/10 bg-[#f5f3ed] text-steel" : "cursor-pointer border-asphalt bg-asphalt text-white hover:border-amber hover:bg-line"}`}>
+            <input disabled={truckLocked || busyKey === spec.key || Boolean(spec.expiry && !expiryValue)} type="file" accept={spec.photoOnly ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,application/pdf"} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; void onUpload(spec, file); event.currentTarget.value = ""; }} />
+            {truckLocked ? c.truckAssignmentRequired : spec.expiry && !expiryValue ? c.expiryDate : busyKey === spec.key ? c.uploading : doc ? c.replace : c.uploadReview}
           </label>
           <p className="mt-2 font-mono text-[9px] tracking-wide text-steel">{spec.photoOnly ? "JPG / PNG / WebP" : "JPG / PNG / WebP / PDF"} · {c.max10}</p>
         </article>;
