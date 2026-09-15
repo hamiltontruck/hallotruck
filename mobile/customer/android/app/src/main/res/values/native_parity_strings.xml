@@ -46,5 +46,10 @@
     <string name="native_enter_positive_amount">Enter an amount greater than zero</string>
     <string name="native_amount_exceeds_remaining">Amount exceeds the remaining amount to submit</string>
     <string name="native_profile_invalid">Profile details are invalid.</string>
+    <string name="native_profile_name_required">Enter your full name.</string>
+    <string name="native_profile_phone_invalid">Phone must be 09xxxxxxxx or +2519xxxxxxxx.</string>
+    <string name="native_profile_email_invalid">Enter a valid email address.</string>
+    <string name="native_profile_type_invalid">Choose a valid customer type.</string>
+    <string name="native_profile_company_required">Company name is required for a business account.</string>
     <string name="native_chat_empty">Message your assigned driver about this order.</string>
 </resources>
