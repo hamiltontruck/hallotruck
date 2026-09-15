@@ -9,7 +9,10 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,12 +33,17 @@ class NativeCustomerProfileController(
     private val locationStatus = root.findViewById<TextView>(R.id.nativeProfileLocationStatus)
     private val shareLocation = root.findViewById<MaterialButton>(R.id.nativeProfileShareLocation)
     private val clearLocationButton = root.findViewById<MaterialButton>(R.id.nativeProfileClearLocation)
+    private val languageGroup = root.findViewById<MaterialButtonToggleGroup>(R.id.nativeProfileLanguages)
+    private val languageEn = root.findViewById<MaterialButton>(R.id.nativeProfileLanguageEn)
+    private val languageOr = root.findViewById<MaterialButton>(R.id.nativeProfileLanguageOr)
+    private val languageAm = root.findViewById<MaterialButton>(R.id.nativeProfileLanguageAm)
 
     init {
         edit.setOnClickListener { viewModel.state.value.profile?.let(::showEditDialog) }
         shareLocation.setOnClickListener { requestLocation() }
         clearLocationButton.setOnClickListener { clearLocation() }
         root.findViewById<MaterialButton>(R.id.nativeProfileSignOut).setOnClickListener { viewModel.signOut() }
+        configureLanguages()
     }
 
     fun render(state: CustomerUiState, location: CustomerPlace?) {
@@ -67,6 +75,29 @@ class NativeCustomerProfileController(
             )
         }
         clearLocationButton.visibility = if (location == null) View.GONE else View.VISIBLE
+    }
+
+    private fun configureLanguages() {
+        val current = CustomerLanguage.fromTag(activity.resources.configuration.locales[0]?.toLanguageTag())
+        languageGroup.check(
+            when (current) {
+                CustomerLanguage.EN -> languageEn.id
+                CustomerLanguage.OR -> languageOr.id
+                CustomerLanguage.AM -> languageAm.id
+            },
+        )
+        languageGroup.addOnButtonCheckedListener { _, checkedId, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            val requested = when (checkedId) {
+                languageOr.id -> CustomerLanguage.OR
+                languageAm.id -> CustomerLanguage.AM
+                else -> CustomerLanguage.EN
+            }
+            if (requested == CustomerLanguage.fromTag(activity.resources.configuration.locales[0]?.toLanguageTag())) {
+                return@addOnButtonCheckedListener
+            }
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(requested.tag))
+        }
     }
 
     private fun showEditDialog(profile: CustomerProfile) {
