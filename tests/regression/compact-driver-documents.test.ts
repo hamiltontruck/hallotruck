@@ -85,11 +85,13 @@ test("Driver Mobile TypeScript clients use five identity plus three vehicle file
   assert.doesNotMatch(driverMobileOnboarding, /\['insurance',/);
 });
 
-test("dispatch backend requires the compact eight-file set and preserves legacy evidence", () => {
+test("dispatch backend requires the compact eight-file set, preserves legacy evidence and keeps helper internal", () => {
   assert.match(dispatchMigration, /create or replace function public\.dispatch_documents_valid/);
   for (const key of ["driver_photo", "license_front", "license_back", "national_id_front", "national_id_back", "vehicle_registration", "truck_front", "truck_side"]) assert.match(dispatchMigration, new RegExp(`'${key}'`));
   for (const legacy of ["insurance", "transport_permit", "truck_back", "truck_loading_area"]) assert.doesNotMatch(dispatchMigration, new RegExp(`'${legacy}'`));
   assert.match(dispatchMigration, /required_key not in \('license_front', 'national_id_front'\)/);
   assert.doesNotMatch(dispatchMigration, /delete\s+from\s+public\.driver_verification_files/i);
-  assert.match(dispatchMigration, /grant execute on function public\.dispatch_documents_valid\(uuid, uuid\) to authenticated, service_role/);
+  assert.match(dispatchMigration, /revoke all on function public\.dispatch_documents_valid\(uuid, uuid\) from public, anon, authenticated/);
+  assert.match(dispatchMigration, /grant execute on function public\.dispatch_documents_valid\(uuid, uuid\) to service_role/);
+  assert.doesNotMatch(dispatchMigration, /grant execute on function public\.dispatch_documents_valid\(uuid, uuid\) to authenticated/);
 });
