@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
@@ -26,7 +27,7 @@
                 android:id="@+id/imgTruck"
                 android:layout_width="64dp"
                 android:layout_height="56dp"
-                android:contentDescription="Truck"
+                android:contentDescription="@null"
                 android:padding="10dp"
                 android:src="@drawable/ic_hallo_truck"
                 app:tint="@color/hallo_blue" />
@@ -44,10 +45,10 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="2"
-                    android:text="Adama → Addis Ababa"
                     android:textColor="@color/hallo_text"
                     android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    tools:text="Adama → Addis Ababa" />
 
                 <TextView
                     android:id="@+id/tvCargoInfo"
@@ -55,10 +56,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="Dry Cargo • 10 Ton • 95 km"
+                    android:maxLines="2"
                     android:textColor="@color/hallo_text_muted"
-                    android:textSize="12sp" />
+                    android:textSize="12sp"
+                    tools:text="Dry Cargo • Truck 22 Ton • 95 km" />
             </LinearLayout>
         </LinearLayout>
 
@@ -69,14 +70,15 @@
             android:gravity="bottom"
             android:orientation="horizontal">
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/tvRate"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trip Rate" android:textColor="@color/hallo_text_muted" android:textSize="11sp" />
-                <TextView android:id="@+id/tvRate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="1dp" android:text="ETB 28,500" android:textColor="@color/hallo_blue" android:textSize="17sp" android:textStyle="bold" />
-            </LinearLayout>
+                android:textColor="@color/hallo_blue"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                tools:text="ETB 28,500" />
 
             <TextView
                 android:id="@+id/tvPickupTime"
@@ -85,9 +87,9 @@
                 android:layout_marginStart="12dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:text="Pickup: Today, 2:00 PM"
                 android:textColor="@color/hallo_text_muted"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                tools:text="HT-2026-123456" />
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
@@ -96,8 +98,8 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginTop="12dp"
-            android:text="Accept Job"
             android:textAllCaps="false"
-            app:cornerRadius="12dp" />
+            app:cornerRadius="12dp"
+            tools:text="Choose truck & accept" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
