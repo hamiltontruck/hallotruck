@@ -7,12 +7,8 @@ export type VerificationDocumentKey =
   | "national_id_front"
   | "national_id_back"
   | "vehicle_registration"
-  | "insurance"
-  | "transport_permit"
   | "truck_front"
-  | "truck_back"
-  | "truck_side"
-  | "truck_loading_area";
+  | "truck_side";
 
 export type DriverProfileRecord = {
   id: string;
@@ -69,12 +65,8 @@ export const identityDocumentKeys: readonly VerificationDocumentKey[] = [
 
 export const vehicleDocumentKeys: readonly VerificationDocumentKey[] = [
   "vehicle_registration",
-  "insurance",
-  "transport_permit",
   "truck_front",
-  "truck_back",
   "truck_side",
-  "truck_loading_area",
 ];
 
 const documentKeySet = new Set<VerificationDocumentKey>([
