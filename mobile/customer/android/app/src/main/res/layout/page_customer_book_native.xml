@@ -32,11 +32,11 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <TextView android:id="@+id/nativeBookStepRoute" style="@style/Widget.Hallo.BookStep" android:text="1\n@string/flow_route" />
-            <TextView android:id="@+id/nativeBookStepCargo" style="@style/Widget.Hallo.BookStep" android:text="2\n@string/flow_cargo" />
-            <TextView android:id="@+id/nativeBookStepTruck" style="@style/Widget.Hallo.BookStep" android:text="3\n@string/flow_truck" />
-            <TextView android:id="@+id/nativeBookStepQuote" style="@style/Widget.Hallo.BookStep" android:text="4\n@string/flow_quote" />
-            <TextView android:id="@+id/nativeBookStepReview" style="@style/Widget.Hallo.BookStep" android:text="5\n@string/flow_review" />
+            <TextView android:id="@+id/nativeBookStepRoute" style="@style/Widget.Hallo.BookStep" android:text="1" />
+            <TextView android:id="@+id/nativeBookStepCargo" style="@style/Widget.Hallo.BookStep" android:text="2" />
+            <TextView android:id="@+id/nativeBookStepTruck" style="@style/Widget.Hallo.BookStep" android:text="3" />
+            <TextView android:id="@+id/nativeBookStepQuote" style="@style/Widget.Hallo.BookStep" android:text="4" />
+            <TextView android:id="@+id/nativeBookStepReview" style="@style/Widget.Hallo.BookStep" android:text="5" />
         </LinearLayout>
     </LinearLayout>
 
