@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/hallo_surface"
     android:clipToPadding="false"
     android:fillViewport="true"
     android:paddingBottom="24dp">
@@ -20,7 +21,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/hallo_navy"
-            android:textSize="28sp"
+            android:textSize="26sp"
             android:textStyle="bold" />
 
         <TextView
@@ -36,12 +37,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
-            app:cardCornerRadius="22dp">
+            app:cardCornerRadius="24dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/hallo_navy"
+                android:background="@color/hallo_blue"
                 android:orientation="vertical"
                 android:padding="20dp">
 
@@ -59,17 +61,20 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:lineSpacingExtra="2dp"
-                    android:textColor="#DCE7F7"
+                    android:textColor="#EAF2FF"
                     android:textSize="14sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/nativeHomeBook"
                     style="@style/Widget.Hallo.AuthPrimary"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:layout_marginTop="16dp"
                     android:text="@string/create_delivery_order"
-                    app:icon="@drawable/ic_hallo_truck" />
+                    app:backgroundTint="@android:color/white"
+                    app:icon="@drawable/ic_hallo_truck"
+                    app:iconTint="@color/hallo_blue"
+                    android:textColor="@color/hallo_blue" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -96,7 +101,7 @@
                 android:layout_weight="1">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical" android:padding="14dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/metric_orders" android:textColor="@color/hallo_muted" android:textSize="12sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/nativeMetricOrders" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_navy" android:textSize="26sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/nativeMetricOrders" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_blue" android:textSize="26sp" android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -108,7 +113,7 @@
                 android:layout_weight="1">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical" android:padding="14dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/metric_active" android:textColor="@color/hallo_muted" android:textSize="12sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/nativeMetricActive" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_navy" android:textSize="26sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/nativeMetricActive" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_blue" android:textSize="26sp" android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
@@ -127,7 +132,7 @@
                 android:layout_weight="1">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical" android:padding="14dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/metric_to_pay" android:textColor="@color/hallo_muted" android:textSize="12sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/nativeMetricToPay" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_navy" android:textSize="21sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/nativeMetricToPay" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_blue" android:textSize="21sp" android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -139,7 +144,7 @@
                 android:layout_weight="1">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical" android:padding="14dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/metric_delivered" android:textColor="@color/hallo_muted" android:textSize="12sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/nativeMetricDelivered" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_navy" android:textSize="26sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/nativeMetricDelivered" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/hallo_success" android:textSize="26sp" android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
