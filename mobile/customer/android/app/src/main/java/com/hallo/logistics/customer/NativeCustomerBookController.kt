@@ -24,14 +24,14 @@ class NativeCustomerBookController(
     private val viewModel: CustomerViewModel,
     private val requestMyLocation: () -> Unit,
 ) {
-    private enum class Step { ROUTE, TRUCK, CARGO, QUOTE, REVIEW, SUCCESS }
+    private enum class Step { ROUTE, CARGO, TRUCK, QUOTE, REVIEW, SUCCESS }
     private data class Option(val key: String, val englishLabel: String, val labelRes: Int)
     private data class Truck(val value: String, val capacity: Int, val imageRes: Int, val label: String)
 
     private val host = root.findViewById<FrameLayout>(R.id.nativeBookStepHost)
     private val indicators = listOf(
-        root.findViewById<TextView>(R.id.nativeBookStepRoute), root.findViewById(R.id.nativeBookStepTruck),
-        root.findViewById(R.id.nativeBookStepCargo), root.findViewById(R.id.nativeBookStepQuote),
+        root.findViewById<TextView>(R.id.nativeBookStepRoute), root.findViewById(R.id.nativeBookStepCargo),
+        root.findViewById<TextView>(R.id.nativeBookStepTruck), root.findViewById(R.id.nativeBookStepQuote),
         root.findViewById(R.id.nativeBookStepReview),
     )
     private var step = Step.ROUTE
@@ -74,7 +74,7 @@ class NativeCustomerBookController(
     }
 
     private fun setIndicatorLabels() {
-        val labels = listOf(R.string.flow_route, R.string.flow_truck, R.string.flow_cargo, R.string.flow_quote, R.string.flow_review)
+        val labels = listOf(R.string.flow_route, R.string.flow_cargo, R.string.flow_truck, R.string.flow_quote, R.string.flow_review)
         indicators.forEachIndexed { index, view -> view.text = "${index + 1}\n${activity.getString(labels[index])}" }
     }
 
@@ -82,8 +82,8 @@ class NativeCustomerBookController(
         step = next
         val layout = when (next) {
             Step.ROUTE -> R.layout.step_customer_book_route
-            Step.TRUCK -> R.layout.step_customer_book_truck
             Step.CARGO -> R.layout.step_customer_book_cargo
+            Step.TRUCK -> R.layout.step_customer_book_truck
             Step.QUOTE -> R.layout.step_customer_book_quote
             Step.REVIEW -> R.layout.step_customer_book_review
             Step.SUCCESS -> R.layout.step_customer_book_success
@@ -97,7 +97,7 @@ class NativeCustomerBookController(
     }
 
     private fun updateIndicator() {
-        val active = when (step) { Step.ROUTE -> 0; Step.TRUCK -> 1; Step.CARGO -> 2; Step.QUOTE -> 3; Step.REVIEW, Step.SUCCESS -> 4 }
+        val active = when (step) { Step.ROUTE -> 0; Step.CARGO -> 1; Step.TRUCK -> 2; Step.QUOTE -> 3; Step.REVIEW, Step.SUCCESS -> 4 }
         indicators.forEachIndexed { i, view ->
             view.setTextColor(activity.getColor(if (i == active) R.color.auth_blue else R.color.hallo_muted))
             view.textSize = if (i == active) 11f else 9f
@@ -106,12 +106,12 @@ class NativeCustomerBookController(
     }
 
     private fun bind(page: View) = when (step) {
-        Step.ROUTE -> bindRoute(page); Step.TRUCK -> bindTruck(page); Step.CARGO -> bindCargo(page)
+        Step.ROUTE -> bindRoute(page); Step.CARGO -> bindCargo(page); Step.TRUCK -> bindTruck(page)
         Step.QUOTE -> bindQuote(page); Step.REVIEW -> bindReview(page); Step.SUCCESS -> bindSuccess(page)
     }
 
     private fun renderStep() = when (step) {
-        Step.ROUTE -> renderRoute(); Step.TRUCK -> renderTruck(); Step.CARGO -> renderCargo()
+        Step.ROUTE -> renderRoute(); Step.CARGO -> renderCargo(); Step.TRUCK -> renderTruck()
         Step.QUOTE -> renderQuote(); Step.REVIEW -> renderReview(); Step.SUCCESS -> renderSuccess()
     }
 
@@ -130,7 +130,7 @@ class NativeCustomerBookController(
         page.findViewById<MaterialButton>(R.id.flowRouteNext).setOnClickListener {
             if (state.selectedPickup == null || state.selectedDropoff == null) {
                 page.findViewById<TextView>(R.id.flowRouteHint).apply { text = activity.getString(R.string.flow_route_required); setTextColor(activity.getColor(R.color.hallo_danger)) }
-            } else show(Step.TRUCK)
+            } else show(Step.CARGO)
         }
     }
 
@@ -153,16 +153,11 @@ class NativeCustomerBookController(
         qty.setText(quantityText); notes.setText(notesText)
         qty.doAfterTextChanged { quantityText = it?.toString().orEmpty(); calculationRequested = false; viewModel.bookingInputChanged(); cargoSummary(page) }
         notes.doAfterTextChanged { notesText = it?.toString().orEmpty() }
-        page.findViewById<MaterialButton>(R.id.flowCargoBack).setOnClickListener { show(Step.TRUCK) }
+        page.findViewById<MaterialButton>(R.id.flowCargoBack).setOnClickListener { show(Step.ROUTE) }
         page.findViewById<MaterialButton>(R.id.flowCargoNext).setOnClickListener {
-            val error = validateDraft()
-            if (error != null) {
-                page.findViewById<TextView>(R.id.flowCargoSummary).apply { text = error; setTextColor(activity.getColor(R.color.hallo_danger)) }
-            } else {
-                calculationRequested = true
-                show(Step.QUOTE)
-                calculate()
-            }
+            val error = validateCargo()
+            if (error == null) show(Step.TRUCK)
+            else page.findViewById<TextView>(R.id.flowCargoSummary).apply { text = error; setTextColor(activity.getColor(R.color.hallo_danger)) }
         }
     }
 
@@ -175,8 +170,12 @@ class NativeCustomerBookController(
     }
 
     private fun bindTruck(page: View) {
-        page.findViewById<MaterialButton>(R.id.flowTruckBack).setOnClickListener { show(Step.ROUTE) }
-        page.findViewById<MaterialButton>(R.id.flowTruckNext).setOnClickListener { show(Step.CARGO) }
+        page.findViewById<MaterialButton>(R.id.flowTruckBack).setOnClickListener { show(Step.CARGO) }
+        page.findViewById<MaterialButton>(R.id.flowTruckNext).setOnClickListener {
+            val error = validateDraft()
+            if (error != null) page.findViewById<TextView>(R.id.flowTruckError).apply { text = error; visibility = View.VISIBLE }
+            else { calculationRequested = true; show(Step.QUOTE); calculate() }
+        }
         renderTruckOptions(page)
     }
     private fun renderTruck() { host.getChildAt(0)?.findViewById<MaterialButton>(R.id.flowTruckNext)?.isEnabled = !state.busy }
@@ -194,7 +193,7 @@ class NativeCustomerBookController(
     }
 
     private fun bindQuote(page: View) {
-        page.findViewById<MaterialButton>(R.id.flowQuoteBack).setOnClickListener { calculationRequested = false; show(Step.CARGO) }
+        page.findViewById<MaterialButton>(R.id.flowQuoteBack).setOnClickListener { calculationRequested = false; show(Step.TRUCK) }
         page.findViewById<MaterialButton>(R.id.flowQuoteRetry).setOnClickListener { calculationRequested = true; calculate() }
         page.findViewById<MaterialButton>(R.id.flowQuoteNext).setOnClickListener { if (state.route != null && state.quote != null) show(Step.REVIEW) }
     }
