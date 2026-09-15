@@ -14,7 +14,9 @@
                 <TextView android:id="@+id/flowReviewRoute" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/hallo_navy" android:textSize="16sp" android:textStyle="bold" />
                 <TextView android:id="@+id/flowReviewCargo" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
                 <TextView android:id="@+id/flowReviewTruck" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
-                <TextView android:id="@+id/flowReviewPayment" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/hallo_text" android:textSize="14sp" />
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:hint="@string/payment_method">
+                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowReviewPayment" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                </com.google.android.material.textfield.TextInputLayout>
                 <TextView android:id="@+id/flowReviewTotal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:textColor="@color/auth_blue" android:textSize="27sp" android:textStyle="bold" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
