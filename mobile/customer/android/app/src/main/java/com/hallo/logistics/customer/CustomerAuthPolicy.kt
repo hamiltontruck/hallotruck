@@ -9,6 +9,16 @@ object CustomerAuthPolicy {
         "Cargo load exceeds the selected truck capacity",
         "Payment receipt is not available",
         "Customer order was not found",
+        "Place was not found in the HALLO operating region",
+        "Pickup and drop-off must be different places",
+        "Truck routing is temporarily unavailable",
+        "Truck routing service is temporarily unavailable",
+        "No safe truck route could be calculated for those places",
+        "No truck route was found between those places",
+        "Truck routing returned an invalid route",
+        "Transport quote is temporarily unavailable",
+        "Quote calculation returned no result",
+        "Quote total is invalid",
     )
 
     fun validateSignIn(email: String, password: String): String? {
@@ -78,6 +88,16 @@ object CustomerAuthPolicy {
                 tr("Enter your full name")
             "valid ethiopian" in text ->
                 tr("Enter a valid Ethiopian 07/09 mobile number")
+            "place was not found" in text ->
+                tr("Place was not found in the HALLO operating region")
+            "pickup and drop-off must be different" in text ->
+                tr("Pickup and drop-off must be different places")
+            "no safe truck route" in text || "no truck route was found" in text || "route_not_found" in text ->
+                tr("No safe truck route could be calculated for those places")
+            "truck routing" in text || "routing_unavailable" in text ->
+                tr("Truck routing is temporarily unavailable")
+            "quote calculation returned no result" in text || "quote total is invalid" in text || "transport quote" in text ->
+                tr("Transport quote is temporarily unavailable")
             else -> tr("Customer request failed. Please try again")
         }
     }
@@ -105,6 +125,11 @@ object CustomerAuthPolicy {
             "Cargo load exceeds the selected truck capacity" -> "Fe'umsi dandeettii konkolaataa filatamee caala"
             "Payment receipt is not available" -> "Ragaan kaffaltii hin jiru"
             "Customer order was not found" -> "Ajajni Customer hin argamne"
+            "Place was not found in the HALLO operating region" -> "Bakki sun naannoo hojii HALLO keessatti hin argamne"
+            "Pickup and drop-off must be different places" -> "Bakki fe'umsaa fi bakka buusaa adda ta'uu qabu"
+            "Truck routing is temporarily unavailable", "Truck routing service is temporarily unavailable", "Truck routing returned an invalid route" -> "Tajaajilli daandii konkolaataa yeroo ammaa hin argamu. Irra deebi'ii yaali"
+            "No safe truck route could be calculated for those places", "No truck route was found between those places" -> "Bakka lamaan kana gidduutti daandii konkolaataa nageenya qabu shallaguun hin danda'amne"
+            "Transport quote is temporarily unavailable", "Quote calculation returned no result", "Quote total is invalid" -> "Gatiin geejjibaa yeroo ammaa shallagamuu hin dandeenye. Irra deebi'ii yaali"
             "Customer request failed. Please try again" -> "Gaaffiin Customer hin milkoofne. Irra deebi'ii yaali"
             else -> english
         }
@@ -130,6 +155,11 @@ object CustomerAuthPolicy {
             "Cargo load exceeds the selected truck capacity" -> "ጭነቱ የተመረጠውን መኪና አቅም ይበልጣል"
             "Payment receipt is not available" -> "የክፍያ ደረሰኝ የለም"
             "Customer order was not found" -> "የCustomer ትዕዛዝ አልተገኘም"
+            "Place was not found in the HALLO operating region" -> "ቦታው በHALLO የስራ ክልል ውስጥ አልተገኘም"
+            "Pickup and drop-off must be different places" -> "መጫኛ እና መድረሻ ቦታዎች የተለያዩ መሆን አለባቸው"
+            "Truck routing is temporarily unavailable", "Truck routing service is temporarily unavailable", "Truck routing returned an invalid route" -> "የጭነት መኪና መንገድ አገልግሎት ለጊዜው አይገኝም። እንደገና ይሞክሩ"
+            "No safe truck route could be calculated for those places", "No truck route was found between those places" -> "በእነዚህ ቦታዎች መካከል ደህንነቱ የተጠበቀ የጭነት መኪና መንገድ ማስላት አልተቻለም"
+            "Transport quote is temporarily unavailable", "Quote calculation returned no result", "Quote total is invalid" -> "የመጓጓዣ ዋጋ ለጊዜው ማስላት አልተቻለም። እንደገና ይሞክሩ"
             "Customer request failed. Please try again" -> "የCustomer ጥያቄው አልተሳካም። እንደገና ይሞክሩ"
             else -> english
         }
