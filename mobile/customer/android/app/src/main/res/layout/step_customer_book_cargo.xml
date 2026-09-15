@@ -48,8 +48,8 @@
         </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowCargoBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:text="@string/flow_back_route" />
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowCargoNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="@string/flow_next_truck" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowCargoBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:text="@string/flow_back_truck" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowCargoNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="@string/flow_calculate_quote" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
