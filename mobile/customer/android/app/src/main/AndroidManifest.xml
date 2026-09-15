@@ -24,7 +24,6 @@
 
         <activity
             android:name=".NativeCustomerActivity"
-            android:configChanges="locale|layoutDirection"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
