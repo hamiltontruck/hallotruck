@@ -1,12 +1,14 @@
 package com.hallo.logistics.customer
 
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doAfterTextChanged
 import com.google.android.material.button.MaterialButton
@@ -16,8 +18,9 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * Native Kotlin/XML booking presentation using the same CustomerViewModel and backend contracts
- * as the production Customer Portal. This class owns presentation only.
+ * PDF2-aligned native booking journey.
+ * Presentation is split into Route -> Cargo -> Truck -> Quote -> Review -> Success while all
+ * routing, pricing and order creation continue to use the existing CustomerViewModel/backend.
  */
 class NativeCustomerBookController(
     private val activity: AppCompatActivity,
@@ -25,26 +28,26 @@ class NativeCustomerBookController(
     private val viewModel: CustomerViewModel,
     private val requestMyLocation: () -> Unit,
 ) {
+    private enum class Step { ROUTE, CARGO, TRUCK, QUOTE, REVIEW, SUCCESS }
     private data class Option(val key: String, val englishLabel: String, val labelRes: Int)
     private data class Truck(val value: String, val capacity: Int, val imageRes: Int, val label: String)
 
-    private val pickupLayout = root.findViewById<TextInputLayout>(R.id.nativeBookPickupLayout)
-    private val dropoffLayout = root.findViewById<TextInputLayout>(R.id.nativeBookDropoffLayout)
-    private val pickup = root.findViewById<AutoCompleteTextView>(R.id.nativeBookPickup)
-    private val dropoff = root.findViewById<AutoCompleteTextView>(R.id.nativeBookDropoff)
-    private val map = root.findViewById<CustomerLiveMapView>(R.id.nativeBookMap)
-    private val trucks = root.findViewById<LinearLayout>(R.id.nativeBookTruckOptions)
-    private val category = root.findViewById<AutoCompleteTextView>(R.id.nativeBookCategory)
-    private val packaging = root.findViewById<AutoCompleteTextView>(R.id.nativeBookPackaging)
-    private val quantity = root.findViewById<EditText>(R.id.nativeBookQuantity)
-    private val unit = root.findViewById<AutoCompleteTextView>(R.id.nativeBookUnit)
-    private val notes = root.findViewById<EditText>(R.id.nativeBookNotes)
-    private val payment = root.findViewById<AutoCompleteTextView>(R.id.nativeBookPayment)
-    private val loadSummary = root.findViewById<TextView>(R.id.nativeBookLoadSummary)
-    private val quoteText = root.findViewById<TextView>(R.id.nativeBookQuote)
-    private val calculate = root.findViewById<MaterialButton>(R.id.nativeBookCalculate)
-    private val review = root.findViewById<MaterialButton>(R.id.nativeBookReview)
+    private val stepHost = root.findViewById<FrameLayout>(R.id.nativeBookStepHost)
+    private val stepViews = listOf(
+        root.findViewById<TextView>(R.id.nativeBookStepRoute),
+        root.findViewById<TextView>(R.id.nativeBookStepCargo),
+        root.findViewById<TextView>(R.id.nativeBookStepTruck),
+        root.findViewById<TextView>(R.id.nativeBookStepQuote),
+        root.findViewById<TextView>(R.id.nativeBookStepReview),
+    )
 
+    private var step = Step.ROUTE
+    private var latestState = viewModel.state.value
+    private var suppressTextCallbacks = false
+    private var pickupQuery = latestState.selectedPickup?.label.orEmpty()
+    private var dropoffQuery = latestState.selectedDropoff?.label.orEmpty()
+    private var quantityText = ""
+    private var notesText = ""
     private var selectedVehicle = vehicleOptions.first { it.value == "Dry Cargo" }
     private var selectedCategory = categories.first { it.key == "general_goods" }
     private var selectedPackaging = packagingTypes.first { it.key == "loose_bulk" }
@@ -52,193 +55,263 @@ class NativeCustomerBookController(
     private var selectedPayment = paymentMethods.first { it.key == "cash" }
     private var pickupSuggestions: List<CustomerPlace> = emptyList()
     private var dropoffSuggestions: List<CustomerPlace> = emptyList()
-    private var suppressTextCallbacks = false
     private var calculationRequested = false
+    private var orderSubmitting = false
+    private var successTrackingId: String? = null
 
     init {
-        configureDropdowns()
-        renderTruckOptions()
-        bindActions()
-        updateLoadSummary()
+        updateStepLabels()
+        showStep(Step.ROUTE)
     }
 
     fun render(state: CustomerUiState) {
+        latestState = state
         pickupSuggestions = state.pickupSuggestions
         dropoffSuggestions = state.dropoffSuggestions
-        updateSuggestionAdapter(pickup, pickupSuggestions)
-        updateSuggestionAdapter(dropoff, dropoffSuggestions)
 
-        state.selectedPickup?.let { selected ->
-            if (!pickup.text.toString().equals(selected.label, ignoreCase = true)) replaceText(pickup, selected.label)
+        if (orderSubmitting && state.message.startsWith("Order ") && state.message.endsWith(" created")) {
+            successTrackingId = state.message.removePrefix("Order ").removeSuffix(" created")
+            orderSubmitting = false
+            showStep(Step.SUCCESS)
+            return
         }
-        state.selectedDropoff?.let { selected ->
-            if (!dropoff.text.toString().equals(selected.label, ignoreCase = true)) replaceText(dropoff, selected.label)
-        }
-
-        pickupLayout.error = state.placeSearchMessage.takeIf { pickup.hasFocus() }
-        dropoffLayout.error = state.placeSearchMessage.takeIf { dropoff.hasFocus() }
-        map.showBooking(state.selectedPickup, state.selectedDropoff, state.route)
-        renderQuoteState(state)
-
-        val validation = validateDraft()
-        calculate.isEnabled = !state.busy && pickup.text.isNotBlank() && dropoff.text.isNotBlank() && validation == null
-        review.isEnabled = !state.busy && state.quote != null && state.route != null && validation == null
-        updateLoadSummary()
+        renderCurrentStep()
     }
 
     fun setCurrentPickup(place: CustomerPlace) {
-        calculationRequested = false
-        replaceText(pickup, place.label)
+        pickupQuery = place.label
         viewModel.selectPlace(place, pickup = true)
+        if (step == Step.ROUTE) renderCurrentStep()
     }
 
-    private fun renderQuoteState(state: CustomerUiState) {
-        val quote = state.quote
-        val route = state.route
-        val danger = calculationRequested && !state.busy && quote == null
-        quoteText.setTextColor(activity.getColor(if (danger) R.color.hallo_danger else R.color.hallo_text))
-        quoteText.text = when {
-            quote != null && route != null -> {
-                calculationRequested = false
-                buildString {
-                    append(route.pickup.label).append("\n→ ").append(route.dropoff.label)
-                    append("\n").append(selectedVehicle.value)
-                    append(" · ").append(formatDistance(route.distanceKm))
-                    append(" · ").append(activity.getString(R.string.minutes_short, route.durationMinutes))
-                    append("\n").append(formatTons(quote.cargoTons))
-                    append(" · ETB ").append(number(quote.totalEtb))
-                }
-            }
-            calculationRequested && state.busy && route == null -> activity.getString(R.string.route_calculating)
-            calculationRequested && route != null -> buildString {
-                append(activity.getString(
-                    R.string.native_route_only_summary,
-                    route.pickup.label,
-                    route.dropoff.label,
-                    formatDistance(route.distanceKm),
-                    activity.getString(R.string.minutes_short, route.durationMinutes),
-                ))
-                if (state.message.isNotBlank()) append("\n\n").append(state.message)
-            }
-            calculationRequested && !state.busy -> state.message.ifBlank { activity.getString(R.string.native_route_failed) }
-            else -> activity.getString(R.string.secure_quote_placeholder)
+    private fun updateStepLabels() {
+        val labels = listOf(R.string.flow_route, R.string.flow_cargo, R.string.flow_truck, R.string.flow_quote, R.string.flow_review)
+        stepViews.forEachIndexed { index, view ->
+            view.text = "${index + 1}\n${activity.getString(labels[index])}"
         }
     }
 
-    private fun bindActions() {
+    private fun showStep(next: Step) {
+        step = next
+        val layout = when (next) {
+            Step.ROUTE -> R.layout.step_customer_book_route
+            Step.CARGO -> R.layout.step_customer_book_cargo
+            Step.TRUCK -> R.layout.step_customer_book_truck
+            Step.QUOTE -> R.layout.step_customer_book_quote
+            Step.REVIEW -> R.layout.step_customer_book_review
+            Step.SUCCESS -> R.layout.step_customer_book_success
+        }
+        stepHost.removeAllViews()
+        val page = activity.layoutInflater.inflate(layout, stepHost, false)
+        stepHost.addView(page)
+        bindCurrentStep(page)
+        updateStepIndicator()
+        renderCurrentStep()
+    }
+
+    private fun updateStepIndicator() {
+        val activeIndex = when (step) {
+            Step.ROUTE -> 0
+            Step.CARGO -> 1
+            Step.TRUCK -> 2
+            Step.QUOTE -> 3
+            Step.REVIEW, Step.SUCCESS -> 4
+        }
+        stepViews.forEachIndexed { index, view ->
+            val active = index == activeIndex
+            view.setTextColor(activity.getColor(if (active) R.color.auth_blue else R.color.hallo_muted))
+            view.textSize = if (active) 11f else 9f
+        }
+        root.findViewById<TextView>(R.id.nativeBookFlowTitle).text = if (step == Step.SUCCESS) {
+            activity.getString(R.string.flow_success_title)
+        } else {
+            activity.getString(R.string.book_truck)
+        }
+    }
+
+    private fun bindCurrentStep(page: View) {
+        when (step) {
+            Step.ROUTE -> bindRoute(page)
+            Step.CARGO -> bindCargo(page)
+            Step.TRUCK -> bindTruck(page)
+            Step.QUOTE -> bindQuote(page)
+            Step.REVIEW -> bindReview(page)
+            Step.SUCCESS -> bindSuccess(page)
+        }
+    }
+
+    private fun renderCurrentStep() {
+        when (step) {
+            Step.ROUTE -> renderRoute()
+            Step.CARGO -> renderCargo()
+            Step.TRUCK -> renderTruck()
+            Step.QUOTE -> renderQuote()
+            Step.REVIEW -> renderReview()
+            Step.SUCCESS -> renderSuccess()
+        }
+    }
+
+    private fun bindRoute(page: View) {
+        val pickup = page.findViewById<AutoCompleteTextView>(R.id.flowPickup)
+        val dropoff = page.findViewById<AutoCompleteTextView>(R.id.flowDropoff)
+        replaceText(pickup, latestState.selectedPickup?.label ?: pickupQuery)
+        replaceText(dropoff, latestState.selectedDropoff?.label ?: dropoffQuery)
+
         pickup.doAfterTextChanged { value ->
             if (!suppressTextCallbacks) {
+                pickupQuery = value?.toString().orEmpty()
                 calculationRequested = false
-                viewModel.placeInputChanged(value?.toString().orEmpty(), pickup = true)
+                viewModel.placeInputChanged(pickupQuery, pickup = true)
             }
         }
         dropoff.doAfterTextChanged { value ->
             if (!suppressTextCallbacks) {
+                dropoffQuery = value?.toString().orEmpty()
                 calculationRequested = false
-                viewModel.placeInputChanged(value?.toString().orEmpty(), pickup = false)
+                viewModel.placeInputChanged(dropoffQuery, pickup = false)
             }
         }
-        quantity.doAfterTextChanged {
-            calculationRequested = false
-            viewModel.bookingInputChanged()
-            updateLoadSummary()
-        }
-        notes.doAfterTextChanged { updateLoadSummary() }
-
         pickup.setOnItemClickListener { _, _, position, _ ->
             pickupSuggestions.getOrNull(position)?.let {
-                calculationRequested = false
+                pickupQuery = it.label
                 viewModel.selectPlace(it, pickup = true)
             }
         }
         dropoff.setOnItemClickListener { _, _, position, _ ->
             dropoffSuggestions.getOrNull(position)?.let {
-                calculationRequested = false
+                dropoffQuery = it.label
                 viewModel.selectPlace(it, pickup = false)
             }
         }
-
-        root.findViewById<MaterialButton>(R.id.nativeBookMyLocation).setOnClickListener {
-            calculationRequested = false
-            requestMyLocation()
-        }
-        root.findViewById<MaterialButton>(R.id.nativeBookSwap).setOnClickListener {
-            calculationRequested = false
-            val oldPickup = pickup.text.toString()
-            val oldDropoff = dropoff.text.toString()
-            replaceText(pickup, oldDropoff)
-            replaceText(dropoff, oldPickup)
+        page.findViewById<MaterialButton>(R.id.flowUseLocation).setOnClickListener { requestMyLocation() }
+        page.findViewById<MaterialButton>(R.id.flowSwapRoute).setOnClickListener {
+            val oldPickup = pickupQuery
+            pickupQuery = dropoffQuery
+            dropoffQuery = oldPickup
             viewModel.swapRoute()
+            showStep(Step.ROUTE)
         }
-        root.findViewById<MaterialButton>(R.id.nativeBookReset).setOnClickListener {
-            calculationRequested = false
-            replaceText(pickup, "")
-            replaceText(dropoff, "")
-            quantity.setText("")
-            notes.setText("")
-            viewModel.resetRoute()
-        }
-
-        calculate.setOnClickListener {
-            val error = validateDraft()
-            if (error != null) {
-                showError(error)
+        page.findViewById<MaterialButton>(R.id.flowRouteNext).setOnClickListener {
+            if (latestState.selectedPickup == null || latestState.selectedDropoff == null) {
+                page.findViewById<TextView>(R.id.flowRouteHint).apply {
+                    text = activity.getString(R.string.flow_route_required)
+                    setTextColor(activity.getColor(R.color.hallo_danger))
+                }
                 return@setOnClickListener
             }
-            calculationRequested = true
-            quoteText.setTextColor(activity.getColor(R.color.hallo_muted))
-            quoteText.text = activity.getString(R.string.route_calculating)
-            viewModel.calculateAutomaticRoute(
-                pickup.text.toString(),
-                dropoff.text.toString(),
-                selectedVehicle.value,
-                cargoTons(),
-            )
+            showStep(Step.CARGO)
         }
-        review.setOnClickListener { showReview() }
     }
 
-    private fun configureDropdowns() {
-        bindOptions(category, categories, selectedCategory) {
-            selectedCategory = it
-            updateLoadSummary()
+    private fun renderRoute() {
+        val page = stepHost.getChildAt(0) ?: return
+        val pickup = page.findViewById<AutoCompleteTextView>(R.id.flowPickup)
+        val dropoff = page.findViewById<AutoCompleteTextView>(R.id.flowDropoff)
+        updateSuggestionAdapter(pickup, pickupSuggestions)
+        updateSuggestionAdapter(dropoff, dropoffSuggestions)
+        latestState.selectedPickup?.let {
+            pickupQuery = it.label
+            if (pickup.text.toString() != it.label) replaceText(pickup, it.label)
         }
-        bindOptions(packaging, packagingTypes, selectedPackaging) {
-            selectedPackaging = it
-            updateLoadSummary()
+        latestState.selectedDropoff?.let {
+            dropoffQuery = it.label
+            if (dropoff.text.toString() != it.label) replaceText(dropoff, it.label)
         }
+        page.findViewById<TextInputLayout>(R.id.flowPickupLayout).error = latestState.placeSearchMessage.takeIf { pickup.hasFocus() }
+        page.findViewById<TextInputLayout>(R.id.flowDropoffLayout).error = latestState.placeSearchMessage.takeIf { dropoff.hasFocus() }
+        page.findViewById<CustomerLiveMapView>(R.id.flowRouteMap).showBooking(latestState.selectedPickup, latestState.selectedDropoff, latestState.route)
+        page.findViewById<MaterialButton>(R.id.flowRouteNext).isEnabled = !latestState.busy
+    }
+
+    private fun bindCargo(page: View) {
+        val category = page.findViewById<HalloDropdownView>(R.id.flowCargoCategory)
+        val unit = page.findViewById<HalloDropdownView>(R.id.flowCargoUnit)
+        val packaging = page.findViewById<HalloDropdownView>(R.id.flowCargoPackaging)
+        val quantity = page.findViewById<EditText>(R.id.flowCargoQuantity)
+        val notes = page.findViewById<EditText>(R.id.flowCargoNotes)
+        bindOptions(category, categories, selectedCategory) { selectedCategory = it }
         bindOptions(unit, units, selectedUnit) {
             selectedUnit = it
             calculationRequested = false
             viewModel.bookingInputChanged()
-            updateLoadSummary()
+            renderCargo()
         }
-        bindOptions(payment, paymentMethods, selectedPayment) { selectedPayment = it }
-    }
-
-    private fun bindOptions(
-        view: AutoCompleteTextView,
-        values: List<Option>,
-        selected: Option,
-        onSelected: (Option) -> Unit,
-    ) {
-        fun label(option: Option) = activity.getString(option.labelRes)
-        val labels = values.map(::label)
-        view.threshold = 0
-        view.setAdapter(ArrayAdapter(activity, android.R.layout.simple_dropdown_item_1line, labels))
-        view.setText(label(selected), false)
-        view.setOnItemClickListener { _, _, position, _ ->
-            values.getOrNull(position)?.let { option ->
-                view.setText(label(option), false)
-                onSelected(option)
+        bindOptions(packaging, packagingTypes, selectedPackaging) { selectedPackaging = it }
+        quantity.setText(quantityText)
+        notes.setText(notesText)
+        quantity.doAfterTextChanged {
+            quantityText = it?.toString().orEmpty()
+            calculationRequested = false
+            viewModel.bookingInputChanged()
+            renderCargoSummary(page)
+        }
+        notes.doAfterTextChanged { notesText = it?.toString().orEmpty() }
+        page.findViewById<MaterialButton>(R.id.flowCargoBack).setOnClickListener { showStep(Step.ROUTE) }
+        page.findViewById<MaterialButton>(R.id.flowCargoNext).setOnClickListener {
+            val error = validateCargo()
+            if (error != null) {
+                page.findViewById<TextView>(R.id.flowCargoSummary).apply {
+                    text = error
+                    setTextColor(activity.getColor(R.color.hallo_danger))
+                }
+            } else {
+                showStep(Step.TRUCK)
             }
         }
     }
 
-    private fun renderTruckOptions() {
-        trucks.removeAllViews()
+    private fun renderCargo() {
+        val page = stepHost.getChildAt(0) ?: return
+        renderCargoSummary(page)
+    }
+
+    private fun renderCargoSummary(page: View) {
+        val summary = page.findViewById<TextView>(R.id.flowCargoSummary)
+        val tons = cargoTons()
+        summary.text = if (tons > 0) {
+            activity.getString(
+                R.string.flow_cargo_summary,
+                activity.getString(selectedCategory.labelRes),
+                formatTons(tons),
+                activity.getString(selectedPackaging.labelRes),
+            )
+        } else {
+            activity.getString(R.string.enter_valid_load)
+        }
+        summary.setTextColor(activity.getColor(if (tons > 0) R.color.hallo_muted else R.color.hallo_danger))
+    }
+
+    private fun bindTruck(page: View) {
+        page.findViewById<MaterialButton>(R.id.flowTruckBack).setOnClickListener { showStep(Step.CARGO) }
+        page.findViewById<MaterialButton>(R.id.flowTruckNext).setOnClickListener {
+            val error = validateDraft()
+            if (error != null) {
+                page.findViewById<TextView>(R.id.flowTruckError).apply {
+                    text = error
+                    visibility = View.VISIBLE
+                }
+                return@setOnClickListener
+            }
+            calculationRequested = true
+            showStep(Step.QUOTE)
+            calculateQuote()
+        }
+        renderTruckOptions(page)
+    }
+
+    private fun renderTruck() {
+        val page = stepHost.getChildAt(0) ?: return
+        page.findViewById<MaterialButton>(R.id.flowTruckNext).isEnabled = !latestState.busy
+    }
+
+    private fun renderTruckOptions(page: View) {
+        val container = page.findViewById<LinearLayout>(R.id.flowTruckOptions)
+        container.removeAllViews()
         vehicleOptions.forEach { truck ->
-            val item = ItemCustomerTruckBinding.inflate(activity.layoutInflater, trucks, false)
+            val item = ItemCustomerTruckBinding.inflate(activity.layoutInflater, container, false)
+            item.root.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = dp(10)
+            }
             item.truckImage.setImageResource(truck.imageRes)
             item.truckImage.contentDescription = truck.label
             item.truckName.text = truck.label
@@ -252,29 +325,183 @@ class NativeCustomerBookController(
                     selectedVehicle = truck
                     calculationRequested = false
                     viewModel.bookingInputChanged()
-                    renderTruckOptions()
-                    updateLoadSummary()
+                    renderTruckOptions(page)
+                    page.findViewById<TextView>(R.id.flowTruckError).visibility = View.GONE
                 }
             }
-            trucks.addView(item.root)
+            container.addView(item.root)
         }
     }
 
-    private fun updateSuggestionAdapter(view: AutoCompleteTextView, places: List<CustomerPlace>) {
-        view.setAdapter(ArrayAdapter(activity, android.R.layout.simple_dropdown_item_1line, places.map { it.label }))
-        if (view.hasFocus() && places.isNotEmpty()) view.post { view.showDropDown() }
+    private fun bindQuote(page: View) {
+        page.findViewById<MaterialButton>(R.id.flowQuoteBack).setOnClickListener {
+            calculationRequested = false
+            showStep(Step.TRUCK)
+        }
+        page.findViewById<MaterialButton>(R.id.flowQuoteRetry).setOnClickListener {
+            calculationRequested = true
+            calculateQuote()
+        }
+        page.findViewById<MaterialButton>(R.id.flowQuoteNext).setOnClickListener {
+            if (latestState.route != null && latestState.quote != null) showStep(Step.REVIEW)
+        }
+    }
+
+    private fun calculateQuote() {
+        viewModel.calculateAutomaticRoute(
+            pickupQuery,
+            dropoffQuery,
+            selectedVehicle.value,
+            cargoTons(),
+        )
+    }
+
+    private fun renderQuote() {
+        val page = stepHost.getChildAt(0) ?: return
+        val route = latestState.route
+        val quote = latestState.quote
+        page.findViewById<CustomerLiveMapView>(R.id.flowQuoteMap).showBooking(latestState.selectedPickup, latestState.selectedDropoff, route)
+        page.findViewById<ProgressBar>(R.id.flowQuoteProgress).visibility = if (latestState.busy) View.VISIBLE else View.GONE
+        page.findViewById<TextView>(R.id.flowQuoteRoute).text = route?.let {
+            activity.getString(R.string.flow_route_line, it.pickup.label, it.dropoff.label)
+        } ?: activity.getString(R.string.route_calculating)
+        page.findViewById<TextView>(R.id.flowQuoteDetails).text = route?.let {
+            activity.getString(
+                R.string.flow_quote_details,
+                formatDistance(it.distanceKm),
+                activity.getString(R.string.minutes_short, it.durationMinutes),
+                selectedVehicle.label,
+                formatTons(cargoTons()),
+            )
+        }.orEmpty()
+        page.findViewById<TextView>(R.id.flowQuoteTotal).text = quote?.let {
+            activity.getString(R.string.flow_total_etb, number(it.totalEtb))
+        }.orEmpty()
+        val failed = calculationRequested && !latestState.busy && quote == null
+        page.findViewById<TextView>(R.id.flowQuoteError).apply {
+            visibility = if (failed) View.VISIBLE else View.GONE
+            text = latestState.message
+        }
+        page.findViewById<MaterialButton>(R.id.flowQuoteRetry).visibility = if (failed) View.VISIBLE else View.GONE
+        page.findViewById<MaterialButton>(R.id.flowQuoteNext).isEnabled = quote != null && route != null && !latestState.busy
+        if (quote != null) calculationRequested = false
+    }
+
+    private fun bindReview(page: View) {
+        val payment = page.findViewById<HalloDropdownView>(R.id.flowReviewPayment)
+        bindOptions(payment, paymentMethods, selectedPayment) { selectedPayment = it }
+        page.findViewById<MaterialButton>(R.id.flowReviewBack).setOnClickListener { showStep(Step.QUOTE) }
+        page.findViewById<MaterialButton>(R.id.flowReviewConfirm).setOnClickListener { confirmOrder(page) }
+    }
+
+    private fun renderReview() {
+        val page = stepHost.getChildAt(0) ?: return
+        val route = latestState.route ?: return
+        val quote = latestState.quote ?: return
+        page.findViewById<TextView>(R.id.flowReviewRoute).text = activity.getString(R.string.flow_route_line, route.pickup.label, route.dropoff.label)
+        page.findViewById<TextView>(R.id.flowReviewCargo).text = activity.getString(
+            R.string.flow_cargo_summary,
+            activity.getString(selectedCategory.labelRes),
+            formatTons(cargoTons()),
+            activity.getString(selectedPackaging.labelRes),
+        )
+        page.findViewById<TextView>(R.id.flowReviewTruck).text = "${activity.getString(R.string.truck)}: ${selectedVehicle.label}\n${activity.getString(R.string.distance)}: ${formatDistance(route.distanceKm)}"
+        page.findViewById<TextView>(R.id.flowReviewTotal).text = activity.getString(R.string.flow_total_etb, number(quote.totalEtb))
+        page.findViewById<MaterialButton>(R.id.flowReviewConfirm).isEnabled = !latestState.busy
+        page.findViewById<TextView>(R.id.flowReviewError).apply {
+            visibility = if (orderSubmitting && !latestState.busy && !latestState.message.startsWith("Order ")) View.VISIBLE else View.GONE
+            text = latestState.message
+        }
+    }
+
+    private fun confirmOrder(page: View) {
+        val route = latestState.route ?: return
+        val quote = latestState.quote ?: return
+        val validation = validateDraft()
+        if (validation != null) {
+            page.findViewById<TextView>(R.id.flowReviewError).apply {
+                text = validation
+                visibility = View.VISIBLE
+            }
+            return
+        }
+        val amount = quantityText.trim().toDoubleOrNull() ?: return
+        val description = CustomerBookingPolicy.cargoDescription(
+            selectedCategory.englishLabel,
+            selectedPackaging.englishLabel,
+            amount,
+            selectedUnit.key,
+            notesText,
+        )
+        orderSubmitting = true
+        viewModel.createOrder(
+            CreateOrderInput(
+                pickupAddress = route.pickup.label,
+                pickupLongitude = route.pickup.longitude,
+                pickupLatitude = route.pickup.latitude,
+                dropoffAddress = route.dropoff.label,
+                dropoffLongitude = route.dropoff.longitude,
+                dropoffLatitude = route.dropoff.latitude,
+                vehicleType = selectedVehicle.value,
+                distanceKm = route.distanceKm,
+                cargoTons = quote.cargoTons,
+                cargoQuantity = amount,
+                cargoUnit = selectedUnit.key,
+                cargoCategory = selectedCategory.key,
+                packagingType = selectedPackaging.key,
+                cargoDescription = description,
+                paymentMethod = selectedPayment.key,
+                quoteEtb = quote.totalEtb,
+            ),
+        )
+    }
+
+    private fun bindSuccess(page: View) {
+        page.findViewById<MaterialButton>(R.id.flowSuccessViewOrder).setOnClickListener { viewModel.show(CustomerPage.ORDERS) }
+        page.findViewById<MaterialButton>(R.id.flowSuccessAnother).setOnClickListener { startAnotherBooking() }
+    }
+
+    private fun renderSuccess() {
+        val page = stepHost.getChildAt(0) ?: return
+        val route = latestState.route
+        val quote = latestState.quote
+        page.findViewById<TextView>(R.id.flowSuccessOrder).text = activity.getString(R.string.flow_order_number, successTrackingId ?: "—")
+        page.findViewById<TextView>(R.id.flowSuccessRoute).text = route?.let { activity.getString(R.string.flow_route_line, it.pickup.label, it.dropoff.label) }.orEmpty()
+        page.findViewById<TextView>(R.id.flowSuccessTruck).text = "${activity.getString(R.string.truck)}: ${selectedVehicle.label}"
+        page.findViewById<TextView>(R.id.flowSuccessTotal).text = quote?.let { activity.getString(R.string.flow_total_etb, number(it.totalEtb)) }.orEmpty()
+    }
+
+    private fun startAnotherBooking() {
+        pickupQuery = ""
+        dropoffQuery = ""
+        quantityText = ""
+        notesText = ""
+        selectedVehicle = vehicleOptions.first { it.value == "Dry Cargo" }
+        selectedCategory = categories.first { it.key == "general_goods" }
+        selectedPackaging = packagingTypes.first { it.key == "loose_bulk" }
+        selectedUnit = units.first { it.key == "ton" }
+        selectedPayment = paymentMethods.first { it.key == "cash" }
+        successTrackingId = null
+        calculationRequested = false
+        orderSubmitting = false
+        viewModel.resetRoute()
+        showStep(Step.ROUTE)
+    }
+
+    private fun validateCargo(): String? {
+        val amount = quantityText.trim().toDoubleOrNull() ?: 0.0
+        val tons = CustomerBookingPolicy.cargoToTons(amount, selectedUnit.key)
+        if (tons <= 0) return activity.getString(R.string.enter_valid_load)
+        if (selectedCategory.key == "other" && notesText.trim().length < 3) return activity.getString(R.string.native_cargo_other_required)
+        return null
     }
 
     private fun validateDraft(): String? {
-        val amount = quantity.text.toString().trim().toDoubleOrNull() ?: 0.0
-        val tons = CustomerBookingPolicy.cargoToTons(amount, selectedUnit.key)
-        if (tons <= 0) return activity.getString(R.string.enter_valid_load)
+        validateCargo()?.let { return it }
+        val tons = cargoTons()
         val capacity = CustomerBookingPolicy.truckCapacityTons(selectedVehicle.value)
         if (capacity != null && tons > capacity) {
             return activity.getString(R.string.capacity_exceeded, formatTons(tons), formatTons(capacity))
-        }
-        if (selectedCategory.key == "other" && notes.text.toString().trim().length < 3) {
-            return activity.getString(R.string.native_cargo_other_required)
         }
         if (selectedPackaging.key in setOf("container_20ft", "container_40ft") && selectedVehicle.value != "Trailer") {
             return activity.getString(R.string.native_container_requires_trailer)
@@ -282,79 +509,26 @@ class NativeCustomerBookController(
         return null
     }
 
-    private fun updateLoadSummary() {
-        val amount = quantity.text.toString().trim().toDoubleOrNull() ?: 0.0
-        val tons = CustomerBookingPolicy.cargoToTons(amount, selectedUnit.key)
-        val capacity = CustomerBookingPolicy.truckCapacityTons(selectedVehicle.value)
-        val capacityText = capacity?.let(::formatTons) ?: "—"
-        loadSummary.text = if (amount <= 0) {
-            activity.getString(R.string.native_truck_capacity_summary, selectedVehicle.label, capacityText)
-        } else {
-            activity.getString(R.string.native_load_capacity_summary, formatTons(tons), selectedVehicle.label, capacityText)
-        }
-        loadSummary.setTextColor(activity.getColor(if (validateDraft() == null || amount <= 0) R.color.hallo_muted else R.color.hallo_danger))
-    }
-
-    private fun showReview() {
-        val state = viewModel.state.value
-        val route = state.route ?: return
-        val quote = state.quote ?: return
-        val validation = validateDraft()
-        if (validation != null) {
-            showError(validation)
-            return
-        }
-        val amount = quantity.text.toString().trim().toDoubleOrNull() ?: return
-        val description = CustomerBookingPolicy.cargoDescription(
-            selectedCategory.englishLabel,
-            selectedPackaging.englishLabel,
-            amount,
-            selectedUnit.key,
-            notes.text.toString(),
-        )
-        val summary = buildString {
-            append(route.pickup.label).append("\n→ ").append(route.dropoff.label)
-            append("\n\n").append(activity.getString(R.string.truck)).append(": ").append(selectedVehicle.label)
-            append("\n").append(activity.getString(R.string.load)).append(": ").append(formatTons(cargoTons()))
-            append("\n").append(activity.getString(R.string.distance)).append(": ").append(formatDistance(route.distanceKm))
-            append("\n").append(activity.getString(R.string.payment)).append(": ").append(activity.getString(selectedPayment.labelRes))
-            append("\n\n").append(activity.getString(R.string.quote)).append(": ETB ").append(number(quote.totalEtb))
-        }
-        AlertDialog.Builder(activity)
-            .setTitle(R.string.booking_review)
-            .setMessage(summary)
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.confirm_order) { _, _ ->
-                viewModel.createOrder(
-                    CreateOrderInput(
-                        pickupAddress = route.pickup.label,
-                        pickupLongitude = route.pickup.longitude,
-                        pickupLatitude = route.pickup.latitude,
-                        dropoffAddress = route.dropoff.label,
-                        dropoffLongitude = route.dropoff.longitude,
-                        dropoffLatitude = route.dropoff.latitude,
-                        vehicleType = selectedVehicle.value,
-                        distanceKm = route.distanceKm,
-                        cargoTons = quote.cargoTons,
-                        cargoQuantity = amount,
-                        cargoUnit = selectedUnit.key,
-                        cargoCategory = selectedCategory.key,
-                        packagingType = selectedPackaging.key,
-                        cargoDescription = description,
-                        paymentMethod = selectedPayment.key,
-                        quoteEtb = quote.totalEtb,
-                    ),
-                )
+    private fun bindOptions(
+        view: HalloDropdownView,
+        values: List<Option>,
+        selected: Option,
+        onSelected: (Option) -> Unit,
+    ) {
+        fun label(option: Option) = activity.getString(option.labelRes)
+        view.setAdapter(ArrayAdapter(activity, android.R.layout.simple_dropdown_item_1line, values.map(::label)))
+        view.setText(label(selected), false)
+        view.setOnItemClickListener { _, _, position, _ ->
+            values.getOrNull(position)?.let { option ->
+                view.setText(label(option), false)
+                onSelected(option)
             }
-            .show()
+        }
     }
 
-    private fun showError(message: String) {
-        AlertDialog.Builder(activity)
-            .setTitle(activity.getString(R.string.book_truck))
-            .setMessage(message)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+    private fun updateSuggestionAdapter(view: AutoCompleteTextView, places: List<CustomerPlace>) {
+        view.setAdapter(ArrayAdapter(activity, android.R.layout.simple_dropdown_item_1line, places.map { it.label }))
+        if (view.hasFocus() && places.isNotEmpty()) view.post { view.showDropDown() }
     }
 
     private fun replaceText(view: AutoCompleteTextView, value: String) {
@@ -365,7 +539,7 @@ class NativeCustomerBookController(
     }
 
     private fun cargoTons(): Double = CustomerBookingPolicy.cargoToTons(
-        quantity.text.toString().trim().toDoubleOrNull() ?: 0.0,
+        quantityText.trim().toDoubleOrNull() ?: 0.0,
         selectedUnit.key,
     )
 
