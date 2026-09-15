@@ -21,31 +21,11 @@ const previewSource = readFileSync(new URL("../src/driver/DriverDocumentPreviewS
 const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 
 function verification(overrides = {}) {
-  return {
-    id: "doc-1",
-    filePath: "driver-1/identity/license_front/evidence.jpg",
-    originalName: "evidence.jpg",
-    mimeType: "image/jpeg",
-    documentKey: "license_front",
-    truckId: null,
-    status: "verified",
-    expiryDate: null,
-    rejectionReason: null,
-    updatedAt: null,
-    ...overrides,
-  };
+  return { id: "doc-1", filePath: "driver-1/identity/license_front/evidence.jpg", originalName: "evidence.jpg", mimeType: "image/jpeg", documentKey: "license_front", truckId: null, status: "verified", expiryDate: null, rejectionReason: null, updatedAt: null, ...overrides };
 }
 
 test("normalizes only the expected Driver profile", () => {
-  const profile = normalizeDriverProfile({
-    id: "driver-1",
-    full_name: "Adil Abdu",
-    phone: "+251900000000",
-    vehicle_type: "flatbed_30t",
-    driver_status: "approved",
-    rating_avg: "4.8",
-    created_at: "2026-08-01T10:00:00Z",
-  }, "driver-1");
+  const profile = normalizeDriverProfile({ id: "driver-1", full_name: "Adil Abdu", phone: "+251900000000", vehicle_type: "flatbed_30t", driver_status: "approved", rating_avg: "4.8", created_at: "2026-08-01T10:00:00Z" }, "driver-1");
   assert.equal(profile?.fullName, "Adil Abdu");
   assert.equal(profile?.ratingAvg, 4.8);
   assert.equal(normalizeDriverProfile({ ...profile, id: "driver-2" }, "driver-1"), null);
@@ -53,44 +33,27 @@ test("normalizes only the expected Driver profile", () => {
 });
 
 test("normalizes assigned truck rows without false capacity", () => {
-  const truck = normalizeDriverTruck({
-    id: "truck-1",
-    plate_number: "OR-3-12345",
-    vehicle_type: "trailer_30t",
-    capacity_tons: "30",
-    status: "assigned",
-    created_at: null,
-    updated_at: "2026-08-30T12:00:00Z",
-  });
+  const truck = normalizeDriverTruck({ id: "truck-1", plate_number: "OR-3-12345", vehicle_type: "trailer_30t", capacity_tons: "30", status: "assigned", created_at: null, updated_at: "2026-08-30T12:00:00Z" });
   assert.equal(truck?.capacityTons, 30);
   assert.equal(normalizeDriverTruck({ id: "truck-1", plate_number: "OR-3" }), null);
   assert.equal(normalizeDriverTruck({ id: "truck-1", plate_number: "OR-3", vehicle_type: "trailer", capacity_tons: "invalid" })?.capacityTons, null);
 });
 
-test("normalizes only preview-safe verification rows with correct scope", () => {
-  const identity = normalizeDriverVerification({
-    id: "doc-1",
-    file_path: "driver-1/identity/license_front/evidence.jpg",
-    original_name: "license-front.jpg",
-    mime_type: "image/jpeg",
-    document_key: "license_front",
-    truck_id: null,
-    status: "verified",
-    expiry_date: "2027-08-31",
-    updated_at: "2026-08-31T10:00:00Z",
-  });
+test("normalizes only compact preview-safe verification rows with correct scope", () => {
+  const identity = normalizeDriverVerification({ id: "doc-1", file_path: "driver-1/identity/license_front/evidence.jpg", original_name: "license-front.jpg", mime_type: "image/jpeg", document_key: "license_front", truck_id: null, status: "verified", expiry_date: "2027-08-31", updated_at: "2026-08-31T10:00:00Z" });
   assert.equal(identity?.documentKey, "license_front");
   assert.equal(identity?.filePath, "driver-1/identity/license_front/evidence.jpg");
   assert.equal(normalizeDriverVerification({ ...identity, document_key: "license_front", truck_id: "truck-1" }), null);
-  assert.equal(normalizeDriverVerification({ id: "doc-2", file_path: "x", original_name: "x", mime_type: "image/jpeg", document_key: "insurance", truck_id: null, status: "pending" }), null);
+  assert.equal(normalizeDriverVerification({ id: "doc-2", file_path: "x", original_name: "x", mime_type: "image/jpeg", document_key: "insurance", truck_id: "truck-1", status: "pending" }), null);
   assert.equal(normalizeDriverVerification({ id: "doc-3", file_path: "x", original_name: "x", mime_type: "text/html", document_key: "license_front", truck_id: null, status: "pending" }), null);
 });
 
-test("document health distinguishes missing, rejected and expired", () => {
+test("document health applies expiry only to license and National ID fronts", () => {
   assert.equal(documentHealth(undefined, new Date("2026-08-31T00:00:00Z")), "missing");
   assert.equal(documentHealth(verification({ status: "rejected", rejectionReason: "Blurred" }), new Date("2026-08-31T00:00:00Z")), "rejected");
   assert.equal(documentHealth(verification({ expiryDate: "2026-08-30" }), new Date("2026-08-31T00:00:00Z")), "expired");
   assert.equal(documentHealth(verification({ expiryDate: "2026-08-31" }), new Date("2026-08-31T00:00:00Z")), "verified");
+  assert.equal(documentHealth(verification({ documentKey: "license_back", expiryDate: "2020-01-01" }), new Date("2026-08-31T00:00:00Z")), "verified");
 });
 
 test("expiry warnings use stable UTC day boundaries", () => {
@@ -101,29 +64,29 @@ test("expiry warnings use stable UTC day boundaries", () => {
   assert.deepEqual(documentExpiryWarning(verification({ expiryDate: "2026-09-08" }), today), { level: "critical", daysRemaining: 7 });
   assert.deepEqual(documentExpiryWarning(verification({ expiryDate: "2026-10-01" }), today), { level: "soon", daysRemaining: 30 });
   assert.deepEqual(documentExpiryWarning(verification({ expiryDate: "2026-10-02" }), today), { level: "none", daysRemaining: 31 });
-  assert.deepEqual(documentExpiryWarning(verification({ status: "rejected", expiryDate: "2026-08-31" }), today), { level: "none", daysRemaining: null });
+  assert.deepEqual(documentExpiryWarning(verification({ documentKey: "license_back", expiryDate: "2020-01-01" }), today), { level: "none", daysRemaining: null });
 });
 
-test("expiry summary separates expired, critical and soon evidence", () => {
+test("expiry summary ignores legacy non-front expiry dates", () => {
   const today = new Date("2026-09-01T00:00:00Z");
   const summary = documentExpirySummary([
     verification({ id: "expired", expiryDate: "2026-08-31" }),
     verification({ id: "critical", expiryDate: "2026-09-05" }),
-    verification({ id: "soon", expiryDate: "2026-09-20" }),
-    verification({ id: "safe", expiryDate: "2027-01-01" }),
+    verification({ id: "soon", documentKey: "national_id_front", expiryDate: "2026-09-20" }),
+    verification({ id: "ignored-back", documentKey: "license_back", expiryDate: "2020-01-01" }),
   ], today);
   assert.deepEqual(summary, { expired: 1, critical: 1, soon: 1 });
 });
 
-test("progress counts only verified non-expired records", () => {
+test("progress uses five identity plus three vehicle files", () => {
   const records = [
     verification({ id: "1", documentKey: "driver_photo" }),
     verification({ id: "2", documentKey: "license_front", status: "pending" }),
-    verification({ id: "3", documentKey: "license_back", expiryDate: "2026-08-30" }),
+    verification({ id: "3", documentKey: "license_back", expiryDate: "2020-01-01" }),
   ];
   const progress = documentProgress(identityDocumentKeys, records, null, new Date("2026-08-31T00:00:00Z"));
-  assert.deepEqual(progress, { verified: 1, submitted: 3, total: 5 });
-  assert.equal(vehicleDocumentKeys.length, 7);
+  assert.deepEqual(progress, { verified: 2, submitted: 3, total: 5 });
+  assert.deepEqual(vehicleDocumentKeys, ["vehicle_registration", "truck_front", "truck_side"]);
 });
 
 test("formatters preserve unknown values instead of false zero", () => {
@@ -171,7 +134,7 @@ test("profile view surfaces signed preview controls and expiry attention", () =>
   assert.match(componentSource, />Ilaali</);
 });
 
-test("App routes only Driver profile to production profile component", () => {
+test("App keeps Driver and Customer profile routes isolated", () => {
   assert.match(appSource, /DriverProfileView/);
   assert.match(appSource, /role === "driver"/);
   assert.match(appSource, /CustomerProfileView/);
