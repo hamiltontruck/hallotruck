@@ -206,7 +206,7 @@ try {
   }
 
   const cases = [
-    ["/admin/operations?section=Orders&status=delivered&q=HT-DELIVERED", 1, "HT-DELIVERED", ["Matching orders", "HT-DELIVERED"]],
+    ["/admin/operations?section=Orders&status=delivered&q=HT-DELIVERED", 0, "HT-DELIVERED", ["Matching orders", "HT-DELIVERED", "Manage Order", "Unreported delivery payment"]],
     ["/admin/operations?section=Fleet%20%26%20drivers&fleet_status=available&driver_status=approved", 2, "", ["Matching fleet", "Matching drivers", "3-A12345", "Adil Abdu"]],
     ["/admin/operations?section=Finance&payment_status=released", 1, "", ["Matching payments", "TEL-001"]],
   ];
