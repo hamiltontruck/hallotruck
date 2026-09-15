@@ -1,5 +1,7 @@
 package com.hallo.logistics.driver
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,6 +9,8 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.core.widget.NestedScrollView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
@@ -83,12 +87,28 @@ class DriverAuthUiController(
         email.isEnabled = !busy
         pin.isEnabled = !busy
         confirmPin.isEnabled = !busy
+        languageEn.isEnabled = !busy
+        languageOr.isEnabled = !busy
+        languageAm.isEnabled = !busy
+        submit.alpha = if (busy) 0.72f else 1f
     }
 
     private fun syncAuthChrome() {
         val showingAuth = host.visibility == View.VISIBLE
         appHeader?.visibility = if (showingAuth) View.GONE else View.VISIBLE
         if (showingAuth) statusCard.visibility = View.GONE
+        val controller = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+        if (showingAuth) {
+            activity.window.statusBarColor = ContextCompat.getColor(activity, R.color.hallo_card)
+            activity.window.navigationBarColor = ContextCompat.getColor(activity, R.color.hallo_card)
+            controller.isAppearanceLightStatusBars = true
+            controller.isAppearanceLightNavigationBars = true
+        } else {
+            activity.window.statusBarColor = ContextCompat.getColor(activity, R.color.hallo_navy)
+            activity.window.navigationBarColor = ContextCompat.getColor(activity, R.color.hallo_card)
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = true
+        }
     }
 
     private fun configureLanguages() {
@@ -100,8 +120,10 @@ class DriverAuthUiController(
                 else -> languageOr.id
             },
         )
+        applyLanguageStyles()
         languages.addOnButtonCheckedListener { _, checkedId, checked ->
             if (!checked) return@addOnButtonCheckedListener
+            applyLanguageStyles()
             val requested = when (checkedId) {
                 languageEn.id -> DriverLocaleManager.EN
                 languageAm.id -> DriverLocaleManager.AM
@@ -110,6 +132,19 @@ class DriverAuthUiController(
             if (requested == DriverLocaleManager.saved(activity)) return@addOnButtonCheckedListener
             DriverLocaleManager.apply(activity, requested)
             activity.recreate()
+        }
+    }
+
+    private fun applyLanguageStyles() {
+        val blue = ContextCompat.getColor(activity, R.color.hallo_blue)
+        val navy = ContextCompat.getColor(activity, R.color.hallo_navy)
+        val border = ContextCompat.getColor(activity, R.color.hallo_border)
+        listOf(languageEn, languageOr, languageAm).forEach { button ->
+            val selected = languages.checkedButtonId == button.id
+            button.backgroundTintList = ColorStateList.valueOf(if (selected) blue else Color.WHITE)
+            button.setTextColor(if (selected) Color.WHITE else navy)
+            button.strokeColor = ColorStateList.valueOf(if (selected) blue else border)
+            button.strokeWidth = dp(1)
         }
     }
 
