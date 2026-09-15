@@ -46,5 +46,10 @@
     <string name="native_enter_positive_amount">ከዜሮ በላይ መጠን ያስገቡ</string>
     <string name="native_amount_exceeds_remaining">መጠኑ ለመላክ ከቀረው መጠን ይበልጣል</string>
     <string name="native_profile_invalid">የመገለጫ መረጃው ትክክል አይደለም።</string>
+    <string name="native_profile_name_required">ሙሉ ስምዎን ያስገቡ።</string>
+    <string name="native_profile_phone_invalid">ስልኩ 09xxxxxxxx ወይም +2519xxxxxxxx መሆን አለበት።</string>
+    <string name="native_profile_email_invalid">ትክክለኛ የኢሜይል አድራሻ ያስገቡ።</string>
+    <string name="native_profile_type_invalid">ትክክለኛ የደንበኛ ዓይነት ይምረጡ።</string>
+    <string name="native_profile_company_required">ለንግድ መለያ የድርጅት ስም ያስፈልጋል።</string>
     <string name="native_chat_empty">ስለዚህ ትዕዛዝ ለተመደበው አሽከርካሪዎ መልዕክት ይላኩ።</string>
 </resources>
