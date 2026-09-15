@@ -11,8 +11,8 @@
         <LinearLayout android:id="@+id/flowTruckOptions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" />
         <TextView android:id="@+id/flowTruckError" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/hallo_danger" android:textSize="12sp" android:visibility="gone" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowTruckBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:text="@string/flow_back_route" />
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowTruckNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="@string/flow_next_cargo" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowTruckBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:maxLines="1" android:text="@string/flow_back_cargo" android:textSize="13sp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowTruckNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:maxLines="1" android:text="@string/flow_calculate_quote" android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
