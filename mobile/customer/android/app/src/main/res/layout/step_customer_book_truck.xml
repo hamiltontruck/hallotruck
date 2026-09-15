@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:paddingBottom="24dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/flow_truck_title" android:textColor="@color/hallo_navy" android:textSize="24sp" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/flow_truck_subtitle" android:textColor="@color/hallo_muted" android:textSize="13sp" />
+        <LinearLayout android:id="@+id/flowTruckOptions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" />
+        <TextView android:id="@+id/flowTruckError" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/hallo_danger" android:textSize="12sp" android:visibility="gone" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowTruckBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:text="@string/flow_back_cargo" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowTruckNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="@string/flow_calculate_quote" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
