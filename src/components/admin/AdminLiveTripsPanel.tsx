@@ -116,7 +116,7 @@ export function AdminLiveTripsPanel({ orders, trucks, drivers }: AdminLiveTripsP
             </section>
 
             <section className="mb-5 grid grid-cols-3 gap-3"><FinanceMetric label="Order value" value={selectedSplit.grossEtb} /><FinanceMetric label={`HALLO ${HALLO_SMART_COMMISSION_PERCENT}%`} value={selectedSplit.commissionEtb} accent="commission" /><FinanceMetric label="Driver net" value={selectedSplit.driverNetEtb} accent="net" /></section>
-            <div className="mb-4 flex items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">LIVE OPERATIONS MAP</p><p className="mt-1 text-xs text-steel">Pickup, destination, driver position, speed, ETA and trip progress.</p></div><span className={`rounded-full px-3 py-1.5 text-[10px] font-semibold ${freshnessClass(telemetry.freshness)}`}>{telemetry.freshness}</span></div>
+            <div className="mb-4 flex items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">LIVE OPERATIONS MAP</p><p className="mt-1 text-xs text-steel">Pickup, destination, driver position, speed, ETA and trip progress.</p></div><span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold text-emerald-700">{selected.status === "in_transit" ? "TRIP ACTIVE" : "ASSIGNED"}</span></div>
             <CustomerLiveTripMap orderId={selected.id} totalDistanceKm={totalDistanceKm} showCustomerDetailsLink={false} />
           </div></div>}
         </div>
