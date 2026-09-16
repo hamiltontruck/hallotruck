@@ -13,10 +13,30 @@ type PresenceRow = {
   location: { type?: string; coordinates?: number[] } | string | null;
 };
 
+type DriverTruckRow = Pick<Truck, "id" | "plate_number" | "vehicle_type"> & { driver_id: string | null };
 type DriverPoint = PresenceRow & { lng: number; lat: number; freshness: TrackingFreshness };
 
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
 const mapStyle = `https://api.maptiler.com/maps/basic-v2/style.json?key=${mapTilerKey ?? ""}`;
+
+function ewkbPoint(value: string): [number, number] | null {
+  if (!/^[0-9a-f]+$/i.test(value) || value.length < 42 || value.length % 2 !== 0) return null;
+  try {
+    const bytes = new Uint8Array(value.match(/.{2}/g)!.map((byte) => Number.parseInt(byte, 16)));
+    const view = new DataView(bytes.buffer);
+    const littleEndian = view.getUint8(0) === 1;
+    const type = view.getUint32(1, littleEndian);
+    if ((type & 0xff) !== 1) return null;
+    const hasSrid = (type & 0x20000000) !== 0;
+    const offset = hasSrid ? 9 : 5;
+    if (bytes.byteLength < offset + 16) return null;
+    const lng = view.getFloat64(offset, littleEndian);
+    const lat = view.getFloat64(offset + 8, littleEndian);
+    return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+  } catch {
+    return null;
+  }
+}
 
 function coordinates(location: PresenceRow["location"]): [number, number] | null {
   if (location && typeof location === "object" && Array.isArray(location.coordinates)) {
@@ -26,6 +46,7 @@ function coordinates(location: PresenceRow["location"]): [number, number] | null
   if (typeof location === "string") {
     const match = location.match(/POINT\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)/i);
     if (match) return [Number(match[1]), Number(match[2])];
+    return ewkbPoint(location);
   }
   return null;
 }
@@ -49,9 +70,10 @@ function markerElement(freshness: TrackingFreshness) {
   return element;
 }
 
-function assignedTruck(driverId: string, orders: AdminOrder[], trucks: Truck[]) {
+function assignedTruck(driverId: string, orders: AdminOrder[], trucks: Truck[], driverTrucks: DriverTruckRow[]) {
   const assignment = orders.find((order) => order.driver_id === driverId && order.truck_id && ["accepted", "in_transit"].includes(order.status));
-  return assignment?.truck_id ? trucks.find((truck) => truck.id === assignment.truck_id) : undefined;
+  if (assignment?.truck_id) return trucks.find((truck) => truck.id === assignment.truck_id);
+  return driverTrucks.find((truck) => truck.driver_id === driverId);
 }
 
 export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Driver[]; trucks: Truck[]; orders: AdminOrder[] }) {
@@ -59,19 +81,22 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Dr
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
   const [presence, setPresence] = useState<PresenceRow[]>([]);
+  const [driverTrucks, setDriverTrucks] = useState<DriverTruckRow[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const { data, error: queryError } = await supabase
-        .from("driver_presence")
-        .select("driver_id,is_available,accuracy_m,updated_at,location")
-        .order("updated_at", { ascending: false });
+      const [presenceResult, trucksResult] = await Promise.all([
+        supabase.from("driver_presence").select("driver_id,is_available,accuracy_m,updated_at,location").order("updated_at", { ascending: false }),
+        supabase.from("trucks").select("id,plate_number,vehicle_type,driver_id").not("driver_id", "is", null),
+      ]);
       if (cancelled) return;
+      const queryError = presenceResult.error || trucksResult.error;
       if (queryError) { setError(queryError.message); return; }
       setError("");
-      setPresence((data ?? []) as PresenceRow[]);
+      setPresence((presenceResult.data ?? []) as PresenceRow[]);
+      setDriverTrucks((trucksResult.data ?? []) as DriverTruckRow[]);
     }
     void load();
     const interval = window.setInterval(() => void load(), 8000);
@@ -101,7 +126,7 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Dr
     markers.current.forEach((marker) => marker.remove());
     markers.current = visible.map((point) => {
       const driver = drivers.find((item) => item.id === point.driver_id);
-      const truck = assignedTruck(point.driver_id, orders, trucks);
+      const truck = assignedTruck(point.driver_id, orders, trucks, driverTrucks);
       const popup = new maplibregl.Popup({ offset: 18 }).setHTML(
         `<strong>${driver?.full_name ?? "Driver"}</strong><br/>${driver?.phone ?? "Phone unavailable"}<br/>${truck?.plate_number ?? truck?.vehicle_type ?? "Truck unavailable"}<br/>GPS ${point.freshness} · ${ageLabel(point.updated_at)}<br/>${point.is_available ? "Available for dispatch" : "Not available"}`,
       );
@@ -113,7 +138,7 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Dr
       visible.slice(1).forEach((point) => bounds.extend([point.lng, point.lat]));
       map.fitBounds(bounds, { padding: 55, maxZoom: 12 });
     }
-  }, [visible, drivers, trucks, orders]);
+  }, [visible, drivers, trucks, orders, driverTrucks]);
 
   return <section className="mb-5 overflow-hidden rounded-2xl border border-asphalt/10 bg-white" aria-label="Online drivers live fleet">
     <div className="flex flex-col gap-3 border-b border-asphalt/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
@@ -125,7 +150,7 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Dr
     <div className="grid gap-2 border-t border-asphalt/10 p-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
       {visible.slice(0, 9).map((point) => {
         const driver = drivers.find((item) => item.id === point.driver_id);
-        const truck = assignedTruck(point.driver_id, orders, trucks);
+        const truck = assignedTruck(point.driver_id, orders, trucks, driverTrucks);
         return <div key={point.driver_id} className="rounded-xl bg-bone p-3 text-xs"><div className="flex items-center justify-between gap-2"><strong className="truncate">{driver?.full_name ?? driver?.phone ?? "Driver"}</strong><span className={point.freshness === "LIVE" ? "text-emerald-700" : "text-amber-dim"}>{point.freshness}</span></div><p className="mt-1 truncate text-steel">{truck?.plate_number ?? truck?.vehicle_type ?? "Truck unavailable"} · {ageLabel(point.updated_at)}</p><p className="mt-1 text-steel">{point.is_available ? "Available for dispatch" : "Not available"}</p></div>;
       })}
       {!visible.length && !error && <p className="text-sm text-steel">No current or recently active driver locations.</p>}
