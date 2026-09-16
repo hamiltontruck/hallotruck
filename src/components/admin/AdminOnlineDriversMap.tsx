@@ -3,7 +3,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { classifyTrackingFreshness, type TrackingFreshness } from "../../domain/tracking-freshness";
 import { supabase } from "../../services/supabase.client";
-import type { Driver, Truck } from "../../services/admin.service";
+import type { AdminOrder, Driver, Truck } from "../../services/admin.service";
 
 type PresenceRow = {
   driver_id: string;
@@ -49,7 +49,12 @@ function markerElement(freshness: TrackingFreshness) {
   return element;
 }
 
-export function AdminOnlineDriversMap({ drivers, trucks }: { drivers: Driver[]; trucks: Truck[] }) {
+function assignedTruck(driverId: string, orders: AdminOrder[], trucks: Truck[]) {
+  const assignment = orders.find((order) => order.driver_id === driverId && order.truck_id && ["accepted", "in_transit"].includes(order.status));
+  return assignment?.truck_id ? trucks.find((truck) => truck.id === assignment.truck_id) : undefined;
+}
+
+export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Driver[]; trucks: Truck[]; orders: AdminOrder[] }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
@@ -96,7 +101,7 @@ export function AdminOnlineDriversMap({ drivers, trucks }: { drivers: Driver[]; 
     markers.current.forEach((marker) => marker.remove());
     markers.current = visible.map((point) => {
       const driver = drivers.find((item) => item.id === point.driver_id);
-      const truck = trucks.find((item) => item.driver_id === point.driver_id);
+      const truck = assignedTruck(point.driver_id, orders, trucks);
       const popup = new maplibregl.Popup({ offset: 18 }).setHTML(
         `<strong>${driver?.full_name ?? "Driver"}</strong><br/>${driver?.phone ?? "Phone unavailable"}<br/>${truck?.plate_number ?? truck?.vehicle_type ?? "Truck unavailable"}<br/>GPS ${point.freshness} · ${ageLabel(point.updated_at)}<br/>${point.is_available ? "Available for dispatch" : "Not available"}`,
       );
@@ -108,7 +113,7 @@ export function AdminOnlineDriversMap({ drivers, trucks }: { drivers: Driver[]; 
       visible.slice(1).forEach((point) => bounds.extend([point.lng, point.lat]));
       map.fitBounds(bounds, { padding: 55, maxZoom: 12 });
     }
-  }, [visible, drivers, trucks]);
+  }, [visible, drivers, trucks, orders]);
 
   return <section className="mb-5 overflow-hidden rounded-2xl border border-asphalt/10 bg-white" aria-label="Online drivers live fleet">
     <div className="flex flex-col gap-3 border-b border-asphalt/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
@@ -120,7 +125,7 @@ export function AdminOnlineDriversMap({ drivers, trucks }: { drivers: Driver[]; 
     <div className="grid gap-2 border-t border-asphalt/10 p-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
       {visible.slice(0, 9).map((point) => {
         const driver = drivers.find((item) => item.id === point.driver_id);
-        const truck = trucks.find((item) => item.driver_id === point.driver_id);
+        const truck = assignedTruck(point.driver_id, orders, trucks);
         return <div key={point.driver_id} className="rounded-xl bg-bone p-3 text-xs"><div className="flex items-center justify-between gap-2"><strong className="truncate">{driver?.full_name ?? driver?.phone ?? "Driver"}</strong><span className={point.freshness === "LIVE" ? "text-emerald-700" : "text-amber-dim"}>{point.freshness}</span></div><p className="mt-1 truncate text-steel">{truck?.plate_number ?? truck?.vehicle_type ?? "Truck unavailable"} · {ageLabel(point.updated_at)}</p><p className="mt-1 text-steel">{point.is_available ? "Available for dispatch" : "Not available"}</p></div>;
       })}
       {!visible.length && !error && <p className="text-sm text-steel">No current or recently active driver locations.</p>}
