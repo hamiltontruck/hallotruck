@@ -9,6 +9,8 @@
     <string name="vehicle_documents_progress">የተሽከርካሪ ሰነዶች %1$d/%2$d</string>
     <string name="document_section_driver">የግል / DRIVER</string>
     <string name="document_section_vehicle">ተሽከርካሪ</string>
+    <string name="document_expiry_prompt">ለ%1$s የሚያበቃበትን ቀን ይምረጡ</string>
+    <string name="document_expiry_required">ትክክለኛ የማብቂያ ቀን ያስፈልጋል።</string>
     <string name="history_unavailable">ታሪክ አሁን አይገኝም። እንደገና ለመሞከር ያድሱ።</string>
     <string name="data_unavailable">አይገኝም</string>
     <string name="tracking_live">LIVE</string>
@@ -38,6 +40,7 @@
     <string name="vehicle_format_v2">ሰሌዳ: %1$s\nተሽከርካሪ: %2$s\nአቅም: %3$s ቶን\nሁኔታ: %4$s</string>
     <string name="customer_collection_format">ከደንበኛ የተሰበሰበ: %1$s</string>
     <string name="payment_method_unknown">አልተሰጠም</string>
+    <string name="bank_telebirr_review">Bank / Telebirr — ለማረጋገጫ ይላኩ</string>
     <string name="status_accepted">ተቀብሏል</string>
     <string name="status_in_transit">በመጓጓዝ ላይ</string>
     <string name="status_delivered">ደርሷል</string>
