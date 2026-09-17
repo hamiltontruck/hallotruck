@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="payment_method_cash">Cash</string>
+    <string name="gps_starting_server">GPS started. Waiting for server confirmation before showing In transit.</string>
+    <string name="deposit_note_format">Note: %1$s</string>
+    <string name="verified_profile_photo">Verified driver profile photo</string>
+    <string name="vehicle_form_uses_assigned">Assigned vehicle details are loaded here for review before saving.</string>
+</resources>
