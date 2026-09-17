@@ -23,6 +23,10 @@ class LiveTripMapView @JvmOverloads constructor(
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        // OSM requires an identifiable application User-Agent. Keep the platform UA so
+        // Leaflet/CDN resources still receive a normal browser signature, then append HALLO.
+        val platformUa = settings.userAgentString.orEmpty()
+        settings.userAgentString = "$platformUa HALLODriver/0.4.0 (+https://hamiltontruck.github.io/hallotruck/)".trim()
         webViewClient = WebViewClient()
         isVerticalScrollBarEnabled = false
         isHorizontalScrollBarEnabled = false
@@ -80,7 +84,7 @@ class LiveTripMapView @JvmOverloads constructor(
               <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
               <script>
                 const map=L.map('map',{zoomControl:true,attributionControl:true});
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
                   maxZoom:19,
                   attribution:'&copy; OpenStreetMap contributors'
                 }).addTo(map);
