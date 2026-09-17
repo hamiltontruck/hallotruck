@@ -35,7 +35,10 @@ class DriverSessionViewModel(private val repo:DriverRepository=DriverRepository(
         if(repo.userId()!=null)load() else _state.value=DriverUiState(false,messageKey=DriverMessage.CONFIRM_EMAIL)
     }
     fun signOut()=work(DriverMessage.SIGNED_OUT){syncJob?.cancel();liveTripJob?.cancel();repo.signOut();_state.value=DriverUiState(false,messageKey=DriverMessage.SIGNED_OUT)}
-    fun page(page:DriverPage){_state.value=_state.value.copy(page=page)}
+    fun page(page:DriverPage){
+        // Page navigation must not carry an old mutation error/status banner into a new workspace.
+        _state.value=_state.value.copy(page=page,messageKey=DriverMessage.CURRENT,errorCode=null)
+    }
     fun refresh()=work(DriverMessage.REFRESHING){load()}
 
     private suspend fun load(){
