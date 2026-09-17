@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="payment_method_cash">ጥሬ ገንዘብ</string>
+    <string name="gps_starting_server">GPS ተጀምሯል። የመንገድ ላይ ሁኔታ ከሰርቨሩ እስኪረጋገጥ በመጠበቅ ላይ።</string>
+    <string name="deposit_note_format">ማስታወሻ፦ %1$s</string>
+    <string name="verified_profile_photo">የተረጋገጠ የአሽከርካሪ ፕሮፋይል ፎቶ</string>
+    <string name="vehicle_form_uses_assigned">የተመደበው ተሽከርካሪ መረጃ ከማስቀመጥ በፊት ለመመርመር እዚህ ይሞላል።</string>
+</resources>
