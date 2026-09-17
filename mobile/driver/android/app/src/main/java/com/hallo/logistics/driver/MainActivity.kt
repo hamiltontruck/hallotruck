@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Gravity
 import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -21,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.setPadding
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -33,6 +35,7 @@ import java.net.URL
 import java.text.NumberFormat
 import java.time.ZoneId
 import java.util.Calendar
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,6 +53,9 @@ class MainActivity:DriverLocalizedActivity(){
     private var signature:ByteArray?=null
     private var currentPaymentResults:List<String> = PAYMENT_RESULTS
     private var vehiclePrefillId:String?=null
+    private var vehicleFormDirty=false
+    private var applyingVehiclePrefill=false
+    private var vehicleSpinnerArmed=false
     private var loadedProfilePhotoPath:String?=null
     private var loadingProfilePhotoPath:String?=null
 
@@ -97,8 +103,16 @@ class MainActivity:DriverLocalizedActivity(){
         b.signOut.setOnClickListener{vm.signOut()};b.refresh.setOnClickListener{vm.refresh()}
         b.documentsAction.setOnClickListener{vm.page(DriverPage.ONBOARDING)};b.notificationsAction.setOnClickListener{vm.page(DriverPage.NOTIFICATIONS)};b.profileDocuments.setOnClickListener{vm.page(DriverPage.ONBOARDING)}
         b.bottomNavigation.setOnItemSelectedListener{item->vm.page(when(item.itemId){R.id.nav_jobs->DriverPage.JOBS;R.id.nav_trip->DriverPage.TRIP;R.id.nav_wallet->DriverPage.WALLET;R.id.nav_profile->DriverPage.PROFILE;else->DriverPage.HOME});true}
+        b.plate.addTextChangedListener{if(!applyingVehiclePrefill)vehicleFormDirty=true}
+        b.capacity.addTextChangedListener{if(!applyingVehiclePrefill)vehicleFormDirty=true}
+        b.vehicleType.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
+            override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long){
+                if(vehicleSpinnerArmed&&!applyingVehiclePrefill)vehicleFormDirty=true
+                vehicleSpinnerArmed=true
+            }
+            override fun onNothingSelected(parent:AdapterView<*>?)=Unit
+        }
         b.saveVehicle.setOnClickListener{
-            vehiclePrefillId=null
             vm.saveVehicle(textOf(b.plate),b.vehicleType.selectedItem?.toString().orEmpty(),textOf(b.capacity).toDoubleOrNull()?:0.0)
         }
         b.chooseDocument.setOnClickListener{
@@ -199,11 +213,32 @@ class MainActivity:DriverLocalizedActivity(){
         state.activeTrip?.truckId?.let{id->state.trucks.firstOrNull{it.id==id}}?:state.trucks.firstOrNull()
 
     private fun renderVehicleForm(state:DriverUiState){
-        if(!state.trucksAvailable)return
-        val truck=primaryTruck(state)?:run{vehiclePrefillId=null;return}
-        if(vehiclePrefillId==truck.id)return
+        val summary=vehicleStatusView()
+        if(!state.trucksAvailable){
+            summary.setText(R.string.vehicle_prefill_unavailable)
+            return
+        }
+        val truck=primaryTruck(state)
+        if(truck==null){
+            summary.setText(R.string.vehicle_prefill_none)
+            if(!vehicleFormDirty&&vehiclePrefillId!=null){
+                applyingVehiclePrefill=true
+                b.plate.text?.clear();b.capacity.text?.clear()
+                if(b.vehicleType.adapter.count>0)b.vehicleType.setSelection(0,false)
+                applyingVehiclePrefill=false
+            }
+            vehiclePrefillId=null
+            return
+        }
+        summary.text=getString(R.string.vehicle_prefill_summary,localStatus(truck.status),vehicleReviewStatus(state,truck.id))
+        if(vehicleFormDirty){
+            if(vehicleFormMatches(truck)){vehicleFormDirty=false;vehiclePrefillId=truck.id}
+            return
+        }
+        if(vehiclePrefillId==truck.id&&vehicleFormMatches(truck))return
+        applyingVehiclePrefill=true
         b.plate.setText(truck.plate.orEmpty())
-        b.capacity.setText(truck.capacity?.let{NumberFormat.getNumberInstance().format(it)}.orEmpty())
+        b.capacity.setText(capacityInput(truck.capacity))
         val type=truck.vehicleType.orEmpty()
         if(type.isNotBlank()){
             var options=VEHICLE_TYPES
@@ -214,8 +249,55 @@ class MainActivity:DriverLocalizedActivity(){
             val index=options.indexOfFirst{it.equals(type,ignoreCase=true)}
             if(index>=0)b.vehicleType.setSelection(index,false)
         }
+        applyingVehiclePrefill=false
         vehiclePrefillId=truck.id
     }
+
+    private fun vehicleStatusView():TextView{
+        b.pageOnboarding.findViewWithTag<TextView>("driver-vehicle-prefill-state")?.let{return it}
+        return TextView(this).apply{
+            tag="driver-vehicle-prefill-state"
+            setText(R.string.vehicle_form_uses_assigned)
+            textSize=13f
+            setTextColor(ContextCompat.getColor(this@MainActivity,R.color.hallo_text_muted))
+            setPadding(dp(12),dp(10),dp(12),dp(10))
+            val index=b.pageOnboarding.indexOfChild(b.saveVehicle).let{if(it>=0)it else 0}
+            b.pageOnboarding.addView(this,index)
+        }
+    }
+
+    private fun vehicleReviewStatus(state:DriverUiState,truckId:String):String{
+        if(!state.documentsAvailable)return getString(R.string.data_unavailable)
+        val latest=state.documents
+            .filter{it.truckId==truckId&&it.key in DriverDocumentPolicy.vehicleKeys}
+            .groupBy{it.key}
+            .mapValues{(_,rows)->rows.maxByOrNull{it.createdAt.orEmpty()}}
+            .values
+            .filterNotNull()
+        if(latest.any{it.status?.lowercase()=="rejected"})return getString(R.string.rejected)
+        if(latest.any{it.status?.lowercase()=="pending"})return getString(R.string.pending)
+        if(latest.size<DriverDocumentPolicy.vehicleKeys.size)return getString(R.string.missing)
+        val reviewed=latest.mapNotNull{it.status?.lowercase()}
+        return when{
+            reviewed.all{it=="verified"}->getString(R.string.verified)
+            reviewed.all{it in setOf("verified","approved")}->getString(R.string.approved)
+            else->getString(R.string.missing)
+        }
+    }
+
+    private fun vehicleFormMatches(truck:DriverTruck):Boolean{
+        val plateMatches=textOf(b.plate).trim().equals(truck.plate.orEmpty().trim(),ignoreCase=true)
+        val typeMatches=b.vehicleType.selectedItem?.toString().orEmpty().equals(truck.vehicleType.orEmpty(),ignoreCase=true)
+        val formCapacity=textOf(b.capacity).toDoubleOrNull()
+        val capacityMatches=when{
+            formCapacity==null&&truck.capacity==null->true
+            formCapacity!=null&&truck.capacity!=null->abs(formCapacity-truck.capacity)<0.005
+            else->false
+        }
+        return plateMatches&&typeMatches&&capacityMatches
+    }
+
+    private fun capacityInput(value:Double?):String=value?.let{if(abs(it-it.toLong())<0.000001)it.toLong().toString() else it.toString()}.orEmpty()
 
     private fun renderAssignment(state:DriverUiState){
         if(!state.activeTripAvailable){b.homeAssignment.text=getString(R.string.data_unavailable)} else {
@@ -255,7 +337,15 @@ class MainActivity:DriverLocalizedActivity(){
             trip?.status=="accepted"&&trackingRunning->getString(R.string.gps_starting_server)
             trip?.status=="accepted"&&live?.recordedAt==null->getString(R.string.ready_to_start)
             live?.truckLat==null->getString(R.string.waiting_gps)
-            else->{val freshness=when(DriverPresentation.trackingFreshness(live.recordedAt)){DriverTrackingFreshness.LIVE->getString(R.string.tracking_live);DriverTrackingFreshness.STALE->getString(R.string.tracking_stale);DriverTrackingFreshness.OFFLINE->getString(R.string.tracking_offline)};val whenText=DriverPresentation.formatDateTime(live.recordedAt,resources.configuration.locales[0],ZoneId.systemDefault())?:getString(R.string.data_unavailable);if(live.speedKmh!=null)getString(R.string.tracking_summary_with_speed,freshness,live.speedKmh,whenText) else getString(R.string.tracking_summary_no_speed,freshness,whenText)}
+            else->{
+                val freshness=when(DriverPresentation.trackingFreshness(live.recordedAt)){DriverTrackingFreshness.LIVE->getString(R.string.tracking_live);DriverTrackingFreshness.STALE->getString(R.string.tracking_stale);DriverTrackingFreshness.OFFLINE->getString(R.string.tracking_offline)}
+                val whenText=DriverPresentation.formatDateTime(live.recordedAt,resources.configuration.locales[0],ZoneId.systemDefault())?:getString(R.string.data_unavailable)
+                when{
+                    live.speedKmh!=null&&live.heading!=null->getString(R.string.tracking_summary_with_speed_heading,freshness,live.speedKmh,live.heading,whenText)
+                    live.speedKmh!=null->getString(R.string.tracking_summary_with_speed,freshness,live.speedKmh,whenText)
+                    else->getString(R.string.tracking_summary_no_speed,freshness,whenText)
+                }
+            }
         }
         b.liveTripMap.visibility=visible(trip!=null);b.liveMapState.visibility=visible(trip!=null);b.openNavigation.visibility=visible(trip!=null)
         b.startTrip.visibility=visible(trip?.status=="accepted"&&!trackingRunning)
@@ -280,11 +370,12 @@ class MainActivity:DriverLocalizedActivity(){
             b.tripHistoryList.addView(infoCard(getString(R.string.trip_result_format_v2,order?.trackingId.orDash(),localStatus(order?.status),order?.pickup.orDash(),order?.dropoff.orDash(),localStatus(result.resultType),paymentMethodLabel(result.paymentMethod),money(order?.priceEtb),money(result.driverGrossEtb?:result.amountCollected),money(result.commissionEtb),money(result.driverNetEtb),money(result.depositConsumedEtb),money(result.depositAfterEtb),date)))
         }}
         b.depositHistoryList.removeAllViews();when{!state.depositTransactionsAvailable->b.depositHistoryList.addView(infoCard(getString(R.string.history_unavailable)));state.depositTransactions.isEmpty()->b.depositHistoryList.addView(infoCard(getString(R.string.no_deposits)));else->state.depositTransactions.sortedByDescending{it.createdAt}.forEach{d->b.depositHistoryList.addView(infoCard(getString(R.string.deposit_row_format_v2,money(d.amountEtb),localStatus(d.status),getString(R.string.deposit_note_format,d.note.orDash()),formatDateTime(d.reversedAt?:d.createdAt))))}}
-        b.commissionPaymentsList.removeAllViews();when{!state.commissionPaymentsAvailable->b.commissionPaymentsList.addView(infoCard(getString(R.string.history_unavailable)));state.commissionPayments.isEmpty()->b.commissionPaymentsList.addView(infoCard(getString(R.string.no_commission_payments)));else->state.commissionPayments.sortedByDescending{it.submittedAt}.forEach{p->b.commissionPaymentsList.addView(infoCard(getString(R.string.commission_payment_row_format_v2,money(p.amountEtb),localStatus(p.status),p.provider,p.transactionId,p.rejectionReason?:formatDateTime(p.reviewedAt?:p.submittedAt))))}}
+        b.commissionPaymentsList.removeAllViews();when{!state.commissionPaymentsAvailable->b.commissionPaymentsList.addView(infoCard(getString(R.string.history_unavailable)));state.commissionPayments.isEmpty()->b.commissionPaymentsList.addView(infoCard(getString(R.string.no_commission_payments)));else->state.commissionPayments.sortedByDescending{it.submittedAt}.forEach{p->b.commissionPaymentsList.addView(infoCard(getString(R.string.commission_payment_row_format_v2,money(p.amountEtb),localStatus(p.status),DriverPresentation.humanizeToken(p.provider)?:p.provider,p.transactionId,p.rejectionReason?:formatDateTime(p.reviewedAt?:p.submittedAt))))}}
     }
 
     private fun renderNotifications(state:DriverUiState){
         b.alertsList.removeAllViews()
+        if(!state.notificationsAvailable){b.alertsList.addView(infoCard(getString(R.string.notifications_unavailable)));return}
         state.notifications.forEach{note->b.alertsList.addView(infoCard("${if(note.readAt==null)"● " else ""}${note.title}\n${note.body}").apply{setOnClickListener{vm.markRead(note.id)}})}
         if(state.notifications.isEmpty())b.alertsList.addView(infoCard(getString(R.string.no_notifications)))
     }
@@ -374,7 +465,7 @@ class MainActivity:DriverLocalizedActivity(){
 
     private fun messageText(message:DriverMessage)=getString(when(message){DriverMessage.RESTORING->R.string.restoring;DriverMessage.CONFIG_REQUIRED->R.string.config_required;DriverMessage.SIGN_IN_REQUIRED->R.string.sign_in_required;DriverMessage.SIGNING_IN->R.string.signing_in;DriverMessage.CREATING_ACCOUNT->R.string.creating_account;DriverMessage.CONFIRM_EMAIL->R.string.confirm_email;DriverMessage.SIGNED_OUT->R.string.signed_out;DriverMessage.REFRESHING->R.string.refreshing;DriverMessage.CURRENT->R.string.current;DriverMessage.ACCESS_DENIED->R.string.access_denied;DriverMessage.ACCEPTING_JOB->R.string.accepting_job;DriverMessage.OPEN_TRIP->R.string.open_trip;DriverMessage.SAVING_VEHICLE->R.string.saving_vehicle;DriverMessage.UPLOADING_DOCUMENT->R.string.uploading_document;DriverMessage.SUBMITTING_DELIVERY->R.string.submitting_delivery;DriverMessage.TRIP_COMPLETED->R.string.trip_completed;DriverMessage.ACTIVE_TRIP_SYNCED->R.string.active_trip_synced;DriverMessage.GPS_STARTED->R.string.gps_started;DriverMessage.GPS_STOPPED->R.string.gps_stopped;DriverMessage.MARKING_READ->R.string.marking_read})
     private fun errorText(error:DriverErrorCode)=getString(when(error){DriverErrorCode.INVALID_CREDENTIALS->R.string.error_invalid_credentials;DriverErrorCode.ACCOUNT_EXISTS->R.string.error_account_exists;DriverErrorCode.NETWORK->R.string.error_network;DriverErrorCode.SESSION_EXPIRED->R.string.error_session_expired;DriverErrorCode.FORBIDDEN->R.string.error_forbidden;DriverErrorCode.INVALID_INPUT->R.string.error_invalid_input;DriverErrorCode.DUPLICATE_ACTION->R.string.error_duplicate;DriverErrorCode.PERMISSION_DENIED->R.string.error_permission_denied;DriverErrorCode.REQUEST_FAILED->R.string.error_request_failed})
-    private fun localStatus(value:String?):String=when(value?.lowercase()){ "approved"->getString(R.string.approved);"verified"->getString(R.string.verified);"pending"->getString(R.string.pending);"rejected","suspended","disabled"->getString(R.string.rejected);"reversed"->getString(R.string.reversed);"accepted"->getString(R.string.status_accepted);"in_transit"->getString(R.string.status_in_transit);"delivered"->getString(R.string.status_delivered);"partial","partially_paid"->getString(R.string.status_partial);"held_escrow"->getString(R.string.status_held_escrow);"initiated"->getString(R.string.status_initiated);"unpaid"->getString(R.string.status_unpaid);"active"->getString(R.string.status_active);"blocked"->getString(R.string.status_blocked);"cash_received"->getString(R.string.cash_received);"bank_telebirr"->getString(R.string.bank_telebirr);"payment_not_received"->getString(R.string.payment_not_received);null,""->getString(R.string.missing);else->DriverPresentation.humanizeToken(value)?:getString(R.string.missing)}
+    private fun localStatus(value:String?):String=when(value?.lowercase()){ "approved"->getString(R.string.approved);"verified"->getString(R.string.verified);"pending"->getString(R.string.pending);"missing"->getString(R.string.missing);"rejected","suspended","disabled"->getString(R.string.rejected);"reversed"->getString(R.string.reversed);"accepted"->getString(R.string.status_accepted);"in_transit"->getString(R.string.status_in_transit);"delivered"->getString(R.string.status_delivered);"partial","partially_paid"->getString(R.string.status_partial);"held_escrow"->getString(R.string.status_held_escrow);"initiated"->getString(R.string.status_initiated);"unpaid"->getString(R.string.status_unpaid);"active"->getString(R.string.status_active);"blocked"->getString(R.string.status_blocked);"cash_received"->getString(R.string.cash_received);"bank_telebirr"->getString(R.string.bank_telebirr);"payment_not_received"->getString(R.string.payment_not_received);null,""->getString(R.string.missing);else->DriverPresentation.humanizeToken(value)?:getString(R.string.missing)}
     private fun paymentLabel(value:String)=when(value){"cash_received"->getString(R.string.cash_received);"bank_telebirr"->getString(R.string.bank_telebirr_review);else->getString(R.string.payment_not_received)}
     private fun paymentMethodLabel(value:String?)=when(value){"cash"->getString(R.string.payment_method_cash);"bank_telebirr"->getString(R.string.bank_telebirr);null,""->getString(R.string.payment_method_unknown);else->DriverPresentation.humanizeToken(value)?:getString(R.string.payment_method_unknown)}
     private fun documentLabel(key:String)=getString(when(key){"driver_photo"->R.string.driver_photo;"license_front"->R.string.license_front;"license_back"->R.string.license_back;"national_id_front"->R.string.national_id_front;"national_id_back"->R.string.national_id_back;"vehicle_registration"->R.string.vehicle_registration;"truck_front"->R.string.truck_front;else->R.string.truck_side})
