@@ -8,7 +8,7 @@ if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
 }
 
 flutter --version
-flutter create . --platforms=android --org com.hallo.logistics --project-name hallo_driver_flutter
+flutter create . --platforms=android --org com.hallo.logistics --project-name hallo_driver_flutter --empty
 flutter pub get
 flutter test
 flutter analyze
