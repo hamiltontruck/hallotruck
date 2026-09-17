@@ -3,6 +3,8 @@ import { supabase } from "./supabase.client";
 const BUCKET = "driver-commission-receipts";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+export const COMMISSION_PAYMENT_MIN_ETB = 1000;
+export const COMMISSION_PAYMENT_MAX_ETB = 100000;
 
 export type CommissionPaymentStatus = "pending" | "approved" | "rejected";
 
@@ -91,6 +93,12 @@ function validateReceipt(file: File) {
   if (file.size > MAX_FILE_BYTES) throw new Error("Receipt must be 10 MB or smaller.");
 }
 
+function validateCommissionPaymentAmount(value: number) {
+  if (!Number.isFinite(value) || value < COMMISSION_PAYMENT_MIN_ETB || value > COMMISSION_PAYMENT_MAX_ETB) {
+    throw new Error("Commission payment amount must be between ETB 1,000 and ETB 100,000.");
+  }
+}
+
 function safeName(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/-+/g, "-").slice(-80) || "receipt";
 }
@@ -101,6 +109,7 @@ export async function submitCommissionPayment(input: {
   amountEtb: number;
   receipt: File;
 }) {
+  validateCommissionPaymentAmount(input.amountEtb);
   validateReceipt(input.receipt);
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Sign in required.");
