@@ -43,24 +43,69 @@ class DriverSessionViewModel(private val repo:DriverRepository=DriverRepository(
         val p=repo.profile()
         val access=DriverAccessPolicy.resolve(p.role,p.driverStatus)
         if(access==DriverAccess.FORBIDDEN){repo.signOut();_state.value=DriverUiState(false,messageKey=DriverMessage.ACCESS_DENIED,access=DriverAccess.FORBIDDEN);return}
-        val trucks=viewModelScope.async{runCatching{repo.driverTrucks()}.getOrDefault(previous.trucks)}
-        val docs=viewModelScope.async{runCatching{repo.documents()}.getOrDefault(previous.documents)}
-        val notes=viewModelScope.async{runCatching{repo.notifications()}.getOrDefault(previous.notifications)}
-        val active=if(access==DriverAccess.APPROVED)runCatching{repo.activeTrip()}.getOrNull() else null
-        val financial=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.wallet()}.getOrNull()?:previous.wallet}else null
-        val commission=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.commissionSummary()}.getOrNull()?:previous.commission}else null
-        val results=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.tripPaymentResults()}.getOrDefault(previous.tripResults)}else null
-        val payments=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.commissionPayments()}.getOrDefault(previous.commissionPayments)}else null
-        val deposits=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.depositTransactions()}.getOrDefault(previous.depositTransactions)}else null
-        val history=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.completedTrips()}.getOrDefault(previous.completedTrips)}else null
-        val wallet=financial?.await()
-        val commissionValue=commission?.await()
-        val blocked=DriverFinancePresentationPolicy.blocked(commissionValue,wallet)
-        val jobs=if(access==DriverAccess.APPROVED&&active==null&&!blocked)runCatching{repo.jobs()}.getOrDefault(previous.jobs) else emptyList()
+
+        val trucksCall=viewModelScope.async{runCatching{repo.driverTrucks()}}
+        val docsCall=viewModelScope.async{runCatching{repo.documents()}}
+        val notesCall=viewModelScope.async{runCatching{repo.notifications()}}
+        val activeResult=if(access==DriverAccess.APPROVED)runCatching{repo.activeTrip()} else Result.success<DriverJob?>(null)
+        val financialCall=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.wallet()}}else null
+        val commissionCall=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.commissionSummary()}}else null
+        val resultsCall=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.tripPaymentResults()}}else null
+        val paymentsCall=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.commissionPayments()}}else null
+        val depositsCall=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.depositTransactions()}}else null
+        val historyCall=if(access==DriverAccess.APPROVED)viewModelScope.async{runCatching{repo.completedTrips()}}else null
+
+        val trucksResult=trucksCall.await()
+        val docsResult=docsCall.await()
+        val notesResult=notesCall.await()
+        val financialResult=financialCall?.await()
+        val commissionResult=commissionCall?.await()
+        val resultsResult=resultsCall?.await()
+        val paymentsResult=paymentsCall?.await()
+        val depositsResult=depositsCall?.await()
+        val historyResult=historyCall?.await()
+
+        val wallet=financialResult?.getOrNull()
+        val commission=commissionResult?.getOrNull()
+        val active=activeResult.getOrNull()
+        val financeKnown=wallet!=null||commission!=null
+        val blocked=if(financeKnown)DriverFinancePresentationPolicy.blocked(commission,wallet) else false
+
+        val jobsResult=when{
+            access!=DriverAccess.APPROVED->null
+            activeResult.isFailure->Result.failure(IllegalStateException("active trip unavailable"))
+            active!=null||blocked->Result.success(emptyList())
+            !financeKnown->Result.failure(IllegalStateException("commission state unavailable"))
+            else->runCatching{repo.jobs()}
+        }
+
         _state.value=DriverUiState(
-            loading=false,busy=false,access=access,page=if(access==DriverAccess.APPROVED)previous.page else DriverPage.ONBOARDING,
-            messageKey=DriverMessage.CURRENT,profile=p,jobs=jobs,activeTrip=active,trucks=trucks.await(),documents=docs.await(),notifications=notes.await(),wallet=wallet,
-            commission=commissionValue,tripResults=results?.await()?:emptyList(),commissionPayments=payments?.await()?:emptyList(),depositTransactions=deposits?.await()?:emptyList(),completedTrips=history?.await()?:emptyList(),liveTrip=previous.liveTrip
+            loading=false,
+            busy=false,
+            access=access,
+            page=if(access==DriverAccess.APPROVED)previous.page else DriverPage.ONBOARDING,
+            messageKey=DriverMessage.CURRENT,
+            profile=p,
+            jobs=jobsResult?.getOrElse{emptyList()}?:emptyList(),
+            jobsAvailable=jobsResult?.isSuccess==true,
+            activeTrip=active,
+            activeTripAvailable=access!=DriverAccess.APPROVED||activeResult.isSuccess,
+            trucks=trucksResult.getOrElse{emptyList()},
+            trucksAvailable=trucksResult.isSuccess,
+            documents=docsResult.getOrElse{emptyList()},
+            documentsAvailable=docsResult.isSuccess,
+            notifications=notesResult.getOrElse{emptyList()},
+            wallet=wallet,
+            commission=commission,
+            tripResults=resultsResult?.getOrElse{emptyList()}?:emptyList(),
+            tripResultsAvailable=resultsResult?.isSuccess==true,
+            commissionPayments=paymentsResult?.getOrElse{emptyList()}?:emptyList(),
+            commissionPaymentsAvailable=paymentsResult?.isSuccess==true,
+            depositTransactions=depositsResult?.getOrElse{emptyList()}?:emptyList(),
+            depositTransactionsAvailable=depositsResult?.isSuccess==true,
+            completedTrips=historyResult?.getOrElse{emptyList()}?:emptyList(),
+            completedTripsAvailable=historyResult?.isSuccess==true,
+            liveTrip=if(active!=null)previous.liveTrip?.takeIf{it.orderId==active.id}else null,
         )
         if(access==DriverAccess.APPROVED)startScopedSync() else {syncJob?.cancel();liveTripJob?.cancel()}
         active?.let{observeLiveTrip(it.id)}
@@ -75,9 +120,13 @@ class DriverSessionViewModel(private val repo:DriverRepository=DriverRepository(
                 if(current.access!=DriverAccess.APPROVED)continue
                 runCatching{repo.activeTrip()}.onSuccess{active->
                     if(active?.id!=current.activeTrip?.id||active?.status!=current.activeTrip?.status){
-                        _state.value=current.copy(activeTrip=active,jobs=if(active!=null)emptyList() else current.jobs,messageKey=DriverMessage.ACTIVE_TRIP_SYNCED)
-                        if(active!=null)observeLiveTrip(active.id) else {liveTripJob?.cancel();_state.value=_state.value.copy(liveTrip=null)}
+                        load()
+                    }else if(!current.activeTripAvailable){
+                        _state.value=current.copy(activeTripAvailable=true)
                     }
+                }.onFailure{
+                    liveTripJob?.cancel()
+                    _state.value=_state.value.copy(activeTrip=null,activeTripAvailable=false,liveTrip=null,jobsAvailable=false)
                 }
             }
         }
@@ -85,7 +134,12 @@ class DriverSessionViewModel(private val repo:DriverRepository=DriverRepository(
 
     private fun observeLiveTrip(orderId:String){
         if(liveTripJob?.isActive==true&&_state.value.liveTrip?.orderId==orderId)return
-        liveTripJob?.cancel();liveTripJob=viewModelScope.launch{while(true){runCatching{repo.liveTrip(orderId)}.onSuccess{_state.value=_state.value.copy(liveTrip=it)};delay(10_000)}}
+        liveTripJob?.cancel();liveTripJob=viewModelScope.launch{
+            while(true){
+                runCatching{repo.liveTrip(orderId)}.onSuccess{_state.value=_state.value.copy(liveTrip=it)}
+                delay(10_000)
+            }
+        }
     }
 
     fun claim(orderId:String,truckId:String)=work(DriverMessage.ACCEPTING_JOB){repo.claim(orderId,truckId);load()}
