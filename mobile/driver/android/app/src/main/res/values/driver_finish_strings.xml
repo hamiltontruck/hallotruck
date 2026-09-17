@@ -9,6 +9,8 @@
     <string name="vehicle_documents_progress">Vehicle documents %1$d/%2$d</string>
     <string name="document_section_driver">PERSONAL / DRIVER</string>
     <string name="document_section_vehicle">VEHICLE</string>
+    <string name="document_expiry_prompt">Select expiry date for %1$s</string>
+    <string name="document_expiry_required">A valid expiry date is required.</string>
     <string name="history_unavailable">History is unavailable right now. Refresh to try again.</string>
     <string name="data_unavailable">Unavailable</string>
     <string name="tracking_live">LIVE</string>
@@ -38,6 +40,7 @@
     <string name="vehicle_format_v2">Plate: %1$s\nVehicle: %2$s\nCapacity: %3$s tons\nStatus: %4$s</string>
     <string name="customer_collection_format">Customer collection: %1$s</string>
     <string name="payment_method_unknown">Not provided</string>
+    <string name="bank_telebirr_review">Bank / Telebirr — submit for verification</string>
     <string name="status_accepted">Accepted</string>
     <string name="status_in_transit">In transit</string>
     <string name="status_delivered">Delivered</string>
