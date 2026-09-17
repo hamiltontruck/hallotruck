@@ -9,4 +9,5 @@
     <string name="vehicle_prefill_unavailable">የተመደበው ተሽከርካሪ መረጃ አሁን አይገኝም። በቅጹ ውስጥ ያለው መረጃ አልተለወጠም።</string>
     <string name="vehicle_prefill_none">አሁን የተመደበ ተሽከርካሪ የለም።</string>
     <string name="notifications_unavailable">ማሳወቂያዎች አሁን አይገኙም። አድስና እንደገና ይሞክሩ።</string>
+    <string name="tracking_summary_with_speed_heading">%1$s · %2$.0f km/h · አቅጣጫ %3$.0f°\nየመጨረሻ ዝመና፦ %4$s</string>
 </resources>
