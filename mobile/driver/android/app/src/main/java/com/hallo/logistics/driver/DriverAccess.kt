@@ -58,13 +58,52 @@ object DriverErrorPolicy {
 }
 
 object DriverDocumentPolicy {
-    val identityKeys=setOf("driver_photo","license_front","license_back","national_id_front","national_id_back")
-    val vehicleKeys=setOf("vehicle_registration","truck_front","insurance","transport_permit","truck_back","truck_side","truck_loading_area")
-    val allKeys=identityKeys+vehicleKeys
+    val identityKeys = linkedSetOf(
+        "driver_photo",
+        "license_front",
+        "license_back",
+        "national_id_front",
+        "national_id_back",
+    )
+    val vehicleKeys = linkedSetOf(
+        "vehicle_registration",
+        "truck_front",
+        "truck_side",
+    )
+
+    // Historical files remain readable in Driver data, but they are not current requirements
+    // and cannot be selected as new required uploads from the native app.
+    val historicalVehicleKeys = setOf(
+        "insurance",
+        "transport_permit",
+        "truck_back",
+        "truck_loading_area",
+    )
+    val allKeys = identityKeys + vehicleKeys
+
+    fun identityCompletion(documents:List<DriverDocument>):Pair<Int,Int> =
+        currentCount(documents.filter { it.truckId == null }, identityKeys) to identityKeys.size
+
+    fun vehicleCompletion(documents:List<DriverDocument>, truckId:String?):Pair<Int,Int> {
+        if (truckId == null) return 0 to vehicleKeys.size
+        return currentCount(documents.filter { it.truckId == truckId }, vehicleKeys) to vehicleKeys.size
+    }
+
     fun completion(documents:List<DriverDocument>,truckId:String?):Pair<Int,Int>{
-        val identity=documents.filter{it.truckId==null}.map{it.key}.toSet()
-        val vehicle=documents.filter{it.truckId==truckId}.map{it.key}.toSet()
-        return (identityKeys.count{it in identity}+vehicleKeys.count{it in vehicle}) to allKeys.size
+        val identity = identityCompletion(documents)
+        val vehicle = vehicleCompletion(documents, truckId)
+        return (identity.first + vehicle.first) to (identity.second + vehicle.second)
+    }
+
+    private fun currentCount(documents:List<DriverDocument>, required:Set<String>):Int {
+        val latest = documents
+            .filter { it.key in required }
+            .groupBy { it.key }
+            .mapValues { (_, rows) -> rows.maxByOrNull { it.createdAt.orEmpty() } }
+        return required.count { key ->
+            val row = latest[key]
+            row != null && row.status?.lowercase() != "rejected"
+        }
     }
 }
 
