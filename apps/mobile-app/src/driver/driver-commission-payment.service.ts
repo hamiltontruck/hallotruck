@@ -55,7 +55,6 @@ export async function submitDriverCommissionPayment(input: {
   provider: string;
   transactionId: string;
   amountEtb: number;
-  payableNowEtb: number;
   receipt: File | null;
 }): Promise<string> {
   const validated = validateDriverCommissionPayment({
@@ -63,7 +62,7 @@ export async function submitDriverCommissionPayment(input: {
     transactionId: input.transactionId,
     amountEtb: input.amountEtb,
     receipt: input.receipt,
-  }, input.payableNowEtb);
+  });
   const client = await requireExpectedDriver(input.expectedUserId);
   const receipt = input.receipt as File;
   const path = buildDriverCommissionReceiptPath(
