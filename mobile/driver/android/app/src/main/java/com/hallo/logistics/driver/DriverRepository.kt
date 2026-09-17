@@ -6,6 +6,7 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.storage.storage
+import java.time.LocalDate
 import java.util.UUID
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -51,16 +52,21 @@ class DriverRepository {
         client.postgrest.rpc("driver_save_vehicle_profile",buildJsonObject{put("p_plate_number",plate.trim());put("p_vehicle_type",type);put("p_capacity_tons",capacity)})
     }
 
-    suspend fun uploadDocument(key:String,truckId:String?,name:String,mime:String,bytes:ByteArray){
+    suspend fun uploadDocument(key:String,truckId:String?,name:String,mime:String,bytes:ByteArray,expiryDate:String?=null){
         val id=profile().id
         require(key in DriverDocumentPolicy.allKeys);require(bytes.isNotEmpty()&&bytes.size<=10*1024*1024)
         require(mime in setOf("image/jpeg","image/png","image/webp","image/heic","image/heif","application/pdf"))
+        val normalizedExpiry=if(key in DriverDocumentPolicy.expiryRequiredKeys){
+            val parsed=LocalDate.parse(requireNotNull(expiryDate))
+            require(!parsed.isBefore(LocalDate.now()))
+            parsed.toString()
+        }else null
         val scope=truckId?.let{"truck-$it"}?:"identity"
         val safe=name.lowercase().replace(Regex("[^a-z0-9._-]"),"-").takeLast(90)
         val path="$id/$scope/$key/${UUID.randomUUID()}-$safe"
         client.storage.from("driver-verification").upload(path,bytes){upsert=false}
         client.from("driver_verification_files").insert(buildJsonObject{
-            put("driver_id",id);if(truckId!=null)put("truck_id",truckId);put("document_key",key);put("file_path",path);put("original_name",name);put("mime_type",mime);put("status","pending")
+            put("driver_id",id);if(truckId!=null)put("truck_id",truckId);put("document_key",key);put("file_path",path);put("original_name",name);put("mime_type",mime);put("status","pending");if(normalizedExpiry!=null)put("expiry_date",normalizedExpiry)
         })
     }
 
