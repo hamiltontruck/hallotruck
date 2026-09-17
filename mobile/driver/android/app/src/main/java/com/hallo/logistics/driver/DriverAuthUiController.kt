@@ -131,7 +131,6 @@ class DriverAuthUiController(
             }
             if (requested == DriverLocaleManager.saved(activity)) return@addOnButtonCheckedListener
             DriverLocaleManager.apply(activity, requested)
-            activity.recreate()
         }
     }
 
