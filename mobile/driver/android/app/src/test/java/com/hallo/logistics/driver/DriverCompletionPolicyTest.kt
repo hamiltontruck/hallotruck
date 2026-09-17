@@ -6,12 +6,28 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DriverCompletionPolicyTest {
-    @Test fun documentChecklistMatchesCurrentPortalFiveIdentityAndSevenVehicleFiles(){
-        val docs=DriverDocumentPolicy.identityKeys.mapIndexed{i,k->DriverDocument("i$i",k,null,"p") }+
-            DriverDocumentPolicy.vehicleKeys.mapIndexed{i,k->DriverDocument("v$i",k,"truck-1","p")}
-        assertEquals(12,DriverDocumentPolicy.completion(docs,"truck-1").first)
-        assertEquals(5,DriverDocumentPolicy.completion(docs,null).first)
+    @Test fun documentChecklistMatchesCurrentFiveDriverAndThreeVehicleFiles(){
+        val docs=DriverDocumentPolicy.identityKeys.mapIndexed{i,k->DriverDocument("i$i",k,null,"p",status="verified") }+
+            DriverDocumentPolicy.vehicleKeys.mapIndexed{i,k->DriverDocument("v$i",k,"truck-1","p",status="verified")}
+        assertEquals(8,DriverDocumentPolicy.completion(docs,"truck-1").first)
+        assertEquals(8,DriverDocumentPolicy.completion(docs,"truck-1").second)
+        assertEquals(5 to 5,DriverDocumentPolicy.identityCompletion(docs))
+        assertEquals(3 to 3,DriverDocumentPolicy.vehicleCompletion(docs,"truck-1"))
     }
+
+    @Test fun historicalVehicleFilesDoNotCountAsCurrentRequirements(){
+        val historical=DriverDocumentPolicy.historicalVehicleKeys.mapIndexed{i,k->DriverDocument("h$i",k,"truck-1","p",status="verified")}
+        assertEquals(0 to 8,DriverDocumentPolicy.completion(historical,"truck-1"))
+    }
+
+    @Test fun rejectedLatestRequiredFileNeedsResubmission(){
+        val docs=listOf(
+            DriverDocument("old","driver_photo",null,"old",status="verified",createdAt="2026-09-01T00:00:00Z"),
+            DriverDocument("new","driver_photo",null,"new",status="rejected",createdAt="2026-09-02T00:00:00Z"),
+        )
+        assertEquals(0 to 5,DriverDocumentPolicy.identityCompletion(docs))
+    }
+
     @Test fun cashRequiresExactInvoiceAmount(){DriverDeliveryPolicy.validate("in_transit","cash","cash_received",12000.0,12000.0)}
     @Test(expected=IllegalArgumentException::class) fun cashMismatchFails(){DriverDeliveryPolicy.validate("in_transit","cash","cash_received",12000.0,11999.0)}
     @Test(expected=IllegalArgumentException::class) fun acceptedTripCannotComplete(){DriverDeliveryPolicy.validate("accepted","cash","cash_received",12000.0,12000.0)}
