@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="payment_method_cash">Kaashii</string>
+    <string name="gps_starting_server">GPS jalqabame. Haalli Daandii irra jira jedhu server irraa mirkanaa'uu eegaa jira.</string>
+    <string name="deposit_note_format">Yaada: %1$s</string>
+    <string name="verified_profile_photo">Suuraa profile Driver mirkanaa'e</string>
+    <string name="vehicle_form_uses_assigned">Odeeffannoon konkolaataa ramadamee save dura ilaaluuf asitti guutama.</string>
+</resources>
