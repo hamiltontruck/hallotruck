@@ -52,8 +52,23 @@ object DriverUiPolisher {
             scaleType = ImageView.ScaleType.FIT_CENTER
             setPadding(0, 0, 0, 0)
             layoutParams = layoutParams.apply {
-                width = dp(activity, 58)
+                width = dp(activity, if(activity.resources.configuration.screenWidthDp<=360)52 else 58)
                 height = dp(activity, 44)
+            }
+        }
+        activity.findViewById<TextView>(R.id.headerTitle)?.apply {
+            maxLines = 2
+            ellipsize = null
+            includeFontPadding = false
+            textSize = if(activity.resources.configuration.screenWidthDp<=360)15f else 17f
+            setLineSpacing(0f,1.02f)
+        }
+        listOf(R.id.languageAction,R.id.documentsAction,R.id.notificationsAction).forEach{id->
+            activity.findViewById<MaterialButton>(id)?.apply{
+                minWidth=dp(activity,48)
+                minHeight=dp(activity,48)
+                cornerRadius=dp(activity,12)
+                setPadding(dp(activity,2),0,dp(activity,2),0)
             }
         }
     }
