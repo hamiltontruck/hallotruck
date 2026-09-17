@@ -1,5 +1,7 @@
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
+  DRIVER_COMMISSION_PAYMENT_MAX_ETB,
+  DRIVER_COMMISSION_PAYMENT_MIN_ETB,
   driverCommissionPaymentStatusLabel,
   type DriverCommissionPayment,
 } from "./driver-commission-payment.model";
@@ -56,12 +58,7 @@ export function DriverCommissionPaymentPanel({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-
-  const payableNowEtb = useMemo(
-    () => Math.max(0, balanceEtb - pendingEtb),
-    [balanceEtb, pendingEtb],
-  );
-  const canSubmit = payableNowEtb > 0.005 && !submitting;
+  const canSubmit = !submitting;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,14 +72,13 @@ export function DriverCommissionPaymentPanel({
         provider,
         transactionId,
         amountEtb: Number(amount),
-        payableNowEtb,
         receipt,
       });
       setTransactionId("");
       setAmount("");
       setReceipt(null);
       if (fileRef.current) fileRef.current.value = "";
-      setSuccess("Commission payment galmaa'eera. Admin/CEO review booda wallet ofumaan haaromfama.");
+      setSuccess("Commission payment galmaa'eera. Admin/CEO review booda prepaid wallet credit ta'a.");
       await onSubmitted();
     } catch (caught) {
       setError(messageOf(caught));
@@ -96,7 +92,7 @@ export function DriverCommissionPaymentPanel({
       <div>
         <p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">Commission settlement</p>
         <h2 id="commission-payment-title" className="mt-1 text-lg font-black text-halo-navy">Komishinii kaffali</h2>
-        <p className="mt-1 text-[11px] leading-5 text-halo-muted">Bank ykn Telebirr irraa kaffaltii ergi; receipt private ta'ee Admin/CEO qofa review godha.</p>
+        <p className="mt-1 text-[11px] leading-5 text-halo-muted">ETB 1,000–100,000 prepaid payment erguu dandeessa; current commission due qabaachuun dirqama miti.</p>
       </div>
       <span className="shrink-0 rounded-xl bg-halo-soft px-2.5 py-1.5 text-[9px] font-black text-halo-blue">SECURE</span>
     </div>
@@ -107,95 +103,85 @@ export function DriverCommissionPaymentPanel({
         <p className="mt-1 text-sm font-black text-halo-navy">{formatWalletEtb(balanceEtb)}</p>
       </div>
       <div className="rounded-2xl bg-halo-soft p-3">
-        <p className="text-[9px] font-black uppercase tracking-[0.12em] text-halo-muted">Amma erguu dandeessu</p>
-        <p className="mt-1 text-sm font-black text-halo-navy">{formatWalletEtb(payableNowEtb)}</p>
+        <p className="text-[9px] font-black uppercase tracking-[0.12em] text-halo-muted">Prepaid range</p>
+        <p className="mt-1 text-sm font-black text-halo-navy">ETB 1,000–100,000</p>
       </div>
     </div>
 
-    {pendingEtb > 0.005 && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-5 text-amber-900">{formatWalletEtb(pendingEtb)} review eeggachaa jira. Pending amount irra deebi'ii hin ergin.</p>}
+    {pendingEtb > 0.005 && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-5 text-amber-900">{formatWalletEtb(pendingEtb)} review eeggachaa jira. Approval booda wallet credit ta'a.</p>}
 
-    {payableNowEtb <= 0.005 ? (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-        <p className="text-sm font-black text-emerald-800">Kaffaltii haaraa barbaachisu hin jiru</p>
-        <p className="mt-1 text-[11px] leading-5 text-emerald-700">Balance kee kaffalameera ykn payment review keessa jira.</p>
-      </div>
-    ) : (
-      <form onSubmit={(event) => void submit(event)} className="space-y-3" aria-busy={submitting}>
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">Bank / provider</span>
-          <input
-            list="driver-commission-providers"
-            value={provider}
-            onChange={(event) => setProvider(event.target.value)}
-            disabled={submitting}
-            autoComplete="organization"
-            maxLength={80}
-            placeholder="Fakkeenya: CBE, Telebirr"
-            className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
-          />
-          <datalist id="driver-commission-providers">
-            <option value="Commercial Bank of Ethiopia" />
-            <option value="Telebirr" />
-            <option value="Bank of Abyssinia" />
-            <option value="Awash Bank" />
-            <option value="Dashen Bank" />
-          </datalist>
-        </label>
+    <form onSubmit={(event) => void submit(event)} className="space-y-3" aria-busy={submitting}>
+      <label className="block">
+        <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">Bank / provider</span>
+        <input
+          list="driver-commission-providers"
+          value={provider}
+          onChange={(event) => setProvider(event.target.value)}
+          disabled={submitting}
+          autoComplete="organization"
+          maxLength={80}
+          placeholder="Fakkeenya: CBE, Telebirr"
+          className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
+        />
+        <datalist id="driver-commission-providers">
+          <option value="Commercial Bank of Ethiopia" />
+          <option value="Telebirr" />
+          <option value="Bank of Abyssinia" />
+          <option value="Awash Bank" />
+          <option value="Dashen Bank" />
+        </datalist>
+      </label>
 
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">Transaction ID</span>
-          <input
-            value={transactionId}
-            onChange={(event) => setTransactionId(event.target.value)}
-            disabled={submitting}
-            maxLength={120}
-            autoCapitalize="characters"
-            autoComplete="off"
-            placeholder="Fakkeenya: FT2026..."
-            className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
-          />
-        </label>
+      <label className="block">
+        <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">Transaction ID</span>
+        <input
+          value={transactionId}
+          onChange={(event) => setTransactionId(event.target.value)}
+          disabled={submitting}
+          maxLength={120}
+          autoCapitalize="characters"
+          autoComplete="off"
+          placeholder="Fakkeenya: FT2026..."
+          className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
+        />
+      </label>
 
-        <label className="block">
-          <span className="mb-1.5 flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">
-            <span>Amount ETB</span>
-            <button type="button" onClick={() => setAmount(payableNowEtb.toFixed(2))} disabled={submitting} className="normal-case tracking-normal text-halo-blue">Full balance</button>
-          </span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0.01"
-            max={payableNowEtb}
-            step="0.01"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            disabled={submitting}
-            placeholder="0.00"
-            className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
-          />
-        </label>
+      <label className="block">
+        <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">Amount ETB</span>
+        <input
+          type="number"
+          inputMode="decimal"
+          min={DRIVER_COMMISSION_PAYMENT_MIN_ETB}
+          max={DRIVER_COMMISSION_PAYMENT_MAX_ETB}
+          step="0.01"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+          disabled={submitting}
+          placeholder="1000.00"
+          className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
+        />
+      </label>
 
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">Receipt JPG, PNG, WebP ykn PDF</span>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            onChange={(event) => setReceipt(event.target.files?.[0] ?? null)}
-            disabled={submitting}
-            className="block min-h-12 w-full rounded-2xl border border-halo-line bg-white p-2 text-xs font-bold text-halo-navy file:mr-3 file:rounded-xl file:border-0 file:bg-halo-soft file:px-3 file:py-2 file:text-[10px] file:font-black file:text-halo-blue disabled:opacity-60"
-          />
-          <p className="mt-1.5 text-[10px] leading-4 text-halo-muted">Maximum 10 MB. Receipt bucket public miti.</p>
-        </label>
+      <label className="block">
+        <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">Receipt JPG, PNG, WebP ykn PDF</span>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          onChange={(event) => setReceipt(event.target.files?.[0] ?? null)}
+          disabled={submitting}
+          className="block min-h-12 w-full rounded-2xl border border-halo-line bg-white p-2 text-xs font-bold text-halo-navy file:mr-3 file:rounded-xl file:border-0 file:bg-halo-soft file:px-3 file:py-2 file:text-[10px] file:font-black file:text-halo-blue disabled:opacity-60"
+        />
+        <p className="mt-1.5 text-[10px] leading-4 text-halo-muted">Maximum 10 MB. Receipt bucket public miti.</p>
+      </label>
 
-        {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-3 text-[11px] font-bold leading-5 text-red-800">{error}</p>}
-        {success && <p role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] font-bold leading-5 text-emerald-800">{success}</p>}
+      {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-3 text-[11px] font-bold leading-5 text-red-800">{error}</p>}
+      {success && <p role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] font-bold leading-5 text-emerald-800">{success}</p>}
 
-        <button type="submit" disabled={!canSubmit} className="min-h-13 w-full rounded-2xl bg-halo-blue px-4 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-50">
-          {submitting ? "Receipt ergaa jira…" : "Kaffaltii review'f ergi"}
-        </button>
-      </form>
-    )}
+      <button type="submit" disabled={!canSubmit} className="min-h-13 w-full rounded-2xl bg-halo-blue px-4 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-50">
+        {submitting ? "Receipt ergaa jira…" : "Kaffaltii review'f ergi"}
+      </button>
+    </form>
 
     <div className="border-t border-halo-line pt-4">
       <div className="flex items-end justify-between gap-3">
