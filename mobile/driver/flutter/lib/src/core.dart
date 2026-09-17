@@ -49,7 +49,7 @@ class DriverValidators {
 }
 
 class DriverStrings {
-  DriverStrings(this.language);
+  const DriverStrings(this.language);
 
   final DriverLanguage language;
 
