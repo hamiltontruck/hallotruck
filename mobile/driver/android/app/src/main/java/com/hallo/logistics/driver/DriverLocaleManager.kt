@@ -1,8 +1,9 @@
 package com.hallo.logistics.driver
 
+import android.app.Activity
 import android.content.Context
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.LocaleListCompat
+import android.content.res.Configuration
+import java.util.Locale
 
 object DriverLocaleManager {
     private const val PREFS = "hallo_driver_language"
@@ -22,31 +23,35 @@ object DriverLocaleManager {
             ?: OR
 
     /**
-     * Apply the persisted locale before AppCompat attaches the Activity context.
-     * The equality guard is important because setApplicationLocales() owns the
-     * Activity recreation when the locale actually changes.
+     * Wrap every Driver Activity with the persisted locale before resources are inflated.
+     * This avoids a split state where the signed-out auth surface changes language but the
+     * authenticated shell keeps the process/default resources.
      */
-    fun applySaved(context: Context) {
-        applyToDelegate(saved(context))
+    fun wrap(context: Context): Context {
+        val language = saved(context)
+        val locale = Locale.forLanguageTag(language)
+        Locale.setDefault(locale)
+        val configuration = Configuration(context.resources.configuration).apply {
+            setLocale(locale)
+            setLayoutDirection(locale)
+        }
+        return context.createConfigurationContext(configuration)
     }
 
     fun apply(context: Context, language: String) {
         val safe = language.takeIf { it in supported } ?: OR
-        if (saved(context) != safe) {
-            // Persist before AppCompat recreates the Activity so process death / force-stop
-            // cannot race the preference write.
+        val changed = saved(context) != safe
+        if (changed) {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putString(KEY, safe)
                 .commit()
         }
-        applyToDelegate(safe)
-    }
-
-    private fun applyToDelegate(language: String) {
-        val current = AppCompatDelegate.getApplicationLocales().toLanguageTags()
-        if (current == language) return
-        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(language))
+        // Recreate the current screen so all XML resources, dynamic getString() calls,
+        // menus, dialogs and authenticated pages are inflated from one locale context.
+        if (changed && context is Activity && !context.isFinishing && !context.isDestroyed) {
+            context.recreate()
+        }
     }
 
     fun compactLabel(language: String) = when (language) {
