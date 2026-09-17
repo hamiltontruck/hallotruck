@@ -9,4 +9,5 @@
     <string name="vehicle_prefill_unavailable">Assigned vehicle data is unavailable. Existing form values were kept.</string>
     <string name="vehicle_prefill_none">No assigned vehicle is currently available.</string>
     <string name="notifications_unavailable">Notifications are unavailable right now. Refresh and try again.</string>
+    <string name="tracking_summary_with_speed_heading">%1$s · %2$.0f km/h · heading %3$.0f°\nLast update: %4$s</string>
 </resources>
