@@ -5,4 +5,8 @@
     <string name="deposit_note_format">Yaada: %1$s</string>
     <string name="verified_profile_photo">Suuraa profile Driver mirkanaa'e</string>
     <string name="vehicle_form_uses_assigned">Odeeffannoon konkolaataa ramadamee save dura ilaaluuf asitti guutama.</string>
+    <string name="vehicle_prefill_summary">Konkolaataa ramadame\nHaala ramaddii: %1$s\nReview sanadootaa: %2$s</string>
+    <string name="vehicle_prefill_unavailable">Odeeffannoon konkolaataa ramadamee yeroo ammaa hin argamne. Odeeffannoon form keessatti jiru hin jijjiiramne.</string>
+    <string name="vehicle_prefill_none">Konkolaataan ramadame yeroo ammaa hin jiru.</string>
+    <string name="notifications_unavailable">Beeksisoonni yeroo ammaa hin argaman. Haaromsiitii irra deebi'i.</string>
 </resources>
