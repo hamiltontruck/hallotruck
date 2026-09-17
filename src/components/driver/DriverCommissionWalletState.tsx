@@ -95,7 +95,7 @@ const copyByLanguage: Record<"en" | "om" | "am", Copy> = {
     transaction: "Transaction ID",
     transactionPlaceholder: "Unique bank / Telebirr reference",
     receipt: "Screenshot / receipt",
-    evidenceRule: "A transaction ID can only be used once. Screenshot submission does not reduce your balance until Admin/Finance verifies the account and approves it.",
+    evidenceRule: "Submit ETB 1,000–100,000. A transaction ID can only be used once. Approval creates prepaid wallet credit even when no commission is currently due.",
     receiptRequired: "Receipt screenshot or PDF is required.",
     balanceUnknown: "Commission balance is unavailable. Retry before submitting a payment.",
     noBalance: "No commission balance is currently due.",
@@ -139,7 +139,7 @@ const copyByLanguage: Record<"en" | "om" | "am", Copy> = {
     transaction: "Lakkoofsa transaction",
     transactionPlaceholder: "Lakkoofsa baankii / Telebirr addaa",
     receipt: "Suuraa / receipt",
-    evidenceRule: "Lakkoofsi transaction tokko yeroo tokko qofa fayyada. Ragaa erguun hanga Admin/Finance mirkaneessutti haftee hin hir'isu.",
+    evidenceRule: "ETB 1,000–100,000 erguu dandeessa. Lakkoofsi transaction tokko yeroo tokko qofa fayyada. Komishiniin amma due hin jirre illee approval booda prepaid wallet credit ta'a.",
     receiptRequired: "Suuraan receipt ykn PDF barbaachisaa dha.",
     balanceUnknown: "Hafteen komishinii hin argamne. Kaffaltii erguun dura irra deebi'i.",
     noBalance: "Amma komishiniin kaffalamuu qabu hin jiru.",
@@ -183,7 +183,7 @@ const copyByLanguage: Record<"en" | "om" | "am", Copy> = {
     transaction: "የግብይት መለያ",
     transactionPlaceholder: "ልዩ የባንክ / Telebirr ማጣቀሻ",
     receipt: "ስክሪንሾት / ደረሰኝ",
-    evidenceRule: "አንድ የግብይት መለያ አንድ ጊዜ ብቻ ይጠቀማል። Admin/Finance እስኪያረጋግጥ ድረስ ማስረጃ መላክ ቀሪውን አይቀንስም።",
+    evidenceRule: "ETB 1,000–100,000 ማስገባት ይችላሉ። አንድ የግብይት መለያ አንድ ጊዜ ብቻ ይጠቀማል። አሁን የሚከፈል ኮሚሽን ባይኖርም ከማጽደቅ በኋላ ቅድመ ዋሌት ክሬዲት ይሆናል።",
     receiptRequired: "የደረሰኝ ስክሪንሾት ወይም PDF ያስፈልጋል።",
     balanceUnknown: "የኮሚሽን ቀሪ ሂሳብ አይገኝም። ክፍያ ከመላክዎ በፊት እንደገና ይሞክሩ።",
     noBalance: "በአሁኑ ጊዜ የሚከፈል ኮሚሽን የለም።",
@@ -288,14 +288,6 @@ export function DriverCommissionWalletState({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saveBusyRef.current) return;
-    if (!summaryKnown || !summary) {
-      setActionError(copy.balanceUnknown);
-      return;
-    }
-    if (summary.balanceEtb <= 0) {
-      setActionError(copy.noBalance);
-      return;
-    }
 
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -345,12 +337,8 @@ export function DriverCommissionWalletState({
 
   const hasSourceError = Boolean(summaryError || paymentsError);
   const hasConfirmedSource = summaryKnown || paymentsKnown;
-  const submitDisabled = saving || !summaryKnown || !summary || summary.balanceEtb <= 0;
-  const submitGuidance = !summaryKnown || !summary
-    ? copy.balanceUnknown
-    : summary.balanceEtb <= 0
-      ? copy.noBalance
-      : copy.evidenceRule;
+  const submitDisabled = saving;
+  const submitGuidance = copy.evidenceRule;
 
   return (
     <section className="mt-8 min-w-0 border border-line bg-white" data-commission-wallet-state="true" aria-busy={loading}>
@@ -405,7 +393,7 @@ export function DriverCommissionWalletState({
         <form onSubmit={handleSubmit} className="min-w-0 border border-line p-4" data-commission-form="true">
           <h3 className="font-display text-lg font-semibold">{copy.payTitle}</h3>
           <p className="mt-1 break-words text-xs text-steel">{copy.payDescription}</p>
-          <fieldset disabled={saving || !summaryKnown || !summary || summary.balanceEtb <= 0} className="min-w-0 disabled:opacity-60">
+          <fieldset disabled={saving} className="min-w-0 disabled:opacity-60">
             <label className="mt-4 block text-xs font-semibold">
               {copy.provider}
               <select name="provider" required className="mt-2 min-h-11 w-full min-w-0 border border-line bg-white p-3 text-sm">
@@ -414,7 +402,7 @@ export function DriverCommissionWalletState({
             </label>
             <label className="mt-4 block text-xs font-semibold">
               {copy.amount}
-              <input name="amountEtb" required min="1" step="0.01" type="number" max={summary?.balanceEtb || undefined} className="mt-2 min-h-11 w-full min-w-0 border border-line p-3 text-sm" />
+              <input name="amountEtb" required min="1000" step="0.01" type="number" max="100000" className="mt-2 min-h-11 w-full min-w-0 border border-line p-3 text-sm" />
             </label>
             <label className="mt-4 block text-xs font-semibold">
               {copy.transaction}
