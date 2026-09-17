@@ -149,6 +149,7 @@ data class DriverUiState(
     val documents:List<DriverDocument> = emptyList(),
     val documentsAvailable:Boolean=false,
     val notifications:List<DriverNotification> = emptyList(),
+    val notificationsAvailable:Boolean=false,
     val wallet:FinancialSummary?=null,
     val commission:DriverCommissionSummary?=null,
     val tripResults:List<DriverTripPaymentResult> = emptyList(),
