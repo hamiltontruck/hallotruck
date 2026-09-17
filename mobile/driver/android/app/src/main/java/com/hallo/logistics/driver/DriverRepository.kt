@@ -73,8 +73,20 @@ class DriverRepository {
     suspend fun notifications():List<DriverNotification>{profile();return client.postgrest.rpc("my_notifications",buildJsonObject{put("p_limit",100)}).decodeList()}
     suspend fun markRead(id:String){profile();client.postgrest.rpc("mark_notification_read",buildJsonObject{put("p_notification_id",id)})}
 
-    suspend fun wallet():FinancialSummary{val id=profile().id;return client.postgrest.rpc("driver_financial_summary",buildJsonObject{put("p_driver_id",id)}).decodeList<FinancialSummary>().firstOrNull()?:FinancialSummary()}
-    suspend fun commissionSummary():DriverCommissionSummary{profile();return client.postgrest.rpc("my_driver_commission_summary").decodeList<DriverCommissionSummary>().firstOrNull()?:DriverCommissionSummary()}
+    suspend fun wallet():FinancialSummary{
+        val id=profile().id
+        return client.postgrest.rpc("driver_financial_summary",buildJsonObject{put("p_driver_id",id)})
+            .decodeList<FinancialSummary>()
+            .firstOrNull()
+            ?: error("financial summary unavailable")
+    }
+    suspend fun commissionSummary():DriverCommissionSummary{
+        profile()
+        return client.postgrest.rpc("my_driver_commission_summary")
+            .decodeList<DriverCommissionSummary>()
+            .firstOrNull()
+            ?: error("commission summary unavailable")
+    }
 
     suspend fun tripPaymentResults():List<DriverTripPaymentResult>{
         val id=profile().id
