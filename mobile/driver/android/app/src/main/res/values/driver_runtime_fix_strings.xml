@@ -5,4 +5,8 @@
     <string name="deposit_note_format">Note: %1$s</string>
     <string name="verified_profile_photo">Verified driver profile photo</string>
     <string name="vehicle_form_uses_assigned">Assigned vehicle details are loaded here for review before saving.</string>
+    <string name="vehicle_prefill_summary">Assigned vehicle\nAssignment status: %1$s\nDocument review: %2$s</string>
+    <string name="vehicle_prefill_unavailable">Assigned vehicle data is unavailable. Existing form values were kept.</string>
+    <string name="vehicle_prefill_none">No assigned vehicle is currently available.</string>
+    <string name="notifications_unavailable">Notifications are unavailable right now. Refresh and try again.</string>
 </resources>
