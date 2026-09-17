@@ -71,9 +71,11 @@ class HalloLocationService:Service(){
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{
         orderId=intent?.getStringExtra("order_id")
         if(orderId.isNullOrBlank()||ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){
+            runningOrderId=null
             stopSelf()
             return START_NOT_STICKY
         }
+        runningOrderId=orderId
         fused.requestLocationUpdates(
             LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,15000).setMinUpdateIntervalMillis(10000).build(),
             callback,
@@ -82,8 +84,17 @@ class HalloLocationService:Service(){
         return START_NOT_STICKY
     }
 
-    override fun onDestroy(){fused.removeLocationUpdates(callback);scope.cancel();super.onDestroy()}
+    override fun onDestroy(){
+        if(runningOrderId==orderId)runningOrderId=null
+        fused.removeLocationUpdates(callback)
+        scope.cancel()
+        super.onDestroy()
+    }
     override fun onBind(intent:Intent?):IBinder?=null
 
-    companion object{const val CHANNEL="hallo_driver_tracking"}
+    companion object{
+        const val CHANNEL="hallo_driver_tracking"
+        @Volatile private var runningOrderId:String?=null
+        fun isRunningFor(orderId:String?):Boolean=orderId!=null&&runningOrderId==orderId
+    }
 }
