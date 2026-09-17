@@ -1,4 +1,6 @@
 export const DRIVER_COMMISSION_RECEIPT_MAX_BYTES = 10 * 1024 * 1024;
+export const DRIVER_COMMISSION_PAYMENT_MIN_ETB = 1000;
+export const DRIVER_COMMISSION_PAYMENT_MAX_ETB = 100000;
 
 export const DRIVER_COMMISSION_RECEIPT_TYPES = [
   "image/jpeg",
@@ -100,25 +102,17 @@ export function normalizeDriverCommissionPayments(value: unknown): DriverCommiss
 
 export function validateDriverCommissionPayment(
   draft: DriverCommissionPaymentDraft,
-  payableNowEtb: number,
 ): ValidatedDriverCommissionPayment {
   const provider = draft.provider.trim();
   const transactionId = draft.transactionId.trim();
   const amountEtb = Number(draft.amountEtb);
-  const payable = Number(payableNowEtb);
 
   if (!provider) throw new Error("Bank ykn Telebirr provider filadhu.");
   if (provider.length > 80) throw new Error("Provider maqaan dheerina 80 caaluu hin qabu.");
   if (!transactionId) throw new Error("Transaction ID galchi.");
   if (transactionId.length > 120) throw new Error("Transaction ID dheerina 120 caaluu hin qabu.");
-  if (!Number.isFinite(payable) || payable <= 0.005) {
-    throw new Error("Komishinii amma kaffalamuu qabu hin jiru.");
-  }
-  if (!Number.isFinite(amountEtb) || amountEtb <= 0) {
-    throw new Error("Amount sirrii galchi.");
-  }
-  if (amountEtb > payable + 0.005) {
-    throw new Error("Amount kaffaltii amma hafee caaluu hin danda'u.");
+  if (!Number.isFinite(amountEtb) || amountEtb < DRIVER_COMMISSION_PAYMENT_MIN_ETB || amountEtb > DRIVER_COMMISSION_PAYMENT_MAX_ETB) {
+    throw new Error("Amount ETB 1,000 hanga ETB 100,000 gidduu galchi.");
   }
   if (!draft.receipt) throw new Error("Receipt suuraa ykn PDF filadhu.");
   if (!DRIVER_COMMISSION_RECEIPT_TYPES.includes(draft.receipt.type as typeof DRIVER_COMMISSION_RECEIPT_TYPES[number])) {
