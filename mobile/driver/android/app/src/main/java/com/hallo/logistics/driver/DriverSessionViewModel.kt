@@ -145,7 +145,7 @@ class DriverSessionViewModel(private val repo:DriverRepository=DriverRepository(
     fun claim(orderId:String,truckId:String)=work(DriverMessage.ACCEPTING_JOB){repo.claim(orderId,truckId);load()}
     fun openTrip(){requireNotNull(_state.value.activeTrip);_state.value=_state.value.copy(page=DriverPage.TRIP,messageKey=DriverMessage.OPEN_TRIP,errorCode=null)}
     fun saveVehicle(plate:String,type:String,capacity:Double)=work(DriverMessage.SAVING_VEHICLE){repo.saveVehicle(plate,type,capacity);load()}
-    fun uploadDocument(key:String,truckId:String?,name:String,mime:String,bytes:ByteArray)=work(DriverMessage.UPLOADING_DOCUMENT){repo.uploadDocument(key,truckId,name,mime,bytes);load()}
+    fun uploadDocument(key:String,truckId:String?,name:String,mime:String,bytes:ByteArray,expiryDate:String?=null)=work(DriverMessage.UPLOADING_DOCUMENT){repo.uploadDocument(key,truckId,name,mime,bytes,expiryDate);load()}
     fun finish(recipient:String,note:String,photo:ByteArray,photoMime:String,signature:ByteArray,result:String,amount:Double?)=work(DriverMessage.SUBMITTING_DELIVERY){
         val trip=requireNotNull(_state.value.activeTrip);DriverDeliveryPolicy.validate(trip.status,trip.paymentMethod,result,trip.priceEtb,amount)
         require(recipient.trim().length>=2);require(photo.isNotEmpty()&&signature.isNotEmpty())
