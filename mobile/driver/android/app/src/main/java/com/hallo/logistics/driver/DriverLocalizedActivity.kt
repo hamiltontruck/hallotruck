@@ -6,7 +6,6 @@ import androidx.appcompat.app.AppCompatActivity
 /** Shared locale boundary for every native Driver screen. */
 abstract class DriverLocalizedActivity : AppCompatActivity() {
     override fun attachBaseContext(newBase: Context) {
-        DriverLocaleManager.applySaved(newBase)
-        super.attachBaseContext(newBase)
+        super.attachBaseContext(DriverLocaleManager.wrap(newBase))
     }
 }
