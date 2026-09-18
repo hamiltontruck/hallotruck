@@ -13,3 +13,18 @@
 @media(max-width:360px){.customer-track-contact{align-items:flex-start;flex-direction:column}.customer-track-contact__actions{width:100%}.customer-track-contact__actions>*{flex:1}}
 
 .customer-track-v4__message--complete{color:#087a55;font-weight:800}
+
+/* Physical-device polish: portal-like full-map tracking without narrow-card crowding. */
+.customer-track-page{max-width:760px;margin:0 auto}
+.customer-track-route{border-radius:24px}
+.customer-track-v4__map-shell{position:relative;overflow:hidden;border-radius:24px;background:#e7e6d9}
+.customer-track-v4__gps-badge{position:absolute;z-index:5;top:12px;left:12px;border-radius:999px;background:#fff;padding:7px 10px;box-shadow:0 4px 14px rgba(16,33,61,.16);color:#68778d;font-size:9px;font-weight:950;letter-spacing:.05em}
+.customer-track-v4__gps-badge--live{background:#e9fbf2;color:#087a55}
+.customer-track-v4__gps-badge--stale{background:#fff4e5;color:#9a6700}
+.customer-track-v4__gps-badge--offline{background:#eef2f6;color:#5e6b7d}
+.customer-track-v4__map{height:min(54dvh,460px);min-height:330px}
+.customer-v4-assignment{overflow:hidden;border-radius:24px}
+.customer-v4-assignment__header{gap:10px}
+.customer-v4-assignment__body{min-width:0}
+@media(max-width:430px){.customer-track-page{padding-left:10px;padding-right:10px}.customer-track-v4__map{height:48dvh;min-height:320px}.customer-track-contact{border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(16,33,61,.06)}}
+@media(max-width:360px){.customer-track-v4__map{height:46dvh;min-height:300px}.customer-track-v4__metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-track-v4__timeline small{white-space:normal;text-align:center;line-height:1.15}}
