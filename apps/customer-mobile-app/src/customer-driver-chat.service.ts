@@ -22,7 +22,7 @@ export async function loadCustomerDriverChatMessages(userId:string,threadId:stri
 }
 export async function sendCustomerDriverChatMessage(userId:string,threadId:string,body:string){
   const client=await requireCustomer(userId); const text=body.trim(); if(!text)return;
-  const {error}=await client.rpc("send_customer_driver_chat_message",{p_thread_id:threadId,p_body:text,p_client_message_id:crypto.randomUUID()});
+  const {error}=await client.rpc("send_customer_driver_chat_message",{p_thread_id:threadId,p_body:text,p_client_message_id:(globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`)});
   if(error) throw new Error(error.message);
 }
 export async function markCustomerDriverChatRead(userId:string,threadId:string){
