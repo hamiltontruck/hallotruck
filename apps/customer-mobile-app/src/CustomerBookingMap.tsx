@@ -3,6 +3,7 @@ import maplibregl, { type GeoJSONSource, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./booking-map.css";
 import {
+  isHalloOperatingCoordinate,
   reverseCustomerPlace,
   searchCustomerPlaces,
   type CustomerPlaceOption,
@@ -40,6 +41,19 @@ function markerElement(kind: ActiveField) {
   element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : "Drop-off location");
   element.innerHTML = `<span>${kind === "pickup" ? "P" : "D"}</span>`;
   return element;
+}
+
+function readCurrentPosition(options: PositionOptions) {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+function locationErrorMessage(error: GeolocationPositionError) {
+  if (error.code === 1) return "Location permission was denied. Allow location for this site in your browser or device settings, then try again.";
+  if (error.code === 2) return "Your current location is unavailable. Turn on device Location/GPS and try again.";
+  if (error.code === 3) return "Getting your current location timed out. Move to an open area or try again.";
+  return "Your current location could not be read. Check browser and device location settings.";
 }
 
 function PlaceSearch({
@@ -296,7 +310,7 @@ export function CustomerBookingMap({
     }
   }, [dropoffPlace, mapReady, pickupPlace, routePreview]);
 
-  function useMyLocation() {
+  async function useMyLocation() {
     if (locating) return;
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setMapMessage("Device location is not available.");
@@ -304,26 +318,40 @@ export function CustomerBookingMap({
     }
 
     setLocating(true);
-    setMapMessage("");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coordinates: [number, number] = [position.coords.longitude, position.coords.latitude];
-        void reverseCustomerPlace(coordinates)
-          .then((place) => {
-            onPickupSelect(place);
-            activeFieldRef.current = "dropoff";
-          })
-          .catch((error: unknown) => {
-            setMapMessage(error instanceof Error ? error.message : "Your current location could not be read.");
-          })
-          .finally(() => setLocating(false));
-      },
-      () => {
-        setLocating(false);
-        setMapMessage("Location permission was not granted. Check your browser or device settings.");
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
-    );
+    setMapMessage("Finding your current location…");
+    try {
+      let position: GeolocationPosition;
+      try {
+        position = await readCurrentPosition({ enableHighAccuracy: true, timeout: 12_000, maximumAge: 30_000 });
+      } catch (caught) {
+        const locationError = caught as GeolocationPositionError;
+        if (locationError.code === 1) throw locationError;
+        setMapMessage("GPS is taking longer than expected. Trying a recent device location…");
+        position = await readCurrentPosition({ enableHighAccuracy: false, timeout: 10_000, maximumAge: 120_000 });
+      }
+
+      const coordinates: [number, number] = [position.coords.longitude, position.coords.latitude];
+      if (!isHalloOperatingCoordinate(coordinates)) {
+        setMapMessage("Your current location is outside the HALLO Ethiopia–Djibouti–Somalia operating corridor.");
+        return;
+      }
+
+      let place: CustomerPlaceOption;
+      try {
+        place = await reverseCustomerPlace(coordinates);
+      } catch {
+        place = { label: `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`, coordinates };
+      }
+
+      onPickupSelect(place);
+      activeFieldRef.current = "dropoff";
+      mapRef.current?.flyTo({ center: coordinates, zoom: 10, duration: 500 });
+      setMapMessage("");
+    } catch (caught) {
+      setMapMessage(locationErrorMessage(caught as GeolocationPositionError));
+    } finally {
+      setLocating(false);
+    }
   }
 
   const routeSelected = Boolean(pickupPlace && dropoffPlace);

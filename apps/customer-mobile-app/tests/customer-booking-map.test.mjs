@@ -24,6 +24,27 @@ test("Customer Home keeps real map place selection and HGV route", () => {
   assert.match(app, /<CustomerBookingFlow/);
 });
 
+test("My location matches portal pickup behavior and survives temporary GPS failures", () => {
+  assert.match(map, /readCurrentPosition\(\{ enableHighAccuracy: true, timeout: 12_000, maximumAge: 30_000 \}\)/);
+  assert.match(map, /if \(locationError\.code === 1\) throw locationError/);
+  assert.match(map, /readCurrentPosition\(\{ enableHighAccuracy: false, timeout: 10_000, maximumAge: 120_000 \}\)/);
+  assert.match(map, /isHalloOperatingCoordinate\(coordinates\)/);
+  assert.match(map, /place = \{ label: `\$\{coordinates\[1\]\.toFixed\(5\)\}, \$\{coordinates\[0\]\.toFixed\(5\)\}`, coordinates \}/);
+  assert.match(map, /onPickupSelect\(place\)/);
+  assert.match(map, /activeFieldRef\.current = "dropoff"/);
+  assert.match(map, /mapRef\.current\?\.flyTo\(\{ center: coordinates, zoom: 10, duration: 500 \}\)/);
+  assert.match(map, /Location permission was denied/);
+  assert.match(map, /current location is unavailable/);
+  assert.match(map, /current location timed out/);
+});
+
+test("drop-off autocomplete stays above route actions and My location remains on the right", () => {
+  assert.match(mapCss, /\.real-booking-map \.real-route-card \{ z-index: 40; \}/);
+  assert.match(mapCss, /\.booking-place-results \{ position: absolute; z-index: 60;/);
+  assert.match(mapCss, /\.portal-map-actions \{ position: absolute; z-index: 16;/);
+  assert.match(mapCss, /\.real-booking-map \.portal-map-actions button:first-child \{ order: 3; \}/);
+});
+
 test("Customer place search stays inside the HALLO corridor", () => {
   assert.match(service, /language", "en"/);
   assert.match(service, /country", "et,dj,so"/);

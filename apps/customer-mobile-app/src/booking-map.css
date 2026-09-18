@@ -6,6 +6,7 @@
 .real-booking-map .maplibregl-ctrl-bottom-left { bottom: 7.35rem; left: 0.45rem; }
 .real-booking-map .maplibregl-ctrl-attrib { max-width: 180px; font-size: 9px; }
 .real-route-card { top: calc(max(0.75rem, env(safe-area-inset-top)) + 3.75rem); overflow: visible; border-radius: 1.25rem; padding: 0.68rem 0.82rem; box-shadow: 0 10px 24px rgb(16 33 61 / 0.14); }
+.real-booking-map .real-route-card { z-index: 40; }
 .booking-place-field { position: relative; min-width: 0; max-width: 100%; }
 .booking-place-field label { display: grid; min-width: 0; max-width: 100%; gap: 0.22rem; }
 /* iOS Safari auto-zooms focused form controls below 16px. Keep the route search mobile-safe without disabling map pinch zoom. */
@@ -28,6 +29,7 @@
 .portal-map-actions { position: absolute; z-index: 16; top: calc(max(0.75rem, env(safe-area-inset-top)) + 10.95rem); right: 3.45rem; left: auto; display: flex; flex-wrap: nowrap; gap: 0.28rem; max-width: calc(100% - 4.2rem); }
 .portal-map-actions button { min-height: 2rem; border: 1px solid rgb(7 89 199 / 0.14); border-radius: 999px; background: rgb(255 255 255 / 0.96); padding: 0 0.62rem; color: #0759c7; font-size: 0.52rem; font-weight: 850; box-shadow: 0 6px 16px rgb(16 33 61 / 0.1); backdrop-filter: blur(14px); white-space: nowrap; }
 .portal-map-actions button:first-child { color: #0759c7; order: 3; }
+.real-booking-map .portal-map-actions button:first-child { order: 3; }
 .portal-map-actions button:disabled { opacity: 0.45; box-shadow: none; }
 .real-route-summary { display: none; }
 .booking-map-message { position: absolute; z-index: 20; right: 0.8rem; bottom: 7.6rem; left: 0.8rem; border: 1px solid rgb(16 33 61 / 0.12); border-radius: 0.8rem; background: rgb(255 255 255 / 0.97); padding: 0.55rem 0.65rem; color: #10213d; font-size: 0.57rem; font-weight: 700; line-height: 1.4; box-shadow: 0 8px 18px rgb(16 33 61 / 0.12); }
