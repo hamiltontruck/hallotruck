@@ -28,3 +28,29 @@
 .customer-v4-assignment__body{min-width:0}
 @media(max-width:430px){.customer-track-page{padding-left:10px;padding-right:10px}.customer-track-v4__map{height:48dvh;min-height:320px}.customer-track-contact{border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(16,33,61,.06)}}
 @media(max-width:360px){.customer-track-v4__map{height:46dvh;min-height:300px}.customer-track-v4__metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-track-v4__timeline small{white-space:normal;text-align:center;line-height:1.15}}
+
+/* #451 physical-device correction: compact assignment card + cleaner tracking hierarchy. */
+.customer-v4-assignment{border:1px solid #dfe7f1;background:#fff;box-shadow:0 10px 28px rgba(16,33,61,.08)}
+.customer-v4-assignment__header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#10213d;color:#fff}
+.customer-v4-assignment__header>strong{color:#f5b400;font-size:10px;letter-spacing:.09em}
+.customer-v4-assignment__header>span{border-radius:999px;padding:6px 9px;font-size:9px;font-weight:900;white-space:nowrap}
+.customer-v4-assignment__header .is-verified{background:#087a55;color:#fff}
+.customer-v4-assignment__header .is-pending{background:#fff4e5;color:#9a6700}
+.customer-v4-assignment__body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px}
+.customer-v4-assignment__truck,.customer-v4-assignment__driver{display:flex;align-items:center;min-width:0;gap:10px}
+.customer-v4-assignment__truck-photo{position:relative;display:grid;flex:0 0 72px;width:72px;height:62px;place-items:center;overflow:hidden;border-radius:14px;background:#eef2f6}
+.customer-v4-assignment__truck-photo img{width:100%;height:100%;object-fit:cover}
+.customer-v4-assignment__avatar{display:grid;flex:0 0 54px;width:54px;height:54px;place-items:center;overflow:hidden;border-radius:50%;background:#eef2f6}
+.customer-v4-assignment__avatar img{width:100%;height:100%;object-fit:cover}
+.customer-v4-assignment__copy{display:grid;min-width:0;gap:3px}
+.customer-v4-assignment__copy small{color:#68778d;font-size:8px;font-weight:900;letter-spacing:.08em}
+.customer-v4-assignment__copy strong,.customer-v4-assignment__copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.customer-v4-assignment__copy strong{font-size:14px}.customer-v4-assignment__copy span{color:#68778d;font-size:10px}
+.customer-v4-call{display:grid;flex:0 0 44px;width:44px;height:44px;place-items:center;border-radius:50%;background:#e9fbf2;color:#087a55;text-decoration:none}
+.customer-v4-assignment__note{margin:0;padding:0 14px 12px;color:#68778d;font-size:9px;line-height:1.4}
+.customer-v4-track-action{width:100%;border:0;border-top:1px solid #e7edf5;background:#f2fbf7;padding:0 14px;color:#087a55;text-align:left;font-weight:900}
+.customer-track-v4__metrics{border-radius:18px;overflow:hidden;background:#fff}
+.customer-track-v4__metrics>div{background:#fff;border-bottom:1px solid #edf1f5}
+.customer-track-v4__metrics>div:nth-last-child(-n+2){border-bottom:0}
+.customer-track-v4__last-update{border:0;box-shadow:0 6px 18px rgba(16,33,61,.05)}
+@media(max-width:430px){.customer-v4-assignment__body{grid-template-columns:1fr}.customer-v4-assignment__truck,.customer-v4-assignment__driver{padding:2px 0}.customer-v4-assignment__header{padding:11px 12px}.customer-v4-assignment__note{padding-left:12px;padding-right:12px}}
