@@ -1,7 +1,13 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { customerSupabase } from "./auth/customer-supabase";
-import { loadCustomerMobileData, type CustomerMobileProfile } from "./customer-data.service";
 import { updateCustomerMobileProfile } from "./customer-profile.service";
+import {
+  clearCustomerAvatar,
+  createCustomerAvatarUrl,
+  loadCustomerMobileAvatarProfile,
+  uploadCustomerAvatar,
+  type CustomerMobileAvatarProfile,
+} from "./customer-profile-avatar.service";
 
 function customerInitials(name: string | null | undefined) {
   const parts = (name || "Customer").trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -9,7 +15,7 @@ function customerInitials(name: string | null | undefined) {
 }
 
 export function CustomerProfileV4Page({ userId }: { userId: string }) {
-  const [profile, setProfile] = useState<CustomerMobileProfile | null>(null);
+  const [profile, setProfile] = useState<CustomerMobileAvatarProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -17,22 +23,43 @@ export function CustomerProfileV4Page({ userId }: { userId: string }) {
   const [success, setSuccess] = useState("");
   const [customerType, setCustomerType] = useState<"individual" | "business">("individual");
   const [signingOut, setSigningOut] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const [avatarProgress, setAvatarProgress] = useState(0);
+  const [avatarStage, setAvatarStage] = useState("");
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [retryAvatarFile, setRetryAvatarFile] = useState<File | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  async function load() {
-    setLoading(true);
+  async function load(showLoading = true) {
+    if (showLoading) setLoading(true);
     try {
-      const data = await loadCustomerMobileData(userId);
-      setProfile(data.profile);
-      setCustomerType(data.profile?.customer_type === "business" ? "business" : "individual");
+      const nextProfile = await loadCustomerMobileAvatarProfile(userId);
+      setProfile(nextProfile);
+      setCustomerType(nextProfile?.customer_type === "business" ? "business" : "individual");
       setError("");
+      setAvatarError("");
+      setAvatarUrl(null);
+      if (nextProfile?.avatar_path) {
+        setAvatarLoading(true);
+        try {
+          setAvatarUrl(await createCustomerAvatarUrl(userId, nextProfile.avatar_path));
+        } catch (caught) {
+          setAvatarError(caught instanceof Error ? caught.message : "Profile photo could not be loaded.");
+        } finally {
+          setAvatarLoading(false);
+        }
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Customer profile could not be loaded.");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }
 
-  useEffect(() => { void load(); }, [userId]);
+  useEffect(() => { void load(true); }, [userId]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,13 +77,63 @@ export function CustomerProfileV4Page({ userId }: { userId: string }) {
         customerType,
         companyName: String(form.get("companyName") || ""),
       });
-      await load();
+      await load(false);
       setEditing(false);
       setSuccess("Profile updated successfully.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Profile could not be saved.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveAvatar(file: File) {
+    if (avatarBusy) return;
+    setAvatarBusy(true);
+    setRetryAvatarFile(file);
+    setAvatarError("");
+    setSuccess("");
+    setAvatarProgress(0);
+    setAvatarStage("Preparing photo");
+    try {
+      await uploadCustomerAvatar(userId, file, (percent, stage) => {
+        setAvatarProgress(percent);
+        setAvatarStage(stage);
+      });
+      await load(false);
+      setRetryAvatarFile(null);
+      setSuccess("Profile photo updated successfully.");
+    } catch (caught) {
+      setAvatarError(caught instanceof Error ? caught.message : "Profile photo could not be uploaded.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  function chooseAvatar(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) void saveAvatar(file);
+  }
+
+  async function removeAvatar() {
+    if (avatarBusy || !profile?.avatar_path) return;
+    setAvatarBusy(true);
+    setAvatarError("");
+    setSuccess("");
+    setAvatarProgress(20);
+    setAvatarStage("Removing profile photo");
+    try {
+      await clearCustomerAvatar(userId);
+      setAvatarUrl(null);
+      setRetryAvatarFile(null);
+      setAvatarProgress(100);
+      await load(false);
+      setSuccess("Profile photo removed.");
+    } catch (caught) {
+      setAvatarError(caught instanceof Error ? caught.message : "Profile photo could not be removed.");
+    } finally {
+      setAvatarBusy(false);
     }
   }
 
@@ -80,7 +157,7 @@ export function CustomerProfileV4Page({ userId }: { userId: string }) {
   }
 
   if (!profile) {
-    return <main className="customer-v4-page"><section className="customer-v4-card customer-v4-state"><strong>Customer profile not available</strong><span>{error || "customer_get_profile returned no Customer record."}</span><button type="button" onClick={() => void load()}>Retry</button></section></main>;
+    return <main className="customer-v4-page"><section className="customer-v4-card customer-v4-state"><strong>Customer profile not available</strong><span>{error || "customer_get_profile_v2 returned no Customer record."}</span><button type="button" onClick={() => void load(true)}>Retry</button></section></main>;
   }
 
   const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "—";
@@ -90,8 +167,24 @@ export function CustomerProfileV4Page({ userId }: { userId: string }) {
     <main className="customer-v4-page">
       <header className="customer-v4-page-header"><div><strong>HALLO<span>TRUCK</span></strong><small>CUSTOMER PROFILE</small></div><b>Verified Customer</b></header>
       <section className="customer-v4-profile-hero">
-        <div className="customer-v4-profile-avatar" aria-label="Customer avatar fallback"><strong>{initials}</strong></div>
+        <ProfileAvatar imageUrl={avatarUrl} initials={initials} name={profile.full_name} loading={avatarLoading} onImageError={() => { setAvatarUrl(null); setAvatarError("Profile photo could not be displayed. Initials are shown instead."); }}/>
         <div><small>YOUR ACCOUNT</small><h1>{profile.full_name || "Customer"}</h1><p>{profile.customer_type === "business" ? profile.company_name || "Business account" : "Individual account"}</p></div>
+      </section>
+
+      <section className="customer-v4-card customer-v4-avatar-card">
+        <div className="customer-v4-avatar-card__top">
+          <ProfileAvatar imageUrl={avatarUrl} initials={initials} name={profile.full_name} compact loading={avatarLoading} onImageError={() => setAvatarUrl(null)}/>
+          <div><small>PROFILE PHOTO</small><strong>{profile.avatar_path ? "Your secure Customer photo" : "Add a Customer photo"}</strong><p>Private image. Only your authenticated Customer account can read or replace this avatar.</p></div>
+        </div>
+        <div className="customer-v4-avatar-actions">
+          <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={avatarBusy}>Camera</button>
+          <button type="button" onClick={() => galleryInputRef.current?.click()} disabled={avatarBusy}>Photo library</button>
+          {profile.avatar_path && <button type="button" className="is-danger" onClick={() => void removeAvatar()} disabled={avatarBusy}>Remove photo</button>}
+        </div>
+        <input ref={cameraInputRef} className="customer-v4-avatar-input" type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={chooseAvatar}/>
+        <input ref={galleryInputRef} className="customer-v4-avatar-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseAvatar}/>
+        {avatarBusy && <div className="customer-v4-avatar-progress" role="status" aria-live="polite"><div><span>{avatarStage || "Uploading photo"}</span><strong>{avatarProgress}%</strong></div><progress max="100" value={avatarProgress}/></div>}
+        {avatarError && <div className="customer-v4-avatar-error" role="alert"><span>{avatarError}</span>{retryAvatarFile && <button type="button" onClick={() => void saveAvatar(retryAvatarFile)} disabled={avatarBusy}>Retry photo upload</button>}</div>}
       </section>
 
       <section className="customer-v4-card">
@@ -115,15 +208,14 @@ export function CustomerProfileV4Page({ userId }: { userId: string }) {
         {error && <p className="customer-v4-error" role="alert">{error}</p>}
       </section>
 
-      <section className="customer-v4-card customer-v4-photo-limit">
-        <div className="customer-v4-profile-avatar customer-v4-profile-avatar--small"><strong>{initials}</strong></div>
-        <div><strong>Profile photo</strong><p>Customer photo upload is not exposed by the current Customer profile RPC/storage contract. Initials are used safely instead of storing an image in an unrelated bucket.</p></div>
-      </section>
-
-      <button type="button" className="customer-v4-secondary" onClick={() => void load()} disabled={loading}>{loading ? "Refreshing…" : "Refresh profile"}</button>
+      <button type="button" className="customer-v4-secondary" onClick={() => void load(true)} disabled={loading || avatarBusy}>{loading ? "Refreshing…" : "Refresh profile"}</button>
       <button type="button" className="customer-v4-danger" onClick={() => void signOut()} disabled={signingOut}>{signingOut ? "Signing out…" : "Sign out"}</button>
     </main>
   );
+}
+
+function ProfileAvatar({ imageUrl, initials, name, compact = false, loading = false, onImageError }: { imageUrl: string | null; initials: string; name: string | null; compact?: boolean; loading?: boolean; onImageError: () => void }) {
+  return <div className={`customer-v4-profile-avatar${compact ? " customer-v4-profile-avatar--small" : ""}`} aria-label={imageUrl ? "Customer profile photo" : "Customer avatar fallback"}>{imageUrl ? <img src={imageUrl} alt={`${name || "Customer"} profile`} onError={onImageError}/> : <strong>{loading ? "…" : initials}</strong>}</div>;
 }
 
 function ProfileValue({ label, value }: { label: string; value: string | null | undefined }) {

@@ -33,10 +33,14 @@ test("route polyline and live remaining ETA reuse the root portal OSRM route ser
   assert.match(mapSource, /ETA/);
 });
 
-test("progress maps Assigned Pickup On route Delivered", () => {
+test("tracking state maps Waiting for GPS, In Transit and Delivered without faking live coordinates", () => {
   assert.match(mapSource, /\["Assigned", "Pickup", "On route", "Delivered"\]/);
   assert.match(mapSource, /status === "delivered"/);
   assert.match(mapSource, /status === "in_transit"/);
+  assert.match(mapSource, /Waiting for GPS/);
+  assert.match(mapSource, /status === "delivered" \? "0 km"/);
+  assert.match(mapSource, /status === "delivered" \? "Delivered"/);
+  assert.match(mapSource, /gpsLive = hasTruck && freshness === "LIVE"/);
 });
 
 test("freshness contract preserves LIVE STALE OFFLINE and exact timestamp", () => {
@@ -50,6 +54,15 @@ test("freshness contract preserves LIVE STALE OFFLINE and exact timestamp", () =
   assert.match(mapSource, /last known location, not a current\/live position/);
   assert.match(mapSource, /second: "2-digit"/);
   assert.match(mapSource, /timeZoneName: "short"/);
+});
+
+test("tracking realtime covers assignment/status, GPS and delivery with cleanup", () => {
+  assert.match(serviceSource, /channel\(`customer-mobile-trip:\$\{userId\}:\$\{orderId\}`\)/);
+  assert.match(serviceSource, /table: "orders", filter: `id=eq\.\$\{orderId\}`/);
+  assert.match(serviceSource, /table: "tracking_pings", filter: `order_id=eq\.\$\{orderId\}`/);
+  assert.match(serviceSource, /table: "delivery_proofs", filter: `order_id=eq\.\$\{orderId\}`/);
+  assert.match(serviceSource, /removeChannel\(channel\)/);
+  assert.match(pageSource, /cleanup\?\.\(\)/);
 });
 
 test("tracking remains Customer-owned and mutation-free", () => {
