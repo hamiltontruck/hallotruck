@@ -234,7 +234,7 @@ function friendlyAuthError(message: string | undefined, language: Language) {
 
 function Screen({ children }: { children: ReactNode }) {
   return (
-    <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: "20px", background: "linear-gradient(180deg,#edf5ff 0%,#f7f9fc 55%,#fff 100%)", color: "#10213d", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" }}>
+<main className="customer-auth-screen" style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: "20px", background: "linear-gradient(180deg,#edf5ff 0%,#f7f9fc 55%,#fff 100%)", color: "#10213d", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" }}>
       {children}
     </main>
   );
@@ -297,9 +297,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
 
   return (
     <Screen>
-      <div style={{ width: "min(100%, 430px)", display: "grid", justifyItems: "stretch" }}>
-        <Brand />
-        <section style={{ ...panelStyle, width: "100%", boxSizing: "border-box" }}>
+      <div className="customer-auth-shell" style={{ width: "min(100%, 430px)", display: "grid", justifyItems: "stretch" }}>\n        <Brand />\n        <section className="customer-auth-card" style={{ ...panelStyle, width: "100%", boxSizing: "border-box" }}>
           <LanguageSelect language={language} setLanguage={setLanguage} disabled={busy} />
           <p style={{ margin: 0, color: "#9a6700", fontSize: "10px", fontWeight: 900, letterSpacing: ".16em" }}>{text.customerOnly}</p>
           <h1 style={{ margin: "8px 0 0", fontSize: "26px", lineHeight: 1.15 }}>{mode === "signup" ? text.createTitle : text.signInTitle}</h1>
@@ -308,7 +306,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
           {error && <div role="alert" style={{ marginTop: "18px", border: "1px solid #fecaca", borderRadius: "14px", background: "#fef2f2", padding: "12px", color: "#b91c1c", fontSize: "13px" }}>{error}</div>}
           {notice && <div role="status" style={{ marginTop: "18px", border: "1px solid #bbf7d0", borderRadius: "14px", background: "#f0fdf4", padding: "12px", color: "#166534", fontSize: "13px" }}>{notice}</div>}
 
-          <form onSubmit={submit} style={{ display: "grid", gap: "16px", marginTop: "22px" }} aria-busy={busy}>
+          <form className="customer-auth-form" onSubmit={submit} style={{ display: "grid", gap: "16px", marginTop: "22px" }} aria-busy={busy}>
             {mode === "signup" && <>
               <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.fullName}<input style={inputStyle} type="text" autoComplete="name" required disabled={busy} value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
               <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.phone}<input style={inputStyle} type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="09XXXXXXXX or +2519XXXXXXXX" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
