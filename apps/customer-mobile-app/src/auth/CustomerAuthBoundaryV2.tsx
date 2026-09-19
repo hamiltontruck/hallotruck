@@ -1,3 +1,8 @@
+import { Mail, LockKeyhole, Eye, EyeOff } from "lucide-react";
+import wordmark from "./assets/wordmark.webp";
+import splashImage from "./assets/splash.webp";
+import skyline from "./assets/skyline.webp";
+import googleMark from "./assets/google.svg";
 import {
   useCallback,
   useEffect,
@@ -92,13 +97,13 @@ const COPY = {
     language: "Language",
     fullName: "Full name",
     phone: "Phone",
-    email: "Email",
+    email: "Email address",
     password: "Password",
     continueWithGoogle: "Continue with Google",
     creating: "CREATING ACCOUNT…",
     verifying: "VERIFYING ACCOUNT…",
     createAccount: "CREATE ACCOUNT",
-    signIn: "SIGN IN",
+    signIn: "Sign In",
     backToSignIn: "Back to Sign in",
     invalidLogin: "The email or password is incorrect.",
     emailNotConfirmed: "Confirm your email before signing in.",
@@ -241,12 +246,11 @@ function Screen({ children }: { children: ReactNode }) {
 }
 
 function Brand() {
-  return (
-    <div className="customer-auth-brand" data-language-static="true">
-      <div aria-label="HALLO logo" className="customer-auth-logo">H</div>
-      <div><strong>HALLO</strong><small>Smart Logistics</small></div>
-    </div>
-  );
+  return <div className="customer-entry-brand" data-language-static="true"><strong>HALLO</strong><img src={wordmark} alt="HALLO" aria-label="HALLO logo" width="240" height="80" /><small>Smart Logistics</small></div>;
+}
+
+function AuthFooter() {
+  return <footer className="customer-entry-footer" data-language-static="true"><img src={skyline} alt="" /><div><strong>HALLO Smart Logistics</strong><span>Move Anything. Anywhere.</span></div></footer>;
 }
 
 function LanguageSelect({ language, setLanguage, disabled = false }: { language: Language; setLanguage: (language: Language) => void; disabled?: boolean }) {
@@ -264,22 +268,15 @@ function LanguageSelect({ language, setLanguage, disabled = false }: { language:
 
 function Splash({ onStart }: { onStart: () => void }) {
   useEffect(() => {
-    const timer = window.setTimeout(onStart, 1800);
+    const timer = window.setTimeout(onStart, 4500);
     return () => window.clearTimeout(timer);
   }, [onStart]);
-
-  return (
-    <Screen>
-      <button
-        type="button"
-        className="customer-auth-splash"
-        onClick={onStart}
-        aria-label="Continue to sign in"
-      >
-        <span className="customer-auth-splash-a11y">HALLO Smart Logistics</span>
-      </button>
-    </Screen>
-  );
+  return <main className="customer-welcome" style={{ backgroundImage: `url(${splashImage})` }}>
+    <button type="button" className="customer-welcome-surface" onClick={onStart} aria-label="Continue to sign in">
+      <div className="customer-welcome-heading"><Brand /><p>Move Anything. Anywhere.<br/>Safer. Faster. Together.</p></div>
+      <div className="customer-welcome-bottom"><div className="customer-welcome-dots" aria-hidden="true"><i/><i/><i/></div><p>Reliable Trucking for a Stronger Ethiopia</p><small>People <span>|</span> Business <span>|</span> Progress</small></div>
+    </button>
+  </main>;
 }
 
 function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSignUp, onGoogleSignIn }: {
@@ -299,8 +296,24 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [resetFeedback, setResetFeedback] = useState<string | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
   const submitLock = useRef(false);
   const text = COPY[language];
+
+  async function resetPassword() {
+    if (busy || resetBusy || !customerSupabase) return;
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) { setResetFeedback(text.emailInvalid); return; }
+    setResetBusy(true);
+    try {
+      const { error: resetError } = await customerSupabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: new URL("../", window.location.href).href,
+      });
+      if (resetError) throw resetError;
+      setResetFeedback(language === "en" ? "If an account exists for this email, a reset link will arrive shortly." : language === "om" ? "Imeelii kanaan akkaawuntiin yoo jiraate, linkiin haaromsuu siif ergama." : "በዚህ ኢሜይል መለያ ካለ፣ የማደሻ አገናኝ ይደርሳል።");
+    } catch { setResetFeedback(text.authUnavailable); }
+    finally { setResetBusy(false); }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -315,48 +328,46 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
   }
 
   function bringIntoView(event: FocusEvent<HTMLInputElement>) {
-    window.setTimeout(() => event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" }), 180);
+    const input = event.currentTarget;
+    window.setTimeout(() => input.scrollIntoView({ block: "center", behavior: "smooth" }), 180);
   }
 
   return (
-    <Screen>
-      <div className="customer-auth-shell">
+    <main className="customer-entry">
+      <div className="customer-entry-shell">
         <LanguageSelect language={language} setLanguage={setLanguage} disabled={busy} />
         <Brand />
-        <section className={`customer-auth-card is-${mode}`}>
+        <section className={`customer-entry-card is-${mode}`}>
           <h1>{mode === "signup" ? text.createTitle : text.signInTitle}</h1>
           <p>{mode === "signup" ? text.createDescription : text.signInDescription}</p>
-          {error && <div className="customer-auth-alert is-error" role="alert">{error}</div>}
-          {notice && <div className="customer-auth-alert is-success" role="status">{notice}</div>}
-          <form className="customer-auth-form" onSubmit={submit} aria-busy={busy}>
+          {error && <div className="customer-entry-alert is-error" role="alert">{error}</div>}
+          {notice && <div className="customer-entry-alert is-success" role="status">{notice}</div>}
+          {resetFeedback && <div className="customer-entry-alert" role="status">{resetFeedback}</div>}
+          <form className="customer-entry-form" onSubmit={submit} aria-busy={busy}>
             {mode === "signup" && <>
               <label><span>{text.fullName}</span><input type="text" autoComplete="name" required disabled={busy} value={fullName} onFocus={bringIntoView} onChange={(event) => setFullName(event.target.value)} /></label>
               <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="+2519XXXXXXXX or 09XXXXXXXX" value={phone} onFocus={bringIntoView} onChange={(event) => setPhone(event.target.value)} /></label>
             </>}
-            <label><span>{text.email}{mode === "signup" ? "" : ""}</span><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={mode === "login" ? "Email address" : "name@example.com"} value={email} onFocus={bringIntoView} onChange={(event) => setEmail(event.target.value)} /></label>
-            <label><span>{text.password}</span><div className="customer-auth-password"><input type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onFocus={bringIntoView} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? "◉" : "◎"}</button></div></label>
-            {mode === "signup" && <label className="customer-auth-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} disabled={busy}/><span>{language === "om" ? "Ulaagaa fi Haala irratti walii gala" : language === "am" ? "በውሎች እና ሁኔታዎች እስማማለሁ" : "I agree to the Terms & Conditions"}</span></label>}
-            <button className="customer-auth-primary" type="submit" disabled={busy || (mode === "signup" && !termsAccepted)}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
+            <label><span className="customer-entry-sr-only">{text.email}</span><div className="customer-entry-field"><Mail size={19} aria-hidden="true"/><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={text.email} value={email} onFocus={bringIntoView} onChange={(event) => setEmail(event.target.value)} /></div></label>
+            <label><span className="customer-entry-sr-only">{text.password}</span><div className="customer-entry-field"><LockKeyhole size={19} aria-hidden="true"/><input placeholder={text.password} type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onFocus={bringIntoView} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={19}/> : <Eye size={19}/>}</button></div></label>
+            {mode === "login" && <button type="button" className="customer-entry-forgot" disabled={busy || resetBusy} onClick={() => void resetPassword()}>{language === "om" ? "Password dagattee?" : language === "am" ? "የይለፍ ቃል ረሱ?" : "Forgot Password?"}</button>}
+            {mode === "signup" && <label className="customer-entry-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} disabled={busy}/><span>{language === "om" ? "Ulaagaa fi Haala irratti walii gala" : language === "am" ? "በውሎች እና ሁኔታዎች እስማማለሁ" : "I agree to the Terms & Conditions"}</span></label>}
+            <button className="customer-entry-primary" type="submit" disabled={busy || (mode === "signup" && !termsAccepted)}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
           </form>
           {mode === "login" && <>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "18px 0", color: "#8a98aa", fontSize: "12px" }}>
-              <span style={{ height: "1px", flex: 1, background: "#e2e9f3" }} />
-              <span>OR</span>
-              <span style={{ height: "1px", flex: 1, background: "#e2e9f3" }} />
-            </div>
-            <button type="button" disabled={busy} onClick={() => void onGoogleSignIn()} style={{ width: "100%", minHeight: "52px", border: "1px solid #cbd7e6", borderRadius: "16px", background: "#fff", color: "#10213d", fontWeight: 900, fontSize: "14px", cursor: "pointer", opacity: busy ? .6 : 1 }}>
-              <span aria-hidden="true" style={{ marginRight: "8px", fontSize: "18px", fontWeight: 900 }}>G</span>{text.continueWithGoogle}
-            </button>
+            <div className="customer-entry-divider">{language === "om" ? "ykn" : language === "am" ? "ወይም" : "or"}</div>
+            <button type="button" className="customer-entry-google" disabled={busy} onClick={() => void onGoogleSignIn()}><img src={googleMark} width="20" height="20" alt=""/>{text.continueWithGoogle}</button>
           </>}
-          <div className="customer-auth-mode">
+          <div className="customer-entry-mode">
             <span>{mode === "login" ? (language === "om" ? "Akkaawuntii hin qabduu?" : language === "am" ? "መለያ የለዎትም?" : "Don't have an account?") : (language === "om" ? "Akkaawuntii qabdaa?" : language === "am" ? "መለያ አለዎት?" : "Already have an account?")}</span>
             <button type="button" disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setPassword(""); setTermsAccepted(false); }}>
-              {mode === "login" ? (language === "om" ? "Galmaa'i" : language === "am" ? "ይመዝገቡ" : "Register") : text.signIn}
+              {mode === "login" ? (language === "om" ? "Galmaa'i" : language === "am" ? "ይመዝገቡ" : "Create Account") : text.signIn}
             </button>
           </div>
         </section>
       </div>
-    </Screen>
+      <AuthFooter />
+    </main>
   );
 }
 
