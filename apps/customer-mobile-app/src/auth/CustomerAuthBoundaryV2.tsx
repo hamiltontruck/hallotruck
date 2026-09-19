@@ -138,6 +138,7 @@ const COPY = {
     phone: "ስልክ",
     email: "ኢሜይል",
     password: "የይለፍ ቃል",
+    continueWithGoogle: "በGoogle ይቀጥሉ",
     creating: "መለያ በመፍጠር ላይ…",
     verifying: "መለያ በማረጋገጥ ላይ…",
     createAccount: "መለያ ይፍጠሩ",
