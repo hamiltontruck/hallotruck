@@ -240,7 +240,7 @@ function Screen({ children }: { children: ReactNode }) {
 
 function Brand() {
   return (
-    <div className="customer-auth-brand">
+    <div className="customer-auth-brand" data-language-static="true">
       <div aria-label="HALLO logo" className="customer-auth-logo">H</div>
       <div><strong>HALLO</strong><small>Smart Logistics</small></div>
     </div>
