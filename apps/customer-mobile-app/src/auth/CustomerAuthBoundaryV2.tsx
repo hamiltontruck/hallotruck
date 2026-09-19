@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type FocusEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
@@ -310,7 +311,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
     }
   }
 
-  function bringIntoView(event: React.FocusEvent<HTMLInputElement>) {
+  function bringIntoView(event: FocusEvent<HTMLInputElement>) {
     window.setTimeout(() => event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" }), 180);
   }
 
