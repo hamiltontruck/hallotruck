@@ -6,6 +6,7 @@ const map = fs.readFileSync(new URL("../src/CustomerBookingMap.tsx", import.meta
 const mapCss = fs.readFileSync(new URL("../src/booking-map.css", import.meta.url), "utf8");
 const service = fs.readFileSync(new URL("../src/customer-quote.service.ts", import.meta.url), "utf8");
 const app = fs.readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+const journey = fs.readFileSync(new URL("../src/CustomerBookingJourney.tsx", import.meta.url), "utf8");
 const responsive = fs.readFileSync(new URL("../src/customer-booking-responsive.css", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
@@ -20,8 +21,10 @@ test("Customer Home keeps real map place selection and HGV route", () => {
   assert.match(map, /portal-map-actions/);
   assert.match(map, />Swap</);
   assert.match(map, />Reset</);
-  assert.match(app, /<CustomerBookingMap/);
-  assert.match(app, /<CustomerBookingFlow/);
+  assert.match(app, /<CustomerBookingJourney/);
+  assert.match(journey, /<CustomerBookingMap/);
+  assert.match(journey, /loadCustomerQuotePreview/);
+  assert.match(journey, /createCustomerMobileOrder/);
 });
 
 test("My location matches portal pickup behavior and survives temporary GPS failures", () => {
@@ -72,10 +75,11 @@ test("screen focus auto-zoom fix does not disable map or browser pinch zoom", ()
   assert.doesNotMatch(map, /touchZoomRotate\.disable/);
 });
 
-test("successful placed order navigates to Orders rather than empty active-trip tracking", () => {
-  assert.match(app, /function handleOrderCreated\(order: CreatedCustomerOrder\)/);
-  assert.match(app, /setCreatedOrder\(order\)/);
-  assert.match(app, /setTab\("orders"\)/);
-  assert.match(app, /Order confirmed/);
+test("successful placed order stays on the real confirmation screen until the Customer chooses the next action", () => {
+  assert.match(journey, /setCreatedOrder\(order\)/);
+  assert.match(journey, /setStep\("success"\)/);
+  assert.match(journey, /bookingConfirmed/);
+  assert.match(journey, /onViewOrder\(createdOrder\.id\)/);
+  assert.match(app, /onViewOrder=\{\(orderId\) => \{ setBookingOpen\(false\); openOrder\(orderId\); \}\}/);
   assert.doesNotMatch(app, /Order creation is not enabled yet/);
 });
