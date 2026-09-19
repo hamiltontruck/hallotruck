@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type FocusEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
@@ -41,9 +42,9 @@ const COPY = {
   om: {
     customerOnly: "CUSTOMER QOFA",
     createTitle: "Akkaawuntii HALLO kee uumi",
-    signInTitle: "Gara akkaawuntii keetti seeni",
+    signInTitle: "Baga nagaan deebite",
     createDescription: "Maqaa, lakkoofsa bilbilaa Itoophiyaa, imeelii fi password fayyadamuun akkaawuntii Customer uumi.",
-    signInDescription: "Geejjiba ajajuu fi hordofuuf akkaawuntii HALLO Customer kee fayyadami.",
+    signInDescription: "Gara akkaawuntii keetti seeni.",
     language: "Afaan",
     fullName: "Maqaa guutuu",
     phone: "Bilbila",
@@ -84,9 +85,9 @@ const COPY = {
   en: {
     customerOnly: "CUSTOMER ONLY",
     createTitle: "Create your HALLO account",
-    signInTitle: "Sign in to your account",
+    signInTitle: "Welcome Back",
     createDescription: "Create a Customer account using your name, Ethiopian phone number, email and password.",
-    signInDescription: "Use your HALLO Customer account to book and track transport.",
+    signInDescription: "Sign in to your account",
     language: "Language",
     fullName: "Full name",
     phone: "Phone",
@@ -127,9 +128,9 @@ const COPY = {
   am: {
     customerOnly: "ለደንበኛ ብቻ",
     createTitle: "የHALLO መለያዎን ይፍጠሩ",
-    signInTitle: "ወደ መለያዎ ይግቡ",
+    signInTitle: "እንኳን ደህና መጡ",
     createDescription: "ስምዎን፣ የኢትዮጵያ ስልክ ቁጥር፣ ኢሜይል እና የይለፍ ቃል በመጠቀም የCustomer መለያ ይፍጠሩ።",
-    signInDescription: "መጓጓዣ ለማዘዝ እና ለመከታተል የHALLO Customer መለያዎን ይጠቀሙ።",
+    signInDescription: "ወደ መለያዎ ይግቡ።",
     language: "ቋንቋ",
     fullName: "ሙሉ ስም",
     phone: "ስልክ",
@@ -233,36 +234,48 @@ function friendlyAuthError(message: string | undefined, language: Language) {
 }
 
 function Screen({ children }: { children: ReactNode }) {
-  return (
-<main className="customer-auth-screen" style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: "20px", background: "linear-gradient(180deg,#edf5ff 0%,#f7f9fc 55%,#fff 100%)", color: "#10213d", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" }}>
-      {children}
-    </main>
-  );
+  return <main className="customer-auth-screen">{children}</main>;
 }
 
 function Brand() {
   return (
-    <div style={{ display: "grid", justifyItems: "center", gap: "10px", marginBottom: "22px", textAlign: "center" }}>
-      <div aria-label="HALLO logo" style={{ width: "68px", height: "68px", display: "grid", placeItems: "center", borderRadius: "22px", background: "#10213d", color: "#f5b400", fontWeight: 950, fontSize: "28px", boxShadow: "0 12px 28px rgba(16,33,61,.18)" }}>H</div>
-      <div>
-        <div style={{ color: "#10213d", fontSize: "26px", fontWeight: 950, lineHeight: 1 }}>HALLO<span style={{ color: "#d68e25" }}>TRUCK</span></div>
-        <div style={{ marginTop: "5px", color: "#66758c", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em" }}>Customer Mobile</div>
-      </div>
+    <div className="customer-auth-brand" data-language-static="true">
+      <div aria-label="HALLO logo" className="customer-auth-logo">H</div>
+      <div><strong>HALLO</strong><small>Smart Logistics</small></div>
     </div>
   );
 }
 
 function LanguageSelect({ language, setLanguage, disabled = false }: { language: Language; setLanguage: (language: Language) => void; disabled?: boolean }) {
-  const text = COPY[language];
   return (
-    <label style={{ display: "grid", gap: "8px", marginBottom: "18px", fontSize: "13px", fontWeight: 800 }}>
-      {text.language}
-      <select value={language} disabled={disabled} onChange={(event) => setLanguage(event.target.value as Language)} style={{ ...inputStyle, marginTop: 0 }}>
-        <option value="om">Afaan Oromoo</option>
-        <option value="en">English</option>
-        <option value="am">አማርኛ</option>
+    <label className="customer-auth-language">
+      <span className="customer-auth-language-label">{COPY[language].language}</span>
+      <select value={language} disabled={disabled} onChange={(event) => setLanguage(event.target.value as Language)} aria-label={COPY[language].language}>
+        <option value="en">EN</option>
+        <option value="om">OR</option>
+        <option value="am">አማ</option>
       </select>
     </label>
+  );
+}
+
+function Splash({ onStart }: { onStart: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onStart, 1800);
+    return () => window.clearTimeout(timer);
+  }, [onStart]);
+
+  return (
+    <Screen>
+      <button
+        type="button"
+        className="customer-auth-splash"
+        onClick={onStart}
+        aria-label="Continue to sign in"
+      >
+        <span className="customer-auth-splash-a11y">HALLO Smart Logistics</span>
+      </button>
+    </Screen>
   );
 }
 
@@ -280,12 +293,14 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const submitLock = useRef(false);
   const text = COPY[language];
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || submitLock.current) return;
+    if (busy || submitLock.current || (mode === "signup" && !termsAccepted)) return;
     submitLock.current = true;
     try {
       if (mode === "signup") await onSignUp(fullName, phone, email, password);
@@ -295,33 +310,37 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
     }
   }
 
+  function bringIntoView(event: FocusEvent<HTMLInputElement>) {
+    window.setTimeout(() => event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" }), 180);
+  }
+
   return (
     <Screen>
-      <div className="customer-auth-shell" style={{ width: "min(100%, 430px)", display: "grid", justifyItems: "stretch" }}>\n        <Brand />\n        <section className="customer-auth-card" style={{ ...panelStyle, width: "100%", boxSizing: "border-box" }}>
-          <LanguageSelect language={language} setLanguage={setLanguage} disabled={busy} />
-          <p style={{ margin: 0, color: "#9a6700", fontSize: "10px", fontWeight: 900, letterSpacing: ".16em" }}>{text.customerOnly}</p>
-          <h1 style={{ margin: "8px 0 0", fontSize: "26px", lineHeight: 1.15 }}>{mode === "signup" ? text.createTitle : text.signInTitle}</h1>
-          <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>{mode === "signup" ? text.createDescription : text.signInDescription}</p>
-
-          {error && <div role="alert" style={{ marginTop: "18px", border: "1px solid #fecaca", borderRadius: "14px", background: "#fef2f2", padding: "12px", color: "#b91c1c", fontSize: "13px" }}>{error}</div>}
-          {notice && <div role="status" style={{ marginTop: "18px", border: "1px solid #bbf7d0", borderRadius: "14px", background: "#f0fdf4", padding: "12px", color: "#166534", fontSize: "13px" }}>{notice}</div>}
-
-          <form className="customer-auth-form" onSubmit={submit} style={{ display: "grid", gap: "16px", marginTop: "22px" }} aria-busy={busy}>
+      <div className="customer-auth-shell">
+        <LanguageSelect language={language} setLanguage={setLanguage} disabled={busy} />
+        <Brand />
+        <section className={`customer-auth-card is-${mode}`}>
+          <h1>{mode === "signup" ? text.createTitle : text.signInTitle}</h1>
+          <p>{mode === "signup" ? text.createDescription : text.signInDescription}</p>
+          {error && <div className="customer-auth-alert is-error" role="alert">{error}</div>}
+          {notice && <div className="customer-auth-alert is-success" role="status">{notice}</div>}
+          <form className="customer-auth-form" onSubmit={submit} aria-busy={busy}>
             {mode === "signup" && <>
-              <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.fullName}<input style={inputStyle} type="text" autoComplete="name" required disabled={busy} value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
-              <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.phone}<input style={inputStyle} type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="09XXXXXXXX or +2519XXXXXXXX" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
+              <label><span>{text.fullName}</span><input type="text" autoComplete="name" required disabled={busy} value={fullName} onFocus={bringIntoView} onChange={(event) => setFullName(event.target.value)} /></label>
+              <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="+2519XXXXXXXX or 09XXXXXXXX" value={phone} onFocus={bringIntoView} onChange={(event) => setPhone(event.target.value)} /></label>
             </>}
-            <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.email}<input style={inputStyle} type="email" autoComplete="email" inputMode="email" required disabled={busy} value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-            <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.password}<input style={inputStyle} type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-            <button type="submit" disabled={busy} style={{ ...primaryButtonStyle, opacity: busy ? .6 : 1 }}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
+            <label><span>{text.email}{mode === "signup" ? "" : ""}</span><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={mode === "login" ? "Email address" : "name@example.com"} value={email} onFocus={bringIntoView} onChange={(event) => setEmail(event.target.value)} /></label>
+            <label><span>{text.password}</span><div className="customer-auth-password"><input type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onFocus={bringIntoView} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? "◉" : "◎"}</button></div></label>
+            {mode === "signup" && <label className="customer-auth-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} disabled={busy}/><span>{language === "om" ? "Ulaagaa fi Haala irratti walii gala" : language === "am" ? "በውሎች እና ሁኔታዎች እስማማለሁ" : "I agree to the Terms & Conditions"}</span></label>}
+            <button className="customer-auth-primary" type="submit" disabled={busy || (mode === "signup" && !termsAccepted)}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
           </form>
+          <div className="customer-auth-mode">
+            <span>{mode === "login" ? (language === "om" ? "Akkaawuntii hin qabduu?" : language === "am" ? "መለያ የለዎትም?" : "Don't have an account?") : (language === "om" ? "Akkaawuntii qabdaa?" : language === "am" ? "መለያ አለዎት?" : "Already have an account?")}</span>
+            <button type="button" disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setPassword(""); setTermsAccepted(false); }}>
+              {mode === "login" ? (language === "om" ? "Galmaa'i" : language === "am" ? "ይመዝገቡ" : "Register") : text.signIn}
+            </button>
+          </div>
         </section>
-
-        <div style={{ display: "grid", placeItems: "center", marginTop: "18px" }}>
-          <button type="button" disabled={busy} onClick={() => setMode(mode === "login" ? "signup" : "login")} style={{ ...modeLinkStyle, opacity: busy ? .55 : 1 }}>
-            {mode === "login" ? "Create Account" : text.backToSignIn}
-          </button>
-        </div>
       </div>
     </Screen>
   );
@@ -356,6 +375,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   const [language, setLanguage] = useState<Language>(storedLanguage);
   const [state, setState] = useState<AuthState>(() => customerSupabaseConfigured ? { kind: "booting" } : { kind: "configuration-error" });
   const [authenticating, setAuthenticating] = useState(false);
+  const [showSplash, setShowSplash] = useState(() => typeof window !== "undefined" && window.sessionStorage.getItem("hallo-customer-splash-seen") !== "1");
   const requestIdRef = useRef(0);
   const loginLockRef = useRef(false);
   const text = COPY[language];
@@ -463,6 +483,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
 
   if (state.kind === "configuration-error") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.configurationEyebrow} title={text.configurationTitle} description={text.configurationDescription} onSignOut={async () => undefined} />;
   if (state.kind === "booting") return <Screen><section style={{ ...panelStyle, textAlign: "center" }}><Brand/><LanguageSelect language={language} setLanguage={setLanguage}/><div style={{ width: "38px", height: "38px", margin: "12px auto", border: "4px solid #e4edf8", borderTopColor: "#0759c7", borderRadius: "50%" }}/><strong role="status">{text.verifyingAccount}</strong></section></Screen>;
+  if (state.kind === "signed-out" && showSplash) return <Splash onStart={() => { window.sessionStorage.setItem("hallo-customer-splash-seen", "1"); setShowSplash(false); }} />;
   if (state.kind === "signed-out") return <AuthForm busy={authenticating} error={state.error} notice={state.notice} language={language} setLanguage={setLanguage} onSignIn={signIn} onSignUp={signUp} />;
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
   if (state.kind === "unsupported-role") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.deniedEyebrow} title={text.deniedTitle} description={text.deniedDescription} onSignOut={signOut} />;

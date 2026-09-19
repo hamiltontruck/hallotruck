@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { customerSupabase } from "./auth/customer-supabase";
 import { updateCustomerMobileProfile } from "./customer-profile.service";
+import { useCustomerLanguage } from "./customer-language";
+import { getCustomerFinalCopy } from "./customer-final-copy";
 import {
   clearCustomerAvatar,
   createCustomerAvatarUrl,
@@ -14,7 +16,9 @@ function customerInitials(name: string | null | undefined) {
   return parts.map((part) => part[0]?.toUpperCase() || "").join("") || "CU";
 }
 
-export function CustomerProfileV4Page({ userId }: { userId: string }) {
+export function CustomerProfileV4Page({ userId, onSavedLocations, onHelp, onSettings }: { userId: string; onSavedLocations?: () => void; onHelp?: () => void; onSettings?: () => void }) {
+  const { language } = useCustomerLanguage();
+  const finalCopy = getCustomerFinalCopy(language);
   const [profile, setProfile] = useState<CustomerMobileAvatarProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -169,6 +173,13 @@ export function CustomerProfileV4Page({ userId }: { userId: string }) {
       <section className="customer-v4-profile-hero">
         <ProfileAvatar imageUrl={avatarUrl} initials={initials} name={profile.full_name} loading={avatarLoading} onImageError={() => { setAvatarUrl(null); setAvatarError("Profile photo could not be displayed. Initials are shown instead."); }}/>
         <div><small>YOUR ACCOUNT</small><h1>{profile.full_name || "Customer"}</h1><p>{profile.customer_type === "business" ? profile.company_name || "Business account" : "Individual account"}</p></div>
+      </section>
+
+      <section className="customer-final-profile-menu" aria-label={finalCopy.profileMenu}>
+        <button type="button" onClick={() => setEditing(true)}><span>◉</span><b>{finalCopy.personalInformation}</b><em>›</em></button>
+        <button type="button" onClick={onSavedLocations} disabled={!onSavedLocations}><span>⌖</span><b>{finalCopy.savedAddresses}</b><em>›</em></button>
+        <button type="button" onClick={onSettings} disabled={!onSettings}><span>文</span><b>{finalCopy.languageSettings}</b><em>›</em></button>
+        <button type="button" onClick={onHelp} disabled={!onHelp}><span>?</span><b>{finalCopy.helpSupport}</b><em>›</em></button>
       </section>
 
       <section className="customer-v4-card customer-v4-avatar-card">

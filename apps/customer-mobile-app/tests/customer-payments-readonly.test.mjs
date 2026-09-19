@@ -14,7 +14,7 @@ test("payments are loaded only after Customer-scoped order ids are resolved", ()
 
 test("Payments tab receives the verified Customer identity", () => {
   assert.match(app, /import \{ CustomerPaymentsPage \} from "\.\/CustomerPaymentsPage"/);
-  assert.match(app, /tab === "payments"/);
+  assert.match(app, /page === "payments"/);
   assert.match(app, /<CustomerPaymentsPage userId=\{identity\.userId\}/);
 });
 

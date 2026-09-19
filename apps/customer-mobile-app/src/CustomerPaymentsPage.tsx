@@ -7,67 +7,48 @@ import {
   type CustomerMobileData,
   type CustomerMobilePayment,
 } from "./customer-data.service";
+import { useCustomerLanguage, type CustomerLanguage } from "./customer-language";
+import { getCustomerFinalCopy } from "./customer-final-copy";
 
 type State =
   | { kind: "loading" }
   | { kind: "ready"; data: CustomerMobileData }
   | { kind: "error"; message: string };
 
-const pageStyle = {
-  minHeight: "100%",
-  padding: "18px 16px 104px",
-  background: "#f4f7fb",
-  color: "#10213d",
-} as const;
+function eventLabel(event: string | null, language: CustomerLanguage) {
+  const key = event || "pending";
+  const labels: Record<CustomerLanguage, Record<string, string>> = {
+    en: { initiated: "Pending verification", held_escrow: "Held in escrow", released: "Released", refunded: "Refunded", pending: "Pending" },
+    om: { initiated: "Mirkaneessa eegamaa", held_escrow: "Escrow keessatti qabame", released: "Gadhiifame", refunded: "Deebifame", pending: "Eegamaa" },
+    am: { initiated: "ማረጋገጫ በመጠባበቅ ላይ", held_escrow: "በEscrow የተያዘ", released: "ተለቋል", refunded: "ተመላሽ ተደርጓል", pending: "በመጠባበቅ ላይ" },
+  };
+  return labels[language][key] || formatOrderStatus(key);
+}
 
-const cardStyle = {
-  border: "1px solid #dfe7f1",
-  borderRadius: 22,
-  background: "#fff",
-  padding: 16,
-  boxShadow: "0 10px 30px rgba(16,33,61,.06)",
-} as const;
-
-function Header({ count }: { count: number | null }) {
+function Header({ title, count }: { title: string; count: number | null }) {
   return (
-    <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18 }}>
-      <div>
-        <div style={{ color: "#10213d", fontWeight: 950, fontSize: 23, letterSpacing: "-.045em" }}>HALLO<span style={{ color: "#d68e25" }}>TRUCK</span></div>
-        <div style={{ color: "#68778d", marginTop: 2, fontSize: 10, fontWeight: 850, letterSpacing: ".09em", textTransform: "uppercase" }}>Customer Payments</div>
-      </div>
-      <span style={{ borderRadius: 999, background: "#fff7e8", color: "#9a6700", padding: "7px 10px", fontSize: 11, fontWeight: 900 }}>
-        {count === null ? "Secure DB" : `${count} Records`}
-      </span>
+    <header className="customer-final-payments-header">
+      <div><strong>HALLO</strong><small>{title}</small></div>
+      <span>{count === null ? "…" : count}</span>
     </header>
   );
 }
 
 function StatusCard({ title, body, action, onAction }: { title: string; body: string; action?: string; onAction?: () => void }) {
   return (
-    <section style={{ ...cardStyle, marginTop: 34, textAlign: "center", padding: "28px 20px" }}>
-      <div style={{ width: 48, height: 48, margin: "0 auto", display: "grid", placeItems: "center", borderRadius: 16, background: "#fff7e8", color: "#9a6700", fontSize: 22, fontWeight: 950 }}>₿</div>
-      <h1 style={{ margin: "16px 0 0", fontSize: 22 }}>{title}</h1>
-      <p style={{ margin: "10px 0 0", color: "#68778d", fontSize: 13, lineHeight: 1.7 }}>{body}</p>
-      {action && onAction && (
-        <button type="button" onClick={onAction} style={{ marginTop: 18, minHeight: 46, width: "100%", border: 0, borderRadius: 15, background: "#10213d", color: "#fff", fontWeight: 900 }}>
-          {action}
-        </button>
-      )}
+    <section className="customer-final-state">
+      <span className="customer-final-payment-state-icon" aria-hidden="true">▣</span>
+      <strong>{title}</strong>
+      <span>{body}</span>
+      {action && onAction && <button type="button" onClick={onAction}>{action}</button>}
     </section>
   );
 }
 
-function PaymentCard({
-  payment,
-  trackingId,
-  userId,
-}: {
-  payment: CustomerMobilePayment;
-  trackingId: string;
-  userId: string;
-}) {
+function PaymentCard({ payment, trackingId, userId, language }: { payment: CustomerMobilePayment; trackingId: string; userId: string; language: CustomerLanguage }) {
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const c = getCustomerFinalCopy(language);
 
   async function openReceipt() {
     if (!payment.receipt_path || receiptBusy) return;
@@ -84,120 +65,63 @@ function PaymentCard({
   }
 
   return (
-    <article style={cardStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-        <div style={{ minWidth: 0 }}>
-          <small style={{ color: "#68778d", fontWeight: 850 }}>ORDER</small>
-          <strong style={{ display: "block", marginTop: 4, overflowWrap: "anywhere" }}>{trackingId}</strong>
-        </div>
-        <span style={{ flex: "0 0 auto", borderRadius: 999, background: "#fff7e8", color: "#9a6700", padding: "6px 9px", fontSize: 11, fontWeight: 900 }}>
-          {formatOrderStatus(payment.event)}
-        </span>
-      </div>
-
-      <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr auto", gap: "8px 12px", alignItems: "center" }}>
-        <span style={{ color: "#68778d", fontSize: 12 }}>Amount</span>
-        <strong>{formatEtb(payment.amount_etb)}</strong>
-        <span style={{ color: "#68778d", fontSize: 12 }}>Provider</span>
-        <strong style={{ textAlign: "right", fontSize: 13 }}>{payment.provider || "—"}</strong>
-        <span style={{ color: "#68778d", fontSize: 12 }}>Reference</span>
-        <strong style={{ textAlign: "right", fontSize: 13, overflowWrap: "anywhere" }}>{payment.provider_ref || "—"}</strong>
-        <span style={{ color: "#68778d", fontSize: 12 }}>Recorded</span>
-        <strong style={{ textAlign: "right", fontSize: 12 }}>{payment.created_at ? new Date(payment.created_at).toLocaleString() : "—"}</strong>
-      </div>
-
-      {payment.receipt_path && (
-        <button
-          type="button"
-          onClick={() => void openReceipt()}
-          disabled={receiptBusy}
-          style={{ marginTop: 14, minHeight: 42, width: "100%", border: "1px solid #cddcf0", borderRadius: 13, background: "#fff", color: "#10213d", fontWeight: 900 }}
-        >
-          {receiptBusy ? "Preparing receipt…" : "Open receipt"}
-        </button>
-      )}
-      {receiptError && <p role="alert" style={{ margin: "10px 0 0", color: "#b42318", fontSize: 11 }}>{receiptError}</p>}
+    <article className="customer-final-payment-record">
+      <header><div><small>ORDER</small><strong>{trackingId}</strong></div><b>{eventLabel(payment.event, language)}</b></header>
+      <dl>
+        <div><dt>{language === "om" ? "Hanga" : language === "am" ? "መጠን" : "Amount"}</dt><dd>{formatEtb(payment.amount_etb)}</dd></div>
+        <div><dt>{language === "om" ? "Karaa" : language === "am" ? "አቅራቢ" : "Provider"}</dt><dd>{payment.provider || "—"}</dd></div>
+        <div><dt>{language === "om" ? "Ragaa" : language === "am" ? "ማጣቀሻ" : "Reference"}</dt><dd>{payment.provider_ref || "—"}</dd></div>
+        <div><dt>{language === "om" ? "Galmaa'e" : language === "am" ? "የተመዘገበ" : "Recorded"}</dt><dd>{payment.created_at ? new Date(payment.created_at).toLocaleString() : "—"}</dd></div>
+      </dl>
+      {payment.receipt_path && <button type="button" className="customer-final-secondary" onClick={() => void openReceipt()} disabled={receiptBusy}>{receiptBusy ? (language === "om" ? "Nagahee qopheessaa jira…" : language === "am" ? "ደረሰኝ በማዘጋጀት ላይ…" : "Preparing receipt…") : (language === "om" ? "Nagahee bani" : language === "am" ? "ደረሰኝ ክፈት" : "Open receipt")}</button>}
+      {receiptError && <p className="customer-final-error" role="alert">{receiptError}</p>}
+      <span className="customer-final-payment-card-truth">{c.paymentTruth}</span>
     </article>
   );
 }
 
 export function CustomerPaymentsPage({ userId, onHome }: { userId: string; onHome: () => void }) {
+  const { language } = useCustomerLanguage();
+  const c = getCustomerFinalCopy(language);
   const [state, setState] = useState<State>({ kind: "loading" });
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
-    try {
-      setState({ kind: "ready", data: await loadCustomerMobileData(userId) });
-    } catch (error) {
-      setState({ kind: "error", message: error instanceof Error ? error.message : "Payment data could not be loaded." });
-    }
+    try { setState({ kind: "ready", data: await loadCustomerMobileData(userId) }); }
+    catch (error) { setState({ kind: "error", message: error instanceof Error ? error.message : "Payment data could not be loaded." }); }
   }, [userId]);
 
   useEffect(() => {
     let active = true;
     void loadCustomerMobileData(userId)
-      .then((data) => {
-        if (active) setState({ kind: "ready", data });
-      })
-      .catch((error: unknown) => {
-        if (active) setState({ kind: "error", message: error instanceof Error ? error.message : "Payment data could not be loaded." });
-      });
-    return () => {
-      active = false;
-    };
+      .then((data) => { if (active) setState({ kind: "ready", data }); })
+      .catch((error: unknown) => { if (active) setState({ kind: "error", message: error instanceof Error ? error.message : "Payment data could not be loaded." }); });
+    return () => { active = false; };
   }, [userId]);
 
   const count = state.kind === "ready" ? state.data.payments.length : null;
-  const orderMap = useMemo(() => {
-    if (state.kind !== "ready") return new Map<string, string>();
-    return new Map(state.data.orders.map((order) => [order.id, order.tracking_id || "Pending tracking ID"]));
-  }, [state]);
+  const orderMap = useMemo(() => state.kind === "ready" ? new Map(state.data.orders.map((order) => [order.id, order.tracking_id || "Pending tracking ID"])) : new Map<string,string>(), [state]);
 
-  if (state.kind === "loading") {
-    return <main style={pageStyle}><Header count={null}/><StatusCard title="Loading payments…" body="Payment ledger records are loading only after this Customer's order IDs are resolved under existing RLS."/></main>;
-  }
+  if (state.kind === "loading") return <main className="customer-final-page"><Header title={c.payments} count={null}/><StatusCard title={c.loading} body={c.paymentTruth}/></main>;
+  if (state.kind === "error") return <main className="customer-final-page"><Header title={c.payments} count={null}/><StatusCard title={c.payments} body={state.message} action={c.retry} onAction={() => void load()}/></main>;
+  if (!state.data.orders.length) return <main className="customer-final-page"><Header title={c.payments} count={0}/><StatusCard title={c.noPaymentRecords} body={c.paymentTruth} action="Home" onAction={onHome}/></main>;
 
-  if (state.kind === "error") {
-    return <main style={pageStyle}><Header count={null}/><StatusCard title="Payments could not be loaded" body={state.message} action="Try again" onAction={() => void load()}/></main>;
-  }
-
-  if (!state.data.orders.length) {
-    return <main style={pageStyle}><Header count={0}/><StatusCard title="No payment history" body="This account has no orders, so there are no real payment records to display." action="Go to Home" onAction={onHome}/></main>;
-  }
-
-  if (!state.data.payments.length) {
-    return <main style={pageStyle}><Header count={0}/><StatusCard title="No payment records yet" body="Orders exist, but the payment ledger currently has no records for this Customer. No payment is fabricated." action="Refresh" onAction={() => void load()}/></main>;
-  }
-
+  const refunds = state.data.payments.filter((payment) => payment.event === "refunded").length;
   return (
-    <main style={pageStyle}>
-      <Header count={count}/>
-      <section style={{ ...cardStyle, marginBottom: 14, background: "linear-gradient(135deg,#10213d,#26364d)", color: "#fff", border: 0 }}>
-        <small style={{ color: "#f5b400", fontWeight: 900 }}>PAYMENT HISTORY</small>
-        <h1 style={{ margin: "6px 0 0", fontSize: 24 }}>Your payments</h1>
-        <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,.78)", fontSize: 12, lineHeight: 1.6 }}>
-          Events and amounts are shown exactly as recorded in the database ledger. This app does not calculate a fake balance or alter finance history.
-        </p>
+    <main className="customer-final-page customer-final-payments-page">
+      <Header title={c.payments} count={count}/>
+      <section className="customer-final-payment-hero">
+        <span aria-hidden="true">▣</span>
+        <div><small>{c.paymentLedger}</small><strong>{state.data.payments.length.toLocaleString()} {language === "om" ? "galmee" : language === "am" ? "መዝገቦች" : "records"}</strong></div>
+        <p>Events and amounts are shown exactly as recorded in the database ledger. {c.paymentTruth}</p>
       </section>
-
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <button type="button" onClick={() => void load()} style={{ border: "1px solid #d8e2ef", borderRadius: 12, background: "#fff", padding: "9px 11px", color: "#10213d", fontWeight: 850 }}>Refresh</button>
-      </div>
-
-      <section style={{ display: "grid", gap: 12 }}>
-        {state.data.payments.map((payment) => (
-          <PaymentCard
-            key={payment.id}
-            payment={payment}
-            userId={userId}
-            trackingId={orderMap.get(payment.order_id) || "Customer order"}
-          />
-        ))}
+      <section className="customer-final-payment-menu">
+        <div><span>▤</span><p><strong>{c.paymentHistory}</strong><small>{state.data.payments.length.toLocaleString()}</small></p></div>
+        <div><span>▧</span><p><strong>{c.invoices}</strong><small>{state.data.orders.length.toLocaleString()}</small></p></div>
+        <div><span>↶</span><p><strong>{c.refunds}</strong><small>{refunds.toLocaleString()}</small></p></div>
       </section>
-
-      <p style={{ margin: "14px 4px 0", color: "#68778d", fontSize: 11, lineHeight: 1.6 }}>
-        Read-only: payment submission, verification, refund, release and ledger mutation are not included in this screen.
-      </p>
+      <div className="customer-final-payment-toolbar"><button type="button" onClick={() => void load()}>{c.refresh}</button></div>
+      {state.data.payments.length ? <section className="customer-final-payment-list">{state.data.payments.map((payment) => <PaymentCard key={payment.id} payment={payment} userId={userId} language={language} trackingId={orderMap.get(payment.order_id) || "Customer order"}/>)}</section> : <StatusCard title={c.noPaymentRecords} body={c.paymentTruth} action={c.refresh} onAction={() => void load()}/>}
     </main>
   );
 }

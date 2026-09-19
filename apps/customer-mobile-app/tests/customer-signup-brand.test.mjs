@@ -22,9 +22,10 @@ test("Customer Mobile keeps database-role verification after signup", () => {
   assert.match(auth, /missing-profile/);
 });
 
-test("Customer Mobile shows HALLO branding at the top of auth", () => {
+test("Customer Mobile shows the official HALLO Smart Logistics brand on splash and auth", () => {
   assert.match(auth, /aria-label="HALLO logo"/);
-  assert.match(auth, /HALLO<span/);
-  assert.match(auth, /Customer Mobile/);
+  assert.match(auth, /<strong>HALLO<\/strong>/);
+  assert.match(auth, /<small>Smart Logistics<\/small>/);
+  assert.match(auth, /function Splash/);
   assert.match(main, /CustomerAuthBoundaryV2/);
 });
