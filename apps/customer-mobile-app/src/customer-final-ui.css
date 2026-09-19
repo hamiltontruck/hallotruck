@@ -77,7 +77,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .customer-final-state.compact{margin-top:10px;padding:18px}.customer-final-state span{color:var(--customer-final-muted);font-size:12px;line-height:1.5}.customer-final-state button{border:0;border-radius:12px;background:var(--customer-final-blue);padding:0 15px;color:#fff;font-weight:900}
 
 .customer-final-bottom-nav{
-  position:absolute;z-index:900;right:0;bottom:0;left:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:end;
+  position:fixed;z-index:900;right:0;bottom:0;left:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:end;\n  width:min(100%,430px);margin-inline:auto;
   min-height:calc(72px + env(safe-area-inset-bottom));border-top:1px solid #e9edf4;background:rgba(255,255,255,.98);padding:7px 5px env(safe-area-inset-bottom);
   box-shadow:0 -8px 24px rgba(20,45,86,.07);backdrop-filter:blur(16px)
 }
