@@ -37,7 +37,7 @@ test("tracking subscriptions are lifecycle safe and use scoped realtime sources"
 test("Track tab receives verified Customer identity and can open one owned order", () => {
   assert.match(app, /import \{ CustomerTrackingPage \} from "\.\/CustomerTrackingPage"/);
   assert.match(app, /trackingOrderId/);
-  assert.match(app, /onTrackOrder=\{openTracking\}/);
+  assert.match(app, /onTrackOrder=\{\(orderId\) => openTracking\(orderId\)\}/);
   assert.match(app, /<CustomerTrackingPage userId=\{identity\.userId\} initialOrderId=\{trackingOrderId\}/);
 });
 
