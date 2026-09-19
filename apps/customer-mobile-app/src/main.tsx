@@ -7,7 +7,6 @@ import "./auth-brand.css";
 import "./auth-language-compact.css";
 import "./auth-language-labels";
 import "./customer-language-surface";
-import "./customer-orders-language-surface";
 import "./customer-booking-responsive.css";
 import "./customer-profile-avatar.css";
 import "./customer-v4-cancel.css";
