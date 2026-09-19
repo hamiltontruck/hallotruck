@@ -8,3 +8,15 @@
 .customer-v4-details>.customer-v4-assignment{margin-top:0;margin-bottom:14px}
 @media(min-width:390px){.customer-v4-order-info{grid-template-columns:repeat(5,minmax(0,1fr))}.customer-v4-order-info>div.is-wide{grid-column:auto}.customer-v4-details>.customer-v4-order-info{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:389px){.customer-v4-order-info{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-v4-order-info>div.is-wide{grid-column:1/-1}}
+
+/* #451 approved portal screenshot parity: one assignment card, 2-column metrics, full-width vehicle. */
+.customer-v4-order-card>.customer-v4-assignment{margin-top:16px}
+.customer-v4-order-card>.customer-v4-order-info{grid-template-columns:repeat(2,minmax(0,1fr))}
+.customer-v4-order-card>.customer-v4-order-info>div.is-wide{grid-column:1/-1}
+.customer-v4-order-card>.customer-v4-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.customer-v4-order-card>.customer-v4-actions>*{width:100%;min-width:0}
+.customer-v4-order-card>.customer-v4-actions>button:first-of-type{grid-column:1/-1}
+.customer-v4-order-card>.customer-v4-actions .is-danger{grid-column:1/-1}
+.customer-v4-order-card>.customer-v4-details{margin-top:16px}
+.customer-v4-order-card>.customer-v4-details>.customer-v4-order-info{grid-template-columns:repeat(2,minmax(0,1fr));padding-top:0;border-top:0}
+@media(max-width:430px){.customer-v4-order-card{padding:14px}.customer-v4-order-card>.customer-v4-assignment .customer-v4-assignment__body{grid-template-columns:1fr}.customer-v4-order-card>.customer-v4-assignment .customer-v4-assignment__truck{border-right:0;border-bottom:1px solid #e7edf5}.customer-v4-order-card>.customer-v4-actions{grid-template-columns:1fr}.customer-v4-order-card>.customer-v4-actions>button:first-of-type,.customer-v4-order-card>.customer-v4-actions .is-danger{grid-column:1}.customer-v4-order-card>.customer-v4-actions>*{justify-content:center}}
