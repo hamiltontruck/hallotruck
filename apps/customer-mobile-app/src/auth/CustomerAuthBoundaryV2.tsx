@@ -16,7 +16,6 @@ import {
   customerSupabase,
   customerSupabaseConfigured,
 } from "./customer-supabase";
-import { customerTruckByKey } from "../customer-vehicle-catalog";
 
 export type CustomerIdentity = {
   userId: string;
@@ -43,9 +42,9 @@ const COPY = {
   om: {
     customerOnly: "CUSTOMER QOFA",
     createTitle: "Akkaawuntii HALLO kee uumi",
-    signInTitle: "Gara akkaawuntii keetti seeni",
+    signInTitle: "Baga nagaan deebite",
     createDescription: "Maqaa, lakkoofsa bilbilaa Itoophiyaa, imeelii fi password fayyadamuun akkaawuntii Customer uumi.",
-    signInDescription: "Geejjiba ajajuu fi hordofuuf akkaawuntii HALLO Customer kee fayyadami.",
+    signInDescription: "Gara akkaawuntii keetti seeni.",
     language: "Afaan",
     fullName: "Maqaa guutuu",
     phone: "Bilbila",
@@ -86,9 +85,9 @@ const COPY = {
   en: {
     customerOnly: "CUSTOMER ONLY",
     createTitle: "Create your HALLO account",
-    signInTitle: "Sign in to your account",
+    signInTitle: "Welcome Back",
     createDescription: "Create a Customer account using your name, Ethiopian phone number, email and password.",
-    signInDescription: "Use your HALLO Customer account to book and track transport.",
+    signInDescription: "Sign in to your account",
     language: "Language",
     fullName: "Full name",
     phone: "Phone",
@@ -129,9 +128,9 @@ const COPY = {
   am: {
     customerOnly: "ለደንበኛ ብቻ",
     createTitle: "የHALLO መለያዎን ይፍጠሩ",
-    signInTitle: "ወደ መለያዎ ይግቡ",
+    signInTitle: "እንኳን ደህና መጡ",
     createDescription: "ስምዎን፣ የኢትዮጵያ ስልክ ቁጥር፣ ኢሜይል እና የይለፍ ቃል በመጠቀም የCustomer መለያ ይፍጠሩ።",
-    signInDescription: "መጓጓዣ ለማዘዝ እና ለመከታተል የHALLO Customer መለያዎን ይጠቀሙ።",
+    signInDescription: "ወደ መለያዎ ይግቡ።",
     language: "ቋንቋ",
     fullName: "ሙሉ ስም",
     phone: "ስልክ",
@@ -260,22 +259,22 @@ function LanguageSelect({ language, setLanguage, disabled = false }: { language:
   );
 }
 
-function Splash({ language, setLanguage, onStart }: { language: Language; setLanguage: (language: Language) => void; onStart: () => void }) {
-  const truckImage = customerTruckByKey("dry-cargo").image;
-  const copy = language === "om"
-    ? { lead: "Daldala Kee Gara Fuulduraatti Sochoosi", sub: "Itoophiyaa fi Ishee Ala", start: "Jalqabi" }
-    : language === "am"
-      ? { lead: "ንግድዎን ወደ ፊት ያንቀሳቅሱ", sub: "በኢትዮጵያ እና ከዚያ ባሻገር", start: "ይጀምሩ" }
-      : { lead: "Move Your Business Forward", sub: "Across Ethiopia and Beyond", start: "Get Started" };
+function Splash({ onStart }: { onStart: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onStart, 1800);
+    return () => window.clearTimeout(timer);
+  }, [onStart]);
+
   return (
     <Screen>
-      <section className="customer-auth-splash">
-        <LanguageSelect language={language} setLanguage={setLanguage} />
-        <Brand />
-        <div className="customer-auth-splash-copy"><h1>{copy.lead}</h1><p>{copy.sub}</p></div>
-        <div className="customer-auth-splash-art" aria-hidden="true">{truckImage && <img src={truckImage} alt="" />}</div>
-        <button type="button" className="customer-auth-primary" onClick={onStart}>{copy.start} <span aria-hidden="true">→</span></button>
-      </section>
+      <button
+        type="button"
+        className="customer-auth-splash"
+        onClick={onStart}
+        aria-label="Continue to sign in"
+      >
+        <span className="customer-auth-splash-a11y">HALLO Smart Logistics</span>
+      </button>
     </Screen>
   );
 }
@@ -320,7 +319,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
       <div className="customer-auth-shell">
         <LanguageSelect language={language} setLanguage={setLanguage} disabled={busy} />
         <Brand />
-        <section className="customer-auth-card">
+        <section className={`customer-auth-card is-${mode}`}>
           <h1>{mode === "signup" ? text.createTitle : text.signInTitle}</h1>
           <p>{mode === "signup" ? text.createDescription : text.signInDescription}</p>
           {error && <div className="customer-auth-alert is-error" role="alert">{error}</div>}
@@ -330,7 +329,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
               <label><span>{text.fullName}</span><input type="text" autoComplete="name" required disabled={busy} value={fullName} onFocus={bringIntoView} onChange={(event) => setFullName(event.target.value)} /></label>
               <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="+2519XXXXXXXX or 09XXXXXXXX" value={phone} onFocus={bringIntoView} onChange={(event) => setPhone(event.target.value)} /></label>
             </>}
-            <label><span>{text.email}{mode === "signup" ? "" : ""}</span><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={mode === "login" ? "Email" : "name@example.com"} value={email} onFocus={bringIntoView} onChange={(event) => setEmail(event.target.value)} /></label>
+            <label><span>{text.email}{mode === "signup" ? "" : ""}</span><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={mode === "login" ? "Email address" : "name@example.com"} value={email} onFocus={bringIntoView} onChange={(event) => setEmail(event.target.value)} /></label>
             <label><span>{text.password}</span><div className="customer-auth-password"><input type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onFocus={bringIntoView} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? "◉" : "◎"}</button></div></label>
             {mode === "signup" && <label className="customer-auth-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} disabled={busy}/><span>{language === "om" ? "Ulaagaa fi Haala irratti walii gala" : language === "am" ? "በውሎች እና ሁኔታዎች እስማማለሁ" : "I agree to the Terms & Conditions"}</span></label>}
             <button className="customer-auth-primary" type="submit" disabled={busy || (mode === "signup" && !termsAccepted)}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
@@ -484,7 +483,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
 
   if (state.kind === "configuration-error") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.configurationEyebrow} title={text.configurationTitle} description={text.configurationDescription} onSignOut={async () => undefined} />;
   if (state.kind === "booting") return <Screen><section style={{ ...panelStyle, textAlign: "center" }}><Brand/><LanguageSelect language={language} setLanguage={setLanguage}/><div style={{ width: "38px", height: "38px", margin: "12px auto", border: "4px solid #e4edf8", borderTopColor: "#0759c7", borderRadius: "50%" }}/><strong role="status">{text.verifyingAccount}</strong></section></Screen>;
-  if (state.kind === "signed-out" && showSplash) return <Splash language={language} setLanguage={setLanguage} onStart={() => { window.sessionStorage.setItem("hallo-customer-splash-seen", "1"); setShowSplash(false); }} />;
+  if (state.kind === "signed-out" && showSplash) return <Splash onStart={() => { window.sessionStorage.setItem("hallo-customer-splash-seen", "1"); setShowSplash(false); }} />;
   if (state.kind === "signed-out") return <AuthForm busy={authenticating} error={state.error} notice={state.notice} language={language} setLanguage={setLanguage} onSignIn={signIn} onSignUp={signUp} />;
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
   if (state.kind === "unsupported-role") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.deniedEyebrow} title={text.deniedTitle} description={text.deniedDescription} onSignOut={signOut} />;
