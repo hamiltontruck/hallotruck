@@ -50,6 +50,7 @@ const COPY = {
     phone: "Bilbila",
     email: "Imeelii",
     password: "Password",
+    continueWithGoogle: "Google'n itti fufi",
     creating: "AKKAAWUNTII UUMAA JIRA…",
     verifying: "AKKAAWUNTII MIRKANEESSAA JIRA…",
     createAccount: "CREATE ACCOUNT",
@@ -93,6 +94,7 @@ const COPY = {
     phone: "Phone",
     email: "Email",
     password: "Password",
+    continueWithGoogle: "Continue with Google",
     creating: "CREATING ACCOUNT…",
     verifying: "VERIFYING ACCOUNT…",
     createAccount: "CREATE ACCOUNT",
@@ -279,7 +281,7 @@ function Splash({ onStart }: { onStart: () => void }) {
   );
 }
 
-function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSignUp }: {
+function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSignUp, onGoogleSignIn }: {
   busy: boolean;
   error: string | null;
   notice: string | null;
@@ -287,6 +289,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
   setLanguage: (language: Language) => void;
   onSignIn: (email: string, password: string) => Promise<void>;
   onSignUp: (fullName: string, phone: string, email: string, password: string) => Promise<void>;
+  onGoogleSignIn: () => Promise<void>;
 }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [fullName, setFullName] = useState("");
@@ -334,6 +337,16 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
             {mode === "signup" && <label className="customer-auth-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} disabled={busy}/><span>{language === "om" ? "Ulaagaa fi Haala irratti walii gala" : language === "am" ? "በውሎች እና ሁኔታዎች እስማማለሁ" : "I agree to the Terms & Conditions"}</span></label>}
             <button className="customer-auth-primary" type="submit" disabled={busy || (mode === "signup" && !termsAccepted)}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
           </form>
+          {mode === "login" && <>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "18px 0", color: "#8a98aa", fontSize: "12px" }}>
+              <span style={{ height: "1px", flex: 1, background: "#e2e9f3" }} />
+              <span>OR</span>
+              <span style={{ height: "1px", flex: 1, background: "#e2e9f3" }} />
+            </div>
+            <button type="button" disabled={busy} onClick={() => void onGoogleSignIn()} style={{ width: "100%", minHeight: "52px", border: "1px solid #cbd7e6", borderRadius: "16px", background: "#fff", color: "#10213d", fontWeight: 900, fontSize: "14px", cursor: "pointer", opacity: busy ? .6 : 1 }}>
+              <span aria-hidden="true" style={{ marginRight: "8px", fontSize: "18px", fontWeight: 900 }}>G</span>{text.continueWithGoogle}
+            </button>
+          </>}
           <div className="customer-auth-mode">
             <span>{mode === "login" ? (language === "om" ? "Akkaawuntii hin qabduu?" : language === "am" ? "መለያ የለዎትም?" : "Don't have an account?") : (language === "om" ? "Akkaawuntii qabdaa?" : language === "am" ? "መለያ አለዎት?" : "Already have an account?")}</span>
             <button type="button" disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setPassword(""); setTermsAccepted(false); }}>
@@ -467,6 +480,26 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
     } finally { loginLockRef.current = false; setAuthenticating(false); }
   }
 
+  async function signInWithGoogle() {
+    const client = customerSupabase;
+    if (!client || loginLockRef.current) return;
+    loginLockRef.current = true;
+    setAuthenticating(true);
+    setState({ kind: "signed-out", error: null, notice: null });
+    try {
+      const redirectTo = `${window.location.origin}${window.location.pathname}`;
+      const { error } = await client.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
+      if (error) throw error;
+    } catch (error) {
+      setState({ kind: "signed-out", error: friendlyAuthError(error instanceof Error ? error.message : undefined, language), notice: null });
+      setAuthenticating(false);
+      loginLockRef.current = false;
+    }
+  }
+
   async function signOut() {
     const client = customerSupabase;
     ++requestIdRef.current;
@@ -484,7 +517,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   if (state.kind === "configuration-error") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.configurationEyebrow} title={text.configurationTitle} description={text.configurationDescription} onSignOut={async () => undefined} />;
   if (state.kind === "booting") return <Screen><section style={{ ...panelStyle, textAlign: "center" }}><Brand/><LanguageSelect language={language} setLanguage={setLanguage}/><div style={{ width: "38px", height: "38px", margin: "12px auto", border: "4px solid #e4edf8", borderTopColor: "#0759c7", borderRadius: "50%" }}/><strong role="status">{text.verifyingAccount}</strong></section></Screen>;
   if (state.kind === "signed-out" && showSplash) return <Splash onStart={() => { window.sessionStorage.setItem("hallo-customer-splash-seen", "1"); setShowSplash(false); }} />;
-  if (state.kind === "signed-out") return <AuthForm busy={authenticating} error={state.error} notice={state.notice} language={language} setLanguage={setLanguage} onSignIn={signIn} onSignUp={signUp} />;
+  if (state.kind === "signed-out") return <AuthForm busy={authenticating} error={state.error} notice={state.notice} language={language} setLanguage={setLanguage} onSignIn={signIn} onSignUp={signUp} onGoogleSignIn={signInWithGoogle} />;
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
   if (state.kind === "unsupported-role") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.deniedEyebrow} title={text.deniedTitle} description={text.deniedDescription} onSignOut={signOut} />;
   if (state.kind === "missing-profile") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.missingEyebrow} title={text.missingTitle} description={text.missingDescription} onSignOut={signOut} onRetry={retryProfile} />;
