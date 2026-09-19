@@ -8,7 +8,7 @@
 .customer-entry .customer-auth-language select{width:76px!important;height:44px!important;min-height:44px!important;padding:8px!important;border:0!important;background:transparent!important;color:#182331!important;border-radius:0!important;box-shadow:none!important;font-size:13px!important}
 .customer-entry-brand{text-align:center;color:#172330}
 .customer-entry-brand>strong{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.customer-entry-brand img{display:block;width:180px;height:60px;object-fit:contain;margin:auto}
+.customer-entry-brand img{display:block;width:180px;height:60px;object-fit:contain;margin:auto;background:none!important}
 .customer-entry-brand small{display:block;margin:-7px 0 0;font-size:16px;line-height:1.5}
 .customer-entry-card{padding:0;border:0;background:transparent;box-shadow:none}
 .customer-entry-card h1{margin:25px 0 4px;text-align:center;font-size:24px;line-height:1.3;font-weight:600;letter-spacing:0}
