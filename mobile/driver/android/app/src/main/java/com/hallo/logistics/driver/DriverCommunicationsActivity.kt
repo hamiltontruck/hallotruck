@@ -7,17 +7,18 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.card.MaterialCardView
 import com.hallo.logistics.driver.databinding.ActivityDriverCommunicationsBinding
+import java.time.ZoneId
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class DriverCommunicationsActivity:AppCompatActivity(){
+class DriverCommunicationsActivity:DriverLocalizedActivity(){
     private lateinit var b:ActivityDriverCommunicationsBinding
     private val repo=DriverCommunicationsRepository()
     private var orders:List<DriverJob> = emptyList()
@@ -28,7 +29,6 @@ class DriverCommunicationsActivity:AppCompatActivity(){
 
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
-        DriverLocaleManager.applySaved(this)
         b=ActivityDriverCommunicationsBinding.inflate(layoutInflater)
         setContentView(b.root)
         configureUi()
@@ -62,7 +62,7 @@ class DriverCommunicationsActivity:AppCompatActivity(){
             val labels=if(orders.isEmpty())listOf(getString(R.string.comms_no_orders)) else orders.map(::orderLabel)
             b.orderSelector.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,labels)
             intent.getStringExtra(EXTRA_ORDER_ID)?.let{requested->orders.indexOfFirst{it.id==requested}.takeIf{it>=0}?.let(b.orderSelector::setSelection)}
-        }.onFailure{b.screenStatus.text=it.message?:getString(R.string.error_request_failed)}
+        }.onFailure{b.screenStatus.setText(R.string.error_request_failed)}
         renderOrderContext();refreshChat(silent=false);refreshDisputes(silent=false)
         setLoading(false,"")
     }
@@ -92,7 +92,7 @@ class DriverCommunicationsActivity:AppCompatActivity(){
                 val thread=operationsThread?:repo.openOperationsChat().also{operationsThread=it}
                 repo.markOperationsRead(thread)
                 repo.operationsMessages(thread).map{ChatRow(it.senderId,it.body,it.createdAt,it.orderId)}
-            }.onSuccess{rows->renderMessages(rows,actor);b.chatStatus.setText(R.string.comms_operations_connected)}.onFailure{if(!silent)b.chatStatus.text=it.message?:getString(R.string.error_request_failed)}
+            }.onSuccess{rows->renderMessages(rows,actor);b.chatStatus.setText(R.string.comms_operations_connected)}.onFailure{if(!silent)b.chatStatus.setText(R.string.error_request_failed)}
             DriverCommunicationMode.CUSTOMER->{
                 val order=selectedOrder()
                 if(order==null){renderMessages(emptyList(),actor);b.chatStatus.setText(R.string.comms_choose_order);return}
@@ -100,7 +100,7 @@ class DriverCommunicationsActivity:AppCompatActivity(){
                     val thread=customerThreads[order.id]?:repo.openCustomerChat(order.id).also{customerThreads[order.id]=it}
                     repo.markCustomerRead(thread)
                     repo.customerMessages(thread).map{ChatRow(it.senderId,it.body,it.createdAt,order.id)}
-                }.onSuccess{rows->renderMessages(rows,actor);b.chatStatus.setText(R.string.comms_customer_connected)}.onFailure{if(!silent)b.chatStatus.text=it.message?:getString(R.string.error_request_failed)}
+                }.onSuccess{rows->renderMessages(rows,actor);b.chatStatus.setText(R.string.comms_customer_connected)}.onFailure{if(!silent)b.chatStatus.setText(R.string.error_request_failed)}
             }
         }
     }
@@ -112,16 +112,16 @@ class DriverCommunicationsActivity:AppCompatActivity(){
         runCatching{
             when(currentMode()){
                 DriverCommunicationMode.OPERATIONS->{val thread=operationsThread?:repo.openOperationsChat().also{operationsThread=it};repo.sendOperationsMessage(thread,text,selectedOrder()?.id)}
-                DriverCommunicationMode.CUSTOMER->{val order=selectedOrder()?:error(getString(R.string.comms_choose_order));val thread=customerThreads[order.id]?:repo.openCustomerChat(order.id).also{customerThreads[order.id]=it};repo.sendCustomerMessage(thread,text)}
+                DriverCommunicationMode.CUSTOMER->{val order=selectedOrder()?:error("order required");val thread=customerThreads[order.id]?:repo.openCustomerChat(order.id).also{customerThreads[order.id]=it};repo.sendCustomerMessage(thread,text)}
             }
         }.onSuccess{b.messageInput.text?.clear();b.screenStatus.setText(R.string.comms_message_sent);refreshChat(silent=false)}
-            .onFailure{b.screenStatus.text=it.message?:getString(R.string.error_request_failed)}
+            .onFailure{b.screenStatus.setText(R.string.error_request_failed)}
         setLoading(false,b.screenStatus.text.toString())
     }
 
     private suspend fun refreshDisputes(silent:Boolean){
         if(repo.userId()==null)return
-        runCatching{repo.disputes()}.onSuccess{loaded->disputes=loaded;renderDisputes()}.onFailure{if(!silent)b.screenStatus.text=it.message?:getString(R.string.comms_disputes_unavailable)}
+        runCatching{repo.disputes()}.onSuccess{loaded->disputes=loaded;renderDisputes()}.onFailure{if(!silent)b.screenStatus.setText(R.string.comms_disputes_unavailable)}
     }
 
     private suspend fun submitDispute(){
@@ -133,7 +133,7 @@ class DriverCommunicationsActivity:AppCompatActivity(){
         setLoading(true,getString(R.string.comms_submitting_dispute))
         runCatching{repo.createDispute(order.id,category,details)}.onSuccess{
             b.disputeDetails.text?.clear();b.screenStatus.setText(R.string.comms_dispute_submitted);refreshDisputes(silent=false)
-        }.onFailure{b.screenStatus.text=it.message?:getString(R.string.error_request_failed)}
+        }.onFailure{b.screenStatus.setText(R.string.error_request_failed)}
         setLoading(false,b.screenStatus.text.toString())
     }
 
@@ -143,7 +143,7 @@ class DriverCommunicationsActivity:AppCompatActivity(){
         rows.forEach{row->
             val mine=row.senderId==actor
             val message=TextView(this).apply{
-                text=buildString{append(row.body);append("\n");append(row.createdAt)}
+                text=buildString{append(row.body);append("\n");append(readableDateTime(row.createdAt))}
                 textSize=14f;setTextColor(ContextCompat.getColor(this@DriverCommunicationsActivity,R.color.hallo_navy));setPadding(dp(12),dp(10),dp(12),dp(10))
             }
             val card=MaterialCardView(this).apply{
@@ -162,7 +162,7 @@ class DriverCommunicationsActivity:AppCompatActivity(){
         if(visible.isEmpty()){b.disputesList.addView(emptyText(getString(R.string.comms_no_disputes)));return}
         visible.forEach{item->
             val tracking=orders.firstOrNull{it.id==item.orderId}?.trackingId.orDash()
-            b.disputesList.addView(emptyText(getString(R.string.comms_dispute_row,tracking,localStatus(item.category),localStatus(item.status),item.details,item.adminNote?:getString(R.string.none),item.createdAt?:getString(R.string.none))).apply{setPadding(dp(10),dp(8),dp(10),dp(8))})
+            b.disputesList.addView(emptyText(getString(R.string.comms_dispute_row,tracking,localStatus(item.category),localStatus(item.status),item.details,item.adminNote?:getString(R.string.none),readableDateTime(item.createdAt))).apply{setPadding(dp(10),dp(8),dp(10),dp(8))})
         }
     }
 
@@ -175,7 +175,25 @@ class DriverCommunicationsActivity:AppCompatActivity(){
     private fun orderLabel(order:DriverJob)="${order.trackingId.orDash()} · ${order.pickup.orDash()} → ${order.dropoff.orDash()} · ${localStatus(order.status)}"
     private fun disputeLabels()=listOf(R.string.comms_dispute_payment,R.string.comms_dispute_delivery,R.string.comms_dispute_assignment,R.string.comms_dispute_customer,R.string.comms_dispute_safety,R.string.comms_dispute_other).map(::getString)
     private fun emptyText(value:String)=TextView(this).apply{text=value;textSize=13f;setTextColor(ContextCompat.getColor(this@DriverCommunicationsActivity,R.color.hallo_text_muted))}
-    private fun localStatus(value:String?)=value?.replace('_',' ')?.split(' ')?.joinToString(" "){it.replaceFirstChar{c->c.uppercase()}}?:getString(R.string.none)
+    private fun localStatus(value:String?)=when(value?.lowercase()){
+        "accepted"->getString(R.string.status_accepted)
+        "in_transit"->getString(R.string.status_in_transit)
+        "delivered"->getString(R.string.status_delivered)
+        "approved"->getString(R.string.approved)
+        "pending"->getString(R.string.pending)
+        "rejected"->getString(R.string.rejected)
+        "reversed"->getString(R.string.reversed)
+        "payment"->getString(R.string.comms_dispute_payment)
+        "delivery"->getString(R.string.comms_dispute_delivery)
+        "assignment"->getString(R.string.comms_dispute_assignment)
+        "customer"->getString(R.string.comms_dispute_customer)
+        "safety"->getString(R.string.comms_dispute_safety)
+        "other"->getString(R.string.comms_dispute_other)
+        null,""->getString(R.string.none)
+        else->DriverPresentation.humanizeToken(value)?:getString(R.string.none)
+    }
+    private fun currentLocale():Locale=resources.configuration.locales[0]?:Locale.getDefault()
+    private fun readableDateTime(value:String?):String=DriverPresentation.formatDateTime(value,currentLocale(),ZoneId.systemDefault())?:getString(R.string.data_unavailable)
     private fun String?.orDash()=if(this.isNullOrBlank())"—" else this
     private fun dp(value:Int)=(value*resources.displayMetrics.density).toInt()
 

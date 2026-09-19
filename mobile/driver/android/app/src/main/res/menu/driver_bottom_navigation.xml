@@ -3,6 +3,6 @@
     <item android:id="@+id/nav_home" android:icon="@android:drawable/ic_menu_view" android:title="@string/home"/>
     <item android:id="@+id/nav_jobs" android:icon="@android:drawable/ic_menu_agenda" android:title="@string/jobs"/>
     <item android:id="@+id/nav_trip" android:icon="@android:drawable/ic_menu_mylocation" android:title="@string/trip"/>
-    <item android:id="@+id/nav_wallet" android:icon="@android:drawable/ic_menu_manage" android:title="@string/earnings"/>
+    <item android:id="@+id/nav_wallet" android:icon="@android:drawable/ic_menu_manage" android:title="@string/nav_wallet"/>
     <item android:id="@+id/nav_profile" android:icon="@android:drawable/ic_menu_myplaces" android:title="@string/profile"/>
 </menu>

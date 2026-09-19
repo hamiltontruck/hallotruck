@@ -3,9 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/hallo_blue_soft"
+    android:background="@android:color/white"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:paddingStart="16dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,7 +18,7 @@
 
         <ImageView
             android:layout_width="0dp"
-            android:layout_height="64dp"
+            android:layout_height="52dp"
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:contentDescription="@string/app_name"
@@ -32,33 +35,42 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/authEn"
                 style="@style/Widget.HalloDriver.CompactToggle"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:text="EN" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/authOr"
                 style="@style/Widget.HalloDriver.CompactToggle"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:text="OR" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/authAm"
                 style="@style/Widget.HalloDriver.CompactToggle"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:text="አማ" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
     </LinearLayout>
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/brand_driver"
+        android:textColor="@color/hallo_blue"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.HalloDriver.ContentCard"
         android:layout_width="match_parent"
-        android:layout_height="156dp"
-        android:layout_marginTop="12dp"
+        android:layout_height="132dp"
+        android:layout_marginTop="10dp"
         app:cardBackgroundColor="@color/hallo_navy_soft"
-        app:cardCornerRadius="20dp"
+        app:cardCornerRadius="18dp"
         app:cardElevation="0dp">
 
         <ImageView
@@ -75,9 +87,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:includeFontPadding="false"
         android:text="@string/driver_auth_signin_title"
         android:textColor="@color/hallo_navy"
-        android:textSize="28sp"
+        android:textSize="26sp"
         android:textStyle="bold" />
 
     <TextView
@@ -85,11 +98,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:layout_marginBottom="20dp"
+        android:layout_marginBottom="16dp"
         android:lineSpacingExtra="2dp"
         android:text="@string/driver_auth_signin_subtitle"
         android:textColor="@color/hallo_text_muted"
-        android:textSize="15sp" />
+        android:textSize="14sp" />
 
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.HalloDriver.ContentCard"
@@ -222,11 +235,11 @@
         android:id="@+id/authPromptModern"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="18dp"
         android:gravity="center"
         android:text="@string/driver_auth_new_prompt"
         android:textColor="@color/hallo_navy"
-        android:textSize="15sp" />
+        android:textSize="14sp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/authModeModern"

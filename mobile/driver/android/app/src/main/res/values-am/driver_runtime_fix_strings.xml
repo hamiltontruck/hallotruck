@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="payment_method_cash">ጥሬ ገንዘብ</string>
+    <string name="gps_starting_server">GPS ተጀምሯል። የመንገድ ላይ ሁኔታ ከሰርቨሩ እስኪረጋገጥ በመጠበቅ ላይ።</string>
+    <string name="deposit_note_format">ማስታወሻ፦ %1$s</string>
+    <string name="verified_profile_photo">የተረጋገጠ የአሽከርካሪ ፕሮፋይል ፎቶ</string>
+    <string name="vehicle_form_uses_assigned">የተመደበው ተሽከርካሪ መረጃ ከማስቀመጥ በፊት ለመመርመር እዚህ ይሞላል።</string>
+    <string name="vehicle_prefill_summary">የተመደበ ተሽከርካሪ\nየምደባ ሁኔታ፦ %1$s\nየሰነድ ግምገማ፦ %2$s</string>
+    <string name="vehicle_prefill_unavailable">የተመደበው ተሽከርካሪ መረጃ አሁን አይገኝም። በቅጹ ውስጥ ያለው መረጃ አልተለወጠም።</string>
+    <string name="vehicle_prefill_none">አሁን የተመደበ ተሽከርካሪ የለም።</string>
+    <string name="notifications_unavailable">ማሳወቂያዎች አሁን አይገኙም። አድስና እንደገና ይሞክሩ።</string>
+    <string name="tracking_summary_with_speed_heading">%1$s · %2$.0f km/h · አቅጣጫ %3$.0f°\nየመጨረሻ ዝመና፦ %4$s</string>
+</resources>

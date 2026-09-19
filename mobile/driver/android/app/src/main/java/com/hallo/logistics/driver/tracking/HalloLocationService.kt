@@ -1,4 +1,5 @@
 package com.hallo.logistics.driver.tracking
+
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -13,18 +14,87 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.hallo.logistics.driver.R
+import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.time.Instant
 
 class HalloLocationService:Service(){
- private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO);private val remote=TrackingRemoteDataSource();private val queue by lazy{TrackingQueue(this)};private val fused by lazy{LocationServices.getFusedLocationProviderClient(this)};private var orderId:String?=null
- private val callback=object:LocationCallback(){override fun onLocationResult(result:LocationResult){val id=orderId?:return;result.lastLocation?.let{l->scope.launch{val current=TrackingPingRequest(id,l.longitude,l.latitude,l.bearing.toDouble(),l.speed*3.6,l.accuracy.toDouble(),Instant.ofEpochMilli(l.time).toString());for(p in queue.read()){if(runCatching{remote.record(p)}.isSuccess)queue.removeFirst()else break};if(runCatching{remote.record(current)}.isFailure)queue.enqueue(current)}}}}
- override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL,"HALLO active trip tracking",NotificationManager.IMPORTANCE_LOW));startForeground(4102,NotificationCompat.Builder(this,CHANNEL).setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("HALLO Driver active trip").setContentText("Authorized GPS tracking is running").setOngoing(true).build())}
- override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{orderId=intent?.getStringExtra("order_id");if(orderId.isNullOrBlank()||ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){stopSelf();return START_NOT_STICKY};fused.requestLocationUpdates(LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,15000).setMinUpdateIntervalMillis(10000).build(),callback,mainLooper);return START_NOT_STICKY}
- override fun onDestroy(){fused.removeLocationUpdates(callback);scope.cancel();super.onDestroy()};override fun onBind(intent:Intent?):IBinder?=null
- companion object{const val CHANNEL="hallo_driver_tracking"}
+    private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
+    private val remote=TrackingRemoteDataSource()
+    private val queue by lazy{TrackingQueue(this)}
+    private val fused by lazy{LocationServices.getFusedLocationProviderClient(this)}
+    private var orderId:String?=null
+
+    private val callback=object:LocationCallback(){
+        override fun onLocationResult(result:LocationResult){
+            val id=orderId?:return
+            result.lastLocation?.let{location->
+                scope.launch{
+                    val current=TrackingPingRequest(
+                        id,
+                        location.longitude,
+                        location.latitude,
+                        location.bearing.toDouble(),
+                        location.speed*3.6,
+                        location.accuracy.toDouble(),
+                        Instant.ofEpochMilli(location.time).toString(),
+                    )
+                    for(ping in queue.read()){
+                        if(runCatching{remote.record(ping)}.isSuccess)queue.removeFirst() else break
+                    }
+                    if(runCatching{remote.record(current)}.isFailure)queue.enqueue(current)
+                }
+            }
+        }
+    }
+
+    override fun onCreate(){
+        super.onCreate()
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(CHANNEL,getString(R.string.tracking_notification_channel),NotificationManager.IMPORTANCE_LOW),
+        )
+        startForeground(
+            4102,
+            NotificationCompat.Builder(this,CHANNEL)
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentTitle(getString(R.string.tracking_notification_title))
+                .setContentText(getString(R.string.tracking_notification_text))
+                .setOngoing(true)
+                .build(),
+        )
+    }
+
+    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{
+        orderId=intent?.getStringExtra("order_id")
+        if(orderId.isNullOrBlank()||ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){
+            runningOrderId=null
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        runningOrderId=orderId
+        fused.requestLocationUpdates(
+            LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,15000).setMinUpdateIntervalMillis(10000).build(),
+            callback,
+            mainLooper,
+        )
+        return START_NOT_STICKY
+    }
+
+    override fun onDestroy(){
+        if(runningOrderId==orderId)runningOrderId=null
+        fused.removeLocationUpdates(callback)
+        scope.cancel()
+        super.onDestroy()
+    }
+    override fun onBind(intent:Intent?):IBinder?=null
+
+    companion object{
+        const val CHANNEL="hallo_driver_tracking"
+        @Volatile private var runningOrderId:String?=null
+        fun isRunningFor(orderId:String?):Boolean=orderId!=null&&runningOrderId==orderId
+    }
 }

@@ -6,7 +6,11 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.storage.storage
+import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
+import kotlin.time.Duration.Companion.minutes
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -51,17 +55,64 @@ class DriverRepository {
         client.postgrest.rpc("driver_save_vehicle_profile",buildJsonObject{put("p_plate_number",plate.trim());put("p_vehicle_type",type);put("p_capacity_tons",capacity)})
     }
 
-    suspend fun uploadDocument(key:String,truckId:String?,name:String,mime:String,bytes:ByteArray){
+    suspend fun uploadDocument(key:String,truckId:String?,name:String,mime:String,bytes:ByteArray,expiryDate:String?=null){
         val id=profile().id
-        require(key in DriverDocumentPolicy.allKeys);require(bytes.isNotEmpty()&&bytes.size<=10*1024*1024)
+        require(key in DriverDocumentPolicy.allKeys)
+        require(bytes.isNotEmpty()&&bytes.size<=10*1024*1024)
         require(mime in setOf("image/jpeg","image/png","image/webp","image/heic","image/heif","application/pdf"))
+        if(key in DriverDocumentPolicy.vehicleKeys){
+            requireNotNull(truckId)
+            require(driverTrucks().any{it.id==truckId})
+        }else require(truckId==null)
+
+        val normalizedExpiry=if(key in DriverDocumentPolicy.expiryRequiredKeys){
+            val parsed=LocalDate.parse(requireNotNull(expiryDate))
+            require(!parsed.isBefore(LocalDate.now()))
+            parsed.toString()
+        }else null
+        val existing=documents()
+            .filter{it.key==key&&it.truckId==truckId}
+            .maxByOrNull{it.createdAt.orEmpty()}
         val scope=truckId?.let{"truck-$it"}?:"identity"
         val safe=name.lowercase().replace(Regex("[^a-z0-9._-]"),"-").takeLast(90)
         val path="$id/$scope/$key/${UUID.randomUUID()}-$safe"
-        client.storage.from("driver-verification").upload(path,bytes){upsert=false}
-        client.from("driver_verification_files").insert(buildJsonObject{
-            put("driver_id",id);if(truckId!=null)put("truck_id",truckId);put("document_key",key);put("file_path",path);put("original_name",name);put("mime_type",mime);put("status","pending")
-        })
+        val bucket=client.storage.from("driver-verification")
+        bucket.upload(path,bytes){upsert=false}
+
+        val record=buildJsonObject{
+            put("driver_id",id)
+            if(truckId==null)put("truck_id",JsonNull) else put("truck_id",truckId)
+            put("document_key",key)
+            put("file_path",path)
+            put("original_name",name)
+            put("mime_type",mime)
+            if(normalizedExpiry==null)put("expiry_date",JsonNull) else put("expiry_date",normalizedExpiry)
+            put("status","pending")
+            put("rejection_reason",JsonNull)
+            put("reviewed_by",JsonNull)
+            put("reviewed_at",JsonNull)
+            put("updated_at",Instant.now().toString())
+        }
+
+        try{
+            if(existing==null){
+                client.from("driver_verification_files").insert(record)
+            }else{
+                client.from("driver_verification_files").update(record){
+                    filter{eq("id",existing.id);eq("driver_id",id);eq("file_path",existing.path)}
+                }
+                if(existing.path!=path)runCatching{bucket.delete(existing.path)}
+            }
+        }catch(error:Throwable){
+            runCatching{bucket.delete(path)}
+            throw error
+        }
+    }
+
+    suspend fun verificationDocumentSignedUrl(path:String):String{
+        profile()
+        require(path.isNotBlank())
+        return client.storage.from("driver-verification").createSignedUrl(path=path,expiresIn=5.minutes)
     }
 
     suspend fun uploadDeliveryAsset(orderId:String,kind:String,mime:String,bytes:ByteArray):String{
@@ -73,8 +124,20 @@ class DriverRepository {
     suspend fun notifications():List<DriverNotification>{profile();return client.postgrest.rpc("my_notifications",buildJsonObject{put("p_limit",100)}).decodeList()}
     suspend fun markRead(id:String){profile();client.postgrest.rpc("mark_notification_read",buildJsonObject{put("p_notification_id",id)})}
 
-    suspend fun wallet():FinancialSummary{val id=profile().id;return client.postgrest.rpc("driver_financial_summary",buildJsonObject{put("p_driver_id",id)}).decodeList<FinancialSummary>().firstOrNull()?:FinancialSummary()}
-    suspend fun commissionSummary():DriverCommissionSummary{profile();return client.postgrest.rpc("my_driver_commission_summary").decodeList<DriverCommissionSummary>().firstOrNull()?:DriverCommissionSummary()}
+    suspend fun wallet():FinancialSummary{
+        val id=profile().id
+        return client.postgrest.rpc("driver_financial_summary",buildJsonObject{put("p_driver_id",id)})
+            .decodeList<FinancialSummary>()
+            .firstOrNull()
+            ?: error("financial summary unavailable")
+    }
+    suspend fun commissionSummary():DriverCommissionSummary{
+        profile()
+        return client.postgrest.rpc("my_driver_commission_summary")
+            .decodeList<DriverCommissionSummary>()
+            .firstOrNull()
+            ?: error("commission summary unavailable")
+    }
 
     suspend fun tripPaymentResults():List<DriverTripPaymentResult>{
         val id=profile().id

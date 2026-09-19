@@ -1,40 +1,114 @@
 package com.hallo.logistics.driver
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
 import android.util.AttributeSet
-import android.view.View
-import kotlin.math.max
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import org.json.JSONObject
 
-class LiveTripMapView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
-    private val route = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(255, 184, 0); strokeWidth = 10f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-    private val road = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(218, 224, 235); strokeWidth = 24f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-    private val point = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(20, 33, 61) }
-    private val truck = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(22, 121, 74) }
-    private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(24, 32, 51); textSize = 30f; isFakeBoldText = true }
-    private var snapshot: LiveTripSnapshot? = null
+/**
+ * Native Driver live-map surface backed by OpenStreetMap tiles.
+ * Only authoritative coordinates returned by the existing live-trip RPC are plotted.
+ * No route geometry or GPS coordinate is synthesized when it is absent.
+ */
+class LiveTripMapView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+) : WebView(context, attrs) {
 
-    fun show(value: LiveTripSnapshot?) {
-        snapshot = value
-        contentDescription = if (value?.truckLat != null && value.truckLng != null) {
-            context.getString(R.string.live_trip_map_accessibility, value.speedKmh?.toInt() ?: 0)
-        } else {
-            context.getString(R.string.live_trip_map_waiting_accessibility)
-        }
-        invalidate()
+    init {
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = false
+        settings.allowFileAccess = false
+        settings.allowContentAccess = false
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        // OSM requires an identifiable application User-Agent. Keep the platform UA so
+        // Leaflet/CDN resources still receive a normal browser signature, then append HALLO.
+        val platformUa = settings.userAgentString.orEmpty()
+        settings.userAgentString = "$platformUa HALLODriver/0.4.0 (+https://hamiltontruck.github.io/hallotruck/)".trim()
+        webViewClient = WebViewClient()
+        isVerticalScrollBarEnabled = false
+        isHorizontalScrollBarEnabled = false
+        setBackgroundColor(0xFFF5F7FA.toInt())
     }
 
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val w = width.toFloat(); val h = height.toFloat(); val pad = max(42f, w * .1f)
-        val path = Path().apply { moveTo(pad, h * .72f); cubicTo(w * .35f, h * .35f, w * .62f, h * .78f, w - pad, h * .28f) }
-        canvas.drawPath(path, road); canvas.drawPath(path, route)
-        canvas.drawCircle(pad, h * .72f, 18f, point); canvas.drawCircle(w - pad, h * .28f, 18f, point)
-        val hasGps = snapshot?.truckLat != null && snapshot?.truckLng != null
-        canvas.drawCircle(w * .52f, h * .52f, 23f, if (hasGps) truck else point)
-        canvas.drawText(context.getString(if (hasGps) R.string.live_gps else R.string.waiting_for_gps), pad, 42f, label)
+    fun show(value: LiveTripSnapshot?) {
+        val truck = coordinate(value?.truckLat, value?.truckLng)
+        val pickup = coordinate(value?.pickupLat, value?.pickupLng)
+        val dropoff = coordinate(value?.dropoffLat, value?.dropoffLng)
+        val points = listOfNotNull(pickup, dropoff, truck)
+
+        contentDescription = when {
+            truck == null -> context.getString(R.string.live_trip_map_waiting_accessibility)
+            value?.speedKmh != null -> context.getString(R.string.live_trip_map_accessibility, value.speedKmh.toInt())
+            else -> context.getString(R.string.live_gps)
+        }
+
+        if (points.isEmpty()) {
+            loadDataWithBaseURL(
+                null,
+                waitingHtml(context.getString(R.string.waiting_for_gps)),
+                "text/html",
+                "utf-8",
+                null,
+            )
+            return
+        }
+
+        val markers = buildString {
+            pickup?.let { append("L.circleMarker([${it.first},${it.second}],{radius:9,color:'#14213d',fillColor:'#14213d',fillOpacity:1}).addTo(map);") }
+            dropoff?.let { append("L.circleMarker([${it.first},${it.second}],{radius:9,color:'#b87900',fillColor:'#ffb800',fillOpacity:1}).addTo(map);") }
+            truck?.let { append("L.circleMarker([${it.first},${it.second}],{radius:11,color:'#0f5132',fillColor:'#16794a',fillOpacity:1}).addTo(map);") }
+        }
+        val bounds = points.joinToString(",") { "[${it.first},${it.second}]" }
+        val viewport = if (points.size == 1) {
+            "map.setView([${points.first().first},${points.first().second}],14);"
+        } else {
+            "map.fitBounds([$bounds],{padding:[24,24],maxZoom:15});"
+        }
+
+        val html = """
+            <!doctype html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+              <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+              <style>
+                html,body,#map{height:100%;width:100%;margin:0;padding:0;background:#f5f7fa}
+                .leaflet-control-attribution{font-size:9px}
+              </style>
+            </head>
+            <body>
+              <div id="map"></div>
+              <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+              <script>
+                const map=L.map('map',{zoomControl:true,attributionControl:true});
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+                  maxZoom:19,
+                  attribution:'&copy; OpenStreetMap contributors'
+                }).addTo(map);
+                $markers
+                $viewport
+              </script>
+            </body>
+            </html>
+        """.trimIndent()
+        loadDataWithBaseURL("https://www.openstreetmap.org/", html, "text/html", "utf-8", null)
+    }
+
+    private fun coordinate(lat: Double?, lng: Double?): Pair<Double, Double>? {
+        if (lat == null || lng == null) return null
+        if (lat !in -90.0..90.0 || lng !in -180.0..180.0) return null
+        return lat to lng
+    }
+
+    private fun waitingHtml(message: String): String {
+        val safe = JSONObject.quote(message)
+        return """
+            <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1" />
+            <style>html,body{height:100%;margin:0;background:#f5f7fa;font-family:sans-serif;color:#14213d}body{display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box}</style>
+            </head><body><div id="state"></div><script>document.getElementById('state').textContent=$safe;</script></body></html>
+        """.trimIndent()
     }
 }
