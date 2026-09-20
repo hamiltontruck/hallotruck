@@ -1,3 +1,5 @@
+import { HALLO_PLATFORM_TAX_PERCENT, splitHalloPlatformTax } from "../utils/commission";
+
 export type FinancePayment = {
   id: string;
   order_id: string;
@@ -90,9 +92,6 @@ export type FinanceDashboardData = {
 
 export type FinanceRange = "today" | "7d" | "30d" | "90d" | "all";
 
-export const HALLO_PLATFORM_TAX_RATE = 0.15;
-export const HALLO_PLATFORM_TAX_PERCENT = 15;
-
 export function numberOf(value: number | string | null | undefined) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -161,8 +160,7 @@ export function computeFinanceSummary(data: FinanceDashboardData, now = new Date
   const availableDeposits = Math.max(deposits - outstandingCommission, 0);
   const activeWallets = new Set(data.deposits.filter((deposit) => deposit.status === "active").map((deposit) => deposit.driver_id)).size;
   const releasedTotal = released.reduce((sum, payment) => sum + numberOf(payment.amount_etb), 0);
-  const platformTaxReserve = Math.round((commissionEarned * HALLO_PLATFORM_TAX_RATE + Number.EPSILON) * 100) / 100;
-  const driverCommissionNetAfterTax = Math.max(0, Math.round(((commissionEarned - platformTaxReserve) + Number.EPSILON) * 100) / 100);
+  const { taxEtb: platformTaxReserve, netCommissionAfterTaxEtb: driverCommissionNetAfterTax } = splitHalloPlatformTax(commissionEarned);
   return {
     todayRevenue: sumSince(todayStart),
     weeklyRevenue: sumSince(weekStart),
