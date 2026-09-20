@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_greeting_format">እንኳን ደህና መጡ፣ %1$s</string>
+</resources>

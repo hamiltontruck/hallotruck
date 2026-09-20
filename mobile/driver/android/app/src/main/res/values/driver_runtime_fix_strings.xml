@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="payment_method_cash">Cash</string>
+    <string name="gps_starting_server">GPS started. Waiting for server confirmation before showing In transit.</string>
+    <string name="deposit_note_format">Note: %1$s</string>
+    <string name="verified_profile_photo">Verified driver profile photo</string>
+    <string name="vehicle_form_uses_assigned">Assigned vehicle details are loaded here for review before saving.</string>
+    <string name="vehicle_prefill_summary">Assigned vehicle\nAssignment status: %1$s\nDocument review: %2$s</string>
+    <string name="vehicle_prefill_unavailable">Assigned vehicle data is unavailable. Existing form values were kept.</string>
+    <string name="vehicle_prefill_none">No assigned vehicle is currently available.</string>
+    <string name="notifications_unavailable">Notifications are unavailable right now. Refresh and try again.</string>
+    <string name="tracking_summary_with_speed_heading">%1$s · %2$.0f km/h · heading %3$.0f°\nLast update: %4$s</string>
+</resources>

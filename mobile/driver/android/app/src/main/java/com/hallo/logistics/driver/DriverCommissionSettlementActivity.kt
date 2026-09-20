@@ -5,12 +5,11 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.widget.ArrayAdapter
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.hallo.logistics.driver.databinding.ActivityDriverCommissionSettlementBinding
 import kotlinx.coroutines.launch
 
-class DriverCommissionSettlementActivity:AppCompatActivity(){
+class DriverCommissionSettlementActivity:DriverLocalizedActivity(){
     private lateinit var b:ActivityDriverCommissionSettlementBinding
     private val repo=DriverCommissionSettlementRepository()
     private var summary:DriverCommissionSummary?=null
@@ -29,7 +28,6 @@ class DriverCommissionSettlementActivity:AppCompatActivity(){
 
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
-        DriverLocaleManager.applySaved(this)
         b=ActivityDriverCommissionSettlementBinding.inflate(layoutInflater)
         setContentView(b.root)
         b.provider.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,DriverCommissionSettlementRepository.PROVIDERS)
@@ -45,7 +43,7 @@ class DriverCommissionSettlementActivity:AppCompatActivity(){
             summary=value
             renderSummary(value)
             b.status.text=if(value.balanceEtb<=0.005)getString(R.string.settlement_no_balance) else ""
-        }.onFailure{b.status.text=it.message?:getString(R.string.wallet_unavailable)}
+        }.onFailure{b.status.setText(R.string.wallet_unavailable)}
         setBusy(false,b.status.text.toString())
     }
 
@@ -79,7 +77,7 @@ class DriverCommissionSettlementActivity:AppCompatActivity(){
             b.transactionId.text?.clear();b.amount.text?.clear();receipt=null;b.receiptState.setText(R.string.settlement_receipt_required)
             b.status.setText(R.string.settlement_submitted)
             runCatching{repo.summary()}.onSuccess{updated->summary=updated;renderSummary(updated)}
-        }.onFailure{b.status.text=it.message?:getString(R.string.error_request_failed)}
+        }.onFailure{b.status.setText(R.string.error_request_failed)}
         setBusy(false,b.status.text.toString())
     }
 

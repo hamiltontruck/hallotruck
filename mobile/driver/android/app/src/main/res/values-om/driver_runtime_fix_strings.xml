@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="payment_method_cash">Kaashii</string>
+    <string name="gps_starting_server">GPS jalqabame. Haalli Daandii irra jira jedhu server irraa mirkanaa\'uu eegaa jira.</string>
+    <string name="deposit_note_format">Yaada: %1$s</string>
+    <string name="verified_profile_photo">Suuraa profile Driver mirkanaa\'e</string>
+    <string name="vehicle_form_uses_assigned">Odeeffannoon konkolaataa ramadamee save dura ilaaluuf asitti guutama.</string>
+    <string name="vehicle_prefill_summary">Konkolaataa ramadame\nHaala ramaddii: %1$s\nReview sanadootaa: %2$s</string>
+    <string name="vehicle_prefill_unavailable">Odeeffannoon konkolaataa ramadamee yeroo ammaa hin argamne. Odeeffannoon form keessatti jiru hin jijjiiramne.</string>
+    <string name="vehicle_prefill_none">Konkolaataan ramadame yeroo ammaa hin jiru.</string>
+    <string name="notifications_unavailable">Beeksisoonni yeroo ammaa hin argaman. Haaromsiitii irra deebi\'i.</string>
+    <string name="tracking_summary_with_speed_heading">%1$s · %2$.0f km/h · kallattii %3$.0f°\nHaaromsa dhumaa: %4$s</string>
+</resources>
