@@ -25,7 +25,7 @@ const EMPTY_REPORT: FinanceV3Report = {
     todayRevenue: 0, weeklyRevenue: 0, monthlyRevenue: 0, releasedPayments: 0, heldEscrow: 0,
     pendingReviews: 0, refundedPayments: 0, failedPayments: 0, commissionEarned: 0, commissionPaid: 0,
     outstandingCommission: 0, driverDeposits: 0, availableDriverDeposits: 0, netPlatformRevenue: 0,
-    platformTaxRate: 15, platformTaxReserve: 0, driverCommissionNetAfterTax: 0, netPlatformRevenueAfterTax: 0, activeWallets: 0,
+    platformTaxRate: 15, platformTaxReserve: 0, platformCommissionAfterTax: 0, netPlatformRevenueAfterTax: 0, activeWallets: 0,
   },
   trend: [],
   breakdowns: { providers: [], routes: [], drivers: [], customers: [], trucks: [] },
@@ -257,7 +257,7 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
           <Kpi label="Available deposits" value={formatEtb(report.summary.availableDriverDeposits)} onClick={() => selectKpi("deposits")} />
           <Kpi label="All-time gross platform revenue" value={formatEtb(report.summary.netPlatformRevenue)} onClick={() => selectKpi("released")} />
           <Kpi label={`All-time tax reserve (${report.summary.platformTaxRate}%)`} value={formatEtb(report.summary.platformTaxReserve)} onClick={() => selectKpi("commission")} warning={report.summary.platformTaxReserve > 0} />
-          <Kpi label="All-time driver commission after tax" value={formatEtb(report.summary.driverCommissionNetAfterTax)} onClick={() => selectKpi("commission")} />
+          <Kpi label="All-time HALLO 2% after tax" value={formatEtb(report.summary.platformCommissionAfterTax)} onClick={() => selectKpi("commission")} />
           <Kpi label="All-time platform after tax" value={formatEtb(report.summary.netPlatformRevenueAfterTax)} strong onClick={() => selectKpi("commission")} />
           <Kpi label="Active wallets" value={String(report.summary.activeWallets)} onClick={() => selectKpi("wallets")} />
         </section>
