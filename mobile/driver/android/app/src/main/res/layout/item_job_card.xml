@@ -22,6 +22,6 @@
             <TextView android:id="@+id/tvRate" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/hallo_blue" android:textSize="17sp" android:textStyle="bold" tools:text="ETB 28,500" />
             <TextView android:id="@+id/tvPickupTime" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:ellipsize="end" android:maxLines="1" android:textColor="@color/hallo_text_muted" android:textSize="12sp" tools:text="HT-2026-123456" />
         </LinearLayout>
-        <com.google.android.material.button.MaterialButton android:id="@+id/btnJobAction" style="@style/Widget.HalloDriver.PrimaryButton" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="12dp" android:textAllCaps="false" app:cornerRadius="12dp" tools:text="Choose truck & accept" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnJobAction" style="@style/Widget.HalloDriver.PrimaryButton" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="12dp" android:textAllCaps="false" app:cornerRadius="12dp" tools:text="Choose truck &amp; accept" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
