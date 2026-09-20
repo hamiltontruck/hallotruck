@@ -10,6 +10,8 @@ const utilities = readFileSync(new URL("../src/CustomerUtilityPages.tsx", import
 const auth = readFileSync(new URL("../src/auth/CustomerAuthBoundaryV2.tsx", import.meta.url), "utf8");
 const copy = readFileSync(new URL("../src/customer-final-copy.ts", import.meta.url), "utf8");
 const css = readFileSync(new URL("../src/customer-final-ui.css", import.meta.url), "utf8");
+const androidCss = readFileSync(new URL("../src/customer-android-responsive.css", import.meta.url), "utf8");
+const main = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
 
 test("final Customer journey exposes every approved screen group", () => {
   for (const token of [
@@ -83,4 +85,20 @@ test("auth includes Ethiopian phone formats, password visibility, terms and keyb
   assert.match(auth, /passwordVisible/);
   assert.match(auth, /termsAccepted/);
   assert.match(auth, /scrollIntoView\(\{ block: "center", behavior: "smooth" \}\)/);
+});
+
+test("Android WebView shell follows the visual viewport, safe areas and keyboard", () => {
+  assert.match(main, /visualViewport/);
+  assert.match(main, /--customer-app-height/);
+  assert.match(main, /customer-android-responsive\.css/);
+  assert.match(androidCss, /height: var\(--customer-app-height\)/);
+  assert.match(androidCss, /env\(safe-area-inset-top\)/);
+  assert.match(androidCss, /env\(safe-area-inset-right\)/);
+  assert.match(androidCss, /env\(safe-area-inset-bottom\)/);
+  assert.match(androidCss, /env\(safe-area-inset-left\)/);
+  assert.match(androidCss, /\.customer-entry:focus-within \.customer-entry-footer/);
+  assert.match(androidCss, /@media \(max-width: 339px\)/);
+  assert.match(androidCss, /@media \(min-width: 340px\) and \(max-width: 359px\)/);
+  assert.match(androidCss, /@media \(min-width: 390px\)/);
+  assert.match(androidCss, /@media \(min-width: 412px\)/);
 });
