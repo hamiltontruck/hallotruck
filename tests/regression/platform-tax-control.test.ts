@@ -50,6 +50,7 @@ test("tax period RPC is leadership guarded, non-overlapping and Ethiopia-date aw
   assert.match(migration, /private\.is_admin_or_ceo\(\)/i);
   assert.match(migration, /timezone\('Africa\/Addis_Ababa', now\(\)\)::date/i);
   assert.match(migration, /daterange\(period\.period_start, period\.period_end, '\[\]'\)/i);
+  assert.match(migration, /pg_advisory_xact_lock\(hashtext\('platform_tax_periods'\)\)/i);
   assert.match(migration, /Tax period overlaps an existing recorded period/i);
   assert.match(migration, /Tax period cannot end in the future/i);
   assert.match(migration, /No canonical HALLO commission exists in this period/i);
@@ -60,6 +61,7 @@ test("remittance RPC is idempotent, evidence-required and blocks overpayment", (
   assert.match(migration, /admin_record_platform_tax_remittance/i);
   assert.match(migration, /where remittance\.request_key = p_request_key/i);
   assert.match(migration, /Payment receipt evidence is required/i);
+  assert.match(migration, /concat\(v_period\.id::text, '\/'\)/i);
   assert.match(migration, /Receipt path must belong to the selected tax period/i);
   assert.match(migration, /Remittance exceeds the current outstanding tax balance/i);
   assert.match(migration, /for update/i);
