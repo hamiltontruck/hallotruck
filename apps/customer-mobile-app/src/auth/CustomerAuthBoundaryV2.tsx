@@ -21,6 +21,7 @@ import {
   customerSupabase,
   customerSupabaseConfigured,
 } from "./customer-supabase";
+import { roleDestination } from "./role-destination";
 
 export type CustomerIdentity = {
   userId: string;
@@ -33,7 +34,7 @@ type AuthState =
   | { kind: "configuration-error" }
   | { kind: "signed-out"; error: string | null; notice: string | null }
   | { kind: "allowed"; identity: CustomerIdentity }
-  | { kind: "unsupported-role" }
+  | { kind: "unsupported-role"; role: string | null }
   | { kind: "missing-profile" }
   | { kind: "load-error"; message: string };
 
@@ -81,6 +82,10 @@ const COPY = {
     deniedEyebrow: "SEENUUN DHORKAME",
     deniedTitle: "Akkaawuntii Customer barbaachisa",
     deniedDescription: "Akkaawuntiin kun database keessatti role Customer hin qabu. Driver, Admin, CEO fi Partner app kana banuu hin danda'an.",
+    driverRedirectEyebrow: "DRIVER ARGAME",
+    driverRedirectTitle: "Gara Driver app geessaa jira",
+    driverRedirectDescription: "Akkaawuntiin kun database keessatti role Driver qaba. Gara HALLO Driver app sirriitti si geessaa jira.",
+    openDriverApp: "DRIVER APP BANI",
     missingEyebrow: "PROFILE HIN JIRU",
     missingTitle: "Database profile hin argamne",
     missingDescription: "Auth account jira, garuu profile row hin deebine. Authorization tilmaamaan hin murtaa'u.",
@@ -125,6 +130,10 @@ const COPY = {
     deniedEyebrow: "ACCESS DENIED",
     deniedTitle: "Customer account required",
     deniedDescription: "This account does not have the Customer database role. Driver, Admin, CEO and Partner workspaces cannot open this app.",
+    driverRedirectEyebrow: "DRIVER DETECTED",
+    driverRedirectTitle: "Opening the Driver app",
+    driverRedirectDescription: "This account has the Driver database role. You are being sent to the correct HALLO Driver app.",
+    openDriverApp: "OPEN DRIVER APP",
     missingEyebrow: "PROFILE MISSING",
     missingTitle: "Database profile not found",
     missingDescription: "An auth account exists, but no profile row was returned. Authorization is never guessed.",
@@ -169,6 +178,10 @@ const COPY = {
     deniedEyebrow: "መዳረሻ ተከልክሏል",
     deniedTitle: "የCustomer መለያ ያስፈልጋል",
     deniedDescription: "ይህ መለያ በdatabase ውስጥ Customer role የለውም። Driver፣ Admin፣ CEO እና Partner ይህን app መክፈት አይችሉም።",
+    driverRedirectEyebrow: "DRIVER ተገኝቷል",
+    driverRedirectTitle: "የDriver app በመክፈት ላይ",
+    driverRedirectDescription: "ይህ መለያ በdatabase ውስጥ Driver role አለው። ወደ ትክክለኛው HALLO Driver app እየተላኩ ነው።",
+    openDriverApp: "DRIVER APP ክፈት",
     missingEyebrow: "PROFILE አልተገኘም",
     missingTitle: "Database profile አልተገኘም",
     missingDescription: "Auth account አለ፣ ነገር ግን profile row አልተመለሰም። Authorization በግምት አይወሰንም።",
@@ -396,6 +409,34 @@ function AccessState({ language, setLanguage, eyebrow, title, description, onSig
   );
 }
 
+function DriverRedirect({ language, setLanguage, onSignOut }: {
+  language: Language;
+  setLanguage: (language: Language) => void;
+  onSignOut: () => Promise<void>;
+}) {
+  const text = COPY[language];
+  const destination = roleDestination("driver", window.location.href);
+
+  useEffect(() => {
+    if (!destination) return;
+    window.location.replace(destination);
+  }, [destination]);
+
+  return (
+    <Screen>
+      <section style={{ ...panelStyle, textAlign: "center" }}>
+        <Brand />
+        <LanguageSelect language={language} setLanguage={setLanguage} />
+        <p style={{ margin: 0, color: "#087a52", fontSize: "10px", fontWeight: 900, letterSpacing: ".14em" }}>{text.driverRedirectEyebrow}</p>
+        <h1 style={{ margin: "10px 0 0", fontSize: "24px" }}>{text.driverRedirectTitle}</h1>
+        <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>{text.driverRedirectDescription}</p>
+        {destination && <a href={destination} style={{ ...primaryButtonStyle, display: "grid", placeItems: "center", boxSizing: "border-box", marginTop: "20px", textDecoration: "none" }}>{text.openDriverApp}</a>}
+        <button type="button" onClick={() => void onSignOut()} style={{ ...primaryButtonStyle, marginTop: "10px", background: "#fff", color: "#10213d", border: "1px solid #d8e2ef" }}>{text.signOut}</button>
+      </section>
+    </Screen>
+  );
+}
+
 export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   const [language, setLanguage] = useState<Language>(storedLanguage);
   const [state, setState] = useState<AuthState>(() => customerSupabaseConfigured ? { kind: "booting" } : { kind: "configuration-error" });
@@ -424,7 +465,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (error) throw error;
       const access = classifyCustomerProfile(data);
       if (access.kind === "allowed") { setState({ kind: "allowed", identity: { userId: session.user.id, fullName: access.fullName } }); return; }
-      if (access.kind === "unsupported-role") { setState({ kind: "unsupported-role" }); return; }
+      if (access.kind === "unsupported-role") { setState({ kind: "unsupported-role", role: access.role }); return; }
       setState({ kind: "missing-profile" });
     } catch {
       if (requestId !== requestIdRef.current) return;
@@ -533,6 +574,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   if (state.kind === "signed-out" && showSplash) return <Splash onStart={() => { window.sessionStorage.setItem("hallo-customer-splash-seen", "1"); setShowSplash(false); }} />;
   if (state.kind === "signed-out") return <AuthForm busy={authenticating} error={state.error} notice={state.notice} language={language} setLanguage={setLanguage} onSignIn={signIn} onSignUp={signUp} onGoogleSignIn={signInWithGoogle} />;
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
+  if (state.kind === "unsupported-role" && state.role === "driver") return <DriverRedirect language={language} setLanguage={setLanguage} onSignOut={signOut} />;
   if (state.kind === "unsupported-role") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.deniedEyebrow} title={text.deniedTitle} description={text.deniedDescription} onSignOut={signOut} />;
   if (state.kind === "missing-profile") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.missingEyebrow} title={text.missingTitle} description={text.missingDescription} onSignOut={signOut} onRetry={retryProfile} />;
   if (state.kind === "load-error") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.connectionEyebrow} title={text.connectionTitle} description={state.message} onSignOut={signOut} onRetry={retryProfile} />;
