@@ -72,6 +72,10 @@ test("finance summary reconciles revenue, escrow, refunds, commission and deposi
   assert.equal(summary.driverDeposits, 10000);
   assert.equal(summary.availableDriverDeposits, 7965);
   assert.equal(summary.netPlatformRevenue, 2535);
+  assert.equal(summary.platformTaxRate, 15);
+  assert.equal(summary.platformTaxReserve, 380.25);
+  assert.equal(summary.driverCommissionNetAfterTax, 2154.75);
+  assert.equal(summary.netPlatformRevenueAfterTax, 2154.75);
   assert.equal(summary.activeWallets, 1);
 });
 
@@ -139,7 +143,9 @@ test("Finance V3 platform revenue uses canonical Driver plus correction-aware Pa
   assert.match(reportingService, /admin_ceo_kpi_v1_report/);
   assert.match(reportingService, /if \(ceoResult\.error\) throw new Error\(ceoResult\.error\.message\)/);
   assert.match(reportingService, /const partnerCommission = numberOf\(ceo\.partnerCommission\)/);
-  assert.match(reportingService, /netPlatformRevenue: Math\.max\(0, numberOf\(summary\.commissionEarned\) \+ partnerCommission\)/);
+  assert.match(reportingService, /const driverCommissionEarned = numberOf\(summary\.commissionEarned\)/);
+  assert.match(reportingService, /splitHalloPlatformTax\(driverCommissionEarned\)/);
+  assert.match(reportingService, /netPlatformRevenueAfterTax: Math\.max\(0, netPlatformRevenue - platformTaxReserve\)/);
   assert.doesNotMatch(reportingService, /netPlatformRevenue:\s*numberOf\(summary\.netPlatformRevenue\)/);
 });
 
