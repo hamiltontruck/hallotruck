@@ -23,6 +23,7 @@ test("HALLO 2% Driver commission and Driver 98% split remain unchanged", () => {
 });
 
 test("tax ledger creates immutable period, remittance and audit tables", () => {
+  assert.match(migration, /tax_rate_percent numeric\(5,2\) not null default 15\.00[\s\S]*check \(tax_rate_percent = 15\.00\)/i);
   assert.match(migration, /create table public\.platform_tax_periods/i);
   assert.match(migration, /create table public\.platform_tax_remittances/i);
   assert.match(migration, /create table public\.platform_tax_audit/i);
