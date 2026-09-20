@@ -125,38 +125,29 @@ stable
 security definer
 set search_path = ''
 as $$
-  with confirmation_base as (
+  with canonical_source as (
     select
       confirmation.payment_id,
-      max(
-        case when confirmation.commission_reversed_at is null
-          then round(confirmation.commission_etb, 2)
-          else 0
-        end
-      )::numeric as amount,
-      min(confirmation.commission_accrued_at) as event_at
+      case when confirmation.commission_reversed_at is null
+        then round(confirmation.commission_etb, 2)
+        else 0
+      end::numeric as amount,
+      confirmation.commission_accrued_at as event_at
     from public.driver_payment_confirmations confirmation
-    group by confirmation.payment_id
-  ),
-  charge_base as (
-    select
-      charge.payment_id,
-      max(case when charge.status = 'active' then round(charge.commission_etb, 2) else 0 end)::numeric as amount,
-      min(charge.created_at) as event_at
-    from public.driver_commission_charges charge
-    group by charge.payment_id
-  ),
-  canonical_source as (
-    select confirmation.payment_id, confirmation.amount, confirmation.event_at
-    from confirmation_base confirmation
 
     union all
 
-    select charge.payment_id, charge.amount, charge.event_at
-    from charge_base charge
+    select
+      charge.payment_id,
+      case when charge.status = 'active'
+        then round(charge.commission_etb, 2)
+        else 0
+      end::numeric as amount,
+      charge.created_at as event_at
+    from public.driver_commission_charges charge
     where not exists (
       select 1
-      from confirmation_base confirmation
+      from public.driver_payment_confirmations confirmation
       where confirmation.payment_id = charge.payment_id
     )
   ),
