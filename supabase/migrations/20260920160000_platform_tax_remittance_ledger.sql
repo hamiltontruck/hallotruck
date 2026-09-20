@@ -288,6 +288,8 @@ begin
   if p_period_end > v_today then
     raise exception 'Tax period cannot end in the future';
   end if;
+
+  perform pg_advisory_xact_lock(hashtext('platform_tax_periods'));
   if exists (
     select 1
     from public.platform_tax_periods period
@@ -397,7 +399,7 @@ begin
   if v_receipt_path is null or char_length(v_receipt_path) > 500 then
     raise exception 'Payment receipt evidence is required';
   end if;
-  if left(v_receipt_path, char_length(v_period.id::text) + 1) <> v_period.id::text || '/' then
+  if left(v_receipt_path, char_length(v_period.id::text) + 1) <> concat(v_period.id::text, '/') then
     raise exception 'Receipt path must belong to the selected tax period';
   end if;
   if v_note is not null and char_length(v_note) not between 3 and 500 then
