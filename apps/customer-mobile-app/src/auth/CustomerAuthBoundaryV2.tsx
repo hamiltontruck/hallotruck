@@ -35,7 +35,7 @@ type AuthState =
   | { kind: "signed-out"; error: string | null; notice: string | null }
   | { kind: "allowed"; identity: CustomerIdentity }
   | { kind: "unsupported-role"; role: string | null }
-  | { kind: "missing-profile" }
+  | { kind: "missing-profile"; session: Session }
   | { kind: "load-error"; message: string };
 
 type CustomerAuthBoundaryProps = {
@@ -191,6 +191,39 @@ const COPY = {
   },
 } as const;
 
+const PROFILE_COPY = {
+  om: {
+    eyebrow: "GOOGLE GALMEE",
+    title: "Akkaawuntii Customer kee xumuri",
+    description: "Google'n seenteetta. HALLO Customer profile kee uumuuf maqaa fi lakkoofsa bilbilaa Itoophiyaa mirkaneessi.",
+    fullName: "Maqaa guutuu",
+    phone: "Bilbila",
+    submit: "GALMEE XUMURI",
+    saving: "GALMEE XUMURAA JIRA…",
+    failed: "Customer profile uumuu hin dandeenye. Odeeffannoo kee ilaalii irra deebi'i.",
+  },
+  en: {
+    eyebrow: "GOOGLE ONBOARDING",
+    title: "Complete your Customer account",
+    description: "Google sign-in succeeded. Confirm your name and Ethiopian mobile number to create your HALLO Customer profile.",
+    fullName: "Full name",
+    phone: "Phone",
+    submit: "COMPLETE CUSTOMER SETUP",
+    saving: "COMPLETING SETUP…",
+    failed: "The Customer profile could not be created. Check your details and try again.",
+  },
+  am: {
+    eyebrow: "GOOGLE ምዝገባ",
+    title: "የCustomer መለያዎን ያጠናቁ",
+    description: "በGoogle መግባት ተሳክቷል። የHALLO Customer profile ለመፍጠር ሙሉ ስምዎን እና የኢትዮጵያ ሞባይል ቁጥርዎን ያረጋግጡ።",
+    fullName: "ሙሉ ስም",
+    phone: "ስልክ",
+    submit: "ምዝገባ አጠናቅ",
+    saving: "ምዝገባ በማጠናቀቅ ላይ…",
+    failed: "የCustomer profile መፍጠር አልተቻለም። መረጃዎን ያረጋግጡና እንደገና ይሞክሩ።",
+  },
+} as const;
+
 const panelStyle = {
   width: "min(100%, 430px)",
   border: "1px solid #e2e9f3",
@@ -241,6 +274,15 @@ const modeLinkStyle = {
 function storedLanguage(): Language {
   const value = window.localStorage.getItem(LANGUAGE_KEY);
   return value === "en" || value === "am" || value === "om" ? value : "om";
+}
+
+function normalizeEthiopianPhone(value: string) {
+  const compact = value.trim().replace(/[\s()-]/g, "");
+  if (!/^(?:\+251|251|0)?[79]\d{8}$/.test(compact)) throw new Error("invalid-phone");
+  if (compact.startsWith("+251")) return `0${compact.slice(4)}`;
+  if (compact.startsWith("251")) return `0${compact.slice(3)}`;
+  if (/^[79]/.test(compact)) return `0${compact}`;
+  return compact;
 }
 
 function friendlyAuthError(message: string | undefined, language: Language) {
@@ -359,7 +401,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
           <form className="customer-entry-form" onSubmit={submit} aria-busy={busy}>
             {mode === "signup" && <>
               <label><span>{text.fullName}</span><input type="text" autoComplete="name" required disabled={busy} value={fullName} onFocus={bringIntoView} onChange={(event) => setFullName(event.target.value)} /></label>
-              <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="+2519XXXXXXXX or 09XXXXXXXX" value={phone} onFocus={bringIntoView} onChange={(event) => setPhone(event.target.value)} /></label>
+              <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="09xxxxxxxx / 07xxxxxxxx / +251…"  value={phone} onFocus={bringIntoView} onChange={(event) => setPhone(event.target.value)} /></label>
             </>}
             <label><span className="customer-entry-sr-only">{text.email}</span><div className="customer-entry-field"><Mail size={19} aria-hidden="true"/><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={text.email} value={email} onFocus={bringIntoView} onChange={(event) => setEmail(event.target.value)} /></div></label>
             <label><span className="customer-entry-sr-only">{text.password}</span><div className="customer-entry-field"><LockKeyhole size={19} aria-hidden="true"/><input placeholder={text.password} type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onFocus={bringIntoView} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={19}/> : <Eye size={19}/>}</button></div></label>
@@ -407,6 +449,71 @@ function AccessState({ language, setLanguage, eyebrow, title, description, onSig
       </section>
     </Screen>
   );
+}
+
+function CustomerProfileCompletion({ session, language, setLanguage, onCompleted, onSignOut }: {
+  session: Session;
+  language: Language;
+  setLanguage: (language: Language) => void;
+  onCompleted: () => Promise<void>;
+  onSignOut: () => Promise<void>;
+}) {
+  const copy = PROFILE_COPY[language];
+  const text = COPY[language];
+  const initialName = String(session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? session.user.email?.split("@")[0] ?? "");
+  const [fullName, setFullName] = useState(initialName);
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || !customerSupabase) return;
+    setBusy(true);
+    setError("");
+    try {
+      const cleanName = fullName.trim().replace(/\s+/g, " ");
+      if (cleanName.length < 2 || cleanName.length > 120) throw new Error(text.nameInvalid);
+      let normalizedPhone: string;
+      try { normalizedPhone = normalizeEthiopianPhone(phone); }
+      catch { throw new Error(text.phoneInvalid); }
+      const { error: profileError } = await customerSupabase.rpc("complete_public_mobile_profile", {
+        p_role: "customer",
+        p_full_name: cleanName,
+        p_phone: normalizedPhone,
+      });
+      if (profileError) throw profileError;
+      const { error: refreshError } = await customerSupabase.auth.refreshSession();
+      if (refreshError) throw refreshError;
+      await onCompleted();
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "";
+      setError(message === text.nameInvalid || message === text.phoneInvalid ? message : copy.failed);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <Screen>
+    <section style={panelStyle}>
+      <Brand />
+      <LanguageSelect language={language} setLanguage={setLanguage} disabled={busy} />
+      <p style={{ margin: 0, color: "#0759c7", fontSize: "10px", fontWeight: 900, letterSpacing: ".14em", textAlign: "center" }}>{copy.eyebrow}</p>
+      <h1 style={{ margin: "10px 0 0", fontSize: "24px", textAlign: "center" }}>{copy.title}</h1>
+      <p style={{ margin: "10px 0 18px", color: "#66758c", fontSize: "13px", lineHeight: 1.7, textAlign: "center" }}>{copy.description}</p>
+      {error && <p role="alert" style={{ color: "#b42318", fontSize: "13px", lineHeight: 1.5 }}>{error}</p>}
+      <form onSubmit={submit}>
+        <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "#34445c" }}>{copy.fullName}
+          <input style={inputStyle} value={fullName} maxLength={120} autoComplete="name" disabled={busy} onChange={(event) => setFullName(event.target.value)} />
+        </label>
+        <label style={{ display: "block", marginTop: "14px", fontSize: "12px", fontWeight: 800, color: "#34445c" }}>{copy.phone}
+          <input style={inputStyle} type="tel" inputMode="tel" autoComplete="tel" placeholder="09xxxxxxxx / 07xxxxxxxx" value={phone} maxLength={17} disabled={busy} onChange={(event) => setPhone(event.target.value)} />
+        </label>
+        <button type="submit" disabled={busy} style={{ ...primaryButtonStyle, marginTop: "20px", opacity: busy ? .65 : 1 }}>{busy ? copy.saving : copy.submit}</button>
+      </form>
+      <button type="button" disabled={busy} onClick={() => void onSignOut()} style={{ ...primaryButtonStyle, marginTop: "10px", background: "#fff", color: "#10213d", border: "1px solid #d8e2ef" }}>{text.signOut}</button>
+    </section>
+  </Screen>;
 }
 
 function DriverRedirect({ language, setLanguage, onSignOut }: {
@@ -466,7 +573,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       const access = classifyCustomerProfile(data);
       if (access.kind === "allowed") { setState({ kind: "allowed", identity: { userId: session.user.id, fullName: access.fullName } }); return; }
       if (access.kind === "unsupported-role") { setState({ kind: "unsupported-role", role: access.role }); return; }
-      setState({ kind: "missing-profile" });
+      setState({ kind: "missing-profile", session });
     } catch {
       if (requestId !== requestIdRef.current) return;
       setState({ kind: "load-error", message: COPY[language].profileLoadError });
@@ -511,12 +618,9 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (cleanName.length < 2) throw new Error(text.nameInvalid);
       if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) throw new Error(text.emailInvalid);
       if (password.length < 6) throw new Error(text.passwordInvalid);
-      const compact = phone.replace(/[\s()-]/g, "");
-      let normalizedPhone = "";
-      if (/^09\d{8}$/.test(compact)) normalizedPhone = `+251${compact.slice(1)}`;
-      else if (/^2519\d{8}$/.test(compact)) normalizedPhone = `+${compact}`;
-      else if (/^\+2519\d{8}$/.test(compact)) normalizedPhone = compact;
-      else throw new Error(text.phoneInvalid);
+      let normalizedPhone: string;
+      try { normalizedPhone = normalizeEthiopianPhone(phone); }
+      catch { throw new Error(text.phoneInvalid); }
 
       const { data, error } = await client.auth.signUp({
         email: cleanEmail,
@@ -574,7 +678,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
   if (state.kind === "unsupported-role" && state.role === "driver") return <DriverRedirect language={language} setLanguage={setLanguage} onSignOut={signOut} />;
   if (state.kind === "unsupported-role") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.deniedEyebrow} title={text.deniedTitle} description={text.deniedDescription} onSignOut={signOut} />;
-  if (state.kind === "missing-profile") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.missingEyebrow} title={text.missingTitle} description={text.missingDescription} onSignOut={signOut} onRetry={retryProfile} />;
+  if (state.kind === "missing-profile") return <CustomerProfileCompletion session={state.session} language={language} setLanguage={setLanguage} onCompleted={retryProfile} onSignOut={signOut} />;
   if (state.kind === "load-error") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.connectionEyebrow} title={text.connectionTitle} description={state.message} onSignOut={signOut} onRetry={retryProfile} />;
   return null;
 }
