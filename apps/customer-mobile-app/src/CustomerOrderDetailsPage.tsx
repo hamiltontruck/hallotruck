@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CustomerAssignmentCard } from "./CustomerAssignmentCard";
+import { CustomerDriverChat } from "./CustomerDriverChat";
+import { CustomerRatingCard } from "./CustomerRatingCard";
 import { loadCustomerAssignments, type CustomerMobileAssignment } from "./customer-assignment.service";
 import {
   calculateCustomerMobilePaymentSummary,
@@ -33,6 +35,7 @@ export function CustomerOrderDetailsPage({
   const { language } = useCustomerLanguage();
   const c = getCustomerFinalCopy(language);
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [chatOpen, setChatOpen] = useState(false);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -86,7 +89,10 @@ export function CustomerOrderDetailsPage({
         {trackable && <button type="button" className="customer-final-primary" onClick={onTrack}>{c.liveTracking}</button>}
         <button type="button" className="customer-final-secondary" onClick={() => printCustomerMobileInvoice(order, payments)}>{c.downloadInvoice}</button>
         {assignment?.driver_phone && <a className="customer-final-primary customer-final-call-link" href={`tel:${assignment.driver_phone}`}>{c.callDriver}</a>}
+        {assignment && <button type="button" className="customer-final-secondary" onClick={() => setChatOpen(true)}>💬 Chat with Driver</button>}
       </div>
+      {order.status === "delivered" && assignment && <CustomerRatingCard userId={userId} orderId={order.id} driverName={assignment.driver_name || "Assigned Driver"} />}
+      {chatOpen && assignment && <CustomerDriverChat userId={userId} orderId={order.id} driverName={assignment.driver_name || "Assigned Driver"} onClose={() => setChatOpen(false)} />}
     </main>
   );
 }

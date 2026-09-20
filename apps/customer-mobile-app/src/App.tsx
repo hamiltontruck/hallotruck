@@ -148,7 +148,7 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
 
   return <div className="customer-app-shell customer-final-shell"><div className="phone-stage customer-final-stage">
     {content}
-    {!bookingOpen && <BottomNav page={page} setPage={(next) => navigate(next)} onBook={() => setBookingOpen(true)}/>}
+    {!bookingOpen && page !== "track" && <BottomNav page={page} setPage={(next) => navigate(next)} onBook={() => setBookingOpen(true)}/>}
     {bookingOpen && <CustomerBookingJourney
       userId={identity.userId}
       pickup={pickup}
