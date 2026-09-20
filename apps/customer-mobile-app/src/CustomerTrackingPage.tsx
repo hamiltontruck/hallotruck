@@ -69,8 +69,8 @@ export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders 
         {state.data.orders.length > 1 && !initialOrderId && <label className="customer-track-route__select"><span>Choose active trip</span><select value={order.id} onChange={(event) => setSelectedOrderId(event.target.value)}>{state.data.orders.map((item) => <option key={item.id} value={item.id}>{item.tracking_id || labelStatus(item.status)}</option>)}</select></label>}
       </section>
 
+      <div className="customer-track-full-map" data-gps-live={gpsLive ? "true" : "false"} aria-label={`Last GPS update ${gpsRecordedAt}`}><CustomerTrackingMap trip={trip} totalDistanceKm={order.distance_km}/></div>
       <CustomerAssignmentCard userId={userId} assignment={assignment} orderVehicleType={order.vehicle_type}/>
-      <div data-gps-live={gpsLive ? "true" : "false"} aria-label={`Last GPS update ${gpsRecordedAt}`}><CustomerTrackingMap trip={trip} totalDistanceKm={order.distance_km}/></div>
       {assignment && <section className="customer-track-contact"><div><strong>{assignment.driver_name || "Assigned Driver"}</strong><span>Verified driver & truck · {assignment.plate_number || "plate pending"}</span></div><div className="customer-track-contact__actions">{assignment.driver_phone ? <a href={`tel:${assignment.driver_phone}`} aria-label={`Call ${assignment.driver_name || "Driver"}`}>Call</a> : <span className="is-disabled">Call</span>}<button type="button" onClick={()=>setChatOpen(true)}>💬 Chat</button></div></section>}
       {chatOpen && assignment && <CustomerDriverChat userId={userId} orderId={order.id} driverName={assignment.driver_name || "Assigned Driver"} onClose={()=>setChatOpen(false)}/>}
 
