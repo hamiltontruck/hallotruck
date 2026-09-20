@@ -29,6 +29,10 @@ export function AdminSidebarLeadershipLinks() {
         <span className="grid h-[18px] w-[18px] place-items-center border border-amber/60 text-[11px] font-bold text-amber">⌕</span>
         <span>Reports & global search</span>
       </Link>
+      <Link to="/admin/crm" className="flex w-full items-center gap-3 px-3 py-3 text-sm text-white/60 transition hover:bg-white/5 hover:text-white">
+        <span className="grid h-[18px] w-[18px] place-items-center border border-amber/60 font-mono text-[7px] font-bold text-amber">CRM</span>
+        <span>Customer & Driver CRM</span>
+      </Link>
       <Link to="/admin/ai-assistant" className="flex w-full items-center gap-3 px-3 py-3 text-sm text-white/60 transition hover:bg-white/5 hover:text-white">
         <span className="grid h-[18px] w-[18px] place-items-center border border-amber/60 font-mono text-[7px] font-bold text-amber">AI</span>
         <span>HALLO AI Assistant</span>
