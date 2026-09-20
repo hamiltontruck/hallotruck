@@ -27,6 +27,7 @@ const EMPTY: PlatformTaxControlData = {
   },
   periods: [],
   remittances: [],
+  audit: [],
 };
 
 export function PlatformTaxControl() {
@@ -182,6 +183,16 @@ export function PlatformTaxControl() {
           <div className="min-w-0"><p className="font-display text-xl font-bold">{formatEtb(row.amountEtb)}</p><p className="mt-2 font-mono text-xs">{row.reference}</p><p className="mt-1 text-xs text-steel">{row.paymentDate} · {row.paymentMethod}</p><p className="mt-1 text-xs text-steel">Recorded by {row.paidByName || "Admin/CEO"} · {new Date(row.createdAt).toLocaleString()}</p>{row.note && <p className="mt-2 text-xs text-steel">{row.note}</p>}</div>
           <button type="button" onClick={() => void openPlatformTaxReceipt(row.receiptPath)} className="min-h-11 self-start border border-asphalt/20 px-4 py-3 text-xs font-semibold">Open evidence</button>
         </article>)}</div> : <p className="px-5 pb-6 text-sm text-steel">No government remittance recorded yet.</p>}
+      </div>
+
+      <div className="border-t border-asphalt/10">
+        <div className="p-5"><h3 className="font-display text-xl font-semibold">Immutable audit trail</h3><p className="mt-1 text-xs text-steel">Period creation and remittance events are append-only and actor-attributed.</p></div>
+        {data.audit.length ? <div className="divide-y divide-asphalt/10">{data.audit.map((event) => <article key={event.id} className="p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0"><p className="font-semibold capitalize">{event.eventType.replace(/_/g, " ")}</p><p className="mt-1 text-xs text-steel">Actor: {event.actorName || "Admin/CEO"} · Period {event.taxPeriodId}</p>{event.remittanceId && <p className="mt-1 font-mono text-[10px] text-steel">Remittance {event.remittanceId}</p>}</div>
+            <time className="shrink-0 text-[10px] text-steel">{new Date(event.createdAt).toLocaleString()}</time>
+          </div>
+        </article>)}</div> : <p className="px-5 pb-6 text-sm text-steel">No tax audit events recorded yet.</p>}
       </div>
     </>}
   </section>;
