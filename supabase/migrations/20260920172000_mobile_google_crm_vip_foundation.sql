@@ -641,17 +641,45 @@ begin
     left join lateral (
       select
         count(*) filter (
-          where vf.document_key in (
-            'driver_photo','license_front','license_back','national_id_front',
-            'national_id_back','vehicle_registration','truck_front','truck_side'
-          )
+          where
+            (
+              vf.truck_id is null
+              and vf.document_key in (
+                'driver_photo','license_front','license_back',
+                'national_id_front','national_id_back'
+              )
+            )
+            or (
+              t.id is not null
+              and vf.truck_id = t.id
+              and vf.document_key in (
+                'vehicle_registration','truck_front','truck_side'
+              )
+            )
         )::bigint as required_submitted,
         count(*) filter (
-          where vf.document_key in (
-            'driver_photo','license_front','license_back','national_id_front',
-            'national_id_back','vehicle_registration','truck_front','truck_side'
-          )
-          and vf.status = 'verified'
+          where
+            vf.status = 'verified'
+            and (
+              vf.document_key not in ('license_front','national_id_front')
+              or (vf.expiry_date is not null and vf.expiry_date >= current_date)
+            )
+            and (
+              (
+                vf.truck_id is null
+                and vf.document_key in (
+                  'driver_photo','license_front','license_back',
+                  'national_id_front','national_id_back'
+                )
+              )
+              or (
+                t.id is not null
+                and vf.truck_id = t.id
+                and vf.document_key in (
+                  'vehicle_registration','truck_front','truck_side'
+                )
+              )
+            )
         )::bigint as required_verified
       from public.driver_verification_files vf
       where vf.driver_id = p.id
