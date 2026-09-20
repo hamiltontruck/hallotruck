@@ -10,6 +10,7 @@ const migration = readFileSync(
 const service = readFileSync(path.join(process.cwd(), "src", "services", "platform-tax.service.ts"), "utf8");
 const component = readFileSync(path.join(process.cwd(), "src", "components", "admin", "PlatformTaxControl.tsx"), "utf8");
 const adminCommission = readFileSync(path.join(process.cwd(), "src", "pages", "AdminDriverCommission.tsx"), "utf8");
+const adminNav = readFileSync(path.join(process.cwd(), "src", "components", "admin", "AdminSidebarLeadershipLinks.tsx"), "utf8");
 const commission = readFileSync(path.join(process.cwd(), "src", "utils", "commission.ts"), "utf8");
 
 test("HALLO 2% Driver commission and Driver 98% split remain unchanged", () => {
@@ -111,6 +112,7 @@ test("Admin service uploads evidence without overwrite and uses secure tax RPCs"
 
 test("Admin tax UI exposes period creation, immutable remittance entry and evidence review", () => {
   assert.match(adminCommission, /<PlatformTaxControl \/>/);
+  assert.match(adminNav, /Commission &amp; tax control/);
   assert.match(component, /Tax liability & remittance ledger/);
   assert.match(component, /name="periodStart"/);
   assert.match(component, /name="periodEnd"/);
