@@ -30,8 +30,8 @@ test("final Customer journey exposes every approved screen group", () => {
   assert.match(auth, /function AuthForm/);
 });
 
-test("booking is a real Route Cargo Truck Quote Review Success state machine", () => {
-  assert.match(booking, /type BookingStep = "route" \| "cargo" \| "truck" \| "quote" \| "review" \| "success"/);
+test("booking is a real Route Truck Cargo Quote Review Success state machine", () => {
+  assert.match(booking, /type BookingStep = "route" \| "truck" \| "cargo" \| "quote" \| "review" \| "success"/);
   assert.match(booking, /<CustomerBookingMap/);
   assert.match(booking, /loadCustomerQuotePreview/);
   assert.match(booking, /createCustomerMobileOrder/);

@@ -24,8 +24,8 @@ import { CUSTOMER_TRUCKS, customerTruckByKey, type CustomerTruckOption } from ".
 import { useCustomerLanguage } from "./customer-language";
 import { getCustomerFinalCopy } from "./customer-final-copy";
 
-type BookingStep = "route" | "cargo" | "truck" | "quote" | "review" | "success";
-const STEPS: Exclude<BookingStep, "success">[] = ["route", "cargo", "truck", "quote", "review"];
+type BookingStep = "route" | "truck" | "cargo" | "quote" | "review" | "success";
+const STEPS: Exclude<BookingStep, "success">[] = ["route", "truck", "cargo", "quote", "review"];
 
 function formatEtb(amount: number) {
   return `ETB ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount)}`;
@@ -269,7 +269,7 @@ export function CustomerBookingJourney({
             onDropoffSelect={onDropoffSelect}
             onSwap={onSwap}
             onReset={onReset}
-            onBook={() => { if (routeReady) setStep("cargo"); }}
+            onBook={() => { if (routeReady) setStep("truck"); }}
           />
         </div>
       )}
@@ -287,7 +287,7 @@ export function CustomerBookingJourney({
           <label className="customer-final-field"><span>{c.specialRequirements}</span><textarea rows={3} maxLength={200} value={specialRequirements} onChange={(event) => setSpecialRequirements(event.target.value)} placeholder={c.requirementsPlaceholder} /></label>
           {cargoDetailsError && <p className="customer-final-error">{cargoCopy.errors[cargoDetailsError]}</p>}
           {cargoQuantity && cargoTons <= 0 && <p className="customer-final-error">{c.weightRequired}</p>}
-          <button type="button" className="customer-final-primary" disabled={!cargoReady} onClick={() => setStep("truck")}>{c.next} →</button>
+          <button type="button" className="customer-final-primary" disabled={!cargoReady} onClick={() => void goToQuote()}>{c.next} →</button>
         </main>
       )}
 
@@ -306,7 +306,7 @@ export function CustomerBookingJourney({
             })}
           </div>
           {!truckReady && <p className="customer-final-error">{c.weightExceeds}</p>}
-          <button type="button" className="customer-final-primary" disabled={!truckReady} onClick={() => void goToQuote()}>{c.next} →</button>
+          <button type="button" className="customer-final-primary" onClick={() => setStep("cargo")}>{c.next} →</button>
         </main>
       )}
 
