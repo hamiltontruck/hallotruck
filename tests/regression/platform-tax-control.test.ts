@@ -12,6 +12,7 @@ const component = readFileSync(path.join(process.cwd(), "src", "components", "ad
 const adminCommission = readFileSync(path.join(process.cwd(), "src", "pages", "AdminDriverCommission.tsx"), "utf8");
 const adminNav = readFileSync(path.join(process.cwd(), "src", "components", "admin", "AdminSidebarLeadershipLinks.tsx"), "utf8");
 const commission = readFileSync(path.join(process.cwd(), "src", "utils", "commission.ts"), "utf8");
+const financeService = readFileSync(path.join(process.cwd(), "src", "services", "admin-finance-v3.service.ts"), "utf8");
 
 test("HALLO 2% Driver commission and Driver 98% split remain unchanged", () => {
   assert.match(commission, /HALLO_SMART_COMMISSION_RATE = 0\.02/);
@@ -60,7 +61,9 @@ test("tax period RPC is leadership guarded, non-overlapping and Ethiopia-date aw
   assert.match(migration, /No canonical HALLO commission exists in this period/i);
 });
 
-test("remittance RPC is idempotent, evidence-required and blocks overpayment", () => {
+test("remittance RPC rejects invalid amounts, prevents duplicates and blocks overpayment", () => {
+  assert.match(migration, /amount_etb numeric\(14,2\) not null check \(amount_etb > 0\)/i);
+  assert.match(migration, /if v_amount <= 0 then[\s\S]*Remittance amount must be greater than zero/i);
   assert.match(migration, /request_key uuid not null unique/i);
   assert.match(migration, /admin_record_platform_tax_remittance/i);
   assert.match(migration, /where remittance\.request_key = p_request_key/i);
@@ -71,7 +74,8 @@ test("remittance RPC is idempotent, evidence-required and blocks overpayment", (
   assert.match(migration, /Uploaded tax payment evidence was not found/i);
   assert.match(migration, /Remittance exceeds the current outstanding tax balance/i);
   assert.match(migration, /for update/i);
-  assert.match(migration, /reference_unique/i);
+  assert.match(migration, /platform_tax_remittances_reference_unique/i);
+  assert.match(migration, /on public\.platform_tax_remittances \(lower\(btrim\(reference\)\)\)/i);
   assert.match(migration, /receipt_path text not null unique/i);
 });
 
@@ -85,13 +89,49 @@ test("tax control exposes all-time and unperiodized liability so no commission i
   assert.match(component, /Unperiodized liability/);
 });
 
-test("tax status is derived from immutable remittances instead of manually editable state", () => {
+test("tax status covers due, partial and fully paid remittance states", () => {
   assert.match(migration, /admin_platform_tax_control/i);
   assert.match(migration, /when period\.paid_etb >= period\.current_tax_due_etb then 'paid'/i);
   assert.match(migration, /when period\.paid_etb > 0 then 'partial'/i);
   assert.match(migration, /else 'due'/i);
   assert.match(migration, /greatest\(period\.current_tax_due_etb - period\.paid_etb, 0\)/i);
   assert.doesNotMatch(migration, /status\s+text\s+not null[\s\S]{0,80}platform_tax_periods/i);
+});
+
+test("all tax RPCs and tax-table reads deny non-leadership users", () => {
+  for (const fn of [
+    "admin_create_platform_tax_period",
+    "admin_record_platform_tax_remittance",
+    "admin_platform_tax_control",
+  ]) {
+    const start = migration.indexOf(`create or replace function public.${fn}`);
+    assert.ok(start >= 0, `missing ${fn}`);
+    const next = migration.indexOf("create or replace function public.", start + 1);
+    const body = migration.slice(start, next >= 0 ? next : migration.length);
+    assert.match(body, /private\.is_admin_or_ceo\(\)/i);
+    assert.match(body, /Admin or CEO access required/i);
+    assert.match(body, /revoke all on function public\./i);
+    assert.match(body, /grant execute on function public\./i);
+  }
+  assert.match(migration, /platform_tax_periods_leadership_read[\s\S]*private\.is_admin_or_ceo\(\)/i);
+  assert.match(migration, /platform_tax_remittances_leadership_read[\s\S]*private\.is_admin_or_ceo\(\)/i);
+  assert.match(migration, /platform_tax_audit_leadership_read[\s\S]*private\.is_admin_or_ceo\(\)/i);
+});
+
+test("Admin tax control refreshes from the authoritative RPC after mutations", () => {
+  assert.match(component, /const next = await getPlatformTaxControl\(\)/);
+  assert.match(component, /useEffect\(\(\) => \{ void load\(\); \}, \[\]\)/);
+  assert.match(component, /await createPlatformTaxPeriod[\s\S]*await load\(\)/);
+  assert.match(component, /await recordPlatformTaxRemittance[\s\S]*await load\(\)/);
+  assert.match(service, /supabase\.rpc\("admin_platform_tax_control"\)/);
+});
+
+test("tax migration does not mutate existing payment, commission or payout history", () => {
+  assert.doesNotMatch(migration, /update\s+public\.(payments|driver_commission_charges|driver_payment_confirmations|driver_trip_payment_results)/i);
+  assert.doesNotMatch(migration, /delete\s+from\s+public\.(payments|driver_commission_charges|driver_payment_confirmations|driver_trip_payment_results)/i);
+  assert.doesNotMatch(migration, /insert\s+into\s+public\.(payments|driver_commission_charges|driver_payment_confirmations|driver_trip_payment_results)/i);
+  assert.match(financeService, /splitHalloPlatformTax\(driverCommissionEarned\)/);
+  assert.match(financeService, /netPlatformRevenueAfterTax: Math\.max\(0, netPlatformRevenue - platformTaxReserve\)/);
 });
 
 test("tax evidence bucket is private append-only for database-backed leadership", () => {
