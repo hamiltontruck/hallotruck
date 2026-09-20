@@ -74,7 +74,7 @@ test("finance summary reconciles revenue, escrow, refunds, commission and deposi
   assert.equal(summary.netPlatformRevenue, 2535);
   assert.equal(summary.platformTaxRate, 15);
   assert.equal(summary.platformTaxReserve, 380.25);
-  assert.equal(summary.driverCommissionNetAfterTax, 2154.75);
+  assert.equal(summary.platformCommissionAfterTax, 2154.75);
   assert.equal(summary.netPlatformRevenueAfterTax, 2154.75);
   assert.equal(summary.activeWallets, 1);
 });
