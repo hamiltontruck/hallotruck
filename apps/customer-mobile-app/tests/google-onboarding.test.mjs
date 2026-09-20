@@ -22,3 +22,11 @@ test("non-Customer database roles stay outside the Customer workspace", () => {
   assert.match(source, /state\.role === "driver"/);
   assert.match(source, /DriverRedirect/);
 });
+
+
+test("latest-main PIN hardening remains intact beside Google onboarding", () => {
+  assert.match(source, /inputMode="numeric"/);
+  assert.match(source, /pattern="\[0-9\]\{6\}"/);
+  assert.match(source, /maxLength=\{6\}/);
+  assert.match(source, /if \(!\/\^\\d\{6\}\$\/\.test\(password\)\)/);
+});
