@@ -255,10 +255,10 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
           <Kpi label="Outstanding commission" value={formatEtb(report.summary.outstandingCommission)} onClick={() => selectKpi("commission")} warning={report.summary.outstandingCommission > 0} />
           <Kpi label="Driver deposits" value={formatEtb(report.summary.driverDeposits)} onClick={() => selectKpi("deposits")} />
           <Kpi label="Available deposits" value={formatEtb(report.summary.availableDriverDeposits)} onClick={() => selectKpi("deposits")} />
-          <Kpi label="Gross platform revenue" value={formatEtb(report.summary.netPlatformRevenue)} onClick={() => selectKpi("released")} />
-          <Kpi label={`Gov't tax reserve (${report.summary.platformTaxRate}%)`} value={formatEtb(report.summary.platformTaxReserve)} onClick={() => selectKpi("commission")} warning={report.summary.platformTaxReserve > 0} />
-          <Kpi label="Driver commission after tax" value={formatEtb(report.summary.driverCommissionNetAfterTax)} onClick={() => selectKpi("commission")} />
-          <Kpi label="Net platform after tax" value={formatEtb(report.summary.netPlatformRevenueAfterTax)} strong onClick={() => selectKpi("commission")} />
+          <Kpi label="All-time gross platform revenue" value={formatEtb(report.summary.netPlatformRevenue)} onClick={() => selectKpi("released")} />
+          <Kpi label={`All-time tax reserve (${report.summary.platformTaxRate}%)`} value={formatEtb(report.summary.platformTaxReserve)} onClick={() => selectKpi("commission")} warning={report.summary.platformTaxReserve > 0} />
+          <Kpi label="All-time driver commission after tax" value={formatEtb(report.summary.driverCommissionNetAfterTax)} onClick={() => selectKpi("commission")} />
+          <Kpi label="All-time platform after tax" value={formatEtb(report.summary.netPlatformRevenueAfterTax)} strong onClick={() => selectKpi("commission")} />
           <Kpi label="Active wallets" value={String(report.summary.activeWallets)} onClick={() => selectKpi("wallets")} />
         </section>
 
