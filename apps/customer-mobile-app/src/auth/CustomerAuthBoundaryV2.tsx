@@ -455,7 +455,9 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (error) throw error;
       await resolveSession(data.session);
     } catch (error) {
-      const message = error instanceof Error ? error.message : undefined;\n      const localValidation = message && [text.emailInvalid, text.passwordInvalid].includes(message as never);\n      setState({ kind: "signed-out", error: localValidation ? message! : friendlyAuthError(message, language), notice: null });
+      const message = error instanceof Error ? error.message : undefined;
+      const localValidation = message && [text.emailInvalid, text.passwordInvalid].includes(message as never);
+      setState({ kind: "signed-out", error: localValidation ? message! : friendlyAuthError(message, language), notice: null });
     } finally { loginLockRef.current = false; setAuthenticating(false); }
   }
 
