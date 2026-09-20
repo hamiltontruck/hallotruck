@@ -23,7 +23,7 @@ export type FinanceV3Summary = {
   netPlatformRevenue: number;
   platformTaxRate: number;
   platformTaxReserve: number;
-  driverCommissionNetAfterTax: number;
+  platformCommissionAfterTax: number;
   netPlatformRevenueAfterTax: number;
   activeWallets: number;
 };
@@ -118,7 +118,7 @@ export async function getAdminFinanceV3Report(query: FinanceV3Query): Promise<Fi
   const drilldown = raw.drilldown ?? {};
   const partnerCommission = numberOf(ceo.partnerCommission);
   const driverCommissionEarned = numberOf(summary.commissionEarned);
-  const { taxEtb: platformTaxReserve, netCommissionAfterTaxEtb: driverCommissionNetAfterTax } = splitHalloPlatformTax(driverCommissionEarned);
+  const { taxEtb: platformTaxReserve, netCommissionAfterTaxEtb: platformCommissionAfterTax } = splitHalloPlatformTax(driverCommissionEarned);
   const netPlatformRevenue = Math.max(0, driverCommissionEarned + partnerCommission);
   return {
     summary: {
@@ -130,7 +130,7 @@ export async function getAdminFinanceV3Report(query: FinanceV3Query): Promise<Fi
       netPlatformRevenue,
       platformTaxRate: HALLO_PLATFORM_TAX_PERCENT,
       platformTaxReserve,
-      driverCommissionNetAfterTax,
+      platformCommissionAfterTax,
       netPlatformRevenueAfterTax: Math.max(0, netPlatformRevenue - platformTaxReserve),
       activeWallets: numberOf(summary.activeWallets),
     },
