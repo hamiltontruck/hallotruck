@@ -487,21 +487,40 @@ begin
         end::text as status
       from period_calc period
     ),
+    all_time as (
+      select private.platform_commission_for_period(
+        date '1970-01-01',
+        timezone('Africa/Addis_Ababa', now())::date
+      )::numeric as commission_base_etb
+    ),
     summary as (
       select
-        coalesce(sum(current_tax_due_etb), 0)::numeric as total_due_etb,
-        coalesce(sum(paid_etb), 0)::numeric as total_paid_etb,
-        coalesce(sum(outstanding_etb), 0)::numeric as total_outstanding_etb,
-        coalesce(sum(credit_etb), 0)::numeric as total_credit_etb,
-        count(*) filter (where status = 'due')::bigint as due_count,
-        count(*) filter (where status = 'partial')::bigint as partial_count,
-        count(*) filter (where status = 'paid')::bigint as paid_count
-      from period_status
+        all_time.commission_base_etb as all_time_commission_etb,
+        round(all_time.commission_base_etb * 0.15, 2)::numeric as all_time_tax_reserve_etb,
+        coalesce(sum(period.current_tax_due_etb), 0)::numeric as total_due_etb,
+        greatest(
+          round(all_time.commission_base_etb * 0.15, 2)
+            - coalesce(sum(period.current_tax_due_etb), 0),
+          0
+        )::numeric as unperiodized_tax_etb,
+        coalesce(sum(period.paid_etb), 0)::numeric as total_paid_etb,
+        coalesce(sum(period.outstanding_etb), 0)::numeric as total_outstanding_etb,
+        coalesce(sum(period.credit_etb), 0)::numeric as total_credit_etb,
+        count(*) filter (where period.status = 'due')::bigint as due_count,
+        count(*) filter (where period.status = 'partial')::bigint as partial_count,
+        count(*) filter (where period.status = 'paid')::bigint as paid_count
+      from all_time
+      left join period_status period on true
+      group by all_time.commission_base_etb
     )
     select jsonb_build_object(
       'summary', (
         select jsonb_build_object(
           'taxRatePercent', 15,
+          'allTimeCommissionEtb', summary.all_time_commission_etb,
+          'allTimeTaxReserveEtb', summary.all_time_tax_reserve_etb,
+          'periodizedTaxDueEtb', summary.total_due_etb,
+          'unperiodizedTaxEtb', summary.unperiodized_tax_etb,
           'totalDueEtb', summary.total_due_etb,
           'totalPaidEtb', summary.total_paid_etb,
           'totalOutstandingEtb', summary.total_outstanding_etb,
