@@ -67,6 +67,7 @@ test("remittance RPC rejects invalid amounts, prevents duplicates and blocks ove
   assert.match(migration, /request_key uuid not null unique/i);
   assert.match(migration, /admin_record_platform_tax_remittance/i);
   assert.match(migration, /where remittance\.request_key = p_request_key/i);
+  assert.ok((migration.match(/where remittance\.request_key = p_request_key/gi) ?? []).length >= 2);
   assert.match(migration, /Payment receipt evidence is required/i);
   assert.match(migration, /concat\(v_period\.id::text, '\/'\)/i);
   assert.match(migration, /Receipt path must belong to the selected tax period/i);
