@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatEtb } from "../utils/currency";
-import { HALLO_PLATFORM_TAX_PERCENT, splitHalloPlatformTax } from "../utils/commission";
+import { PlatformTaxControl } from "../components/admin/PlatformTaxControl";
 import { supabase } from "../services/supabase.client";
 import type { FinancialCorrection } from "../services/financial-correction.service";
 import {
@@ -41,7 +41,6 @@ export function AdminDriverCommission() {
   const [rows, setRows] = useState<AdminCommissionPayment[]>([]);
   const [platformRows, setPlatformRows] = useState<PlatformCommissionAccrual[]>([]);
   const [corrections, setCorrections] = useState<FinancialCorrection[]>([]);
-  const [canonicalCommissionEtb, setCanonicalCommissionEtb] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
@@ -49,18 +48,13 @@ export function AdminDriverCommission() {
 
   async function load() {
     try {
-      const [settlements, platformResult, correctionsResult, financeResult] = await Promise.all([
+      const [settlements, platformResult, correctionsResult] = await Promise.all([
         getAdminCommissionPayments(),
         supabase.rpc("admin_platform_commission_accruals"),
         supabase.from("financial_corrections").select("*").gt("driver_commission_reversal_etb", 0).order("created_at", { ascending: false }).limit(500),
-        supabase.rpc("admin_finance_v3_report", {
-          p_range: "all", p_provider: null, p_driver_query: null, p_customer_query: null, p_route_query: null,
-          p_truck_query: null, p_search: null, p_event: null, p_page: 1, p_page_size: 50,
-        }),
       ]);
       if (platformResult.error) throw new Error(platformResult.error.message);
       if (correctionsResult.error) throw new Error(correctionsResult.error.message);
-      if (financeResult.error) throw new Error(financeResult.error.message);
       setRows(settlements);
       setPlatformRows(((platformResult.data ?? []) as PlatformCommissionAccrual[]).map((row) => ({
         ...row,
@@ -70,8 +64,6 @@ export function AdminDriverCommission() {
         driver_net_etb: money(row.driver_net_etb),
       })));
       setCorrections((correctionsResult.data ?? []) as FinancialCorrection[]);
-      const finance = (financeResult.data ?? {}) as { summary?: { commissionEarned?: number | string } };
-      setCanonicalCommissionEtb(money(finance.summary?.commissionEarned));
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load commission control.");
@@ -90,7 +82,6 @@ export function AdminDriverCommission() {
   const driverNetHeld = activePlatformRows.filter((row) => !row.released_at).reduce((sum, row) => sum + row.driver_net_etb, 0);
   const driverNetReleased = activePlatformRows.filter((row) => row.released_at).reduce((sum, row) => sum + row.driver_net_etb, 0);
   const reversedCommission = corrections.reduce((sum, row) => sum + money(row.driver_commission_reversal_etb), 0);
-  const taxControl = splitHalloPlatformTax(canonicalCommissionEtb);
 
   async function approve(row: AdminCommissionPayment) {
     if (!window.confirm(`Confirm that ${formatEtb(row.amount_etb)} is visible in the HALLO Smart ${row.provider} account and approve this settlement?`)) return;
@@ -122,23 +113,7 @@ export function AdminDriverCommission() {
 
       {error && <p className="mb-5 border border-route/30 bg-route/10 p-3 text-sm text-route">{error}</p>}
 
-      <section className="mb-8 border border-asphalt/10 bg-white">
-        <div className="border-b border-asphalt/10 bg-white p-5">
-          <p className="font-mono text-[10px] tracking-[.18em] text-amber-dim">GOVERNMENT TAX CONTROL</p>
-          <div className="mt-2 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2 className="font-display text-2xl font-semibold">15% tax reserve on HALLO's 2% commission</h2>
-              <p className="mt-2 max-w-3xl text-xs leading-relaxed text-steel">The tax reserve is calculated from canonical HALLO commission after duplicate prevention, reversals and corrections. It does not reduce the Driver's 98% share.</p>
-            </div>
-            <span className="w-fit border border-amber/40 bg-amber/10 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wide text-amber-dim">Payment evidence ledger not yet recorded</span>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-px bg-asphalt/10 sm:grid-cols-3">
-          <PlatformMetric label="Canonical HALLO commission" value={formatEtb(taxControl.grossCommissionEtb)} />
-          <PlatformMetric label={`Tax reserve · ${HALLO_PLATFORM_TAX_PERCENT}%`} value={formatEtb(taxControl.taxEtb)} alert={taxControl.taxEtb > 0} />
-          <PlatformMetric label="HALLO net after tax" value={formatEtb(taxControl.netCommissionAfterTaxEtb)} />
-        </div>
-      </section>
+      <PlatformTaxControl />
 
       <section className="mb-8 border border-asphalt/10 bg-white">
         <div className="border-b border-asphalt/10 bg-asphalt p-5 text-white">
