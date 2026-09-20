@@ -48,6 +48,8 @@ test("VIP/customer level changes are leadership-only and audited", () => {
   assert.match(migration, /admin_customer_registry_report/);
   assert.match(migration, /largestOrderEtb/);
   assert.match(migration, /lifetimeOrderEtb/);
+  assert.match(migration, /sum\(o\.price_etb\) filter \(where o\.status::text = 'delivered'\)/);
+  assert.match(migration, /max\(o\.price_etb\) filter \(where o\.status::text = 'delivered'\)/);
 });
 
 test("Admin Driver registry reports canonical plate and eight-file readiness", () => {
