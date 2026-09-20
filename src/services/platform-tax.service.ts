@@ -8,6 +8,10 @@ export type PlatformTaxStatus = "due" | "partial" | "paid";
 
 export type PlatformTaxSummary = {
   taxRatePercent: number;
+  allTimeCommissionEtb: number;
+  allTimeTaxReserveEtb: number;
+  periodizedTaxDueEtb: number;
+  unperiodizedTaxEtb: number;
   totalDueEtb: number;
   totalPaidEtb: number;
   totalOutstandingEtb: number;
@@ -76,6 +80,10 @@ export async function getPlatformTaxControl(): Promise<PlatformTaxControl> {
   return {
     summary: {
       taxRatePercent: numberOf(summary.taxRatePercent) || 15,
+      allTimeCommissionEtb: numberOf(summary.allTimeCommissionEtb),
+      allTimeTaxReserveEtb: numberOf(summary.allTimeTaxReserveEtb),
+      periodizedTaxDueEtb: numberOf(summary.periodizedTaxDueEtb),
+      unperiodizedTaxEtb: numberOf(summary.unperiodizedTaxEtb),
       totalDueEtb: numberOf(summary.totalDueEtb),
       totalPaidEtb: numberOf(summary.totalPaidEtb),
       totalOutstandingEtb: numberOf(summary.totalOutstandingEtb),
