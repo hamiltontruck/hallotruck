@@ -133,20 +133,32 @@ as $$
           then round(confirmation.commission_etb, 2)
           else 0
         end
-      )::numeric as amount
+      )::numeric as amount,
+      min(confirmation.commission_accrued_at) as event_at
     from public.driver_payment_confirmations confirmation
-    where timezone('Africa/Addis_Ababa', confirmation.commission_accrued_at)::date
-      between p_start and p_end
     group by confirmation.payment_id
   ),
   charge_base as (
     select
       charge.payment_id,
-      max(case when charge.status = 'active' then round(charge.commission_etb, 2) else 0 end)::numeric as amount
+      max(case when charge.status = 'active' then round(charge.commission_etb, 2) else 0 end)::numeric as amount,
+      min(charge.created_at) as event_at
     from public.driver_commission_charges charge
-    where timezone('Africa/Addis_Ababa', charge.created_at)::date
-      between p_start and p_end
     group by charge.payment_id
+  ),
+  canonical_source as (
+    select confirmation.payment_id, confirmation.amount, confirmation.event_at
+    from confirmation_base confirmation
+
+    union all
+
+    select charge.payment_id, charge.amount, charge.event_at
+    from charge_base charge
+    where not exists (
+      select 1
+      from confirmation_base confirmation
+      where confirmation.payment_id = charge.payment_id
+    )
   ),
   correction_base as (
     select
@@ -156,22 +168,13 @@ as $$
     where correction.source_payment_id is not null
     group by correction.source_payment_id
   ),
-  commission_keys as (
-    select payment_id from charge_base
-    union
-    select payment_id from confirmation_base
-  ),
   corrected as (
     select
-      keys.payment_id,
-      greatest(
-        coalesce(confirmation.amount, charge.amount, 0) - coalesce(correction.reversal, 0),
-        0
-      )::numeric as effective_commission
-    from commission_keys keys
-    left join charge_base charge on charge.payment_id = keys.payment_id
-    left join confirmation_base confirmation on confirmation.payment_id = keys.payment_id
-    left join correction_base correction on correction.payment_id = keys.payment_id
+      source.payment_id,
+      greatest(source.amount - coalesce(correction.reversal, 0), 0)::numeric as effective_commission
+    from canonical_source source
+    left join correction_base correction on correction.payment_id = source.payment_id
+    where timezone('Africa/Addis_Ababa', source.event_at)::date between p_start and p_end
   ),
   unpaid_trip_commission as (
     select coalesce(sum(result.commission_etb), 0)::numeric as amount
