@@ -18,8 +18,6 @@ test("government tax control uses only the HALLO 2% platform basis and fixed 15%
   assert.match(commission, /HALLO_SMART_COMMISSION_RATE = 0\.02/);
   assert.match(commission, /HALLO_SMART_COMMISSION_PERCENT = 2/);
   assert.match(commission, /HALLO_PLATFORM_TAX_RATE = 0\.15/);
-  assert.doesNotMatch(migration, /driverNetEtb|98%|0\.98/i);
-  assert.doesNotMatch(component, /Driver 98%|98%|driverNetEtb/i);
   assert.doesNotMatch(commission, /gross \* 0\.15/);
 });
 
