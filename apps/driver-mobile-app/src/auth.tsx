@@ -1,7 +1,11 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { supabase } from "./supabase";
+import { Mail, LockKeyhole, Eye, EyeOff } from "lucide-react";
+import { AuthBrand, AuthFooter } from "./auth/brand";
+import googleMark from "./auth/assets/google.svg";
+import { beginGoogleSignIn, driverAuthRedirect } from "./auth/google-sign-in";
 
-type Mode = "login" | "signup";
+type Mode = "login" | "signup" | "reset";
 type Language = "om" | "en" | "am";
 
 const LANGUAGE_KEY = "hallo-driver-language";
@@ -40,6 +44,14 @@ const COPY = {
   },
 } as const;
 
+const UI = {
+  en: { welcome: "Welcome Back", subtitle: "Sign in to your account", signIn: "Sign In", forgot: "Forgot Password?", google: "Continue with Google", or: "or", noAccount: "Don’t have an account?", create: "Create Account", reset: "Reset your password", send: "Send reset link", sent: "If an account exists for this email, a reset link will arrive shortly.", googleUnavailable: "Google sign-in is unavailable right now. Please use your email and password.", googleFailed: "Google sign-in was not completed. Try again or sign in with your email.", back: "Back to Sign In" },
+  om: { welcome: "Baga Nagaan Deebitan", subtitle: "Gara akkaawuntii keetti seeni", signIn: "Seeni", forgot: "Password dagattee?", google: "Google waliin itti fufi", or: "ykn", noAccount: "Akkaawuntii hin qabduu?", create: "Akkaawuntii Uumi", reset: "Password kee haaromsi", send: "Linkii haaromsuu ergi", sent: "Imeelii kanaan akkaawuntiin yoo jiraate, linkiin haaromsuu siif ergama.", googleUnavailable: "Google'n seenuun amma hin danda'amu. Imeelii fi password kee fayyadami.", googleFailed: "Google'n seenuun hin xumuramne. Irra deebi'i ykn imeelii keetiin seeni.", back: "Gara Seenuutti Deebi'i" },
+  am: { welcome: "እንኳን ደህና ተመለሱ", subtitle: "ወደ መለያዎ ይግቡ", signIn: "ግባ", forgot: "የይለፍ ቃል ረሱ?", google: "በGoogle ይቀጥሉ", or: "ወይም", noAccount: "መለያ የለዎትም?", create: "መለያ ይፍጠሩ", reset: "የይለፍ ቃልዎን ያድሱ", send: "የማደሻ አገናኝ ላክ", sent: "በዚህ ኢሜይል መለያ ካለ፣ የማደሻ አገናኝ ይላካል።", googleUnavailable: "በGoogle መግባት አሁን አይቻልም። ኢሜይልና የይለፍ ቃልዎን ይጠቀሙ።", googleFailed: "በGoogle መግባት አልተጠናቀቀም። እንደገና ይሞክሩ ወይም በኢሜይል ይግቡ።", back: "ወደ መግቢያ ተመለስ" },
+} as const;
+// Capture provider rejection before Supabase consumes the callback URL.
+const callbackError = new URLSearchParams(window.location.hash.slice(1)).has("error") || new URLSearchParams(window.location.search).has("error");
+
 function storedLanguage(): Language {
   const value = window.localStorage.getItem(LANGUAGE_KEY);
   return value === "en" || value === "am" || value === "om" ? value : "om";
@@ -51,6 +63,7 @@ function isNetworkFailure(reason: unknown) {
 }
 
 export function Login() {
+  const submitting = useRef(false);
   const [mode, setMode] = useState<Mode>("login");
   const [language, setLanguage] = useState<Language>(storedLanguage);
   const [fullName, setFullName] = useState("");
@@ -64,6 +77,17 @@ export function Login() {
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const text = COPY[language];
+  const ui = UI[language];
+
+  useEffect(() => {
+    if (callbackError) {
+      setError(UI[storedLanguage()].googleFailed);
+      const url = new URL(window.location.href);
+      for (const key of ["error", "error_code", "error_description"]) url.searchParams.delete(key);
+      if (new URLSearchParams(url.hash.slice(1)).has("error")) url.hash = "";
+      window.history.replaceState(null, "", url);
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -96,11 +120,19 @@ export function Login() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    if (submitting.current) return;
+    submitting.current = true;
     setBusy(true); resetFeedback();
     try {
       if (!navigator.onLine) throw new Error(text.offline);
       const normalizedEmail = normalizeEmail(email);
-      if (mode === "signup") {
+      if (mode === "reset") {
+        // The existing root portal owns the complete recovery callback and PIN policy.
+        const redirectTo = new URL("../", driverAuthRedirect(window.location.origin, import.meta.env.BASE_URL)).href;
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+        if (resetError) throw resetError;
+        setConfirmation(ui.sent);
+      } else if (mode === "signup") {
         const normalizedName = fullName.trim().replace(/\s+/g, " ");
         if (normalizedName.length < 2 || normalizedName.length > 120) throw new Error(text.nameInvalid);
         if (!/^\d{6}$/.test(password)) throw new Error(text.pinInvalid);
@@ -121,29 +153,53 @@ export function Login() {
     } catch (reason) {
       setOnline(navigator.onLine);
       setError(isNetworkFailure(reason) ? text.network : reason instanceof Error ? reason.message : text.authFailed);
-    } finally { setBusy(false); }
+    } finally { submitting.current = false; setBusy(false); }
   }
 
-  function switchMode() { setMode((current) => current === "login" ? "signup" : "login"); setPassword(""); setConfirmPassword(""); setShowPin(false); resetFeedback(); }
+  function changeMode(next: Mode) { setMode(next); setPassword(""); setConfirmPassword(""); setShowPin(false); resetFeedback(); }
+  async function googleSignIn() {
+    if (busy) return;
+    if (submitting.current) return;
+    submitting.current = true; setBusy(true); resetFeedback();
+    try {
+      if (!navigator.onLine) throw new Error(text.offline);
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY }, signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error(ui.googleUnavailable);
+      const settings = await response.json();
+      if (settings.external?.google !== true) throw new Error(ui.googleUnavailable);
+      const url = await beginGoogleSignIn(supabase, driverAuthRedirect(window.location.origin, import.meta.env.BASE_URL));
+      window.location.assign(url);
+    } catch (reason) {
+      setError(isNetworkFailure(reason) ? text.network : reason instanceof Error ? reason.message : ui.googleFailed);
+    } finally { submitting.current = false; setBusy(false); }
+  }
   const signup = mode === "signup";
+  const reset = mode === "reset";
 
-  return <main className="auth">
-    <div className="auth-brand"><span className="mark big">H</span><h1>HALLO Driver</h1><p>{signup ? text.taglineSignup : text.taglineLogin}</p></div>
-    {!online && <p className="error banner" role="alert">{text.offline}</p>}
-    <form onSubmit={submit} className="panel" noValidate>
-      <label>{text.language}<select value={language} onChange={(event) => setLanguage(event.target.value as Language)} disabled={busy}><option value="om">Afaan Oromoo</option><option value="en">English</option><option value="am">አማርኛ</option></select></label>
-      {signup && <>
-        <label>{text.fullName}<input required autoComplete="name" minLength={2} maxLength={120} value={fullName} onChange={(event) => setFullName(event.target.value)} disabled={busy} /></label>
-        <label>{text.phone}<input required type="tel" inputMode="tel" autoComplete="tel" placeholder="09xxxxxxxx" maxLength={17} value={phone} onChange={(event) => setPhone(event.target.value)} disabled={busy} /></label>
-      </>}
-      <label>{text.email}<input required type="email" autoComplete="email" inputMode="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy} /></label>
-      <label>{signup ? text.createPin : text.passwordPin}<input required type={showPin ? "text" : "password"} inputMode={signup ? "numeric" : undefined} pattern={signup ? "[0-9]{6}" : undefined} minLength={signup ? 6 : undefined} maxLength={signup ? 6 : undefined} autoComplete={signup ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(signup ? event.target.value.replace(/\D/g, "").slice(0, 6) : event.target.value)} disabled={busy} /></label>
-      {signup && <label>{text.confirmPin}<input required type={showPin ? "text" : "password"} inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value.replace(/\D/g, "").slice(0, 6))} disabled={busy} /></label>}
-      <label className="auth-check"><input type="checkbox" checked={showPin} onChange={(event) => setShowPin(event.target.checked)} disabled={busy} /><span>{signup ? text.showPins : text.showPassword}</span></label>
-      {error && <p className="error banner" role="alert" aria-live="assertive">{error}</p>}
-      {confirmation && <p className="success notice-box" role="status" aria-live="polite">{confirmation}</p>}
-      <button type="submit" className="primary" disabled={busy || !online}>{busy ? text.wait : signup ? text.create : text.signIn}</button>
-    </form>
-    <button type="button" className="link-button" disabled={busy} onClick={switchMode}>{signup ? text.signInInstead : text.createLink}</button>
+  return <main className="driver-auth">
+    <div className="driver-auth-top"><label><span className="driver-sr-only">{text.language}</span><select aria-label={text.language} value={language} onChange={(event) => setLanguage(event.target.value as Language)} disabled={busy}><option value="en">EN</option><option value="om">OR</option><option value="am">አማ</option></select></label></div>
+    <div className="driver-auth-content">
+      <AuthBrand />
+      <header className="driver-auth-title"><h1>{signup ? ui.create : reset ? ui.reset : ui.welcome}</h1><p>{signup ? text.taglineSignup : reset ? text.email : ui.subtitle}</p></header>
+      {!online && <p className="driver-auth-error" role="alert" aria-live="assertive">{text.offline}</p>}
+      <form onSubmit={submit} className="driver-auth-form" noValidate>
+        {signup && <>
+          <label>{text.fullName}<input required autoComplete="name" minLength={2} maxLength={120} value={fullName} onChange={(event) => setFullName(event.target.value)} disabled={busy} /></label>
+          <label>{text.phone}<input required type="tel" inputMode="tel" autoComplete="tel" placeholder="09xxxxxxxx" maxLength={17} value={phone} onChange={(event) => setPhone(event.target.value)} disabled={busy} /></label>
+        </>}
+        <label className="driver-auth-field"><span className="driver-sr-only">{text.email}</span><Mail size={19} aria-hidden="true"/><input required type="email" autoComplete="email" inputMode="email" placeholder={language === "en" ? "Email address" : text.email} maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy} /></label>
+        {!reset && <label className="driver-auth-field"><span className="driver-sr-only">{signup ? text.createPin : text.passwordPin}</span><LockKeyhole size={19} aria-hidden="true"/><input required placeholder={signup ? text.createPin : text.passwordPin} type={showPin ? "text" : "password"} inputMode={signup ? "numeric" : undefined} pattern={signup ? "[0-9]{6}" : undefined} minLength={signup ? 6 : undefined} maxLength={signup ? 6 : undefined} autoComplete={signup ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(signup ? event.target.value.replace(/\D/g, "").slice(0, 6) : event.target.value)} disabled={busy} /><button type="button" className="driver-password-toggle" aria-label={text.showPassword} aria-pressed={showPin} disabled={busy} onClick={() => setShowPin(!showPin)}>{showPin ? <EyeOff size={19}/> : <Eye size={19}/>}</button></label>}
+        {signup && <label>{text.confirmPin}<input required type={showPin ? "text" : "password"} inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value.replace(/\D/g, "").slice(0, 6))} disabled={busy} /></label>}
+        {!signup && !reset && <button type="button" className="driver-auth-forgot" disabled={busy} onClick={() => changeMode("reset")}>{ui.forgot}</button>}
+        {error && <p className="driver-auth-error" role="alert" aria-live="assertive">{error}</p>}
+        {confirmation && <p className="driver-auth-notice" role="status" aria-live="polite">{confirmation}</p>}
+        <button type="submit" className="driver-auth-submit" disabled={busy || !online}>{busy ? text.wait : signup ? text.create : reset ? ui.send : ui.signIn}</button>
+      </form>
+      {!signup && !reset && <><div className="driver-auth-divider"><span>{ui.or}</span></div><button type="button" className="driver-auth-google" disabled={busy || !online} onClick={() => void googleSignIn()}><img src={googleMark} alt="" width="20" height="20"/>{busy ? text.wait : ui.google}</button></>}
+      <div className="driver-auth-switch">{!signup && !reset && <span>{ui.noAccount}</span>}<button type="button" disabled={busy} onClick={() => changeMode(signup || reset ? "login" : "signup")}>{signup || reset ? ui.back : ui.create}</button></div>
+    </div>
+    <AuthFooter />
   </main>;
 }

@@ -1,0 +1,198 @@
+/* Android/Capacitor viewport hardening. Loaded last so the Driver app stays
+   inside the visible WebView when system bars or the software keyboard open. */
+:root {
+  --driver-app-height: 100dvh;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: var(--driver-app-height);
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #f7f9f8;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.driver-auth,
+.driver-welcome,
+.driver-app,
+.onboarding,
+.auth,
+.splash {
+  width: min(100%, 560px);
+  height: var(--driver-app-height);
+  min-height: 0;
+  overflow-x: clip;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.driver-auth,
+.driver-welcome,
+.auth {
+  width: min(100%, 440px);
+}
+
+.driver-auth::-webkit-scrollbar,
+.driver-welcome::-webkit-scrollbar,
+.driver-app::-webkit-scrollbar,
+.onboarding::-webkit-scrollbar,
+.auth::-webkit-scrollbar,
+.splash::-webkit-scrollbar {
+  display: none;
+}
+
+.driver-auth,
+.driver-welcome,
+.driver-app,
+.onboarding,
+.auth {
+  padding-right: max(0px, env(safe-area-inset-right));
+  padding-left: max(0px, env(safe-area-inset-left));
+}
+
+.driver-auth:focus-within .driver-auth-footer {
+  display: none;
+}
+
+.driver-auth:focus-within .driver-auth-content {
+  padding-top: 4px;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.driver-auth:focus-within .driver-auth-title {
+  margin-top: 14px;
+  margin-bottom: 16px;
+}
+
+.driver-auth input,
+.driver-auth select,
+.onboarding input,
+.onboarding select,
+.driver-app input,
+.driver-app select,
+.driver-app textarea,
+.auth input,
+.auth select {
+  font-size: 16px;
+}
+
+@media (max-width: 339px) {
+  .driver-auth-content {
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+
+  .driver-auth-brand img {
+    width: 156px;
+    height: 52px;
+  }
+
+  .driver-auth-title {
+    margin-top: 16px;
+    margin-bottom: 18px;
+  }
+
+  .driver-welcome {
+    padding-right: max(18px, env(safe-area-inset-right));
+    padding-left: max(18px, env(safe-area-inset-left));
+  }
+
+  .driver-welcome .driver-auth-brand img {
+    width: 205px;
+    height: 68px;
+  }
+}
+
+@media (min-width: 340px) and (max-width: 359px) {
+  .driver-auth-content {
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-left: max(20px, env(safe-area-inset-left));
+  }
+}
+
+@media (min-width: 390px) {
+  .driver-auth-content {
+    padding-right: max(28px, env(safe-area-inset-right));
+    padding-left: max(28px, env(safe-area-inset-left));
+  }
+}
+
+@media (min-width: 412px) {
+  .driver-auth-content {
+    padding-right: max(30px, env(safe-area-inset-right));
+    padding-left: max(30px, env(safe-area-inset-left));
+  }
+}
+
+@media (min-width: 561px) {
+  .driver-app,
+  .onboarding,
+  .splash {
+    box-shadow: 0 0 48px rgb(16 33 61 / 0.12);
+  }
+}
+
+@media (max-height: 700px) {
+  .driver-auth-top {
+    padding-top: calc(8px + env(safe-area-inset-top));
+    min-height: 48px;
+  }
+
+  .driver-auth-content {
+    padding-top: 4px;
+  }
+
+  .driver-auth-title {
+    margin: 14px 0 16px;
+  }
+
+  .driver-auth-footer > img {
+    max-height: 72px;
+  }
+
+  .driver-welcome {
+    padding-top: calc(76px + env(safe-area-inset-top));
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .driver-auth-footer,
+  .driver-welcome-bottom > p {
+    display: none;
+  }
+
+  .driver-auth-top {
+    min-height: 42px;
+  }
+
+  .driver-auth-content {
+    padding-top: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .driver-welcome {
+    padding-top: calc(42px + env(safe-area-inset-top));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-auth *,
+  .driver-welcome *,
+  .driver-app *,
+  .onboarding * {
+    scroll-behavior: auto !important;
+  }
+}
