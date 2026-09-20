@@ -8,6 +8,7 @@ const links = [
   { to: "/admin", label: "Overview", icon: "▦" },
   { to: "/admin/ai-assistant", label: "AI Assistant", icon: "AI" },
   { to: "/admin/intelligence", label: "Intelligence", icon: "⌕" },
+  { to: "/admin/crm", label: "Customer & Driver CRM", icon: "CRM" },
   { to: "/admin/finance", label: "Finance Dashboard V3", icon: "FIN" },
   { to: "/admin/partner-finance", label: "Partner finance", icon: "P%" },
   { to: "/admin/partners", label: "Partner onboarding", icon: "LP" },
