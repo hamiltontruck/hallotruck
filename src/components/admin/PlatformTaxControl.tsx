@@ -117,7 +117,7 @@ export function PlatformTaxControl() {
         <div>
           <h2 className="font-display text-2xl font-semibold">Tax liability & remittance ledger</h2>
           <p className="mt-2 max-w-3xl text-xs leading-5 text-white/60">
-            Configured rate: {data.summary.taxRatePercent}%. Liability is derived from canonical HALLO Driver commission after duplicate prevention, reversals and corrections. Driver 98% is unchanged.
+            Configured rate: {data.summary.taxRatePercent}%. Liability is derived only from the canonical HALLO 2% platform revenue basis after duplicate prevention, reversals and corrections.
           </p>
         </div>
         <span className="w-fit border border-white/20 px-3 py-2 font-mono text-[10px] uppercase tracking-wide text-white/70">
