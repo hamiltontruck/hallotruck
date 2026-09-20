@@ -20,6 +20,8 @@ test("Customer Mobile keeps database-role verification after signup", () => {
   assert.match(auth, /classifyCustomerProfile\(data\)/);
   assert.match(auth, /unsupported-role/);
   assert.match(auth, /missing-profile/);
+  assert.match(auth, /state\.role === "driver"/);
+  assert.match(auth, /window\.location\.replace\(destination\)/);
 });
 
 test("Customer Mobile shows the official HALLO Smart Logistics brand on splash and auth", () => {
