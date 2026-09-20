@@ -551,8 +551,8 @@ begin
       c.id,
       count(o.id)::bigint as order_count,
       count(o.id) filter (where o.status::text = 'delivered')::bigint as delivered_count,
-      coalesce(sum(o.price_etb), 0)::numeric as lifetime_order_etb,
-      coalesce(max(o.price_etb), 0)::numeric as largest_order_etb,
+      coalesce(sum(o.price_etb) filter (where o.status::text = 'delivered'), 0)::numeric as lifetime_order_etb,
+      coalesce(max(o.price_etb) filter (where o.status::text = 'delivered'), 0)::numeric as largest_order_etb,
       max(o.created_at) as last_order_at
     from public.customers c
     left join public.orders o
