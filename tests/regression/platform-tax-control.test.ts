@@ -67,6 +67,16 @@ test("remittance RPC is idempotent, evidence-required and blocks overpayment", (
   assert.match(migration, /receipt_path text not null unique/i);
 });
 
+test("tax control exposes all-time and unperiodized liability so no commission is hidden before period creation", () => {
+  assert.match(migration, /allTimeCommissionEtb/);
+  assert.match(migration, /allTimeTaxReserveEtb/);
+  assert.match(migration, /periodizedTaxDueEtb/);
+  assert.match(migration, /unperiodizedTaxEtb/);
+  assert.match(migration, /date '1970-01-01'/);
+  assert.match(component, /All-time tax reserve/);
+  assert.match(component, /Unperiodized liability/);
+});
+
 test("tax status is derived from immutable remittances instead of manually editable state", () => {
   assert.match(migration, /admin_platform_tax_control/i);
   assert.match(migration, /when period\.paid_etb >= period\.current_tax_due_etb then 'paid'/i);
