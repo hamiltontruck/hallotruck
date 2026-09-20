@@ -574,6 +574,23 @@ begin
         ), '[]'::jsonb)
         from public.platform_tax_remittances remittance
         left join public.profiles profile on profile.id = remittance.paid_by
+      ),
+      'audit', (
+        select coalesce(jsonb_agg(
+          jsonb_build_object(
+            'id', audit.id,
+            'eventType', audit.event_type,
+            'taxPeriodId', audit.tax_period_id,
+            'remittanceId', audit.remittance_id,
+            'actorId', audit.actor_id,
+            'actorName', profile.full_name,
+            'details', audit.details,
+            'createdAt', audit.created_at
+          )
+          order by audit.created_at desc, audit.id desc
+        ), '[]'::jsonb)
+        from public.platform_tax_audit audit
+        left join public.profiles profile on profile.id = audit.actor_id
       )
     )
   );
