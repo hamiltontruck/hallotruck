@@ -402,6 +402,14 @@ begin
   if left(v_receipt_path, char_length(v_period.id::text) + 1) <> concat(v_period.id::text, '/') then
     raise exception 'Receipt path must belong to the selected tax period';
   end if;
+  if not exists (
+    select 1
+    from storage.objects object
+    where object.bucket_id = 'tax-remittance-receipts'
+      and object.name = v_receipt_path
+  ) then
+    raise exception 'Uploaded tax payment evidence was not found';
+  end if;
   if v_note is not null and char_length(v_note) not between 3 and 500 then
     raise exception 'Payment note must be 3 to 500 characters';
   end if;
