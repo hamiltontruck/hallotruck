@@ -29,7 +29,7 @@ test("final Customer journey exposes every approved screen group", () => {
 });
 
 test("booking is a real Route Truck Cargo Quote Review Success state machine", () => {
-  assert.match(booking, /type BookingStep = "route" \| "cargo" \| "truck" \| "quote" \| "review" \| "success"/);
+  assert.match(booking, /type BookingStep = "route" \| "truck" \| "cargo" \| "quote" \| "review" \| "success"/);
   assert.match(booking, /<CustomerBookingMap/);
   assert.match(booking, /loadCustomerQuotePreview/);
   assert.match(booking, /createCustomerMobileOrder/);
