@@ -13,6 +13,10 @@ import {
 const EMPTY: PlatformTaxControlData = {
   summary: {
     taxRatePercent: 15,
+    allTimeCommissionEtb: 0,
+    allTimeTaxReserveEtb: 0,
+    periodizedTaxDueEtb: 0,
+    unperiodizedTaxEtb: 0,
     totalDueEtb: 0,
     totalPaidEtb: 0,
     totalOutstandingEtb: 0,
@@ -125,11 +129,13 @@ export function PlatformTaxControl() {
     {success && <p className="border-b border-emerald-600/30 bg-emerald-50 p-4 text-sm text-emerald-800" aria-live="polite">{success}</p>}
 
     {loading ? <p className="p-10 text-center text-sm text-steel">Loading tax ledger…</p> : <>
-      <div className="grid grid-cols-2 gap-px bg-asphalt/10 sm:grid-cols-4">
-        <TaxMetric label="Current tax due" value={formatEtb(data.summary.totalDueEtb)} />
+      <div className="grid grid-cols-2 gap-px bg-asphalt/10 sm:grid-cols-3 xl:grid-cols-6">
+        <TaxMetric label="All-time HALLO commission" value={formatEtb(data.summary.allTimeCommissionEtb)} />
+        <TaxMetric label="All-time tax reserve" value={formatEtb(data.summary.allTimeTaxReserveEtb)} alert={data.summary.allTimeTaxReserveEtb > 0} />
+        <TaxMetric label="Periodized due" value={formatEtb(data.summary.periodizedTaxDueEtb)} />
+        <TaxMetric label="Unperiodized liability" value={formatEtb(data.summary.unperiodizedTaxEtb)} alert={data.summary.unperiodizedTaxEtb > 0} />
         <TaxMetric label="Government paid" value={formatEtb(data.summary.totalPaidEtb)} />
-        <TaxMetric label="Outstanding" value={formatEtb(data.summary.totalOutstandingEtb)} alert={data.summary.totalOutstandingEtb > 0} />
-        <TaxMetric label="Paid periods" value={String(data.summary.paidCount)} />
+        <TaxMetric label="Period outstanding" value={formatEtb(data.summary.totalOutstandingEtb)} alert={data.summary.totalOutstandingEtb > 0} />
       </div>
 
       <div className="grid gap-px border-t border-asphalt/10 bg-asphalt/10 xl:grid-cols-2">
