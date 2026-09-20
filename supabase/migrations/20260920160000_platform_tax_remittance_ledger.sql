@@ -381,6 +381,17 @@ begin
     raise exception 'Tax period not found';
   end if;
 
+  -- Re-check after the period lock so concurrent retries with the same
+  -- request key return the first committed remittance instead of racing into
+  -- the unique constraint or over-remittance validation.
+  select remittance.id
+  into v_existing
+  from public.platform_tax_remittances remittance
+  where remittance.request_key = p_request_key;
+  if found then
+    return v_existing;
+  end if;
+
   if v_amount <= 0 then
     raise exception 'Remittance amount must be greater than zero';
   end if;
