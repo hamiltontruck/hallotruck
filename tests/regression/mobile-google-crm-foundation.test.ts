@@ -5,6 +5,11 @@ import { readFileSync } from "node:fs";
 const migration = readFileSync("supabase/migrations/20260920172000_mobile_google_crm_vip_foundation.sql", "utf8");
 const customerSource = readFileSync("apps/customer-mobile-app/src/auth/CustomerAuthBoundaryV2.tsx", "utf8");
 const driverSource = readFileSync("apps/driver-mobile-app/src/onboarding.tsx", "utf8");
+const adminCrmPage = readFileSync("src/pages/AdminCrmRegistry.tsx", "utf8");
+const adminCrmService = readFileSync("src/services/admin-crm-registry.service.ts", "utf8");
+const appSource = readFileSync("src/App.tsx", "utf8");
+const adminToolShell = readFileSync("src/components/admin/AdminToolShell.tsx", "utf8");
+
 
 test("OAuth auth trigger no longer defaults unknown identities to Driver", () => {
   assert.match(migration, /v_role_text not in \('customer', 'driver'\)[\s\S]*return new/);
@@ -60,4 +65,22 @@ test("both mobile apps route missing Google profiles through the shared secure R
   assert.match(customerSource, /p_role: "customer"/);
   assert.match(driverSource, /complete_public_mobile_profile/);
   assert.match(driverSource, /p_role: 'driver'/);
+});
+
+
+test("Admin/CEO CRM exposes stable IDs, Customer value, VIP controls and Driver readiness", () => {
+  assert.match(appSource, /path="\/admin\/crm"/);
+  assert.match(appSource, /AdminCrmRegistry/);
+  assert.match(adminToolShell, /Customer & Driver CRM/);
+  assert.match(adminCrmService, /admin_customer_registry_report/);
+  assert.match(adminCrmService, /admin_driver_registry_report/);
+  assert.match(adminCrmService, /admin_set_customer_level/);
+  assert.match(adminCrmPage, /customerCode/);
+  assert.match(adminCrmPage, /driverCode/);
+  assert.match(adminCrmPage, /largestOrderEtb/);
+  assert.match(adminCrmPage, /lifetimeOrderEtb/);
+  assert.match(adminCrmPage, /requiredDocumentsVerified/);
+  assert.match(adminCrmPage, /\/8/);
+  assert.match(adminCrmPage, /Reason/);
+  assert.match(adminCrmPage, /VIP Customers/);
 });
