@@ -1,5 +1,6 @@
 import { supabase } from "./supabase.client";
 import type { FinanceRange } from "../domain/finance-dashboard";
+import { HALLO_PLATFORM_TAX_PERCENT, splitHalloPlatformTax } from "../utils/commission";
 
 export const FINANCE_V3_PAGE_SIZES = [50, 100] as const;
 
@@ -20,6 +21,10 @@ export type FinanceV3Summary = {
   driverDeposits: number;
   availableDriverDeposits: number;
   netPlatformRevenue: number;
+  platformTaxRate: number;
+  platformTaxReserve: number;
+  driverCommissionNetAfterTax: number;
+  netPlatformRevenueAfterTax: number;
   activeWallets: number;
 };
 
@@ -112,14 +117,21 @@ export async function getAdminFinanceV3Report(query: FinanceV3Query): Promise<Fi
   const summary = raw.summary ?? {};
   const drilldown = raw.drilldown ?? {};
   const partnerCommission = numberOf(ceo.partnerCommission);
+  const driverCommissionEarned = numberOf(summary.commissionEarned);
+  const { taxEtb: platformTaxReserve, netCommissionAfterTaxEtb: driverCommissionNetAfterTax } = splitHalloPlatformTax(driverCommissionEarned);
+  const netPlatformRevenue = Math.max(0, driverCommissionEarned + partnerCommission);
   return {
     summary: {
       todayRevenue: numberOf(summary.todayRevenue), weeklyRevenue: numberOf(summary.weeklyRevenue), monthlyRevenue: numberOf(summary.monthlyRevenue),
       releasedPayments: numberOf(summary.releasedPayments), heldEscrow: numberOf(summary.heldEscrow), pendingReviews: numberOf(summary.pendingReviews),
-      refundedPayments: numberOf(summary.refundedPayments), failedPayments: numberOf(summary.failedPayments), commissionEarned: numberOf(summary.commissionEarned),
+      refundedPayments: numberOf(summary.refundedPayments), failedPayments: numberOf(summary.failedPayments), commissionEarned: driverCommissionEarned,
       commissionPaid: numberOf(summary.commissionPaid), outstandingCommission: numberOf(summary.outstandingCommission), driverDeposits: numberOf(summary.driverDeposits),
       availableDriverDeposits: numberOf(summary.availableDriverDeposits),
-      netPlatformRevenue: Math.max(0, numberOf(summary.commissionEarned) + partnerCommission),
+      netPlatformRevenue,
+      platformTaxRate: HALLO_PLATFORM_TAX_PERCENT,
+      platformTaxReserve,
+      driverCommissionNetAfterTax,
+      netPlatformRevenueAfterTax: Math.max(0, netPlatformRevenue - platformTaxReserve),
       activeWallets: numberOf(summary.activeWallets),
     },
     trend: Array.isArray(raw.trend) ? raw.trend.map((item: any) => ({ date: String(item.date), revenue: numberOf(item.revenue), escrow: numberOf(item.escrow), commission: numberOf(item.commission) })) : [],
