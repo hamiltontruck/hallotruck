@@ -48,9 +48,57 @@ where role::text = 'driver'
   and driver_code is null;
 
 alter table public.customers
-  alter column customer_code
-  set default ('HC-C-' || lpad(nextval('public.customer_public_id_seq')::text, 8, '0')),
   alter column customer_code set not null;
+
+create or replace function private.assign_customer_public_code()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if new.customer_code is null or btrim(new.customer_code) = '' then
+    new.customer_code := 'HC-C-' || lpad(nextval('public.customer_public_id_seq')::text, 8, '0');
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function private.assign_customer_public_code()
+  from public, anon, authenticated;
+
+drop trigger if exists customers_assign_public_code on public.customers;
+create trigger customers_assign_public_code
+before insert on public.customers
+for each row execute function private.assign_customer_public_code();
+
+create or replace function private.assign_driver_public_code()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if new.role::text = 'driver'
+     and (new.driver_code is null or btrim(new.driver_code) = '') then
+    new.driver_code := 'HC-D-' || lpad(nextval('public.driver_public_id_seq')::text, 8, '0');
+  elsif new.role::text <> 'driver' then
+    new.driver_code := null;
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function private.assign_driver_public_code()
+  from public, anon, authenticated;
+
+drop trigger if exists profiles_assign_driver_public_code on public.profiles;
+create trigger profiles_assign_driver_public_code
+before insert or update of role, driver_code on public.profiles
+for each row execute function private.assign_driver_public_code();
+
+revoke all on sequence public.customer_public_id_seq from public, anon, authenticated;
+revoke all on sequence public.driver_public_id_seq from public, anon, authenticated;
 
 create or replace function private.normalize_public_mobile_phone(p_phone text)
 returns text
@@ -384,6 +432,7 @@ where o.customer_record_id is null
 create or replace function private.sync_order_customer_record_id()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $function$
 begin
