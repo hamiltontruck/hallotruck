@@ -147,8 +147,17 @@ createRoot(document.getElementById("root")).render(
 );
 
 async function verify() {
-  await delay(90);
-  const partialBanner = document.querySelector('[data-driver-payment-action-state="partial-error"]');
+  const waitFor = async (predicate, timeoutMs = 1000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const value = predicate();
+      if (value) return value;
+      await delay(10);
+    }
+    return predicate();
+  };
+
+  const partialBanner = await waitFor(() => document.querySelector('[data-driver-payment-action-state="partial-error"]'));
   const partialTaskVisible = Boolean(
     partialBanner
     && partialBanner.getAttribute("data-driver-payment-action-order") === "order-a"
