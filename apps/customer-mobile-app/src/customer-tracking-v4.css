@@ -92,3 +92,18 @@
  .customer-final-stage .customer-v4-assignment__body{grid-template-columns:1fr}
  .customer-final-stage .customer-track-v4__map{height:43dvh;min-height:280px}
 }
+
+
+/* Full-map tracking: make the real route/GPS surface the primary trip view. */
+.customer-final-stage .customer-track-full-map{width:100%;min-width:0;margin:0 0 14px}
+.customer-final-stage .customer-track-full-map .customer-track-v4{gap:12px;margin:0}
+.customer-final-stage .customer-track-full-map .customer-track-v4__map-shell{width:100%;border-radius:20px;background:#e7e6d9}
+.customer-final-stage .customer-track-full-map .customer-track-v4__map{width:100%;height:min(62dvh,520px);min-height:390px;border-radius:20px}
+.customer-final-stage .customer-track-full-map .customer-track-v4__gps-badge{top:14px;left:14px}
+.customer-final-stage .customer-track-full-map + .customer-v4-assignment{margin-top:0}
+@media(max-width:430px){
+ .customer-final-stage .customer-track-full-map .customer-track-v4__map{height:58dvh;min-height:380px}
+}
+@media(max-width:359px){
+ .customer-final-stage .customer-track-full-map .customer-track-v4__map{height:54dvh;min-height:340px}
+}
