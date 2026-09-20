@@ -98,6 +98,16 @@ test("tax evidence bucket is private append-only for database-backed leadership"
   assert.doesNotMatch(migration, /create policy "tax remittance[^"]*"[^;]*for delete/is);
 });
 
+test("tax report returns immutable actor-attributed audit events", () => {
+  assert.match(migration, /'audit', \(/);
+  assert.match(migration, /'eventType', audit\.event_type/);
+  assert.match(migration, /'actorName', profile\.full_name/);
+  assert.match(service, /PlatformTaxAuditEvent/);
+  assert.match(service, /audit: Array\.isArray\(raw\.audit\)/);
+  assert.match(component, /Immutable audit trail/);
+  assert.match(component, /period creation and remittance events are append-only/i);
+});
+
 test("Admin service uploads evidence without overwrite and uses secure tax RPCs", () => {
   assert.match(service, /BUCKET = "tax-remittance-receipts"/);
   assert.match(service, /MAX_FILE_BYTES = 10 \* 1024 \* 1024/);
