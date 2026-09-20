@@ -52,10 +52,22 @@ export type PlatformTaxRemittance = {
   createdAt: string;
 };
 
+export type PlatformTaxAuditEvent = {
+  id: string;
+  eventType: "period_created" | "remittance_recorded";
+  taxPeriodId: string;
+  remittanceId: string | null;
+  actorId: string;
+  actorName: string | null;
+  details: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type PlatformTaxControl = {
   summary: PlatformTaxSummary;
   periods: PlatformTaxPeriod[];
   remittances: PlatformTaxRemittance[];
+  audit: PlatformTaxAuditEvent[];
 };
 
 function numberOf(value: unknown) {
@@ -119,6 +131,16 @@ export async function getPlatformTaxControl(): Promise<PlatformTaxControl> {
       note: row.note ? String(row.note) : null,
       paidBy: String(row.paidBy),
       paidByName: row.paidByName ? String(row.paidByName) : null,
+      createdAt: String(row.createdAt),
+    })) : [],
+    audit: Array.isArray(raw.audit) ? raw.audit.map((row: any) => ({
+      id: String(row.id),
+      eventType: String(row.eventType) as "period_created" | "remittance_recorded",
+      taxPeriodId: String(row.taxPeriodId),
+      remittanceId: row.remittanceId ? String(row.remittanceId) : null,
+      actorId: String(row.actorId),
+      actorName: row.actorName ? String(row.actorName) : null,
+      details: row.details && typeof row.details === "object" ? row.details as Record<string, unknown> : {},
       createdAt: String(row.createdAt),
     })) : [],
   };
