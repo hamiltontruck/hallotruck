@@ -10,7 +10,7 @@ create table public.platform_tax_periods (
   period_start date not null,
   period_end date not null,
   tax_rate_percent numeric(5,2) not null default 15.00
-    check (tax_rate_percent > 0 and tax_rate_percent <= 100),
+    check (tax_rate_percent = 15.00),
   commission_base_snapshot_etb numeric(14,2) not null
     check (commission_base_snapshot_etb > 0),
   tax_due_snapshot_etb numeric(14,2) not null
