@@ -50,11 +50,14 @@ test("VIP/customer level changes are leadership-only and audited", () => {
   assert.match(migration, /lifetimeOrderEtb/);
 });
 
-test("Admin Driver registry reports plate and eight-file verification progress", () => {
+test("Admin Driver registry reports canonical plate and eight-file readiness", () => {
   assert.match(migration, /admin_driver_registry_report/);
   assert.match(migration, /plateNumber/);
   assert.match(migration, /requiredDocumentsSubmitted/);
   assert.match(migration, /requiredDocumentsVerified/);
+  assert.match(migration, /vf\.truck_id is null[\s\S]*driver_photo[\s\S]*national_id_back/);
+  assert.match(migration, /vf\.truck_id = t\.id[\s\S]*vehicle_registration[\s\S]*truck_side/);
+  assert.match(migration, /license_front','national_id_front'[\s\S]*vf\.expiry_date is not null[\s\S]*vf\.expiry_date >= current_date/);
   for (const key of ["driver_photo","license_front","license_back","national_id_front","national_id_back","vehicle_registration","truck_front","truck_side"]) {
     assert.match(migration, new RegExp(key));
   }
@@ -83,4 +86,19 @@ test("Admin/CEO CRM exposes stable IDs, Customer value, VIP controls and Driver 
   assert.match(adminCrmPage, /\/8/);
   assert.match(adminCrmPage, /Reason/);
   assert.match(adminCrmPage, /VIP Customers/);
+});
+
+
+test("leadership-only CRM RPCs deny Customer, Driver and Partner database roles", () => {
+  for (const rpc of [
+    "admin_set_customer_level",
+    "admin_customer_registry_report",
+    "admin_driver_registry_report",
+  ]) {
+    assert.match(migration, new RegExp(`private\\.require_active_leadership\\('${rpc}'\\)`));
+  }
+  assert.match(migration, /customer_level_audit_leadership_read[\s\S]*private\.is_admin_or_ceo/);
+  assert.match(migration, /revoke all on function public\.admin_set_customer_level\(uuid, text, text\)[\s\S]*from public, anon/);
+  assert.match(migration, /revoke all on function public\.admin_customer_registry_report\(\)[\s\S]*from public, anon/);
+  assert.match(migration, /revoke all on function public\.admin_driver_registry_report\(\)[\s\S]*from public, anon/);
 });
