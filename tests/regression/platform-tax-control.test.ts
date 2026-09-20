@@ -42,7 +42,9 @@ test("tax liability uses canonical commission with corrections and unpaid-trip c
   assert.match(migration, /financial_corrections/i);
   assert.match(migration, /driver_commission_reversal_etb/i);
   assert.match(migration, /canonical_source/i);
-  assert.match(migration, /where not exists \([\s\S]*from confirmation_base confirmation[\s\S]*confirmation\.payment_id = charge\.payment_id/i);
+  assert.match(migration, /confirmation\.commission_accrued_at as event_at/i);
+  assert.match(migration, /charge\.created_at as event_at/i);
+  assert.match(migration, /where not exists \([\s\S]*from public\.driver_payment_confirmations confirmation[\s\S]*confirmation\.payment_id = charge\.payment_id/i);
   assert.match(migration, /timezone\('Africa\/Addis_Ababa', source\.event_at\)::date between p_start and p_end/i);
   assert.match(migration, /driver_trip_payment_results/i);
   assert.match(migration, /result_type = 'payment_not_received'/i);
