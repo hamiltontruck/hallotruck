@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const migration = readFileSync("supabase/migrations/20260920172000_mobile_google_crm_vip_foundation.sql", "utf8");
+const migration = readFileSync("supabase/migrations/20260920210000_mobile_google_crm_vip_foundation.sql", "utf8");
 const customerSource = readFileSync("apps/customer-mobile-app/src/auth/CustomerAuthBoundaryV2.tsx", "utf8");
 const driverSource = readFileSync("apps/driver-mobile-app/src/onboarding.tsx", "utf8");
 const adminCrmPage = readFileSync("src/pages/AdminCrmRegistry.tsx", "utf8");
