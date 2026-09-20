@@ -64,6 +64,8 @@ test("remittance RPC is idempotent, evidence-required and blocks overpayment", (
   assert.match(migration, /Payment receipt evidence is required/i);
   assert.match(migration, /concat\(v_period\.id::text, '\/'\)/i);
   assert.match(migration, /Receipt path must belong to the selected tax period/i);
+  assert.match(migration, /from storage\.objects object[\s\S]*object\.bucket_id = 'tax-remittance-receipts'[\s\S]*object\.name = v_receipt_path/i);
+  assert.match(migration, /Uploaded tax payment evidence was not found/i);
   assert.match(migration, /Remittance exceeds the current outstanding tax balance/i);
   assert.match(migration, /for update/i);
   assert.match(migration, /reference_unique/i);
