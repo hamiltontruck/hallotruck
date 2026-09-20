@@ -1,11 +1,7 @@
-/* Official HALLO Logistics logo for Customer Mobile authentication. */
+/* Reference HALLO wordmark for Customer Mobile authentication only. */
 [aria-label="HALLO logo"] {
   color: transparent !important;
   font-size: 0 !important;
-  background-color: transparent !important;
-  background-image: url("./hallo-logistics-logo.webp") !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-size: contain !important;
-  box-shadow: 0 12px 28px rgba(16,33,61,.18) !important;
+  background: transparent url("./customer-auth-wordmark.webp") center / contain no-repeat !important;
+  box-shadow: none !important;
 }

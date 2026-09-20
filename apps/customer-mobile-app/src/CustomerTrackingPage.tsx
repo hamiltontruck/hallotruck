@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { CustomerAssignmentCard } from "./CustomerAssignmentCard";
 import { CustomerTrackingMap } from "./CustomerTrackingMap";
-import { loadCustomerTrackingData, subscribeCustomerTracking, type CustomerLiveTrip, type CustomerTrackingData } from "./customer-tracking.service";
+import { CustomerDriverChat } from "./CustomerDriverChat";
 import { classifyTrackingFreshness } from "./tracking-freshness";
+import { loadCustomerTrackingData, subscribeCustomerTracking, type CustomerLiveTrip, type CustomerTrackingData } from "./customer-tracking.service";
+
 import "./customer-tracking-v4.css";
 
 type TrackingState = { kind: "loading" } | { kind: "ready"; data: CustomerTrackingData } | { kind: "error"; message: string };
@@ -12,45 +14,11 @@ function labelStatus(value: string | null | undefined) {
   return clean.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function formatGpsRecordedAt(value: string | null | undefined) {
-  if (!value) return "Waiting for GPS update";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short",
-  });
-}
-
-function CustomerGpsSnapshot({ trip }: { trip: CustomerLiveTrip | undefined }) {
-  const hasGps = trip?.truck_lat != null && trip?.truck_lng != null;
-  const freshness = classifyTrackingFreshness(hasGps ? trip?.recorded_at : null);
-  const gpsLive = hasGps && freshness === "LIVE";
-  const title = !hasGps ? "Waiting for GPS" : gpsLive ? "Live Driver GPS" : `${freshness} · last known location`;
-
-  return (
-    <section className="customer-track-gps-snapshot" data-tracking-freshness={freshness}>
-      <div>
-        <small>GPS SNAPSHOT</small>
-        <strong>{title}</strong>
-        <span>Last GPS update</span>
-        <b>{formatGpsRecordedAt(trip?.recorded_at)}</b>
-      </div>
-      <i className={gpsLive ? "is-live" : ""} aria-label={gpsLive ? "GPS live" : `GPS ${freshness.toLowerCase()}`} />
-      <p>STALE or OFFLINE coordinates are historical last-known data, never a current/live position.</p>
-    </section>
-  );
-}
-
 export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders }: { userId: string; initialOrderId?: string | null; onHome: () => void; onOrders: () => void }) {
   const [state, setState] = useState<TrackingState>({ kind: "loading" });
   const [selectedOrderId, setSelectedOrderId] = useState(initialOrderId || "");
   const [refreshing, setRefreshing] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const reload = useCallback(async (showLoading = false) => {
     if (showLoading) setState({ kind: "loading" }); else setRefreshing(true);
@@ -87,6 +55,10 @@ export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders 
   const order = selectedOrder ?? state.data.orders[0];
   const assignment = state.data.assignments.find((item) => item.order_id === order.id);
   const trip = state.data.liveTrips.find((item) => item.order_id === order.id);
+  const hasGps = Boolean(trip?.truck_lat != null && trip?.truck_lng != null);
+  const freshness = classifyTrackingFreshness(hasGps ? trip?.recorded_at : null);
+  const gpsLive = hasGps && freshness === "LIVE";
+  const gpsRecordedAt = trip?.recorded_at ? new Date(trip.recorded_at).toLocaleString(undefined, { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "short" }) : "Waiting for GPS update";
 
   return (
     <main className="customer-track-page">
@@ -97,9 +69,10 @@ export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders 
         {state.data.orders.length > 1 && !initialOrderId && <label className="customer-track-route__select"><span>Choose active trip</span><select value={order.id} onChange={(event) => setSelectedOrderId(event.target.value)}>{state.data.orders.map((item) => <option key={item.id} value={item.id}>{item.tracking_id || labelStatus(item.status)}</option>)}</select></label>}
       </section>
 
+      <div className="customer-track-full-map" data-gps-live={gpsLive ? "true" : "false"} aria-label={`Last GPS update ${gpsRecordedAt}`}><CustomerTrackingMap trip={trip} totalDistanceKm={order.distance_km}/></div>
       <CustomerAssignmentCard userId={userId} assignment={assignment} orderVehicleType={order.vehicle_type}/>
-      <CustomerTrackingMap trip={trip} totalDistanceKm={order.distance_km}/>
-      <CustomerGpsSnapshot trip={trip}/>
+      {assignment && <section className="customer-track-contact"><div><strong>{assignment.driver_name || "Assigned Driver"}</strong><span>Verified driver & truck · {assignment.plate_number || "plate pending"}</span></div><div className="customer-track-contact__actions">{assignment.driver_phone ? <a href={`tel:${assignment.driver_phone}`} aria-label={`Call ${assignment.driver_name || "Driver"}`}>Call</a> : <span className="is-disabled">Call</span>}<button type="button" onClick={()=>setChatOpen(true)}>💬 Chat</button></div></section>}
+      {chatOpen && assignment && <CustomerDriverChat userId={userId} orderId={order.id} driverName={assignment.driver_name || "Assigned Driver"} onClose={()=>setChatOpen(false)}/>}
 
       <button type="button" className="customer-track-refresh" onClick={() => void reload(false)} disabled={refreshing}>{refreshing ? "Refreshing…" : "Refresh tracking"}</button>
       <p className="customer-track-security">Read-only Customer tracking. GPS writes remain Driver-only; assignment and trip access stay bound to this signed-in Customer's order.</p>

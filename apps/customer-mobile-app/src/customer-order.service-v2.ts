@@ -88,7 +88,7 @@ export async function createCustomerMobileOrder(input: {
     .single();
   if (profileError) throw new Error(profileError.message);
 
-  const trackingId = `HT-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+  const trackingId = `HT-${new Date().getFullYear()}-${(globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`).replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase()}`;
   const cargoDescription = buildCustomerCargoDescription({
     category: input.cargoCategory,
     packagingType: input.packagingType,
