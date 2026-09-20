@@ -6,6 +6,7 @@ const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 const booking = readFileSync(new URL("../src/CustomerBookingJourney.tsx", import.meta.url), "utf8");
 const home = readFileSync(new URL("../src/CustomerHomePage.tsx", import.meta.url), "utf8");
 const details = readFileSync(new URL("../src/CustomerOrderDetailsPage.tsx", import.meta.url), "utf8");
+const orders = readFileSync(new URL("../src/CustomerOrdersV4Page.tsx", import.meta.url), "utf8");
 const utilities = readFileSync(new URL("../src/CustomerUtilityPages.tsx", import.meta.url), "utf8");
 const auth = readFileSync(new URL("../src/auth/CustomerAuthBoundaryV2.tsx", import.meta.url), "utf8");
 const copy = readFileSync(new URL("../src/customer-final-copy.ts", import.meta.url), "utf8");
@@ -101,4 +102,21 @@ test("Android WebView shell follows the visual viewport, safe areas and keyboard
   assert.match(androidCss, /@media \(min-width: 340px\) and \(max-width: 359px\)/);
   assert.match(androidCss, /@media \(min-width: 390px\)/);
   assert.match(androidCss, /@media \(min-width: 412px\)/);
+});
+
+test("smart mobile layouts keep Orders compact and Tracking immersive", () => {
+  assert.match(orders, /expanded=\{expanded\[order\.id\] \?\? false\}/);
+  assert.match(orders, /customer-v4-actions__track/);
+  assert.match(orders, /customer-v4-details[\s\S]*CustomerAssignmentCard/);
+  assert.match(app, /!bookingOpen && page !== "track" && <BottomNav/);
+  assert.match(androidCss, /\.customer-track-full-map \.customer-track-v4__map/);
+  assert.match(androidCss, /height: clamp\(300px, 46dvh, 430px\)/);
+});
+
+test("booking route uses the live visual viewport and keyboard-first map layout", () => {
+  assert.match(androidCss, /height: calc\(var\(--customer-app-height\) - 126px/);
+  assert.match(androidCss, /\.customer-final-route-step \.map-surface[\s\S]*height: 100%/);
+  assert.match(androidCss, /:has\(\.booking-place-field input:focus\) \.real-start-sheet/);
+  assert.match(androidCss, /\.real-start-sheet[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(androidCss, /\.real-start-sheet button[\s\S]*min-height: 44px/);
 });
