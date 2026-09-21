@@ -85,9 +85,10 @@ test("final responsive CSS explicitly protects all required width classes and sa
 });
 
 test("auth includes Ethiopian phone formats, password visibility, terms and keyboard focus recovery", () => {
-  assert.match(auth, /\+2519XXXXXXXX or 09XXXXXXXX/);
-  assert.match(auth, /\^09\\d\{8\}\$/);
-  assert.match(auth, /\^\\\+2519\\d\{8\}\$/);
+  assert.match(auth, /09XXXXXXXX \/ \+2519XXXXXXXX/);
+  assert.match(auth, /normalizeEthiopianMobile/);
+  assert.match(auth, /sanitizeEthiopianPhoneInput/);
+  assert.match(auth, /maxLength=\{13\}/);
   assert.match(auth, /passwordVisible/);
   assert.match(auth, /termsAccepted/);
   assert.match(auth, /scrollIntoView\(\{ block: "center", behavior: "smooth" \}\)/);
