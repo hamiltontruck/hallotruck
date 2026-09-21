@@ -12,6 +12,8 @@ const auth = readFileSync(new URL("../src/auth/CustomerAuthBoundaryV2.tsx", impo
 const copy = readFileSync(new URL("../src/customer-final-copy.ts", import.meta.url), "utf8");
 const css = readFileSync(new URL("../src/customer-final-ui.css", import.meta.url), "utf8");
 const androidCss = readFileSync(new URL("../src/customer-android-responsive.css", import.meta.url), "utf8");
+const trackingPage = readFileSync(new URL("../src/CustomerTrackingPage.tsx", import.meta.url), "utf8");
+const trackingMap = readFileSync(new URL("../src/CustomerTrackingMap.tsx", import.meta.url), "utf8");
 const main = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
 
 test("final Customer journey exposes every approved screen group", () => {
@@ -39,6 +41,9 @@ test("booking is a real Route Truck Cargo Quote Review Success state machine", (
   assert.match(booking, /setStep\("success"\)/);
   assert.match(booking, /expectedQuoteEtb: fresh\.total_quote_etb/);
   assert.doesNotMatch(booking, /Math\.random\(\).*quote|hardcoded quote/i);
+  assert.match(booking, /const truckFitsCargo = cargoTons <= 0 \|\| cargoTons <= truck\.capacityTons/);
+  assert.match(booking, /const fits = cargoTons <= 0 \|\| cargoTons <= option\.capacityTons/);
+  assert.match(booking, /disabled=\{!truckReady\}/);
 });
 
 test("home and order details are wired to real Customer-owned data services", () => {
@@ -110,7 +115,13 @@ test("smart mobile layouts keep Orders compact and Tracking immersive", () => {
   assert.match(orders, /customer-v4-details[\s\S]*CustomerAssignmentCard/);
   assert.match(app, /!bookingOpen && page !== "track" && <BottomNav/);
   assert.match(androidCss, /\.customer-track-full-map \.customer-track-v4__map/);
-  assert.match(androidCss, /height: clamp\(300px, 46dvh, 430px\)/);
+  assert.match(androidCss, /height: clamp\(360px, 58dvh, 520px\)/);
+  assert.match(androidCss, /customer-v4-order-card \.customer-v4-assignment__body[\s\S]*grid-template-columns: repeat\(2/);
+  assert.doesNotMatch(trackingPage, /<TrackingHeader right=\{labelStatus\(order\.status\)\}/);
+  assert.doesNotMatch(trackingPage, />Refresh tracking<\/button>/);
+  assert.match(trackingMap, /Truck as TruckIcon/);
+  assert.match(trackingMap, /try \{[\s\S]*new maplibregl\.Map/);
+  assert.match(trackingMap, /Interactive map unavailable on this device/);
 });
 
 test("booking route uses the live visual viewport and keyboard-first map layout", () => {
