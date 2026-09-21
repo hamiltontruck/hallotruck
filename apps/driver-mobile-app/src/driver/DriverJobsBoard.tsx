@@ -77,9 +77,8 @@ function ActiveTripCard({ snapshot, onOpenTrip }: { snapshot: DriverWorkboardSna
         <span className="text-[10px] font-bold text-white/55">Customer invoice</span>
         <strong className="text-sm">{formatEtb(trip.priceEtb)}</strong>
       </div>
-      <p className="mt-4 text-xs leading-5 text-white/55">
-        Hojii haaraa fudhachuu dura trip kana xumuri. Live trip controls mobile keessatti slice itti aanu irratti walitti hidhamu.
-      </p>
+      <p className="mt-4 text-xs leading-5 text-white/55">Hojii haaraa fudhachuu dura trip kana xumuri. GPS, route, customer contact fi delivery controls Active Trip keessatti jiru.</p>
+      <button type="button" onClick={onOpenTrip} className="mt-4 min-h-12 w-full rounded-2xl bg-white px-4 text-xs font-black text-halo-navy">Active Trip bani →</button>
     </section>
   );
 }
@@ -139,7 +138,8 @@ export function DriverJobsBoard({ userId, fullName, onOpenTrip = () => undefined
   const [truckOptions, setTruckOptions] = useState<Record<string, DriverTruckOption[]>>({});
   const [selectedTruckIds, setSelectedTruckIds] = useState<Record<string, string>>({});
   const [loadingTrucksFor, setLoadingTrucksFor] = useState<string | null>(null);
-  const [claimingJobId, setClaimingJobId] = useState<string | null>(null);\n  const [dismissedCancellationId, setDismissedCancellationId] = useState<string | null>(null);
+  const [claimingJobId, setClaimingJobId] = useState<string | null>(null);
+  const [dismissedCancellationId, setDismissedCancellationId] = useState<string | null>(null);
   const mountedRef = useRef(false);
   const busyRef = useRef(false);
   const queuedRefreshRef = useRef(false);
@@ -258,6 +258,17 @@ export function DriverJobsBoard({ userId, fullName, onOpenTrip = () => undefined
 
   const jobs = snapshot?.availableJobs ?? [];
   const potential = jobs.reduce((sum, job) => sum + (job.priceEtb ?? 0), 0);
+  const latestCancellation = snapshot?.latestCancellation ?? null;
+  const cancellationDismissed = latestCancellation
+    ? dismissedCancellationId === latestCancellation.id
+      || window.localStorage.getItem(`hallotruck-dismissed-cancellation-${latestCancellation.id}`) === "1"
+    : true;
+
+  function dismissCancellation() {
+    if (!latestCancellation) return;
+    window.localStorage.setItem(`hallotruck-dismissed-cancellation-${latestCancellation.id}`, "1");
+    setDismissedCancellationId(latestCancellation.id);
+  }
 
   return (
     <div className="space-y-5 overflow-x-hidden px-4 pb-7 pt-5 sm:px-6" aria-busy={refreshing}>
@@ -276,6 +287,26 @@ export function DriverJobsBoard({ userId, fullName, onOpenTrip = () => undefined
           {refreshing ? "…" : "Haaromsi"}
         </button>
       </div>
+
+      {snapshot && <DriverAvailabilityCard userId={userId} hasActiveTrip={Boolean(snapshot.activeTrip)} onOpenTrip={onOpenTrip} />}
+
+      {latestCancellation && !cancellationDismissed && <section className="overflow-hidden rounded-[24px] border border-red-200 bg-white shadow-halo-card" data-driver-cancellation-notice>
+        <div className="bg-red-700 px-4 py-4 text-white">
+          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/70">CUSTOMER CANCELLATION</p>
+          <h2 className="mt-1 text-lg font-black">Ajajni geejjibaa kun dhiifameera</h2>
+          <p className="mt-1 text-[10px] text-white/75">{latestCancellation.trackingId}</p>
+        </div>
+        <div className="p-4">
+          <p className="text-xs leading-5 text-halo-muted">Trip/GPS kana dhaabi. Truck hojii biraaf gadhiifameera; payment ykn trip cost Admin/Finance audit keessa darba.</p>
+          <div className="mt-3 rounded-2xl bg-red-50 p-3">
+            <p className="text-[9px] font-black uppercase tracking-wider text-red-700">Sababa customer</p>
+            <p className="mt-1 text-xs font-bold leading-5 text-halo-navy">{latestCancellation.cancellationReason || "—"}</p>
+            {latestCancellation.cancelledAt && <p className="mt-2 text-[10px] text-halo-muted">{new Date(latestCancellation.cancelledAt).toLocaleString()}</p>}
+          </div>
+          <p className="mt-3 text-[10px] text-halo-muted">{latestCancellation.pickupAddress} → {latestCancellation.dropoffAddress}</p>
+          <button type="button" onClick={dismissCancellation} className="mt-4 min-h-11 w-full rounded-xl border border-halo-line bg-white px-4 text-xs font-black text-halo-navy">Beeksisa cufi</button>
+        </div>
+      </section>}
 
       {snapshot && !snapshot.activeTrip && (
         <section className="grid grid-cols-2 gap-3" aria-label="Driver jobs summary">
