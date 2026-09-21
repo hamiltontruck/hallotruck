@@ -6,11 +6,14 @@ const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 const booking = readFileSync(new URL("../src/CustomerBookingJourney.tsx", import.meta.url), "utf8");
 const home = readFileSync(new URL("../src/CustomerHomePage.tsx", import.meta.url), "utf8");
 const details = readFileSync(new URL("../src/CustomerOrderDetailsPage.tsx", import.meta.url), "utf8");
+const orders = readFileSync(new URL("../src/CustomerOrdersV4Page.tsx", import.meta.url), "utf8");
 const utilities = readFileSync(new URL("../src/CustomerUtilityPages.tsx", import.meta.url), "utf8");
 const auth = readFileSync(new URL("../src/auth/CustomerAuthBoundaryV2.tsx", import.meta.url), "utf8");
 const copy = readFileSync(new URL("../src/customer-final-copy.ts", import.meta.url), "utf8");
 const css = readFileSync(new URL("../src/customer-final-ui.css", import.meta.url), "utf8");
 const androidCss = readFileSync(new URL("../src/customer-android-responsive.css", import.meta.url), "utf8");
+const trackingPage = readFileSync(new URL("../src/CustomerTrackingPage.tsx", import.meta.url), "utf8");
+const trackingMap = readFileSync(new URL("../src/CustomerTrackingMap.tsx", import.meta.url), "utf8");
 const main = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
 
 test("final Customer journey exposes every approved screen group", () => {
@@ -30,14 +33,17 @@ test("final Customer journey exposes every approved screen group", () => {
   assert.match(auth, /function AuthForm/);
 });
 
-test("booking is a real Route Cargo Truck Quote Review Success state machine", () => {
-  assert.match(booking, /type BookingStep = "route" \| "cargo" \| "truck" \| "quote" \| "review" \| "success"/);
+test("booking is a real Route Truck Cargo Quote Review Success state machine", () => {
+  assert.match(booking, /type BookingStep = "route" \| "truck" \| "cargo" \| "quote" \| "review" \| "success"/);
   assert.match(booking, /<CustomerBookingMap/);
   assert.match(booking, /loadCustomerQuotePreview/);
   assert.match(booking, /createCustomerMobileOrder/);
   assert.match(booking, /setStep\("success"\)/);
   assert.match(booking, /expectedQuoteEtb: fresh\.total_quote_etb/);
   assert.doesNotMatch(booking, /Math\.random\(\).*quote|hardcoded quote/i);
+  assert.match(booking, /const truckFitsCargo = cargoTons <= 0 \|\| cargoTons <= truck\.capacityTons/);
+  assert.match(booking, /const fits = cargoTons <= 0 \|\| cargoTons <= option\.capacityTons/);
+  assert.match(booking, /disabled=\{!truckReady\}/);
 });
 
 test("home and order details are wired to real Customer-owned data services", () => {
@@ -79,9 +85,10 @@ test("final responsive CSS explicitly protects all required width classes and sa
 });
 
 test("auth includes Ethiopian phone formats, password visibility, terms and keyboard focus recovery", () => {
-  assert.match(auth, /\+2519XXXXXXXX or 09XXXXXXXX/);
-  assert.match(auth, /\^09\\d\{8\}\$/);
-  assert.match(auth, /\^\\\+2519\\d\{8\}\$/);
+  assert.match(auth, /09XXXXXXXX \/ \+2519XXXXXXXX/);
+  assert.match(auth, /normalizeEthiopianMobile/);
+  assert.match(auth, /sanitizeEthiopianPhoneInput/);
+  assert.match(auth, /maxLength=\{13\}/);
   assert.match(auth, /passwordVisible/);
   assert.match(auth, /termsAccepted/);
   assert.match(auth, /scrollIntoView\(\{ block: "center", behavior: "smooth" \}\)/);
@@ -101,4 +108,27 @@ test("Android WebView shell follows the visual viewport, safe areas and keyboard
   assert.match(androidCss, /@media \(min-width: 340px\) and \(max-width: 359px\)/);
   assert.match(androidCss, /@media \(min-width: 390px\)/);
   assert.match(androidCss, /@media \(min-width: 412px\)/);
+});
+
+test("smart mobile layouts keep Orders compact and Tracking immersive", () => {
+  assert.match(orders, /expanded=\{expanded\[order\.id\] \?\? false\}/);
+  assert.match(orders, /customer-v4-actions__track/);
+  assert.match(orders, /customer-v4-details[\s\S]*CustomerAssignmentCard/);
+  assert.match(app, /!bookingOpen && page !== "track" && <BottomNav/);
+  assert.match(androidCss, /\.customer-track-full-map \.customer-track-v4__map/);
+  assert.match(androidCss, /height: clamp\(360px, 58dvh, 520px\)/);
+  assert.match(androidCss, /customer-v4-order-card \.customer-v4-assignment__body[\s\S]*grid-template-columns: repeat\(2/);
+  assert.doesNotMatch(trackingPage, /<TrackingHeader right=\{labelStatus\(order\.status\)\}/);
+  assert.doesNotMatch(trackingPage, />Refresh tracking<\/button>/);
+  assert.match(trackingMap, /Truck as TruckIcon/);
+  assert.match(trackingMap, /try \{[\s\S]*new maplibregl\.Map/);
+  assert.match(trackingMap, /Interactive map unavailable on this device/);
+});
+
+test("booking route uses the live visual viewport and keyboard-first map layout", () => {
+  assert.match(androidCss, /height: calc\(var\(--customer-app-height\) - 126px/);
+  assert.match(androidCss, /\.customer-final-route-step \.map-surface[\s\S]*height: 100%/);
+  assert.match(androidCss, /:has\(\.booking-place-field input:focus\) \.real-start-sheet/);
+  assert.match(androidCss, /\.real-start-sheet[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(androidCss, /\.real-start-sheet button[\s\S]*min-height: 44px/);
 });

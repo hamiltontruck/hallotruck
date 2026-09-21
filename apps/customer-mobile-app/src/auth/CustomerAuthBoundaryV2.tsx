@@ -22,6 +22,13 @@ import {
   customerSupabaseConfigured,
 } from "./customer-supabase";
 import { roleDestination } from "./role-destination";
+import {
+  isValidCustomerFullName,
+  isValidSixDigitPin,
+  normalizeEthiopianMobile,
+  sanitizeCustomerFullName,
+  sanitizeEthiopianPhoneInput,
+} from "./customer-auth-validation";
 
 export type CustomerIdentity = {
   userId: string;
@@ -49,13 +56,13 @@ const COPY = {
     customerOnly: "CUSTOMER QOFA",
     createTitle: "Akkaawuntii HALLO kee uumi",
     signInTitle: "Baga nagaan deebite",
-    createDescription: "Maqaa, lakkoofsa bilbilaa Itoophiyaa, imeelii fi password fayyadamuun akkaawuntii Customer uumi.",
+    createDescription: "Maqaa, lakkoofsa bilbilaa Itoophiyaa, imeelii fi PIN lakkoofsa 6 fayyadamuun akkaawuntii Customer uumi.",
     signInDescription: "Gara akkaawuntii keetti seeni.",
     language: "Afaan",
     fullName: "Maqaa guutuu",
     phone: "Bilbila",
     email: "Imeelii",
-    password: "Password",
+    password: "PIN lakkoofsa 6",
     continueWithGoogle: "Google'n itti fufi",
     creating: "AKKAAWUNTII UUMAA JIRA…",
     verifying: "AKKAAWUNTII MIRKANEESSAA JIRA…",
@@ -65,13 +72,13 @@ const COPY = {
     invalidLogin: "Imeeliin ykn password dogoggora.",
     emailNotConfirmed: "Seenuu dura imeelii kee mirkaneessi.",
     alreadyRegistered: "Imeelii kanaan akkaawuntiin duraan jira.",
-    weakPassword: "Password cimaa qubee 6 ol qabu fayyadami.",
+    weakPassword: "PIN lakkoofsa 6 qofa galchi.",
     network: "Server bira ga'uun hin danda'amne. Internet kee ilaali.",
     authUnavailable: "Authentication yeroo ammaatti hin hojjatu. Irra deebi'ii yaali.",
     phoneInvalid: "Lakkoofsa bilbilaa Itoophiyaa sirrii galchi.",
     nameInvalid: "Maqaa guutuu kee galchi.",
     emailInvalid: "Imeelii sirrii galchi.",
-    passwordInvalid: "Password qubee 6 ol qabu fayyadami.",
+    passwordInvalid: "PIN lakkoofsa 6 qofa galchi.",
     createdNotice: "Akkaawuntiin uumameera. Imeelii kee mirkaneessi; sana booda seeni.",
     retry: "Mirkaneessa irra deebi'i",
     signOut: "Ba'i",
@@ -97,13 +104,13 @@ const COPY = {
     customerOnly: "CUSTOMER ONLY",
     createTitle: "Create your HALLO account",
     signInTitle: "Welcome Back",
-    createDescription: "Create a Customer account using your name, Ethiopian phone number, email and password.",
+    createDescription: "Create a Customer account using your name, Ethiopian phone number, email and 6-digit PIN.",
     signInDescription: "Sign in to your account",
     language: "Language",
     fullName: "Full name",
     phone: "Phone",
     email: "Email address",
-    password: "Password",
+    password: "6-digit PIN",
     continueWithGoogle: "Continue with Google",
     creating: "CREATING ACCOUNT…",
     verifying: "VERIFYING ACCOUNT…",
@@ -113,13 +120,13 @@ const COPY = {
     invalidLogin: "The email or password is incorrect.",
     emailNotConfirmed: "Confirm your email before signing in.",
     alreadyRegistered: "An account already exists for this email.",
-    weakPassword: "Use a stronger password with at least 6 characters.",
+    weakPassword: "Enter exactly 6 digits for your PIN.",
     network: "The server could not be reached. Check your internet connection.",
     authUnavailable: "Authentication is temporarily unavailable. Please try again.",
     phoneInvalid: "Enter a valid Ethiopian mobile number.",
     nameInvalid: "Enter your full name.",
     emailInvalid: "Enter a valid email address.",
-    passwordInvalid: "Use a password with at least 6 characters.",
+    passwordInvalid: "Enter exactly 6 digits for your PIN.",
     createdNotice: "Account created. Confirm your email, then sign in.",
     retry: "Retry verification",
     signOut: "Sign out",
@@ -145,13 +152,13 @@ const COPY = {
     customerOnly: "ለደንበኛ ብቻ",
     createTitle: "የHALLO መለያዎን ይፍጠሩ",
     signInTitle: "እንኳን ደህና መጡ",
-    createDescription: "ስምዎን፣ የኢትዮጵያ ስልክ ቁጥር፣ ኢሜይል እና የይለፍ ቃል በመጠቀም የCustomer መለያ ይፍጠሩ።",
+    createDescription: "ስምዎን፣ የኢትዮጵያ ስልክ ቁጥር፣ ኢሜይል እና ባለ 6 አሃዝ PIN በመጠቀም የCustomer መለያ ይፍጠሩ።",
     signInDescription: "ወደ መለያዎ ይግቡ።",
     language: "ቋንቋ",
     fullName: "ሙሉ ስም",
     phone: "ስልክ",
     email: "ኢሜይል",
-    password: "የይለፍ ቃል",
+    password: "ባለ 6 አሃዝ PIN",
     continueWithGoogle: "በGoogle ይቀጥሉ",
     creating: "መለያ በመፍጠር ላይ…",
     verifying: "መለያ በማረጋገጥ ላይ…",
@@ -161,13 +168,13 @@ const COPY = {
     invalidLogin: "ኢሜይሉ ወይም የይለፍ ቃሉ ትክክል አይደለም።",
     emailNotConfirmed: "ከመግባትዎ በፊት ኢሜይልዎን ያረጋግጡ።",
     alreadyRegistered: "በዚህ ኢሜይል መለያ አስቀድሞ አለ።",
-    weakPassword: "ቢያንስ 6 ፊደላት ያሉት ጠንካራ የይለፍ ቃል ይጠቀሙ።",
+    weakPassword: "ባለ 6 አሃዝ PIN ብቻ ያስገቡ።",
     network: "Server ላይ መድረስ አልተቻለም። ኢንተርኔትዎን ይፈትሹ።",
     authUnavailable: "Authentication ለጊዜው አይገኝም። እንደገና ይሞክሩ።",
     phoneInvalid: "ትክክለኛ የኢትዮጵያ ሞባይል ቁጥር ያስገቡ።",
     nameInvalid: "ሙሉ ስምዎን ያስገቡ።",
     emailInvalid: "ትክክለኛ ኢሜይል ያስገቡ።",
-    passwordInvalid: "ቢያንስ 6 ፊደላት ያሉት የይለፍ ቃል ይጠቀሙ።",
+    passwordInvalid: "ባለ 6 አሃዝ PIN ብቻ ያስገቡ።",
     createdNotice: "መለያ ተፈጥሯል። ኢሜይልዎን ያረጋግጡ፣ ከዚያ ይግቡ።",
     retry: "እንደገና ያረጋግጡ",
     signOut: "ውጣ",
@@ -309,28 +316,39 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [resetFeedback, setResetFeedback] = useState<string | null>(null);
+  const [resetFeedback, setResetFeedback] = useState<{ message: string; kind: "success" | "error" } | null>(null);
   const [resetBusy, setResetBusy] = useState(false);
+  const [touched, setTouched] = useState({ fullName: false, phone: false, email: false, password: false });
   const submitLock = useRef(false);
   const text = COPY[language];
+  const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
+  const pinValid = isValidSixDigitPin(password);
+  const nameValid = isValidCustomerFullName(fullName);
+  const phoneValid = normalizeEthiopianMobile(phone) !== null;
+  const formReady = mode === "signup"
+    ? nameValid && phoneValid && emailValid && pinValid && termsAccepted
+    : emailValid && pinValid;
 
   async function resetPassword() {
     if (busy || resetBusy || !customerSupabase) return;
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) { setResetFeedback(text.emailInvalid); return; }
+    if (!emailValid) { setTouched((current) => ({ ...current, email: true })); setResetFeedback({ message: text.emailInvalid, kind: "error" }); return; }
     setResetBusy(true);
     try {
       const { error: resetError } = await customerSupabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: new URL("../", window.location.href).href,
       });
       if (resetError) throw resetError;
-      setResetFeedback(language === "en" ? "If an account exists for this email, a reset link will arrive shortly." : language === "om" ? "Imeelii kanaan akkaawuntiin yoo jiraate, linkiin haaromsuu siif ergama." : "በዚህ ኢሜይል መለያ ካለ፣ የማደሻ አገናኝ ይደርሳል።");
-    } catch { setResetFeedback(text.authUnavailable); }
+      setResetFeedback({ message: language === "en" ? "If an account exists for this email, a reset link will arrive shortly." : language === "om" ? "Imeelii kanaan akkaawuntiin yoo jiraate, linkiin haaromsuu siif ergama." : "በዚህ ኢሜይል መለያ ካለ፣ የማደሻ አገናኝ ይደርሳል።", kind: "success" });
+    } catch { setResetFeedback({ message: text.authUnavailable, kind: "error" }); }
     finally { setResetBusy(false); }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || submitLock.current || (mode === "signup" && !termsAccepted)) return;
+    if (busy || submitLock.current || !formReady) {
+      setTouched({ fullName: mode === "signup", phone: mode === "signup", email: true, password: true });
+      return;
+    }
     submitLock.current = true;
     try {
       if (mode === "signup") await onSignUp(fullName, phone, email, password);
@@ -355,17 +373,17 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
           <p>{mode === "signup" ? text.createDescription : text.signInDescription}</p>
           {error && <div className="customer-entry-alert is-error" role="alert">{error}</div>}
           {notice && <div className="customer-entry-alert is-success" role="status">{notice}</div>}
-          {resetFeedback && <div className="customer-entry-alert" role="status">{resetFeedback}</div>}
+          {resetFeedback && <div className={`customer-entry-alert is-${resetFeedback.kind}`} role={resetFeedback.kind === "error" ? "alert" : "status"}>{resetFeedback.message}</div>}
           <form className="customer-entry-form" onSubmit={submit} aria-busy={busy}>
             {mode === "signup" && <>
-              <label><span>{text.fullName}</span><input type="text" autoComplete="name" required disabled={busy} value={fullName} onFocus={bringIntoView} onChange={(event) => setFullName(event.target.value)} /></label>
-              <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="+2519XXXXXXXX or 09XXXXXXXX" value={phone} onFocus={bringIntoView} onChange={(event) => setPhone(event.target.value)} /></label>
+              <label><span>{text.fullName}</span><input type="text" autoComplete="name" maxLength={80} required disabled={busy} value={fullName} aria-invalid={touched.fullName && !nameValid} aria-describedby="customer-name-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, fullName: true }))} onChange={(event) => setFullName(sanitizeCustomerFullName(event.target.value))} />{touched.fullName && !nameValid && <small id="customer-name-error" className="customer-entry-field-error">{text.nameInvalid}</small>}</label>
+              <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" maxLength={13} required disabled={busy} placeholder="09XXXXXXXX / +2519XXXXXXXX" value={phone} aria-invalid={touched.phone && !phoneValid} aria-describedby="customer-phone-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, phone: true }))} onChange={(event) => setPhone(sanitizeEthiopianPhoneInput(event.target.value))} />{touched.phone && !phoneValid && <small id="customer-phone-error" className="customer-entry-field-error">{text.phoneInvalid}</small>}</label>
             </>}
-            <label><span className="customer-entry-sr-only">{text.email}</span><div className="customer-entry-field"><Mail size={19} aria-hidden="true"/><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={text.email} value={email} onFocus={bringIntoView} onChange={(event) => setEmail(event.target.value)} /></div></label>
-            <label><span className="customer-entry-sr-only">{text.password}</span><div className="customer-entry-field"><LockKeyhole size={19} aria-hidden="true"/><input placeholder={text.password} type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onFocus={bringIntoView} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={19}/> : <Eye size={19}/>}</button></div></label>
+            <label><span className="customer-entry-sr-only">{text.email}</span><div className="customer-entry-field"><Mail size={19} aria-hidden="true"/><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={text.email} value={email} aria-invalid={touched.email && !emailValid} aria-describedby="customer-email-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, email: true }))} onChange={(event) => { setEmail(event.target.value.replace(/\s/g, "")); setResetFeedback(null); }} /></div>{touched.email && !emailValid && <small id="customer-email-error" className="customer-entry-field-error">{text.emailInvalid}</small>}</label>
+            <label><span className="customer-entry-sr-only">{text.password}</span><div className="customer-entry-field"><LockKeyhole size={19} aria-hidden="true"/><input placeholder={text.password} type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} required disabled={busy} value={password} aria-invalid={touched.password && !pinValid} aria-describedby="customer-pin-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, password: true }))} onChange={(event) => setPassword(event.target.value.replace(/\D/g, "").slice(0, 6))} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={19}/> : <Eye size={19}/>}</button></div>{touched.password && !pinValid && <small id="customer-pin-error" className="customer-entry-field-error">{text.passwordInvalid}</small>}</label>
             {mode === "login" && <button type="button" className="customer-entry-forgot" disabled={busy || resetBusy} onClick={() => void resetPassword()}>{language === "om" ? "Password dagattee?" : language === "am" ? "የይለፍ ቃል ረሱ?" : "Forgot Password?"}</button>}
             {mode === "signup" && <label className="customer-entry-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} disabled={busy}/><span>{language === "om" ? "Ulaagaa fi Haala irratti walii gala" : language === "am" ? "በውሎች እና ሁኔታዎች እስማማለሁ" : "I agree to the Terms & Conditions"}</span></label>}
-            <button className="customer-entry-primary" type="submit" disabled={busy || (mode === "signup" && !termsAccepted)}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
+            <button className="customer-entry-primary" type="submit" disabled={busy || !formReady}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
           </form>
           {mode === "login" && <>
             <div className="customer-entry-divider">{language === "om" ? "ykn" : language === "am" ? "ወይም" : "or"}</div>
@@ -373,7 +391,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
           </>}
           <div className="customer-entry-mode">
             <span>{mode === "login" ? (language === "om" ? "Akkaawuntii hin qabduu?" : language === "am" ? "መለያ የለዎትም?" : "Don't have an account?") : (language === "om" ? "Akkaawuntii qabdaa?" : language === "am" ? "መለያ አለዎት?" : "Already have an account?")}</span>
-            <button type="button" disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setPassword(""); setTermsAccepted(false); }}>
+            <button type="button" disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setPassword(""); setTermsAccepted(false); setResetFeedback(null); setTouched({ fullName: false, phone: false, email: false, password: false }); }}>
               {mode === "login" ? (language === "om" ? "Galmaa'i" : language === "am" ? "ይመዝገቡ" : "Create Account") : text.signIn}
             </button>
           </div>
@@ -496,7 +514,9 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (error) throw error;
       await resolveSession(data.session);
     } catch (error) {
-      setState({ kind: "signed-out", error: friendlyAuthError(error instanceof Error ? error.message : undefined, language), notice: null });
+      const message = error instanceof Error ? error.message : undefined;
+      const localValidation = message && [text.emailInvalid, text.passwordInvalid].includes(message as never);
+      setState({ kind: "signed-out", error: localValidation ? message! : friendlyAuthError(message, language), notice: null });
     } finally { loginLockRef.current = false; setAuthenticating(false); }
   }
 
@@ -508,15 +528,11 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("network");
       const cleanName = fullName.trim();
       const cleanEmail = email.trim().toLowerCase();
-      if (cleanName.length < 2) throw new Error(text.nameInvalid);
+      if (!isValidCustomerFullName(cleanName)) throw new Error(text.nameInvalid);
       if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) throw new Error(text.emailInvalid);
-      if (password.length < 6) throw new Error(text.passwordInvalid);
-      const compact = phone.replace(/[\s()-]/g, "");
-      let normalizedPhone = "";
-      if (/^09\d{8}$/.test(compact)) normalizedPhone = `+251${compact.slice(1)}`;
-      else if (/^2519\d{8}$/.test(compact)) normalizedPhone = `+${compact}`;
-      else if (/^\+2519\d{8}$/.test(compact)) normalizedPhone = compact;
-      else throw new Error(text.phoneInvalid);
+      if (!isValidSixDigitPin(password)) throw new Error(text.passwordInvalid);
+      const normalizedPhone = normalizeEthiopianMobile(phone);
+      if (!normalizedPhone) throw new Error(text.phoneInvalid);
 
       const { data, error } = await client.auth.signUp({
         email: cleanEmail,

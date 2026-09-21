@@ -24,8 +24,8 @@ import { CUSTOMER_TRUCKS, customerTruckByKey, type CustomerTruckOption } from ".
 import { useCustomerLanguage } from "./customer-language";
 import { getCustomerFinalCopy } from "./customer-final-copy";
 
-type BookingStep = "route" | "cargo" | "truck" | "quote" | "review" | "success";
-const STEPS: Exclude<BookingStep, "success">[] = ["route", "cargo", "truck", "quote", "review"];
+type BookingStep = "route" | "truck" | "cargo" | "quote" | "review" | "success";
+const STEPS: Exclude<BookingStep, "success">[] = ["route", "truck", "cargo", "quote", "review"];
 
 function formatEtb(amount: number) {
   return `ETB ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount)}`;
@@ -107,7 +107,8 @@ export function CustomerBookingJourney({
   const routeReady = Boolean(pickupPlace && dropoffPlace && routePreview && routePreview.distance_km > 0 && !routeLoading && !routeError);
   const cargoDetailsError = validateCustomerCargoDetails({ packagingType, vehicleType: truck.label });
   const cargoReady = Boolean(cargoCategory && packagingType && cargoTons > 0 && !cargoDetailsError);
-  const truckReady = cargoReady && cargoTons <= truck.capacityTons;
+  const truckFitsCargo = cargoTons <= 0 || cargoTons <= truck.capacityTons;
+  const truckReady = cargoReady && truckFitsCargo;
   const quoteReady = Boolean(quote && quote.total_quote_etb > 0 && !quoteLoading && !quoteError);
   const note = [cargoNotes.trim(), specialRequirements.trim()].filter(Boolean).join(" · ");
   const activeIndex = step === "success" ? STEPS.length : STEPS.indexOf(step);
@@ -269,7 +270,7 @@ export function CustomerBookingJourney({
             onDropoffSelect={onDropoffSelect}
             onSwap={onSwap}
             onReset={onReset}
-            onBook={() => { if (routeReady) setStep("cargo"); }}
+            onBook={() => { if (routeReady) setStep("truck"); }}
           />
         </div>
       )}
@@ -287,17 +288,18 @@ export function CustomerBookingJourney({
           <label className="customer-final-field"><span>{c.specialRequirements}</span><textarea rows={3} maxLength={200} value={specialRequirements} onChange={(event) => setSpecialRequirements(event.target.value)} placeholder={c.requirementsPlaceholder} /></label>
           {cargoDetailsError && <p className="customer-final-error">{cargoCopy.errors[cargoDetailsError]}</p>}
           {cargoQuantity && cargoTons <= 0 && <p className="customer-final-error">{c.weightRequired}</p>}
-          <button type="button" className="customer-final-primary" disabled={!cargoReady} onClick={() => setStep("truck")}>{c.next} →</button>
+          {cargoReady && !truckFitsCargo && <p className="customer-final-error">{c.weightExceeds}</p>}
+          <button type="button" className="customer-final-primary" disabled={!truckReady} onClick={() => void goToQuote()}>{c.next} →</button>
         </main>
       )}
 
       {step === "truck" && (
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepTruckHelp}</p>
-          <div className="customer-final-truck-filter"><button type="button" className="active">{c.all}</button><span>{cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} ton</span></div>
+          <div className="customer-final-truck-filter"><button type="button" className="active">{c.all}</button><span>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} ton` : "—"}</span></div>
           <div className="customer-final-truck-list">
             {CUSTOMER_TRUCKS.map((option) => {
-              const fits = cargoTons > 0 && cargoTons <= option.capacityTons;
+              const fits = cargoTons <= 0 || cargoTons <= option.capacityTons;
               return <button type="button" key={option.key} className={`customer-final-truck-row ${selectedTruck === option.key ? "selected" : ""}`} disabled={!fits} onClick={() => onTruckChange(option.key)}>
                 <TruckImage truck={option} />
                 <span><strong>{option.label}</strong><small>{c.maxLoad} {option.capacityTons} Ton</small></span>
@@ -305,8 +307,7 @@ export function CustomerBookingJourney({
               </button>;
             })}
           </div>
-          {!truckReady && <p className="customer-final-error">{c.weightExceeds}</p>}
-          <button type="button" className="customer-final-primary" disabled={!truckReady} onClick={() => void goToQuote()}>{c.next} →</button>
+          <button type="button" className="customer-final-primary" onClick={() => setStep("cargo")}>{c.next} →</button>
         </main>
       )}
 

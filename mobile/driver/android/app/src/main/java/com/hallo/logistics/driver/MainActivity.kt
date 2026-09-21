@@ -24,6 +24,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.hallo.logistics.driver.databinding.ActivityMainBinding
+import com.hallo.logistics.driver.databinding.FragmentHomeBinding
+import com.hallo.logistics.driver.databinding.ItemJobCardBinding
 import com.hallo.logistics.driver.tracking.HalloLocationService
 import io.github.jan.supabase.auth.handleDeeplinks
 import java.text.NumberFormat
@@ -31,6 +33,7 @@ import kotlinx.coroutines.launch
 
 class MainActivity:AppCompatActivity(){
     private lateinit var b:ActivityMainBinding
+    private lateinit var home:FragmentHomeBinding
     private lateinit var authUi:DriverAuthUiController
     private val vm:DriverSessionViewModel by viewModels()
     private var pendingKey=""
@@ -49,6 +52,8 @@ class MainActivity:AppCompatActivity(){
         super.onCreate(savedInstanceState)
         if(savedInstanceState==null)DriverLocaleManager.applySaved(this)
         b=ActivityMainBinding.inflate(layoutInflater);setContentView(b.root)
+        b.pageHome.removeAllViews()
+        home=FragmentHomeBinding.inflate(layoutInflater,b.pageHome,true)
         authUi=DriverAuthUiController(
             activity=this,
             host=b.authPanel,
@@ -74,7 +79,12 @@ class MainActivity:AppCompatActivity(){
 
     private fun configureListeners(){
         b.languageAction.setOnClickListener{showLanguageDialog()}
-        b.signOut.setOnClickListener{vm.signOut()};b.refresh.setOnClickListener{vm.refresh()}
+        b.signOut.setOnClickListener{vm.signOut()}
+        home.refresh.setOnClickListener{vm.refresh()}
+        home.btnFindJobs.setOnClickListener{vm.page(DriverPage.JOBS)}
+        home.btnActiveTrip.setOnClickListener{vm.page(DriverPage.TRIP)}
+        home.btnWallet.setOnClickListener{vm.page(DriverPage.WALLET)}
+        home.btnDocuments.setOnClickListener{vm.page(DriverPage.ONBOARDING)}
         b.documentsAction.setOnClickListener{vm.page(DriverPage.ONBOARDING)};b.notificationsAction.setOnClickListener{vm.page(DriverPage.NOTIFICATIONS)};b.profileDocuments.setOnClickListener{vm.page(DriverPage.ONBOARDING)}
         b.bottomNavigation.setOnItemSelectedListener{item->vm.page(when(item.itemId){R.id.nav_jobs->DriverPage.JOBS;R.id.nav_trip->DriverPage.TRIP;R.id.nav_wallet->DriverPage.WALLET;R.id.nav_profile->DriverPage.PROFILE;else->DriverPage.HOME});true}
         b.saveVehicle.setOnClickListener{vm.saveVehicle(textOf(b.plate),VEHICLE_TYPES[b.vehicleType.selectedItemPosition],textOf(b.capacity).toDoubleOrNull()?:0.0)}
@@ -109,7 +119,7 @@ class MainActivity:AppCompatActivity(){
         val page=if(state.access==DriverAccess.APPROVED)state.page else DriverPage.ONBOARDING;showPage(page)
         b.accessState.text=getString(R.string.verification_format,localStatus(state.profile?.driverStatus))
         val docs=DriverDocumentPolicy.completion(state.documents,state.trucks.firstOrNull()?.id)
-        b.homeAvailableJobs.text=state.jobs.size.toString();b.homeActiveTrip.text=state.activeTrip?.trackingId?:getString(R.string.none);b.homeDocuments.text="${docs.first}/${docs.second}"
+        home.homeAvailableJobs.text=state.jobs.size.toString();home.homeActiveTrip.text=state.activeTrip?.trackingId?:getString(R.string.none);home.homeDocuments.text="${docs.first}/${docs.second}"
         renderAssignment(state);renderJobs(state);renderTrip(state);renderWallet(state);renderNotifications(state);renderProfile(state)
         b.documentState.text=documentSummary(state.documents,state.trucks.firstOrNull()?.id)
     }
@@ -125,8 +135,8 @@ class MainActivity:AppCompatActivity(){
 
     private fun renderAssignment(state:DriverUiState){
         val trip=state.activeTrip;val truck=state.trucks.firstOrNull{it.id==trip?.truckId}?:state.trucks.firstOrNull()
-        b.homeAssignment.text=if(trip==null)getString(R.string.no_active_assignment) else getString(R.string.assignment_format,trip.trackingId.orDash(),localStatus(trip.status),trip.pickup.orDash(),trip.dropoff.orDash(),truck?.plate.orDash(),truck?.vehicleType?:trip.vehicleType.orDash())
-        val w=state.wallet;b.homeEarnings.text=if(w==null)getString(R.string.earnings_summary_unavailable) else buildString{append(getString(R.string.home_earnings_format,money(w.grossReleased),money(w.commissionDue),money(w.availableDeposit)));if(DriverFinancePresentationPolicy.blocked(state.commission,w))append("\n").append(getString(R.string.job_locked))}
+        home.homeAssignment.text=if(trip==null)getString(R.string.no_active_assignment) else getString(R.string.assignment_format,trip.trackingId.orDash(),localStatus(trip.status),trip.pickup.orDash(),trip.dropoff.orDash(),truck?.plate.orDash(),truck?.vehicleType?:trip.vehicleType.orDash())
+        val w=state.wallet;home.homeEarnings.text=if(w==null)getString(R.string.earnings_summary_unavailable) else buildString{append(getString(R.string.home_earnings_format,money(w.grossReleased),money(w.commissionDue),money(w.availableDeposit)));if(DriverFinancePresentationPolicy.blocked(state.commission,w))append("\n").append(getString(R.string.job_locked))}
     }
 
     private fun renderJobs(state:DriverUiState){
@@ -135,9 +145,18 @@ class MainActivity:AppCompatActivity(){
         if(state.activeTrip!=null){b.jobsList.addView(infoCard(getString(R.string.finish_before_next,state.activeTrip.trackingId.orDash())));return}
         if(state.jobs.isEmpty()){b.jobsList.addView(infoCard(getString(R.string.no_jobs)));return}
         state.jobs.forEach{job->
-            val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(14))}
-            box.addView(text(getString(R.string.job_card_format,job.trackingId.orDash(),job.pickup.orDash(),job.dropoff.orDash(),job.vehicleType.orDash(),job.distanceKm?.toString()?:"—",money(job.priceEtb)),15f))
-            box.addView(button(getString(R.string.choose_truck_accept)){chooseTruck(job)});b.jobsList.addView(card(box))
+            val item=ItemJobCardBinding.inflate(layoutInflater,b.jobsList,false)
+            item.tvRoute.text="${job.pickup.orDash()} → ${job.dropoff.orDash()}"
+            item.tvCargoInfo.text=listOfNotNull(
+                job.cargoDescription?.takeIf{it.isNotBlank()},
+                job.vehicleType?.takeIf{it.isNotBlank()},
+                job.distanceKm?.let{"${NumberFormat.getNumberInstance().format(it)} km"},
+            ).joinToString(" • ").ifBlank{getString(R.string.available_jobs_help)}
+            item.tvRate.text=money(job.priceEtb)
+            item.tvPickupTime.text=job.trackingId.orDash()
+            item.btnJobAction.text=getString(R.string.choose_truck_accept)
+            item.btnJobAction.setOnClickListener{chooseTruck(job)}
+            b.jobsList.addView(item.root)
         }
     }
 
