@@ -15,6 +15,7 @@ import {
 import { DriverCommissionPaymentPanel } from "./DriverCommissionPaymentPanel";
 import type { DriverCommissionPayment } from "./driver-commission-payment.model";
 import { fetchDriverCommissionPayments } from "./driver-commission-payment.service";
+import { DriverPendingPaymentActions } from "./DriverPendingPaymentActions";
 
 type SourceErrors = {
   financial: string | null;
@@ -174,6 +175,8 @@ export function DriverWalletView({ userId }: { userId: string }) {
       <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Driver finance</p><h1 className="mt-1 text-2xl font-black text-halo-navy">Wallet fi galii kee</h1><p className="mt-2 text-xs leading-5 text-halo-muted">Customer collection, deposit, commission fi released earnings walitti hin makamu.</p></div>
       <button type="button" onClick={() => void load(true)} disabled={refreshing} className="min-h-11 shrink-0 rounded-2xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-halo-card disabled:opacity-60">{refreshing ? "Fe'aa…" : "Refresh"}</button>
     </div>
+
+    <DriverPendingPaymentActions userId={userId} />
 
     <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-halo-blue to-halo-blue-dark p-5 text-white shadow-halo-float">
       <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full border-[25px] border-white/5" />
