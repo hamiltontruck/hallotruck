@@ -9,6 +9,7 @@
   },
   "include": [
     "src/auth/customer-access-policy.ts",
+    "src/auth/customer-auth-validation.ts",
     "src/auth/role-destination.ts"
   ]
 }
