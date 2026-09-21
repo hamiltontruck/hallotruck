@@ -10,6 +10,7 @@ import type {
   DriverTruckOption,
   DriverWorkboardSnapshot,
 } from "./driver-jobs.model";
+import { DriverAvailabilityCard } from "./DriverAvailabilityCard";
 
 const MARKET_REFRESH_MS = 20_000;
 
@@ -47,7 +48,7 @@ function JobRoute({ job }: { job: DriverAvailableJob }) {
   );
 }
 
-function ActiveTripCard({ snapshot }: { snapshot: DriverWorkboardSnapshot }) {
+function ActiveTripCard({ snapshot, onOpenTrip }: { snapshot: DriverWorkboardSnapshot; onOpenTrip: () => void }) {
   const trip = snapshot.activeTrip;
   if (!trip) return null;
 
@@ -131,14 +132,14 @@ function TruckSelector({
   );
 }
 
-export function DriverJobsBoard({ userId, fullName }: { userId: string; fullName: string }) {
+export function DriverJobsBoard({ userId, fullName, onOpenTrip = () => undefined }: { userId: string; fullName: string; onOpenTrip?: () => void }) {
   const [snapshot, setSnapshot] = useState<DriverWorkboardSnapshot | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [truckOptions, setTruckOptions] = useState<Record<string, DriverTruckOption[]>>({});
   const [selectedTruckIds, setSelectedTruckIds] = useState<Record<string, string>>({});
   const [loadingTrucksFor, setLoadingTrucksFor] = useState<string | null>(null);
-  const [claimingJobId, setClaimingJobId] = useState<string | null>(null);
+  const [claimingJobId, setClaimingJobId] = useState<string | null>(null);\n  const [dismissedCancellationId, setDismissedCancellationId] = useState<string | null>(null);
   const mountedRef = useRef(false);
   const busyRef = useRef(false);
   const queuedRefreshRef = useRef(false);
@@ -304,7 +305,7 @@ export function DriverJobsBoard({ userId, fullName }: { userId: string; fullName
         </section>
       )}
 
-      {snapshot?.activeTrip && <ActiveTripCard snapshot={snapshot} />}
+      {snapshot?.activeTrip && <ActiveTripCard snapshot={snapshot} onOpenTrip={onOpenTrip} />}
 
       {snapshot && !snapshot.activeTrip && jobs.length === 0 && (
         <section className="rounded-[24px] border border-halo-line bg-white p-8 text-center shadow-halo-card">
