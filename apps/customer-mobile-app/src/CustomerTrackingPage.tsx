@@ -62,9 +62,8 @@ export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders 
 
   return (
     <main className="customer-track-page">
-      <TrackingHeader right={labelStatus(order.status)}/>
       <section className="customer-track-route">
-        <div className="customer-track-route__top"><div><small>TRACKING / ORDER ID</small><strong>{order.tracking_id || order.id}</strong></div><button type="button" onClick={onOrders} aria-label="Close live tracking">×</button></div>
+        <div className="customer-track-route__top"><div><small>TRACKING / ORDER ID</small><strong>{order.tracking_id || order.id}</strong></div><div className="customer-track-route__controls"><b className="customer-track-route__status">{labelStatus(order.status)}</b><button type="button" onClick={onOrders} aria-label="Close live tracking">×</button></div></div>
         <div className="customer-track-route__path"><div><small>Pickup</small><strong>{order.pickup_address || "Pickup pending"}</strong></div><span>→</span><div><small>Drop-off</small><strong>{order.dropoff_address || "Drop-off pending"}</strong></div></div>
         {state.data.orders.length > 1 && !initialOrderId && <label className="customer-track-route__select"><span>Choose active trip</span><select value={order.id} onChange={(event) => setSelectedOrderId(event.target.value)}>{state.data.orders.map((item) => <option key={item.id} value={item.id}>{item.tracking_id || labelStatus(item.status)}</option>)}</select></label>}
       </section>
@@ -74,7 +73,7 @@ export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders 
       {assignment && <section className="customer-track-contact"><div><strong>{assignment.driver_name || "Assigned Driver"}</strong><span>Verified driver & truck · {assignment.plate_number || "plate pending"}</span></div><div className="customer-track-contact__actions">{assignment.driver_phone ? <a href={`tel:${assignment.driver_phone}`} aria-label={`Call ${assignment.driver_name || "Driver"}`}>Call</a> : <span className="is-disabled">Call</span>}<button type="button" onClick={()=>setChatOpen(true)}>💬 Chat</button></div></section>}
       {chatOpen && assignment && <CustomerDriverChat userId={userId} orderId={order.id} driverName={assignment.driver_name || "Assigned Driver"} onClose={()=>setChatOpen(false)}/>}
 
-      <button type="button" className="customer-track-refresh" onClick={() => void reload(false)} disabled={refreshing}>{refreshing ? "Refreshing…" : "Refresh tracking"}</button>
+      {refreshing && <p className="customer-track-auto-refresh" role="status">Refreshing live position…</p>}
       <p className="customer-track-security">Read-only Customer tracking. GPS writes remain Driver-only; assignment and trip access stay bound to this signed-in Customer's order.</p>
     </main>
   );

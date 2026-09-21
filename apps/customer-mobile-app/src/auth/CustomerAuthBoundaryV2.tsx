@@ -22,6 +22,13 @@ import {
   customerSupabaseConfigured,
 } from "./customer-supabase";
 import { roleDestination } from "./role-destination";
+import {
+  isValidCustomerFullName,
+  isValidSixDigitPin,
+  normalizeEthiopianMobile,
+  sanitizeCustomerFullName,
+  sanitizeEthiopianPhoneInput,
+} from "./customer-auth-validation";
 
 export type CustomerIdentity = {
   userId: string;
@@ -55,7 +62,7 @@ const COPY = {
     fullName: "Maqaa guutuu",
     phone: "Bilbila",
     email: "Imeelii",
-    password: "Password",
+    password: "PIN lakkoofsa 6",
     continueWithGoogle: "Google'n itti fufi",
     creating: "AKKAAWUNTII UUMAA JIRA…",
     verifying: "AKKAAWUNTII MIRKANEESSAA JIRA…",
@@ -103,7 +110,7 @@ const COPY = {
     fullName: "Full name",
     phone: "Phone",
     email: "Email address",
-    password: "Password",
+    password: "6-digit PIN",
     continueWithGoogle: "Continue with Google",
     creating: "CREATING ACCOUNT…",
     verifying: "VERIFYING ACCOUNT…",
@@ -151,7 +158,7 @@ const COPY = {
     fullName: "ሙሉ ስም",
     phone: "ስልክ",
     email: "ኢሜይል",
-    password: "የይለፍ ቃል",
+    password: "ባለ 6 አሃዝ PIN",
     continueWithGoogle: "በGoogle ይቀጥሉ",
     creating: "መለያ በመፍጠር ላይ…",
     verifying: "መለያ በማረጋገጥ ላይ…",
@@ -351,28 +358,39 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [resetFeedback, setResetFeedback] = useState<string | null>(null);
+  const [resetFeedback, setResetFeedback] = useState<{ message: string; kind: "success" | "error" } | null>(null);
   const [resetBusy, setResetBusy] = useState(false);
+  const [touched, setTouched] = useState({ fullName: false, phone: false, email: false, password: false });
   const submitLock = useRef(false);
   const text = COPY[language];
+  const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
+  const pinValid = isValidSixDigitPin(password);
+  const nameValid = isValidCustomerFullName(fullName);
+  const phoneValid = normalizeEthiopianMobile(phone) !== null;
+  const formReady = mode === "signup"
+    ? nameValid && phoneValid && emailValid && pinValid && termsAccepted
+    : emailValid && pinValid;
 
   async function resetPassword() {
     if (busy || resetBusy || !customerSupabase) return;
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) { setResetFeedback(text.emailInvalid); return; }
+    if (!emailValid) { setTouched((current) => ({ ...current, email: true })); setResetFeedback({ message: text.emailInvalid, kind: "error" }); return; }
     setResetBusy(true);
     try {
       const { error: resetError } = await customerSupabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: new URL("../", window.location.href).href,
       });
       if (resetError) throw resetError;
-      setResetFeedback(language === "en" ? "If an account exists for this email, a reset link will arrive shortly." : language === "om" ? "Imeelii kanaan akkaawuntiin yoo jiraate, linkiin haaromsuu siif ergama." : "በዚህ ኢሜይል መለያ ካለ፣ የማደሻ አገናኝ ይደርሳል።");
-    } catch { setResetFeedback(text.authUnavailable); }
+      setResetFeedback({ message: language === "en" ? "If an account exists for this email, a reset link will arrive shortly." : language === "om" ? "Imeelii kanaan akkaawuntiin yoo jiraate, linkiin haaromsuu siif ergama." : "በዚህ ኢሜይል መለያ ካለ፣ የማደሻ አገናኝ ይደርሳል።", kind: "success" });
+    } catch { setResetFeedback({ message: text.authUnavailable, kind: "error" }); }
     finally { setResetBusy(false); }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || submitLock.current || (mode === "signup" && !termsAccepted)) return;
+    if (busy || submitLock.current || !formReady) {
+      setTouched({ fullName: mode === "signup", phone: mode === "signup", email: true, password: true });
+      return;
+    }
     submitLock.current = true;
     try {
       if (mode === "signup") await onSignUp(fullName, phone, email, password);
@@ -397,17 +415,17 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
           <p>{mode === "signup" ? text.createDescription : text.signInDescription}</p>
           {error && <div className="customer-entry-alert is-error" role="alert">{error}</div>}
           {notice && <div className="customer-entry-alert is-success" role="status">{notice}</div>}
-          {resetFeedback && <div className="customer-entry-alert" role="status">{resetFeedback}</div>}
+          {resetFeedback && <div className={`customer-entry-alert is-${resetFeedback.kind}`} role={resetFeedback.kind === "error" ? "alert" : "status"}>{resetFeedback.message}</div>}
           <form className="customer-entry-form" onSubmit={submit} aria-busy={busy}>
             {mode === "signup" && <>
-              <label><span>{text.fullName}</span><input type="text" autoComplete="name" required disabled={busy} value={fullName} onFocus={bringIntoView} onChange={(event) => setFullName(event.target.value)} /></label>
-              <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="09xxxxxxxx / 07xxxxxxxx / +251…"  value={phone} onFocus={bringIntoView} onChange={(event) => setPhone(event.target.value)} /></label>
+              <label><span>{text.fullName}</span><input type="text" autoComplete="name" maxLength={80} required disabled={busy} value={fullName} aria-invalid={touched.fullName && !nameValid} aria-describedby="customer-name-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, fullName: true }))} onChange={(event) => setFullName(sanitizeCustomerFullName(event.target.value))} />{touched.fullName && !nameValid && <small id="customer-name-error" className="customer-entry-field-error">{text.nameInvalid}</small>}</label>
+              <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" maxLength={13} required disabled={busy} placeholder="09XXXXXXXX / +2519XXXXXXXX" value={phone} aria-invalid={touched.phone && !phoneValid} aria-describedby="customer-phone-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, phone: true }))} onChange={(event) => setPhone(sanitizeEthiopianPhoneInput(event.target.value))} />{touched.phone && !phoneValid && <small id="customer-phone-error" className="customer-entry-field-error">{text.phoneInvalid}</small>}</label>
             </>}
-            <label><span className="customer-entry-sr-only">{text.email}</span><div className="customer-entry-field"><Mail size={19} aria-hidden="true"/><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={text.email} value={email} onFocus={bringIntoView} onChange={(event) => setEmail(event.target.value.replace(/\s/g, ""))} /></div></label>
-            <label><span className="customer-entry-sr-only">{text.password}</span><div className="customer-entry-field"><LockKeyhole size={19} aria-hidden="true"/><input placeholder={text.password} type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} required disabled={busy} value={password} onFocus={bringIntoView} onChange={(event) => setPassword(event.target.value.replace(/\D/g, "").slice(0, 6))} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={19}/> : <Eye size={19}/>}</button></div></label>
+            <label><span className="customer-entry-sr-only">{text.email}</span><div className="customer-entry-field"><Mail size={19} aria-hidden="true"/><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={text.email} value={email} aria-invalid={touched.email && !emailValid} aria-describedby="customer-email-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, email: true }))} onChange={(event) => { setEmail(event.target.value.replace(/\s/g, "")); setResetFeedback(null); }} /></div>{touched.email && !emailValid && <small id="customer-email-error" className="customer-entry-field-error">{text.emailInvalid}</small>}</label>
+            <label><span className="customer-entry-sr-only">{text.password}</span><div className="customer-entry-field"><LockKeyhole size={19} aria-hidden="true"/><input placeholder={text.password} type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} required disabled={busy} value={password} aria-invalid={touched.password && !pinValid} aria-describedby="customer-pin-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, password: true }))} onChange={(event) => setPassword(event.target.value.replace(/\D/g, "").slice(0, 6))} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={19}/> : <Eye size={19}/>}</button></div>{touched.password && !pinValid && <small id="customer-pin-error" className="customer-entry-field-error">{text.passwordInvalid}</small>}</label>
             {mode === "login" && <button type="button" className="customer-entry-forgot" disabled={busy || resetBusy} onClick={() => void resetPassword()}>{language === "om" ? "Password dagattee?" : language === "am" ? "የይለፍ ቃል ረሱ?" : "Forgot Password?"}</button>}
             {mode === "signup" && <label className="customer-entry-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} disabled={busy}/><span>{language === "om" ? "Ulaagaa fi Haala irratti walii gala" : language === "am" ? "በውሎች እና ሁኔታዎች እስማማለሁ" : "I agree to the Terms & Conditions"}</span></label>}
-            <button className="customer-entry-primary" type="submit" disabled={busy || (mode === "signup" && !termsAccepted)}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
+            <button className="customer-entry-primary" type="submit" disabled={busy || !formReady}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
           </form>
           {mode === "login" && <>
             <div className="customer-entry-divider">{language === "om" ? "ykn" : language === "am" ? "ወይም" : "or"}</div>
@@ -415,7 +433,7 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
           </>}
           <div className="customer-entry-mode">
             <span>{mode === "login" ? (language === "om" ? "Akkaawuntii hin qabduu?" : language === "am" ? "መለያ የለዎትም?" : "Don't have an account?") : (language === "om" ? "Akkaawuntii qabdaa?" : language === "am" ? "መለያ አለዎት?" : "Already have an account?")}</span>
-            <button type="button" disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setPassword(""); setTermsAccepted(false); }}>
+            <button type="button" disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setPassword(""); setTermsAccepted(false); setResetFeedback(null); setTouched({ fullName: false, phone: false, email: false, password: false }); }}>
               {mode === "login" ? (language === "om" ? "Galmaa'i" : language === "am" ? "ይመዝገቡ" : "Create Account") : text.signIn}
             </button>
           </div>
@@ -617,12 +635,11 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("network");
       const cleanName = fullName.trim();
       const cleanEmail = email.trim().toLowerCase();
-      if (cleanName.length < 2) throw new Error(text.nameInvalid);
+      if (!isValidCustomerFullName(cleanName)) throw new Error(text.nameInvalid);
       if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) throw new Error(text.emailInvalid);
-      if (!/^\d{6}$/.test(password)) throw new Error(text.passwordInvalid);
-      let normalizedPhone: string;
-      try { normalizedPhone = normalizeEthiopianPhone(phone); }
-      catch { throw new Error(text.phoneInvalid); }
+      if (!isValidSixDigitPin(password)) throw new Error(text.passwordInvalid);
+      const normalizedPhone = normalizeEthiopianMobile(phone);
+      if (!normalizedPhone) throw new Error(text.phoneInvalid);
 
       const { data, error } = await client.auth.signUp({
         email: cleanEmail,

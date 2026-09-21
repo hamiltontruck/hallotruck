@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Truck as TruckIcon } from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
 import maplibregl, { type LngLatLike, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { CustomerLiveTrip } from "./customer-tracking.service";
@@ -8,6 +10,7 @@ const mapTilerKey = (import.meta.env.VITE_MAPTILER_KEY as string | undefined)?.t
 const mapStyle = mapTilerKey ? `https://api.maptiler.com/maps/basic-v2/style.json?key=${encodeURIComponent(mapTilerKey)}` : "https://tiles.openfreemap.org/styles/liberty";
 const ROUTE_SOURCE_ID = "customer-mobile-trip-route";
 const ROUTE_LAYER_ID = "customer-mobile-trip-route-line";
+const TRUCK_ICON_MARKUP = renderToStaticMarkup(<TruckIcon aria-hidden="true" size={22} strokeWidth={2.6}/>);
 
 type RouteResult = { coordinates: [number, number][]; distanceM: number; durationS: number };
 
@@ -43,7 +46,7 @@ function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: num
     element.style.width = "20px"; element.style.height = "20px"; element.style.borderRadius = "50%"; element.style.background = kind === "pickup" ? "#10213d" : "#d68e25";
     element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : "Drop-off location");
   } else {
-    element.style.width = "34px"; element.style.height = "34px"; element.style.borderRadius = "12px"; element.style.background = "#10213d"; element.style.color = "#f5b400"; element.style.fontSize = "17px"; element.style.fontWeight = "900"; element.innerHTML = '<span data-truck-arrow aria-hidden="true">➤</span>';
+    element.style.width = "42px"; element.style.height = "42px"; element.style.borderRadius = "13px"; element.style.background = "#10213d"; element.style.color = "#f5b400"; element.innerHTML = `<span data-truck-arrow aria-hidden="true" style="display:grid;place-items:center">${TRUCK_ICON_MARKUP}</span>`;
     applyTruckHeading(element, heading); applyTruckFreshness(element, freshness);
   }
   return element;
@@ -106,7 +109,14 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
     let mapReady = false;
     setMapLoading(true);
     setMapError("");
-    const map = new maplibregl.Map({ container: containerRef.current, style: mapStyle, center: [39.6, 8.8], zoom: 6, dragPan: true, scrollZoom: true, touchZoomRotate: true, doubleClickZoom: true });
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({ container: containerRef.current, style: mapStyle, center: [39.6, 8.8], zoom: 6, dragPan: true, scrollZoom: true, touchZoomRotate: true, doubleClickZoom: true });
+    } catch {
+      setMapLoading(false);
+      setMapError("Interactive map unavailable on this device.");
+      return;
+    }
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.once("load", () => {
       mapReady = true;
@@ -197,7 +207,7 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
         {!hasTruck && <p className="customer-track-v4__message">Waiting for the assigned Driver's first GPS location.</p>}
         {delivered && <p className="customer-track-v4__message customer-track-v4__message--complete">Delivery complete — map shows the completed trip route and final recorded Driver location.</p>}
         {!delivered && hasTruck && !gpsLive && <p className="customer-track-v4__message customer-track-v4__message--warn">{freshness} — last known location, not a current/live position.</p>}
-        <div className="customer-track-v4__legend"><span>● Pickup</span><span>● Drop-off</span><span>▣ Truck</span></div>
+        <div className="customer-track-v4__legend"><span>● Pickup</span><span>● Drop-off</span><span><TruckIcon aria-hidden="true" size={14}/> Truck</span></div>
       </div>
       <div className="customer-track-v4__last-update"><span>Latest location timestamp</span><strong>{lastUpdate}</strong></div>
     </section>
