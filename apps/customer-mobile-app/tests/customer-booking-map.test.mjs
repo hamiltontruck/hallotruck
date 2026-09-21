@@ -9,18 +9,19 @@ const app = fs.readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 const journey = fs.readFileSync(new URL("../src/CustomerBookingJourney.tsx", import.meta.url), "utf8");
 const responsive = fs.readFileSync(new URL("../src/customer-booking-responsive.css", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const language = fs.readFileSync(new URL("../src/customer-language.tsx", import.meta.url), "utf8");
 
 test("Customer Home keeps real map place selection and HGV route", () => {
   assert.match(map, /new maplibregl\.Map/);
   assert.match(map, /new maplibregl\.NavigationControl/);
-  assert.match(map, /searchCustomerPlaces\(value, controller\.signal\)/);
-  assert.match(map, /reverseCustomerPlace\(coordinates\)/);
+  assert.match(map, /searchCustomerPlaces\(value, language, controller\.signal\)/);
+  assert.match(map, /reverseCustomerPlace\(coordinates, languageRef\.current\)/);
   assert.match(map, /map\.on\("click"/);
   assert.match(map, /navigator\.geolocation\.getCurrentPosition/);
   assert.match(map, /draggable: true/);
   assert.match(map, /portal-map-actions/);
-  assert.match(map, />Swap</);
-  assert.match(map, />Reset</);
+  assert.match(map, /\{ui\.swap\}/);
+  assert.match(map, /\{ui\.reset\}/);
   assert.match(app, /<CustomerBookingJourney/);
   assert.match(journey, /<CustomerBookingMap/);
   assert.match(journey, /loadCustomerQuotePreview/);
@@ -36,9 +37,10 @@ test("My location matches portal pickup behavior and survives temporary GPS fail
   assert.match(map, /onPickupSelect\(place\)/);
   assert.match(map, /activeFieldRef\.current = "dropoff"/);
   assert.match(map, /mapRef\.current\?\.flyTo\(\{ center: coordinates, zoom: 10, duration: 500 \}\)/);
-  assert.match(map, /Location permission was denied/);
-  assert.match(map, /current location is unavailable/);
-  assert.match(map, /current location timed out/);
+  assert.match(map, /copy\.permissionDenied/);
+  assert.match(map, /copy\.locationUnavailable/);
+  assert.match(map, /copy\.locationTimeout/);
+  assert.match(language, /Location permission was denied/);
 });
 
 test("drop-off autocomplete stays above route actions and My location remains on the right", () => {
@@ -49,7 +51,8 @@ test("drop-off autocomplete stays above route actions and My location remains on
 });
 
 test("Customer place search stays inside the HALLO corridor", () => {
-  assert.match(service, /language", "en"/);
+  assert.match(service, /searchParams\.set\("language", language\)/);
+  assert.doesNotMatch(service, /searchParams\.set\("language", "en"\)/);
   assert.match(service, /country", "et,dj,so"/);
   assert.match(service, /isHalloOperatingCoordinate/);
   assert.match(service, /Ethiopia–Djibouti–Somalia operating corridor/);
