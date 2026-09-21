@@ -20,7 +20,7 @@ import {
   type CreatedCustomerOrder,
   type CustomerPaymentMethod,
 } from "./customer-order.service-v2";
-import { CUSTOMER_TRUCKS, customerTruckByKey, type CustomerTruckOption } from "./customer-vehicle-catalog";
+import { CUSTOMER_TRUCKS, customerTruckByKey, customerTruckDisplayLabel, type CustomerTruckOption } from "./customer-vehicle-catalog";
 import { useCustomerLanguage } from "./customer-language";
 import { getCustomerFinalCopy } from "./customer-final-copy";
 
@@ -31,11 +31,11 @@ function formatEtb(amount: number) {
   return `ETB ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount)}`;
 }
 
-function TruckImage({ truck }: { truck: CustomerTruckOption }) {
+function TruckImage({ truck, alt }: { truck: CustomerTruckOption; alt?: string }) {
   const [failed, setFailed] = useState(!truck.image);
   return (
     <div className="customer-final-truck-image">
-      {!failed && truck.image ? <img src={truck.image} alt={truck.imageAlt} loading="lazy" onError={() => setFailed(true)} /> : <span aria-hidden="true">🚚</span>}
+      {!failed && truck.image ? <img src={truck.image} alt={alt ?? truck.imageAlt} loading="lazy" onError={() => setFailed(true)} /> : <span aria-hidden="true">🚚</span>}
     </div>
   );
 }
@@ -102,6 +102,7 @@ export function CustomerBookingJourney({
   const submitLock = useRef(false);
 
   const truck = customerTruckByKey(selectedTruck);
+  const truckDisplayLabel = customerTruckDisplayLabel(truck, language);
   const rawAmount = Number(cargoQuantity);
   const cargoTons = Number.isFinite(rawAmount) && rawAmount > 0 ? cargoToTons(rawAmount, cargoUnit) : 0;
   const routeReady = Boolean(pickupPlace && dropoffPlace && routePreview && routePreview.distance_km > 0 && !routeLoading && !routeError);
@@ -144,6 +145,7 @@ export function CustomerBookingJourney({
         dropoffPlace,
         vehicleType: truck.label,
         cargoTons,
+        language,
       });
       setQuote(result);
       return result;
@@ -176,6 +178,7 @@ export function CustomerBookingJourney({
         dropoffPlace,
         vehicleType: truck.label,
         cargoTons,
+        language,
       });
       if (Math.abs(fresh.total_quote_etb - quote.total_quote_etb) > 0.01) {
         setQuote(fresh);
@@ -232,7 +235,7 @@ export function CustomerBookingJourney({
           <section className="customer-final-summary-card">
             <div><small>{c.orderNumber}</small><strong>{createdOrder.trackingId}</strong></div>
             <div><small>{c.route}</small><strong>{createdOrder.pickupAddress} → {createdOrder.dropoffAddress}</strong></div>
-            <div><small>{c.truck}</small><strong>{createdOrder.vehicleType}</strong></div>
+            <div><small>{c.truck}</small><strong>{truckDisplayLabel}</strong></div>
             <div><small>{c.totalAmount}</small><strong>{formatEtb(createdOrder.priceEtb)}</strong></div>
           </section>
           <button type="button" className="customer-final-primary" onClick={() => onViewOrder(createdOrder.id)}>{c.viewOrder}</button>
@@ -249,7 +252,7 @@ export function CustomerBookingJourney({
         <h1>{step === "cargo" ? c.cargoTitle : step === "truck" ? c.chooseTruck : step === "quote" ? c.yourQuote : step === "review" ? c.reviewBooking : c.routeTitle}</h1>
         <span aria-hidden="true" />
       </header>
-      <div className="customer-final-stepper" aria-label="Booking progress">
+      <div className="customer-final-stepper" aria-label={c.bookingProgress}>
         {STEPS.map((item, index) => <div key={item} className={index === activeIndex ? "active" : index < activeIndex ? "done" : ""}><span>{index < activeIndex ? "✓" : index + 1}</span><small>{c[item]}</small></div>)}
       </div>
 
@@ -263,7 +266,7 @@ export function CustomerBookingJourney({
             routePreview={routePreview}
             routeLoading={routeLoading}
             routeError={routeError}
-            vehicleType={truck.label}
+            vehicleDisplayName={truckDisplayLabel}
             onPickupChange={onPickupChange}
             onDropoffChange={onDropoffChange}
             onPickupSelect={onPickupSelect}
@@ -281,7 +284,7 @@ export function CustomerBookingJourney({
           <label className="customer-final-select-row"><span><b>{c.cargoType}</b><small>{cargoCopy.categories[cargoCategory]}</small></span><select value={cargoCategory} onChange={(event) => setCargoCategory(event.target.value as CustomerCargoCategory)}>{CUSTOMER_CARGO_CATEGORIES.map((value) => <option value={value} key={value}>{cargoCopy.categories[value]}</option>)}</select></label>
           <div className="customer-final-weight-row">
             <label><span>{c.totalWeight}</span><input type="number" min="0.1" step="0.1" inputMode="decimal" value={cargoQuantity} onChange={(event) => setCargoQuantity(event.target.value)} placeholder="0.0" /></label>
-            <label><span>Unit</span><select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">Ton</option><option value="quintal">Quintal</option></select></label>
+            <label><span>{c.unit}</span><select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{c.ton}</option><option value="quintal">{c.quintal}</option></select></label>
           </div>
           <label className="customer-final-select-row"><span><b>{c.packagingType}</b><small>{cargoCopy.packagingTypes[packagingType]}</small></span><select value={packagingType} onChange={(event) => setPackagingType(event.target.value as CustomerPackagingType)}>{CUSTOMER_PACKAGING_TYPES.map((value) => <option value={value} key={value}>{cargoCopy.packagingTypes[value]}</option>)}</select></label>
           <label className="customer-final-field"><span>{c.loadDescription}</span><textarea rows={3} maxLength={300} value={cargoNotes} onChange={(event) => setCargoNotes(event.target.value)} placeholder={c.loadPlaceholder} /></label>
@@ -294,20 +297,21 @@ export function CustomerBookingJourney({
       )}
 
       {step === "truck" && (
-        <main className="customer-final-step-body">
+        <main className="customer-final-step-body customer-final-step-body--truck">
           <p className="customer-final-step-help">{c.stepTruckHelp}</p>
-          <div className="customer-final-truck-filter"><button type="button" className="active">{c.all}</button><span>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} ton` : "—"}</span></div>
+          <div className="customer-final-truck-filter"><button type="button" className="active">{c.all}</button><span>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} ${c.ton}` : "—"}</span></div>
           <div className="customer-final-truck-list">
             {CUSTOMER_TRUCKS.map((option) => {
               const fits = cargoTons <= 0 || cargoTons <= option.capacityTons;
+              const displayLabel = customerTruckDisplayLabel(option, language);
               return <button type="button" key={option.key} className={`customer-final-truck-row ${selectedTruck === option.key ? "selected" : ""}`} disabled={!fits} onClick={() => onTruckChange(option.key)}>
-                <TruckImage truck={option} />
-                <span><strong>{option.label}</strong><small>{c.maxLoad} {option.capacityTons} Ton</small></span>
+                <TruckImage truck={option} alt={displayLabel} />
+                <span><strong>{displayLabel}</strong><small>{c.maxLoad} {option.capacityTons} {c.ton}</small></span>
                 <b aria-hidden="true">{selectedTruck === option.key ? "✓" : "○"}</b>
               </button>;
             })}
           </div>
-          <button type="button" className="customer-final-primary" onClick={() => setStep("cargo")}>{c.next} →</button>
+          <div className="customer-final-truck-action"><button type="button" className="customer-final-primary" onClick={() => setStep("cargo")}>{c.continue} →</button></div>
         </main>
       )}
 
@@ -315,7 +319,7 @@ export function CustomerBookingJourney({
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepQuoteHelp}</p>
           {routePreview && <section className="customer-final-route-summary"><span>●</span><div><strong>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong><small>{routePreview.distance_km.toFixed(1)} km · {routeDuration}</small></div></section>}
-          <section className="customer-final-quote-truck"><TruckImage truck={truck}/><div><strong>{truck.label}</strong><small>{cargoCopy.categories[cargoCategory]} · {cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} ton</small></div></section>
+          <section className="customer-final-quote-truck"><TruckImage truck={truck} alt={truckDisplayLabel}/><div><strong>{truckDisplayLabel}</strong><small>{cargoCopy.categories[cargoCategory]} · {cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} {c.ton}</small></div></section>
           <section className="customer-final-price-card">
             <div><span>{c.authoritativeQuote}</span><strong>{quote ? formatEtb(quote.total_quote_etb) : "—"}</strong></div>
             <div className="total"><span>{c.total}</span><strong>{quote ? formatEtb(quote.total_quote_etb) : "—"}</strong></div>
@@ -332,8 +336,8 @@ export function CustomerBookingJourney({
           <p className="customer-final-step-help">{c.stepReviewHelp}</p>
           <section className="customer-final-review-card">
             <div><span>⌖</span><p><small>{c.route}</small><strong>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong><em>{routePreview.distance_km.toFixed(1)} km · {routeDuration}</em></p></div>
-            <div><span>▣</span><p><small>{c.cargo}</small><strong>{cargoCopy.categories[cargoCategory]} · {cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} ton</strong><em>{cargoCopy.packagingTypes[packagingType]}</em></p></div>
-            <div><span>🚚</span><p><small>{c.truck}</small><strong>{truck.label}</strong></p></div>
+            <div><span>▣</span><p><small>{c.cargo}</small><strong>{cargoCopy.categories[cargoCategory]} · {cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} {c.ton}</strong><em>{cargoCopy.packagingTypes[packagingType]}</em></p></div>
+            <div><span>🚚</span><p><small>{c.truck}</small><strong>{truckDisplayLabel}</strong></p></div>
             <div className="total"><p><small>{c.total}</small><strong>{formatEtb(quote.total_quote_etb)}</strong></p></div>
           </section>
           <fieldset className="customer-final-payment-choice">
