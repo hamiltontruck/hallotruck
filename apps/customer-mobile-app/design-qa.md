@@ -38,3 +38,41 @@
 - Post-fix automated suite and production build passed.
 
 final result: blocked
+
+---
+
+## Booking, compact Orders and Live Tracking polish — 2026-09-21
+
+**Source visual truth**
+
+- `/workspace/scratch/e71d6b4b238c/upload/01-1000246111.jpg` — truck selection.
+- `/workspace/scratch/e71d6b4b238c/upload/02-1000246104.jpg` — compact Customer Portal order card.
+- `/workspace/scratch/e71d6b4b238c/upload/03-1000246112.jpg` — immersive live tracking.
+
+**Implementation and viewport**
+
+- Customer Mobile booking, Orders and live tracking under `src/CustomerBookingJourney.tsx`, `src/CustomerTrackingPage.tsx`, `src/CustomerTrackingMap.tsx` and `src/customer-android-responsive.css`.
+- Browser comparison used a 430 CSS-pixel Customer app viewport inside the supervised preview.
+- The tested order card measured 402px client width and 402px scroll width, confirming no horizontal overflow.
+
+**Full-view and focused comparisons**
+
+- Truck selection: all visible vehicle choices were enabled before cargo entry, selection worked, vehicle photos remained visible and the misleading `0 ton` label was removed.
+- Orders: the assigned truck/Driver block retained its real image elements while being reduced to a compact two-column mobile layout.
+- Live tracking: the marked top brand/header section was removed, status moved beside Close, the map region was enlarged and the manual Refresh button was removed.
+- Live map marker: code and automated checks confirm a Lucide truck marker replaces the arrow glyph. The supervised cloud browser cannot initialize WebGL, so a rendered marker comparison could not be captured there; the screen now fails safely with a user-facing map-unavailable state instead of crashing.
+
+**Primary interactions tested**
+
+- Route → Truck: all vehicle options enabled and selectable before cargo weight entry.
+- Cargo → Quote: incompatible weight blocks quote progression after weight is known.
+- Customer order card: no horizontal overflow at the tested narrow viewport.
+- Automated Customer Mobile suite: 81/81 passed.
+- TypeScript typecheck: passed.
+- Production build: passed.
+
+**Remaining visual gate**
+
+- [P1] Verify the live Lucide truck marker and map heading rotation on a WebGL-capable Android browser after deployment. Cloud-browser WebGL is unavailable, so exact rendered-map comparison remains blocked.
+
+final result: blocked
