@@ -35,11 +35,14 @@
 .customer-entry-footer span{font-size:10px;color:#75847d}
 .customer-entry-alert{padding:12px;margin:0 0 16px;border-radius:6px;line-height:1.5;background:#fff0ed;color:#8f271c;overflow-wrap:anywhere}
 .customer-entry-alert.is-success{background:#e6f2eb;color:#165b3a}
+.customer-entry-alert.is-error{background:#fff0ed;color:#8f271c}
+.customer-entry-field-error{display:block;margin-top:1px;color:#a12b21;font-size:11px;line-height:1.35}
+.customer-entry-form input[aria-invalid="true"]{border-color:#b74b40;background:#fffafa}
 .customer-entry-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .customer-entry-terms{display:flex!important;align-items:center;gap:8px!important;line-height:1.5}
 .customer-entry-terms input{width:20px!important;height:20px!important;flex-shrink:0;accent-color:#08603f}
 .customer-entry :focus-visible,.customer-welcome :focus-visible{outline:3px solid #278c63;outline-offset:3px}
-.customer-entry button:disabled{opacity:.6;cursor:wait}
+.customer-entry button:disabled{opacity:.56;cursor:not-allowed}
 .customer-welcome{background-color:#647a75;background-size:cover;background-position:center}
 .customer-welcome-surface{display:flex;flex-direction:column;justify-content:space-between;width:100%;min-height:100svh;padding:calc(21svh + env(safe-area-inset-top)) 24px calc(42px + env(safe-area-inset-bottom));border:0;border-radius:0;background:transparent;text-align:center;font:inherit;cursor:pointer}
 .customer-welcome .customer-entry-brand img{width:252px;height:84px;max-width:100%}
