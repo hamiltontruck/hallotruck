@@ -331,6 +331,16 @@ body {
   overflow: hidden;
 }
 
+.customer-final-booking-shell > .customer-final-step-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.customer-final-booking-shell > .customer-final-step-body--truck {
+  overflow: hidden;
+}
+
 .customer-final-route-step {
   height: calc(var(--customer-app-height) - 126px - env(safe-area-inset-top));
   min-height: 0;

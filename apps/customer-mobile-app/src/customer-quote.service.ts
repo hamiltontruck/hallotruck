@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { customerSupabase } from "./auth/customer-supabase";
+import type { CustomerLanguage } from "./customer-language";
 
 export type CustomerPlaceOption = {
   label: string;
@@ -111,7 +112,7 @@ function featureToPlace(feature: GeocodeFeature): CustomerPlaceOption | null {
   return label ? { label, coordinates } : null;
 }
 
-async function fetchGeocodeFeatures(query: string, autocomplete: boolean, signal?: AbortSignal) {
+async function fetchGeocodeFeatures(query: string, autocomplete: boolean, language: CustomerLanguage = "en", signal?: AbortSignal) {
   const clean = query.trim();
   if (clean.length < 2) return [] as GeocodeFeature[];
   if (!mapTilerKey) throw new Error("Map search is not configured.");
@@ -119,7 +120,7 @@ async function fetchGeocodeFeatures(query: string, autocomplete: boolean, signal
   const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
   url.searchParams.set("key", mapTilerKey);
   url.searchParams.set("limit", "6");
-  url.searchParams.set("language", "en");
+  url.searchParams.set("language", language);
   url.searchParams.set("autocomplete", autocomplete ? "true" : "false");
   url.searchParams.set("country", "et,dj,so");
   url.searchParams.set("types", [...NON_ROUTABLE_PLACE_TYPES].join(","));
@@ -131,8 +132,8 @@ async function fetchGeocodeFeatures(query: string, autocomplete: boolean, signal
   return payload.features ?? [];
 }
 
-export async function searchCustomerPlaces(query: string, signal?: AbortSignal): Promise<CustomerPlaceOption[]> {
-  const features = await fetchGeocodeFeatures(query, true, signal);
+export async function searchCustomerPlaces(query: string, language: CustomerLanguage = "en", signal?: AbortSignal): Promise<CustomerPlaceOption[]> {
+  const features = await fetchGeocodeFeatures(query, true, language, signal);
   const unique = new Map<string, CustomerPlaceOption>();
   for (const feature of features) {
     const place = featureToPlace(feature);
@@ -141,7 +142,7 @@ export async function searchCustomerPlaces(query: string, signal?: AbortSignal):
   return [...unique.values()];
 }
 
-export async function reverseCustomerPlace(coordinates: [number, number], signal?: AbortSignal): Promise<CustomerPlaceOption> {
+export async function reverseCustomerPlace(coordinates: [number, number], language: CustomerLanguage = "en", signal?: AbortSignal): Promise<CustomerPlaceOption> {
   if (!isHalloOperatingCoordinate(coordinates)) {
     throw new Error("The selected place is outside the HALLO Ethiopia–Djibouti–Somalia operating corridor.");
   }
@@ -152,7 +153,7 @@ export async function reverseCustomerPlace(coordinates: [number, number], signal
   const url = new URL(`https://api.maptiler.com/geocoding/${coordinates[0]},${coordinates[1]}.json`);
   url.searchParams.set("key", mapTilerKey);
   url.searchParams.set("limit", "1");
-  url.searchParams.set("language", "en");
+  url.searchParams.set("language", language);
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error("This map position could not be resolved to a place name.");
   const payload = await response.json() as { features?: GeocodeFeature[] };
@@ -172,10 +173,10 @@ async function requireCustomerSession(userId: string) {
   return { client, session: data.session };
 }
 
-async function geocodePlace(query: string): Promise<CustomerPlaceOption> {
+async function geocodePlace(query: string, language: CustomerLanguage = "en"): Promise<CustomerPlaceOption> {
   const clean = query.trim();
   if (clean.length < 2) throw new Error("Choose both pickup and drop-off places.");
-  const features = await fetchGeocodeFeatures(clean, false);
+  const features = await fetchGeocodeFeatures(clean, false, language);
   const place = features.map(featureToPlace).find((item): item is CustomerPlaceOption => item !== null);
   if (!place) {
     throw new Error(`"${clean}" was not found inside the HALLO Ethiopia–Djibouti–Somalia operating corridor.`);
@@ -256,16 +257,17 @@ export async function loadCustomerQuotePreview(userId: string, input: {
   dropoffPlace?: CustomerPlaceOption | null;
   vehicleType: string;
   cargoTons: number;
+  language?: CustomerLanguage;
 }): Promise<CustomerQuotePreview> {
   const cargoTons = finitePositive(input.cargoTons, "Cargo weight");
   const { client, session } = await requireCustomerSession(userId);
 
   const pickup = validSelectedPlace(input.pickupPlace)
     ? input.pickupPlace as CustomerPlaceOption
-    : await geocodePlace(input.pickupQuery);
+    : await geocodePlace(input.pickupQuery, input.language);
   const dropoff = validSelectedPlace(input.dropoffPlace)
     ? input.dropoffPlace as CustomerPlaceOption
-    : await geocodePlace(input.dropoffQuery);
+    : await geocodePlace(input.dropoffQuery, input.language);
 
   const cachedRoute = readCachedRoute(pickup, dropoff, input.vehicleType);
   const route = cachedRoute ?? await requestHgvRoute(session, {
