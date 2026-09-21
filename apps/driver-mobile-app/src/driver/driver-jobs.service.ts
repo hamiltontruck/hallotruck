@@ -3,6 +3,7 @@ import { mobileSupabase } from "../auth/mobile-supabase";
 import {
   normalizeDriverActiveTrip,
   normalizeDriverAvailableJobs,
+  normalizeDriverCancelledOrder,
   normalizeDriverTruckOptions,
   type DriverTruckOption,
   type DriverWorkboardSnapshot,
@@ -33,18 +34,29 @@ async function requireExpectedDriver(expectedUserId: string): Promise<{
 export async function fetchDriverWorkboard(expectedUserId: string): Promise<DriverWorkboardSnapshot> {
   const { client, user } = await requireExpectedDriver(expectedUserId);
 
-  const activeResult = await client
-    .from("orders")
-    .select("id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at")
-    .eq("driver_id", user.id)
-    .in("status", ["accepted", "in_transit"])
-    .order("accepted_at", { ascending: true })
-    .limit(1);
+  const [activeResult, cancellationResult] = await Promise.all([
+    client
+      .from("orders")
+      .select("id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at")
+      .eq("driver_id", user.id)
+      .in("status", ["accepted", "in_transit"])
+      .order("accepted_at", { ascending: true })
+      .limit(1),
+    client
+      .from("orders")
+      .select("id,tracking_id,pickup_address,dropoff_address,cancellation_reason,cancelled_at")
+      .eq("driver_id", user.id)
+      .eq("status", "cancelled")
+      .order("cancelled_at", { ascending: false })
+      .limit(1),
+  ]);
 
   if (activeResult.error) throw new Error(activeResult.error.message);
+  if (cancellationResult.error) throw new Error(cancellationResult.error.message);
   const activeTrip = normalizeDriverActiveTrip(activeResult.data?.[0] ?? null);
+  const latestCancellation = normalizeDriverCancelledOrder(cancellationResult.data?.[0] ?? null);
   if (activeTrip) {
-    return { activeTrip, availableJobs: [], loadedAt: Date.now() };
+    return { activeTrip, availableJobs: [], latestCancellation, loadedAt: Date.now() };
   }
 
   const availableResult = await client.rpc("get_available_jobs");
@@ -53,6 +65,7 @@ export async function fetchDriverWorkboard(expectedUserId: string): Promise<Driv
   return {
     activeTrip: null,
     availableJobs: normalizeDriverAvailableJobs(availableResult.data),
+    latestCancellation,
     loadedAt: Date.now(),
   };
 }
