@@ -36,7 +36,7 @@ test("Customer Mobile shows the official HALLO Smart Logistics brand on splash a
 test("Customer auth keeps six-digit PIN sanitization executable", () => {
   assert.ok(auth.includes('event.target.value.replace(/\\s/g, "")'));
   assert.ok(auth.includes('event.target.value.replace(/\\D/g, "").slice(0, 6)'));
-  assert.ok(auth.includes('if (!/^\\d{6}$/.test(password)) throw new Error(text.passwordInvalid);'));
+  assert.ok(auth.includes('if (!isValidSixDigitPin(password)) throw new Error(text.passwordInvalid);'));
   assert.ok(!auth.includes('replace(/\\\\D/g, "")'));
   assert.ok(!auth.includes('/^\\\\d{6}$/'));
 });
