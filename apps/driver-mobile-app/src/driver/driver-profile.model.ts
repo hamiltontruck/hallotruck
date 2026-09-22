@@ -166,7 +166,7 @@ export function documentProgress(keys: readonly VerificationDocumentKey[], recor
 }
 
 export function formatVehicleType(value: string | null): string {
-  if (!value) return "Hin galmoofne";
+  if (!value) return "—";
   return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 export function formatCapacityTons(value: number | null): string {
