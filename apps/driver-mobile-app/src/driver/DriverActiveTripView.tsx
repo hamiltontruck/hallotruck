@@ -76,10 +76,12 @@ export function DriverActiveTripView({
   userId,
   fullName,
   onOpenWallet = () => undefined,
+  language = "om",
 }: {
   userId: string;
   fullName: string;
   onOpenWallet?: () => void;
+  language?: "om" | "en" | "am";
 }) {
   const mountedRef = useRef(false);
   const tripRef = useRef<DriverActiveTripOrder | null>(null);
@@ -393,10 +395,33 @@ export function DriverActiveTripView({
     return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-5"><section className="w-full max-w-sm rounded-[28px] border border-halo-line bg-white p-7 text-center shadow-halo-card"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Active trip</p><h1 className="mt-3 text-2xl font-black text-halo-navy">Trip hojii irra jiru hin jiru</h1><p className="mt-3 text-sm leading-6 text-halo-muted">Hojii fudhatte erga jiraate booda route fi GPS controls as irratti mul'atu.</p>{error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>}<button type="button" onClick={() => void refreshTrip()} className="mt-6 min-h-12 w-full rounded-2xl bg-halo-blue px-5 font-black text-white">Irra deebi'ii ilaali</button></section></div>;
   }
 
+  const tripUi = language === "en"
+    ? { distance:"Distance", duration:"Route time", price:"Trip price", next:"Next direction", stop:"Stop sharing GPS", start:"Start trip & share GPS", continueGps:"Continue live GPS", requesting:"Starting GPS…", syncing:"Syncing GPS…", retryQueue:"Retry queued GPS" }
+    : language === "am"
+      ? { distance:"ርቀት", duration:"የመንገድ ጊዜ", price:"የጉዞ ዋጋ", next:"ቀጣይ መመሪያ", stop:"GPS ማጋራትን አቁም", start:"ጉዞ ጀምር እና GPS አጋራ", continueGps:"የቀጥታ GPS ቀጥል", requesting:"GPS በመጀመር ላይ…", syncing:"GPS በማመሳሰል ላይ…", retryQueue:"የተጠበቀ GPS እንደገና ላክ" }
+      : { distance:"Fageenya", duration:"Yeroo route", price:"Gatii trip", next:"Qajeelfama itti aanu", stop:"GPS qooduu dhaabi", start:"Imala jalqabi & GPS qoodi", continueGps:"GPS kallattii itti fufi", requesting:"GPS jalqabaa jira…", syncing:"GPS sync godhaa jira…", retryQueue:"GPS eeggatu irra deebi'ii ergi" };
   const gps = statusCopy(gpsState, trip.status, pendingCount);
   const busy = gpsState === "requesting" || gpsState === "syncing";
   const statusLabel = trip.status === "in_transit" ? "IN TRANSIT" : "ASSIGNED";
   const firstStep = route?.steps[0] ?? null;
+  const locationCopy = language === "en"
+    ? { title: "Live location", unavailable: "Start GPS to show and share your current location.", share: "Share location", copied: "Location link copied." }
+    : language === "am"
+      ? { title: "የቀጥታ አካባቢ", unavailable: "አሁን ያሉበትን ቦታ ለማሳየትና ለማጋራት GPS ያስጀምሩ።", share: "አካባቢን አጋራ", copied: "የአካባቢ ሊንክ ተቀድቷል።" }
+      : { title: "Bakka kallattii", unavailable: "Bakka amma jirtu agarsiisuu fi qooduuf GPS jalqabi.", share: "Bakka qoodi", copied: "Linkiin bakka kee copy ta'eera." };
+
+  const shareLocation = useCallback(async () => {
+    if (!driverPosition) return;
+    const [lng, lat] = driverPosition;
+    const url = "https://www.google.com/maps?q=" + lat + "," + lng;
+    try {
+      if (navigator.share) await navigator.share({ title: "HALLO Driver location", text: trip?.trackingId ?? "HALLO Driver", url });
+      else { await navigator.clipboard.writeText(url); setError(locationCopy.copied); }
+    } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
+      setError("Location qooduun hin danda'amne.");
+    }
+  }, [driverPosition, locationCopy.copied, trip?.trackingId]);
 
   return <div className="relative min-h-[calc(100dvh-137px)] overflow-hidden bg-[#e9f1ec]" data-mobile-driver-active-trip data-gps-state={gpsState}>
     <div className="absolute inset-0 halo-map-grid" />
@@ -425,22 +450,32 @@ export function DriverActiveTripView({
     <section className="absolute inset-x-0 bottom-0 z-10 max-h-[58dvh] overflow-y-auto rounded-t-[30px] border-t border-white bg-white/97 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-4 shadow-[0_-18px_50px_rgba(16,33,61,0.16)] backdrop-blur-xl sm:px-6">
       <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
       {error && <p role="alert" className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold leading-5 text-red-700">{error}</p>}
-      <div className="grid grid-cols-3 divide-x divide-halo-line text-center"><div><p className="text-[10px] font-bold text-halo-muted">Fageenya</p><p className="mt-1 text-sm font-black text-halo-navy">{formatRouteDistance(route?.distanceKm ?? null)}</p></div><div><p className="text-[10px] font-bold text-halo-muted">Yeroo route</p><p className="mt-1 text-sm font-black text-halo-navy">{formatRouteDuration(route?.durationMin ?? null)}</p></div><div><p className="text-[10px] font-bold text-halo-muted">Gatii trip</p><p className="mt-1 truncate px-1 text-sm font-black text-halo-navy">{formatEtb(trip.priceEtb)}</p></div></div>
+      <div className="grid grid-cols-3 divide-x divide-halo-line text-center"><div><p className="text-[10px] font-bold text-halo-muted">{tripUi.distance}</p><p className="mt-1 text-sm font-black text-halo-navy">{formatRouteDistance(route?.distanceKm ?? null)}</p></div><div><p className="text-[10px] font-bold text-halo-muted">{tripUi.duration}</p><p className="mt-1 text-sm font-black text-halo-navy">{formatRouteDuration(route?.durationMin ?? null)}</p></div><div><p className="text-[10px] font-bold text-halo-muted">{tripUi.price}</p><p className="mt-1 truncate px-1 text-sm font-black text-halo-navy">{formatEtb(trip.priceEtb)}</p></div></div>
 
       <div className={`mt-4 rounded-2xl border p-4 ${gpsState === "live" ? "border-emerald-200 bg-emerald-50" : gpsState === "queued" || gpsState === "syncing" ? "border-amber-200 bg-amber-50" : "border-halo-line bg-halo-soft"}`} aria-busy={busy}>
         <div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${gpsState === "live" ? "animate-pulse bg-emerald-600" : gpsState === "queued" || gpsState === "syncing" ? "bg-amber-500" : "bg-halo-muted"}`}/><div className="min-w-0"><p className="text-sm font-black text-halo-navy">{gps.title}</p><p role="status" aria-live="polite" className="mt-1 text-[11px] leading-5 text-halo-muted">{gps.help}</p>{lastPingAt && <p className="mt-2 text-[10px] font-bold text-emerald-700">Last server update: {lastPingAt}{speedKmh !== null ? ` · ${speedKmh.toFixed(1)} km/h` : ""}</p>}</div></div>
       </div>
 
-      {firstStep && <div className="mt-3 rounded-2xl border border-halo-line bg-white p-3"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">Qajeelfama itti aanu</p><p className="mt-1 text-xs font-bold leading-5 text-halo-navy">{firstStep.instruction}</p><p className="mt-1 text-[10px] text-halo-muted">{Math.round(firstStep.distanceM).toLocaleString()} m</p></div>}
+      {firstStep && <div className="mt-3 rounded-2xl border border-halo-line bg-white p-3"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{tripUi.next}</p><p className="mt-1 text-xs font-bold leading-5 text-halo-navy">{firstStep.instruction}</p><p className="mt-1 text-[10px] text-halo-muted">{Math.round(firstStep.distanceM).toLocaleString()} m</p></div>}
 
       <div className="mt-4 grid gap-3">
         {gpsState === "queued" ? <>
-          <button type="button" onClick={() => void syncQueue()} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white disabled:opacity-60">GPS eeggatu irra deebi'ii ergi</button>
-          {watchIdRef.current !== null && <button type="button" onClick={stopSharing} className="min-h-12 w-full rounded-2xl border border-halo-line px-5 text-sm font-black text-halo-navy">GPS qooduu dhaabi</button>}
-        </> : gpsState === "live" ? <button type="button" onClick={stopSharing} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-5 text-sm font-black text-halo-navy">GPS qooduu dhaabi</button> : <button type="button" onClick={startSharing} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white shadow-halo-button disabled:opacity-60">{gpsState === "requesting" ? "GPS jalqabaa jira…" : gpsState === "syncing" ? "GPS sync godhaa jira…" : trip.status === "in_transit" ? "GPS kallattii itti fufi" : "Imala jalqabi & GPS qoodi"}</button>}
+          <button type="button" onClick={() => void syncQueue()} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white disabled:opacity-60">{tripUi.retryQueue}</button>
+          {watchIdRef.current !== null && <button type="button" onClick={stopSharing} className="min-h-12 w-full rounded-2xl border border-halo-line px-5 text-sm font-black text-halo-navy">{tripUi.stop}</button>}
+        </> : gpsState === "live" ? <button type="button" onClick={stopSharing} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-5 text-sm font-black text-halo-navy">{tripUi.stop}</button> : <button type="button" onClick={startSharing} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white shadow-halo-button disabled:opacity-60">{gpsState === "requesting" ? tripUi.requesting : gpsState === "syncing" ? tripUi.syncing : trip.status === "in_transit" ? tripUi.continueGps : tripUi.start}</button>}
       </div>
 
-      <DriverTripCustomerPaymentPanel userId={userId} trip={trip} />
+      <section className="mx-3 mb-3 rounded-[22px] border border-halo-line bg-white/95 p-4 shadow-halo-card" data-driver-live-location>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{locationCopy.title}</p>
+          {driverPosition ? <p className="mt-2 break-all text-xs font-bold text-halo-navy">{driverPosition[1].toFixed(6)}, {driverPosition[0].toFixed(6)}</p> : <p className="mt-2 text-xs leading-5 text-halo-muted">{locationCopy.unavailable}</p>}
+        </div>
+        <button type="button" onClick={() => void shareLocation()} disabled={!driverPosition} className="min-h-11 shrink-0 rounded-xl bg-halo-blue px-3 text-[10px] font-black text-white disabled:opacity-45">{locationCopy.share}</button>
+      </div>
+    </section>
+
+    <DriverTripCustomerPaymentPanel userId={userId} trip={trip} />
 
       {trip.status === "in_transit" && (
         <DriverDeliveryProofPanel trip={trip} userId={userId} onDelivered={handleDelivered} />
