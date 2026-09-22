@@ -115,7 +115,9 @@ test("wallet keeps portal-backed trip history and financial contracts", () => {
 test("authenticated shell remains scrollable with sticky five-tab navigation at target widths", () => {
   assert.match(workspace, /grid-cols-5/);
   assert.match(androidCss, /\[data-driver-v4-workspace\]\.driver-app[\s\S]*overflow-y:\s*auto/);
-  assert.match(androidCss, /\[data-driver-v4-workspace\] > nav \{ position: sticky; bottom: 0; \}/);
+  assert.match(androidCss, /\[data-driver-v4-workspace\] > nav[\s\S]*position:\s*fixed[\s\S]*bottom:\s*0/);
+  assert.match(androidCss, /padding-bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(androidCss, /\[data-driver-v4-workspace\] > header select[\s\S]*font-size:\s*12px/);
   for (const width of ["320px", "360px", "390px", "412px", "430px"]) {
     assert.match(css + "\n" + androidCss, new RegExp(width.replace(".", "\\.")), "responsive CSS must cover " + width);
   }
