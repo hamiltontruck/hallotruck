@@ -47,8 +47,8 @@ const EMPTY: Snapshot = {
   commission: null,
 };
 
-function message(error: unknown, fallback: string) {
-  return error instanceof Error && error.message.trim() ? error.message : fallback;
+function message(_error: unknown, fallback: string) {
+  return fallback;
 }
 
 function statusLabel(
