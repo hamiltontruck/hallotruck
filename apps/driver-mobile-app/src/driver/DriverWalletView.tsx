@@ -269,10 +269,15 @@ export function DriverWalletView({
           <div className="px-1"><p className="text-[9px] text-halo-muted">{t.wallet.driverNet}</p><p className="mt-1 break-words text-xs font-black text-emerald-700">{formatWalletEtb(trip.netEtb)}</p></div>
         </div>
         <dl className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-halo-soft p-3 text-[9px] text-halo-muted">
-          <div><dt className="font-black text-halo-navy">{t.wallet.paymentMethod}</dt><dd className="mt-1">{trip.paymentMethod === "bank_telebirr" ? "Bank / Telebirr" : trip.paymentMethod === "cash" ? "Cash" : t.common.none}</dd></div>
+          <div><dt className="font-black text-halo-navy">{t.wallet.tripAmount}</dt><dd className="mt-1">{formatWalletEtb(trip.tripAmountEtb)}</dd></div>
+          <div><dt className="font-black text-halo-navy">{t.wallet.vehicle}</dt><dd className="mt-1 break-words">{trip.vehicleType ? trip.vehicleType.replaceAll("_", " ") : t.common.none}</dd></div>
+          <div><dt className="font-black text-halo-navy">{t.wallet.distance}</dt><dd className="mt-1">{trip.distanceKm === null ? "—" : `${trip.distanceKm.toLocaleString()} km`}</dd></div>
+          <div><dt className="font-black text-halo-navy">{t.wallet.cargo}</dt><dd className="mt-1 break-words">{trip.cargoDescription || t.common.none}</dd></div>
+          <div><dt className="font-black text-halo-navy">{t.wallet.paymentMethod}</dt><dd className="mt-1">{trip.paymentMethod === "bank_telebirr" ? t.wallet.bankTelebirr : trip.paymentMethod === "cash" ? t.wallet.cash : t.common.none}</dd></div>
           <div><dt className="font-black text-halo-navy">{t.wallet.customerCollections}</dt><dd className="mt-1">{formatWalletEtb(trip.amountCollectedEtb)}</dd></div>
+          <div><dt className="font-black text-halo-navy">{t.wallet.accepted}</dt><dd className="mt-1">{trip.acceptedAt ? dateLabel(trip.acceptedAt, language) : "—"}</dd></div>
+          <div><dt className="font-black text-halo-navy">{t.wallet.delivered}</dt><dd className="mt-1">{dateLabel(trip.deliveredAt || trip.completedAt, language)}</dd></div>
           <div><dt className="font-black text-halo-navy">{t.wallet.depositUsed}</dt><dd className="mt-1">{formatWalletEtb(trip.depositConsumedEtb)}</dd></div>
-          <div><dt className="font-black text-halo-navy">{t.wallet.delivered}</dt><dd className="mt-1">{dateLabel(trip.completedAt, language)}</dd></div>
         </dl>
       </article>)}
     </section>
