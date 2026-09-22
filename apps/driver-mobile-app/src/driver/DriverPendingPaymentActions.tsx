@@ -37,7 +37,7 @@ export function DriverPendingPaymentActions({
       setItems(await fetchPendingDriverPaymentActions(userId));
       setError("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t.pendingPayments.loadError);
+      setError(t.pendingPayments.loadError);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -60,7 +60,7 @@ export function DriverPendingPaymentActions({
       setNotice(`${item.trackingId}: ${t.pendingPayments.confirmedNotice}`);
       await refresh(true);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t.pendingPayments.confirmError);
+      setError(t.pendingPayments.confirmError);
     } finally {
       setBusyPaymentId(null);
     }
@@ -83,7 +83,7 @@ export function DriverPendingPaymentActions({
       setReason("");
       await refresh(true);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t.pendingPayments.reportError);
+      setError(t.pendingPayments.reportError);
     } finally {
       setBusyPaymentId(null);
     }
