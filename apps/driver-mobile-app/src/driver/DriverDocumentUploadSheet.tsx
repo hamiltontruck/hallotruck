@@ -42,6 +42,7 @@ export function DriverDocumentUploadSheet({
   const [submitting, setSubmitting] = useState(false);
   const t = getDriverV4Copy(language);
   const photoOnly = photoOnlyDocumentKeys.has(documentKey);
+  const driverPhotoCameraOnly = documentKey === "driver_photo";
   const supportsExpiry = expiryDocumentKeys.has(documentKey);
   const accept = photoOnly
     ? "image/jpeg,image/png,image/webp,image/heic,image/heif"
@@ -124,7 +125,7 @@ export function DriverDocumentUploadSheet({
           ref={fileInputRef}
           type="file"
           accept={accept}
-          capture={photoOnly ? (documentKey === "driver_photo" ? "user" : "environment") : undefined}
+          capture={driverPhotoCameraOnly ? "user" : photoOnly ? "environment" : undefined}
           disabled={submitting}
           onChange={(event) => {
             const selected = event.currentTarget.files?.[0] ?? null;
@@ -134,7 +135,7 @@ export function DriverDocumentUploadSheet({
           className="sr-only"
         />
         <button type="button" onClick={chooseFile} disabled={submitting} className="flex min-h-24 w-full flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-halo-line bg-halo-canvas px-4 text-center transition active:scale-[0.99] disabled:opacity-60">
-          <span className="text-sm font-black text-halo-blue">{file ? t.documentUi.changeFile : photoOnly ? t.documentUi.cameraGallery : t.documentUi.chooseFile}</span>
+          <span className="text-sm font-black text-halo-blue">{file ? t.documentUi.changeFile : driverPhotoCameraOnly ? "📷" : photoOnly ? t.documentUi.cameraGallery : t.documentUi.chooseFile}</span>
           <span className="mt-2 break-all text-[10px] leading-4 text-halo-muted">{selectedSummary || (photoOnly ? "JPG, PNG, WebP, HEIC/HEIF · max 10 MB" : "JPG, PNG, WebP, HEIC/HEIF, PDF · max 10 MB")}</span>
         </button>
 
