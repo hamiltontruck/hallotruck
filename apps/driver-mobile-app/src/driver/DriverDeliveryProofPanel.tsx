@@ -228,7 +228,7 @@ export function DriverDeliveryProofPanel({
       setOpen(false);
       onDelivered(trip.trackingId);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t.deliveryProof.completeError);
+      setError(t.deliveryProof.completeError);
       setSaving(false);
       submittingRef.current = false;
     }
