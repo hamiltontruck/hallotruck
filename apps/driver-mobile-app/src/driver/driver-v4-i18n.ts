@@ -48,6 +48,8 @@ const en = {
     inTransit: "IN TRANSIT",
     approved: "APPROVED",
     suspended: "SUSPENDED",
+    delivered: "DELIVERED",
+    cancelled: "CANCELLED",
     notRecorded: "Not recorded",
   },
   home: {
@@ -577,6 +579,8 @@ const om = {
     inTransit: "IMALA IRRA",
     approved: "EEYYAMAME",
     suspended: "DHAABBATE",
+    delivered: "GEESSAME",
+    cancelled: "HAQAME",
     notRecorded: "Hin galmoofne",
   },
   home: {
@@ -1106,6 +1110,8 @@ const am = {
     inTransit: "በመንገድ ላይ",
     approved: "ጸድቋል",
     suspended: "ታግዷል",
+    delivered: "ደርሷል",
+    cancelled: "ተሰርዟል",
     notRecorded: "አልተመዘገበም",
   },
   home: {
