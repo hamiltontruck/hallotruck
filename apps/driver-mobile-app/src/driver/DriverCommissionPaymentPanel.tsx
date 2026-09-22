@@ -86,7 +86,7 @@ export function DriverCommissionPaymentPanel({
       setSuccess(t.commission.success);
       await onSubmitted();
     } catch (caught) {
-      setError(caught instanceof Error && caught.message.trim() ? caught.message : t.commission.submitError);
+      setError(t.commission.submitError);
     } finally {
       setSubmitting(false);
     }
