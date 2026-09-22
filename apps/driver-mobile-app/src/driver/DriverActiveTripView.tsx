@@ -49,6 +49,12 @@ function formatEtb(value: number | null): string {
   return value === null ? "—" : `ETB ${Math.round(value).toLocaleString()}`;
 }
 
+function concisePlace(value: string): string {
+  const [place] = value.split(",");
+  return place?.trim() || value.trim();
+}
+
+
 function statusCopy(
   state: GpsState,
   tripStatus: DriverActiveTripOrder["status"],
@@ -437,8 +443,7 @@ export function DriverActiveTripView({
     </svg>
 
     <div className="absolute inset-x-3 top-3 z-10 rounded-[22px] border border-white/70 bg-white/95 p-4 shadow-halo-float backdrop-blur-xl">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-muted">{trip.trackingId}</p><h1 className="mt-1 break-words text-lg font-black text-halo-navy">{trip.pickupAddress} → {trip.dropoffAddress}</h1></div><span className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black ${trip.status === "in_transit" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{statusLabel}</span></div>
-      <div className="mt-3 flex items-center gap-3 text-xs text-halo-muted"><span className="flex min-w-0 items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" /><span className="truncate">{trip.pickupAddress}</span></span><span className="h-px flex-1 bg-halo-line"/><span className="flex min-w-0 items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-red-500" /><span className="truncate">{trip.dropoffAddress}</span></span></div>
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-halo-muted">{fullName} · {trip.trackingId}</p><h1 className="mt-1 break-words text-lg font-black text-halo-navy">{concisePlace(trip.pickupAddress)} → {concisePlace(trip.dropoffAddress)}</h1></div><span className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black ${trip.status === "in_transit" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{statusLabel}</span></div>
     </div>
 
     <div className="absolute inset-x-3 top-[118px] z-10 flex items-start gap-2">
