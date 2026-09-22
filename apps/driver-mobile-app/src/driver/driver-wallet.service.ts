@@ -51,7 +51,7 @@ export async function fetchDriverWalletTrips(expectedUserId: string): Promise<Dr
   const client = await requireExpectedDriver(expectedUserId);
   const { data, error } = await client
     .from("driver_trip_payment_results")
-    .select("id,order_id,result_type,amount_collected,payment_method,completed_at,commission_etb,driver_gross_etb,driver_net_etb,deposit_consumed_etb,commission_due_after_etb,orders!inner(tracking_id,pickup_address,dropoff_address)")
+    .select("id,order_id,result_type,amount_collected,payment_method,completed_at,commission_etb,driver_gross_etb,driver_net_etb,deposit_consumed_etb,commission_due_after_etb,orders!inner(tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,cargo_description,selected_payment_method,accepted_at,delivered_at,truck_id)")
     .eq("assigned_driver_id", expectedUserId)
     .order("completed_at", { ascending: false })
     .limit(20);
