@@ -143,7 +143,7 @@ test("profile view surfaces signed preview controls and expiry attention", () =>
   assert.match(componentSource, /DriverDocumentPreviewSheet/);
   assert.match(componentSource, /documentExpirySummary/);
   assert.match(componentSource, /data-driver-document-expiry-warning/);
-  assert.match(componentSource, />Ilaali</);
+  assert.match(componentSource, /c\.preview/);
 });
 
 test("App routes only Driver profile to production profile component", () => {
