@@ -87,7 +87,8 @@ test("upload sheet locks duplicate submission and requires front expiry", () => 
   assert.match(sheetSource, /if \(submitting\) return/);
   assert.match(sheetSource, /supportsExpiry && !expiryDate/);
   assert.match(sheetSource, /t\.documentUi\.expiryRequired/);
-  assert.match(sheetSource, /capture=\{photoOnly/);
+  assert.match(sheetSource, /driverPhotoCameraOnly = documentKey === "driver_photo"/);
+  assert.match(sheetSource, /capture=\{driverPhotoCameraOnly \? "user"/);
   assert.match(sheetSource, /application\/pdf/);
   assert.match(sheetSource, /data-driver-document-upload-sheet/);
   assert.match(sheetSource, /t\.documentUi\.(securityHelp|warningVerified|warningRejected|warningPending)/);
