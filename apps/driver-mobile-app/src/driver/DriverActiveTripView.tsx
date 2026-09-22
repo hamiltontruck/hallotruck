@@ -158,7 +158,7 @@ export function DriverActiveTripView({
       }
     } catch (caught) {
       if (!mountedRef.current || requestId !== refreshRequestIdRef.current) return;
-      setError(caught instanceof Error ? caught.message : t.trip.loadError);
+      setError(t.trip.loadError);
     } finally {
       if (mountedRef.current && requestId === refreshRequestIdRef.current) setLoading(false);
       refreshInFlightRef.current = false;
@@ -180,7 +180,7 @@ export function DriverActiveTripView({
       setRouteOrderId(orderId);
     } catch (caught) {
       if (!mountedRef.current || requestId !== routeRequestIdRef.current || tripRef.current?.id !== orderId) return;
-      setRouteError(caught instanceof Error ? caught.message : t.trip.routeError);
+      setRouteError(t.trip.routeError);
       if (routeOrderId !== orderId) setRoute(null);
     } finally {
       if (mountedRef.current && requestId === routeRequestIdRef.current) setRouteLoading(false);
@@ -222,7 +222,7 @@ export function DriverActiveTripView({
       if (!mountedRef.current) return;
       setPendingCount(getQueuedDriverPingCount(userId, current.id));
       setGpsState("queued");
-      setError(caught instanceof Error ? caught.message : t.trip.queueSendError);
+      setError(t.trip.queueSendError);
     } finally {
       syncInFlightRef.current = false;
     }
@@ -292,7 +292,7 @@ export function DriverActiveTripView({
               }
               clearWatch();
               setGpsState(getQueuedDriverPingCount(userId, active.id) > 0 ? "queued" : "idle");
-              setError(caught instanceof Error ? caught.message : t.trip.pingError);
+              setError(t.trip.pingError);
             })
             .finally(() => {
               startingRef.current = false;
@@ -309,7 +309,7 @@ export function DriverActiveTripView({
     } catch (caught) {
       clearWatch();
       setGpsState(pendingCount > 0 ? "queued" : "idle");
-      setError(caught instanceof Error ? caught.message : t.trip.gpsReadError);
+      setError(t.trip.gpsReadError);
     }
   }, [clearWatch, pendingCount, t.trip, userId]);
 
@@ -338,7 +338,7 @@ export function DriverActiveTripView({
     try {
       unsubscribe = subscribeToDriverActiveTrip(userId, () => void refreshTrip(true));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t.trip.realtimeError);
+      setError(t.trip.realtimeError);
     }
     return () => {
       mountedRef.current = false;
