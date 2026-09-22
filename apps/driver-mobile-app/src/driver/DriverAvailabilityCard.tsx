@@ -67,7 +67,7 @@ export function DriverAvailabilityCard({
         if (!hasActiveTrip && value?.isAvailable) startWatch();
       })
       .catch((caught) => {
-        if (active) setError(caught instanceof Error ? caught.message : t.availability.loadError);
+        if (active) setError(t.availability.loadError);
       });
     return () => {
       active = false;
@@ -99,7 +99,7 @@ export function DriverAvailabilityCard({
           lastSentAtRef.current = Date.now();
           startWatch();
         }).catch((caught) => {
-          setError(caught instanceof Error ? caught.message : t.availability.permission);
+          setError(t.availability.permission);
         }).finally(() => setBusy(false));
       },
       () => {
@@ -117,7 +117,7 @@ export function DriverAvailabilityCard({
       stopWatch();
       setPresence(await updateDriverPresence(userId, { isAvailable: false }));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t.availability.updateError);
+      setError(t.availability.updateError);
     } finally {
       setBusy(false);
     }
