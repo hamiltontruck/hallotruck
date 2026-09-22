@@ -83,6 +83,13 @@ article:has(select[id^="truck-"]) button:not(:disabled):active{transform:scale(.
  article:has(select[id^="truck-"]){border-radius:22px}
  [role="dialog"][aria-labelledby="mobile-delivery-proof-title"] form>section{border-radius:20px}
 }
+@media(max-width:412px){
+ [data-driver-v4-workspace]{max-width:100%;overflow-x:hidden}
+ [data-driver-v4-workspace]>header{padding-inline:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+ [data-driver-v4-workspace]>nav{padding-left:max(0px,env(safe-area-inset-left));padding-right:max(0px,env(safe-area-inset-right))}
+ [data-mobile-driver-home],[data-mobile-driver-wallet],[data-mobile-driver-profile]{max-width:100%;overflow-x:hidden}
+ [data-driver-operations-chat]{max-width:100vw}
+}
 @media(max-width:390px){
  .halo-mobile-app main>div.space-y-6{padding-inline:12px;gap:20px}
  .halo-mobile-app main>div.space-y-6>.grid.grid-cols-3{gap:9px}
