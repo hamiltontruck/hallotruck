@@ -45,7 +45,7 @@ type DriverLanguage = "om" | "en" | "am";
 const profileCopy = {
   en: {
     eyebrow: "Driver profile", title: "Identity & compliance", help: "View your database profile and Admin/CEO verification status in real time.",
-    loading: "Loading driver profile…", preferredVehicle: "{c.preferredVehicle}", memberSince: "{c.memberSince}", driverDocs: "Driver documents", vehicleDocs: "Vehicle documents",
+    loading: "Loading driver profile…", preferredVehicle: "Preferred vehicle", memberSince: "Member since", driverDocs: "Driver documents", vehicleDocs: "Vehicle documents",
     verified: "verified", submitted: "Submitted", fleet: "Fleet", yourVehicles: "Your vehicles", total: "total", noVehicle: "No vehicle assigned",
     noVehicleHelp: "Vehicle assignment or onboarding completion is required from Admin/CEO.", identityChecklist: "Identity checklist", vehicleChecklist: "Vehicle checklist",
     chooseVehicle: "No vehicle selected", chooseVehicleHelp: "Select a vehicle to view its document status.", uploadNote: "Document upload/replacement:", uploadHelp: "A new file becomes Pending and waits for Admin/CEO review. Replacing a verified document does not inherit its previous verification.",
@@ -111,7 +111,8 @@ function statusCopy(status: DriverProfileRecord["driverStatus"], language: Drive
   return { label: "SUSPENDED", detail: "Driver account yeroo ammaa hojii fudhachuu hin danda'u.", className: "bg-red-50 text-red-700" };
 }
 
-function ProgressCard({ title, verified, submitted, total, language }: { title: string; verified: number; submitted: number; total: number; language: DriverLanguage }) {\n  const c = profileCopy[language];
+function ProgressCard({ title, verified, submitted, total, language }: { title: string; verified: number; submitted: number; total: number; language: DriverLanguage }) {
+  const c = profileCopy[language];
   const percent = total > 0 ? Math.round((verified / total) * 100) : 0;
   return <div className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card">
     <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">{title}</p><p className="mt-2 text-xl font-black text-halo-navy">{verified}/{total} {c.verified}</p></div><span className="rounded-xl bg-halo-soft px-3 py-2 text-xs font-black text-halo-blue">{percent}%</span></div>
@@ -130,15 +131,20 @@ function DocumentRow({
   onPreview,
   onUpload,
   uploadDisabled = false,
+  language,
 }: {
   documentKey: VerificationDocumentKey;
   record: DriverVerificationRecord | undefined;
   onPreview: () => void;
   onUpload: () => void;
   uploadDisabled?: boolean;
+  language: DriverLanguage;
 }) {
+  const c = profileCopy[language];
+  const localizedLabels = documentLabelsByLanguage[language];
   const health = documentHealth(record);
-  const copy = healthCopy[health];\n  const healthLabel = health === "missing" ? c.missing : health === "pending" ? c.pending : health === "verified" ? c.docVerified : health === "rejected" ? c.rejected : c.expired;
+  const copy = healthCopy[health];
+  const healthLabel = health === "missing" ? c.missing : health === "pending" ? c.pending : health === "verified" ? c.docVerified : health === "rejected" ? c.rejected : c.expired;
   const expiry = documentExpiryWarning(record);
   const expiryMessage = expiry.level === "expired"
     ? "Yeroon isaa darbeera — document haaraa galchi."
@@ -157,7 +163,8 @@ function DocumentRow({
   </article>;
 }
 
-function TruckCard({ truck, selected, onSelect, language }: { truck: DriverTruckRecord; selected: boolean; onSelect: () => void; language: DriverLanguage }) {\n  const c = profileCopy[language];
+function TruckCard({ truck, selected, onSelect, language }: { truck: DriverTruckRecord; selected: boolean; onSelect: () => void; language: DriverLanguage }) {
+  const c = profileCopy[language];
   return <button type="button" onClick={onSelect} aria-pressed={selected} className={`min-w-[230px] rounded-[22px] border p-4 text-left shadow-halo-card transition ${selected ? "border-halo-blue bg-halo-soft" : "border-halo-line bg-white"}`}>
     <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">{c.plate}</p><p className="mt-1 text-lg font-black text-halo-navy">{truck.plateNumber}</p></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${selected ? "bg-halo-blue text-white" : "bg-slate-100 text-slate-600"}`}>{truck.status?.replace(/_/g, " ").toUpperCase() || "STATUS —"}</span></div>
     <div className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><p className="text-[9px] font-bold uppercase tracking-wider text-halo-muted">{c.type}</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(truck.vehicleType)}</p></div><div><p className="text-[9px] font-bold uppercase tracking-wider text-halo-muted">{c.capacity}</p><p className="mt-1 font-extrabold text-halo-navy">{formatCapacityTons(truck.capacityTons)}</p></div></div>
