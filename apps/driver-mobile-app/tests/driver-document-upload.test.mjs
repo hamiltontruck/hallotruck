@@ -86,11 +86,11 @@ test("service keeps storage and database mutation self-scoped", () => {
 test("upload sheet locks duplicate submission and requires front expiry", () => {
   assert.match(sheetSource, /if \(submitting\) return/);
   assert.match(sheetSource, /supportsExpiry && !expiryDate/);
-  assert.match(sheetSource, /Expiry date — required/);
+  assert.match(sheetSource, /t\.documentUi\.expiryRequired/);
   assert.match(sheetSource, /capture=\{photoOnly/);
   assert.match(sheetSource, /application\/pdf/);
   assert.match(sheetSource, /data-driver-document-upload-sheet/);
-  assert.match(sheetSource, /Admin\/CEO review/);
+  assert.match(sheetSource, /t\.documentUi\.(securityHelp|warningVerified|warningRejected|warningPending)/);
 });
 
 test("Driver Profile integrates upload and refreshes after success", () => {
