@@ -27,6 +27,7 @@ import {
   syncQueuedDriverPings,
 } from "./driver-gps-queue";
 import { DriverDeliveryProofPanel } from "./DriverDeliveryProofPanel";
+import { DriverTripCustomerPaymentPanel } from "./DriverTripCustomerPaymentPanel";
 
 type GpsState = "idle" | "requesting" | "queued" | "syncing" | "live";
 
@@ -74,9 +75,11 @@ function statusCopy(state: GpsState, tripStatus: DriverActiveTripOrder["status"]
 export function DriverActiveTripView({
   userId,
   fullName,
+  onOpenWallet = () => undefined,
 }: {
   userId: string;
   fullName: string;
+  onOpenWallet?: () => void;
 }) {
   const mountedRef = useRef(false);
   const tripRef = useRef<DriverActiveTripOrder | null>(null);
@@ -383,7 +386,7 @@ export function DriverActiveTripView({
           <h1 className="mt-2 text-2xl font-black text-halo-navy">Trip milkaa'inaan xumurameera</h1>
           <p className="mt-3 text-sm leading-6 text-halo-muted">Delivery proof fi payment result server irratti olkaa'amaniiru. Trip kun active workspace keessaa haqameera.</p>
           {error && <p role="alert" className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">{error}</p>}
-          <button type="button" onClick={() => { setCompletedTrackingId(null); void refreshTrip(); }} className="mt-6 min-h-12 w-full rounded-2xl bg-halo-blue px-5 font-black text-white">Hojii itti aanu ilaali</button>
+          <div className="mt-6 grid gap-2"><button type="button" onClick={onOpenWallet} className="min-h-12 w-full rounded-2xl bg-emerald-700 px-5 font-black text-white">Payment / Wallet ilaali</button><button type="button" onClick={() => { setCompletedTrackingId(null); void refreshTrip(); }} className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-5 font-black text-halo-navy">Hojii itti aanu ilaali</button></div>
         </section>
       </div>;
     }
@@ -436,6 +439,8 @@ export function DriverActiveTripView({
           {watchIdRef.current !== null && <button type="button" onClick={stopSharing} className="min-h-12 w-full rounded-2xl border border-halo-line px-5 text-sm font-black text-halo-navy">GPS qooduu dhaabi</button>}
         </> : gpsState === "live" ? <button type="button" onClick={stopSharing} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-5 text-sm font-black text-halo-navy">GPS qooduu dhaabi</button> : <button type="button" onClick={startSharing} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white shadow-halo-button disabled:opacity-60">{gpsState === "requesting" ? "GPS jalqabaa jira…" : gpsState === "syncing" ? "GPS sync godhaa jira…" : trip.status === "in_transit" ? "GPS kallattii itti fufi" : "Imala jalqabi & GPS qoodi"}</button>}
       </div>
+
+      <DriverTripCustomerPaymentPanel userId={userId} trip={trip} />
 
       {trip.status === "in_transit" && (
         <DriverDeliveryProofPanel trip={trip} userId={userId} onDelivered={handleDelivered} />
