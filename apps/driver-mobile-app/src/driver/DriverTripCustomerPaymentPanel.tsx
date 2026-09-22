@@ -59,13 +59,13 @@ export function DriverTripCustomerPaymentPanel({
       setContact(contactResult.value);
       setContactError("");
     } else {
-      setContactError(contactResult.reason instanceof Error ? contactResult.reason.message : t.customerPayment.contactLoadError);
+      setContactError(t.customerPayment.contactLoadError);
     }
     if (paymentResult.status === "fulfilled") {
       setPayments(paymentResult.value);
       setPaymentError("");
     } else {
-      setPaymentError(paymentResult.reason instanceof Error ? paymentResult.reason.message : t.customerPayment.paymentLoadError);
+      setPaymentError(t.customerPayment.paymentLoadError);
     }
     setRefreshing(false);
   }, [t.customerPayment.contactLoadError, t.customerPayment.paymentLoadError, trip.id, userId]);
