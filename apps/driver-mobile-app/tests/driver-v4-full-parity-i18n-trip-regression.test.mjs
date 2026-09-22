@@ -109,7 +109,14 @@ test("wallet keeps portal-backed trip history and financial contracts", () => {
   assert.match(wallet, /fetchDriverWalletTrips/);
   assert.match(wallet, /fetchDriverFinancialSummary/);
   assert.match(wallet, /fetchDriverCommissionSummary/);
-  assert.match(wallet, /DriverCommissionPaymentPanel/);
+  assert.doesNotMatch(wallet, /DriverCommissionPaymentPanel|DriverPendingPaymentActions/);
+});
+
+test("final Driver card is concise and profile omits rating badge", () => {
+  assert.match(trip, /function concisePlace/);
+  assert.match(trip, /\{fullName\} · \{trip\.trackingId\}/);
+  assert.match(trip, /concisePlace\(trip\.pickupAddress\).*concisePlace\(trip\.dropoffAddress\)/s);
+  assert.doesNotMatch(profile, /ratingAvg\.toFixed/);
 });
 
 test("authenticated shell remains scrollable with sticky five-tab navigation at target widths", () => {
