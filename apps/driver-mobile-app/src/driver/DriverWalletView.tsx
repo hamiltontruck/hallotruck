@@ -11,10 +11,8 @@ import {
   fetchDriverWalletTrips,
   subscribeToDriverWallet,
 } from "./driver-wallet.service";
-import { DriverCommissionPaymentPanel } from "./DriverCommissionPaymentPanel";
 import type { DriverCommissionPayment } from "./driver-commission-payment.model";
 import { fetchDriverCommissionPayments } from "./driver-commission-payment.service";
-import { DriverPendingPaymentActions } from "./DriverPendingPaymentActions";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
 type SourceErrors = {
@@ -200,8 +198,6 @@ export function DriverWalletView({
       <button type="button" onClick={() => void load(true)} disabled={refreshing} className="min-h-11 shrink-0 rounded-2xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-halo-card disabled:opacity-60">{refreshing ? t.common.refreshing : t.common.refresh}</button>
     </div>
 
-    <DriverPendingPaymentActions userId={userId} language={language} />
-
     <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-halo-blue to-halo-blue-dark p-5 text-white shadow-halo-float">
       <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full border-[25px] border-white/5" />
       <div className="relative">
@@ -236,17 +232,6 @@ export function DriverWalletView({
         <Metric label={t.wallet.balance} value={formatWalletEtb(commission?.balanceEtb ?? financial?.commissionDueEtb ?? null)} />
       </div>
     </section>
-
-    {commission && <DriverCommissionPaymentPanel
-      userId={userId}
-      balanceEtb={commission.balanceEtb}
-      pendingEtb={commission.pendingEtb}
-      payments={payments}
-      sourceError={errors.payments}
-      onRetry={() => void load(true)}
-      onSubmitted={async () => { await load(true); }}
-      language={language}
-    />}
 
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">
