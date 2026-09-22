@@ -196,3 +196,15 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Driver V4 authenticated workspace: body is locked on Android, so this view owns scrolling. */
+[data-driver-v4-workspace].driver-app {
+  height: var(--driver-app-height);
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+[data-driver-v4-workspace] > nav { position: sticky; bottom: 0; }

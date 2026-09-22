@@ -119,7 +119,7 @@ function TruckCard({ truck, selected, onSelect }: { truck: DriverTruckRecord; se
   </button>;
 }
 
-export function DriverProfileView({ userId, fallbackName }: { userId: string; fallbackName: string }) {
+export function DriverProfileView({ userId, fallbackName, language = "om" }: { userId: string; fallbackName: string; language?: "om" | "en" | "am" }) {
   const mountedRef = useRef(false);
   const refreshInFlightRef = useRef(false);
   const queuedRefreshRef = useRef(false);
@@ -234,7 +234,7 @@ export function DriverProfileView({ userId, fallbackName }: { userId: string; fa
   }
 
   return <div className="space-y-5 px-4 pb-8 pt-5 sm:px-6" data-mobile-driver-profile>
-    <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Driver profile</p><h1 className="mt-1 text-2xl font-black text-halo-navy">Eenyummaa fi compliance</h1><p className="mt-2 text-xs leading-5 text-halo-muted">Odeeffannoo database fi Admin/CEO verification status yeroo dhugaa ilaali.</p></div>
+    <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{language === "en" ? "Driver profile" : language === "am" ? "የDriver profile" : "Profile Driver"}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{language === "en" ? "Identity & compliance" : language === "am" ? "መታወቂያ እና compliance" : "Eenyummaa fi compliance"}</h1><p className="mt-2 text-xs leading-5 text-halo-muted">Odeeffannoo database fi Admin/CEO verification status yeroo dhugaa ilaali.</p></div>
 
     {uploadNotice && <div role="status" className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-700">{uploadNotice}</div>}
     {profileError && <SourceError message={profileError} onRetry={() => void refresh()} />}

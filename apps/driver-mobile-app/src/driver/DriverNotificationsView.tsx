@@ -15,7 +15,12 @@ function notificationTime(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export function DriverNotificationsView({ userId }: { userId: string }) {
+export function DriverNotificationsView({ userId, language = "om" }: { userId: string; language?: "om" | "en" | "am" }) {
+  const ui = language === "en"
+    ? { eyebrow:"Driver alerts", title:"Notifications", refresh:"Refresh", loading:"Loading notifications…", empty:"No new notifications." }
+    : language === "am"
+      ? { eyebrow:"የDriver ማሳወቂያዎች", title:"ማሳወቂያዎች", refresh:"አድስ", loading:"ማሳወቂያዎች በመጫን ላይ…", empty:"አዲስ ማሳወቂያ የለም።" }
+      : { eyebrow:"Beeksisa Driver", title:"Beeksisa", refresh:"Haaromsi", loading:"Beeksisa fe'aa jira…", empty:"Beeksisa haaraan hin jiru." };
   const [items, setItems] = useState<DriverNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -54,8 +59,8 @@ export function DriverNotificationsView({ userId }: { userId: string }) {
   }
 
   return <main className="min-h-[calc(100dvh-74px)] bg-halo-canvas px-4 pb-8 pt-5">
-    <div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Driver alerts</p><h1 className="mt-1 text-2xl font-black text-halo-navy">Notifications</h1></div><button type="button" onClick={() => void refresh()} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black">Refresh</button></div>
+    <div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{ui.eyebrow}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{ui.title}</h1></div><button type="button" onClick={() => void refresh()} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black">{ui.refresh}</button></div>
     {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</p>}
-    {loading ? <p className="mt-6 text-sm text-halo-muted">Notifications fe'amaa jiru…</p> : items.length === 0 ? <div className="mt-6 rounded-[22px] border border-dashed border-halo-line bg-white p-6 text-center text-sm text-halo-muted">Notification haaraan hin jiru.</div> : <section className="mt-5 space-y-3">{items.map((item) => <button key={item.id} type="button" onClick={() => void markRead(item)} className={`w-full rounded-[22px] border p-4 text-left shadow-halo-card ${item.read_at ? "border-halo-line bg-white" : "border-halo-gold bg-halo-gold-soft"}`}><span className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-blue">{item.event_type.replaceAll("_", " ")}</span><strong className="mt-1 block text-sm text-halo-navy">{item.title}</strong><span className="mt-2 block text-xs leading-5 text-halo-muted">{item.body}</span><time className="mt-2 block text-[9px] text-halo-muted">{notificationTime(item.created_at)}</time></button>)}</section>}
+    {loading ? <p className="mt-6 text-sm text-halo-muted">{ui.loading}</p> : items.length === 0 ? <div className="mt-6 rounded-[22px] border border-dashed border-halo-line bg-white p-6 text-center text-sm text-halo-muted">{ui.empty}</div> : <section className="mt-5 space-y-3">{items.map((item) => <button key={item.id} type="button" onClick={() => void markRead(item)} className={`w-full rounded-[22px] border p-4 text-left shadow-halo-card ${item.read_at ? "border-halo-line bg-white" : "border-halo-gold bg-halo-gold-soft"}`}><span className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-blue">{item.event_type.replaceAll("_", " ")}</span><strong className="mt-1 block text-sm text-halo-navy">{item.title}</strong><span className="mt-2 block text-xs leading-5 text-halo-muted">{item.body}</span><time className="mt-2 block text-[9px] text-halo-muted">{notificationTime(item.created_at)}</time></button>)}</section>}
   </main>;
 }

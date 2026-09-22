@@ -78,11 +78,13 @@ export function DriverHomeView({
   onNavigate,
   onProfileName,
   onOpenSupport,
+  language = "om",
 }: {
   userId: string;
   onNavigate: (destination: DriverWorkspaceDestination) => void;
   onProfileName?: (name: string) => void;
   onOpenSupport: () => void;
+  language?: "om" | "en" | "am";
 }) {
   const mountedRef = useRef(false);
   const requestIdRef = useRef(0);
@@ -90,6 +92,34 @@ export function DriverHomeView({
   const [errors, setErrors] = useState<SourceErrors>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const copy = language === "en" ? {
+    welcome: "Welcome", description: "Jobs, trip, documents and finance below come from your signed-in Driver account.",
+    current: "Current operation", documents: "Documents", availableJobs: "Available jobs", assignedTruck: "Assigned truck",
+    releasedGross: "Released gross", commissionDue: "Commission due", availableDeposit: "Available deposit", rating: "Rating",
+    alerts: "Important alerts", attention: "Operational attention", notifications: "Notifications", quick: "Quick actions",
+    workspace: "Driver workspace", refreshing: "Refreshing…", refresh: "Refresh", jobs: "Jobs",
+    jobsDetail: "Available loads and truck selection", activeTrip: "Active Trip", tripDetail: "GPS, route, payment and delivery",
+    history: "Trip History / Wallet", historyDetail: "Completed trips, deposit and commission", docs: "Documents",
+    docsDetail: "Verification documents", support: "HALLO Support", supportDetail: "Secure Operations chat",
+  } : language === "am" ? {
+    welcome: "እንኳን ደህና መጡ", description: "ስራዎች፣ ጉዞ፣ ሰነዶች እና ፋይናንስ ከDriver መለያዎ ይመጣሉ።",
+    current: "የአሁኑ ስራ", documents: "ሰነዶች", availableJobs: "የሚገኙ ስራዎች", assignedTruck: "የተመደበ መኪና",
+    releasedGross: "የተለቀቀ ገቢ", commissionDue: "የሚከፈል ኮሚሽን", availableDeposit: "የሚገኝ ዲፖዚት", rating: "ደረጃ",
+    alerts: "አስፈላጊ ማሳወቂያዎች", attention: "የስራ ትኩረት", notifications: "ማሳወቂያዎች", quick: "ፈጣን እርምጃዎች",
+    workspace: "Driver workspace", refreshing: "በማደስ ላይ…", refresh: "አድስ", jobs: "ስራዎች",
+    jobsDetail: "የሚገኙ ጭነቶች እና መኪና", activeTrip: "ንቁ ጉዞ", tripDetail: "GPS፣ መንገድ፣ ክፍያ እና ማድረስ",
+    history: "የጉዞ ታሪክ / Wallet", historyDetail: "የተጠናቀቁ ጉዞዎች፣ ዲፖዚት እና ኮሚሽን", docs: "ሰነዶች",
+    docsDetail: "የማረጋገጫ ሰነዶች", support: "HALLO Support", supportDetail: "ደህንነቱ የተጠበቀ Operations chat",
+  } : {
+    welcome: "Baga nagaan dhuftan", description: "Hojii, imala, dokumentii fi faayinaansi akkaawuntii Driver kee irraa dhufu.",
+    current: "Hojii ammaa", documents: "Dokumentii", availableJobs: "Hojii jiran", assignedTruck: "Truck ramadame",
+    releasedGross: "Galii gadhiifame", commissionDue: "Komishinii hafee", availableDeposit: "Deposit jiru", rating: "Sadarkaa",
+    alerts: "Beeksisa barbaachisaa", attention: "Xiyyeeffannoo hojii", notifications: "Beeksisa", quick: "Tarkaanfii saffisaa",
+    workspace: "Driver workspace", refreshing: "Haaromsaa…", refresh: "Haaromsi", jobs: "Hojii",
+    jobsDetail: "Fe'umsa jiran fi truck filannoo", activeTrip: "Imala hojii irra jiru", tripDetail: "GPS, route, payment fi delivery",
+    history: "Seenaa Imalaa / Wallet", historyDetail: "Imala xumurame, deposit fi komishinii", docs: "Dokumentii",
+    docsDetail: "Dokumentii mirkaneessaa", support: "HALLO Support", supportDetail: "Operations chat nageenya qabu",
+  };
 
   const load = useCallback(async (silent = false) => {
     const requestId = ++requestIdRef.current;
@@ -177,18 +207,18 @@ export function DriverHomeView({
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-[.18em] text-halo-gold">HALLO DRIVER</p>
-          <h1 className="mt-2 break-words text-2xl font-black">Welcome, {firstName}</h1>
-          <p className="mt-2 text-xs leading-5 text-white/70">Jobs, trip, documents and finance below come from your signed-in Driver account.</p>
+          <h1 className="mt-2 break-words text-2xl font-black">{copy.welcome}, {firstName}</h1>
+          <p className="mt-2 text-xs leading-5 text-white/70">{copy.description}</p>
         </div>
         <span className="shrink-0 rounded-full bg-white/10 px-3 py-2 text-[9px] font-black">{statusLabel(snapshot.profile?.driverStatus)}</span>
       </div>
       <div className="relative mt-5 grid grid-cols-2 gap-3">
         <button type="button" onClick={() => onNavigate(activeTrip ? "trip" : "jobs")} className="min-h-20 rounded-2xl bg-white/10 p-3 text-left">
-          <span className="text-[9px] font-bold text-white/55">Current operation</span>
+          <span className="text-[9px] font-bold text-white/55">{copy.current}</span>
           <strong className="mt-1 block break-words text-sm">{activeTrip ? activeTrip.trackingId : jobsCount === null ? "Unavailable" : `${jobsCount} available job${jobsCount === 1 ? "" : "s"}`}</strong>
         </button>
         <button type="button" onClick={() => onNavigate("profile")} className="min-h-20 rounded-2xl bg-white/10 p-3 text-left">
-          <span className="text-[9px] font-bold text-white/55">Documents</span>
+          <span className="text-[9px] font-bold text-white/55">{copy.documents}</span>
           <strong className="mt-1 block text-sm">{progress ? `${progress.submitted}/${progress.total} submitted` : "Unavailable"}</strong>
           {progress && <span className="mt-1 block text-[9px] text-white/55">{progress.verified}/{progress.total} verified</span>}
         </button>
@@ -200,16 +230,16 @@ export function DriverHomeView({
     </section>}
 
     <section className="mt-4 grid grid-cols-2 gap-3" aria-label="Driver operational summary">
-      <Metric label="Available jobs" value={jobsCount === null ? "—" : String(jobsCount)} help={activeTrip ? "Locked while trip is active" : "Authorized marketplace"} />
-      <Metric label="Assigned truck" value={truck?.plateNumber ?? (snapshot.trucks ? "None" : "—")} help={truck?.vehicleType ?? undefined} />
-      <Metric label="Released gross" value={formatWalletEtb(snapshot.financial?.grossReleasedEtb ?? null)} help="Authoritative released trip funds" />
-      <Metric label="Commission due" value={formatWalletEtb(due)} help={blocked === null ? "Access state unavailable" : blocked ? "Job access blocked" : "Job access active"} />
-      <Metric label="Available deposit" value={formatWalletEtb(snapshot.financial?.availableDepositEtb ?? null)} help="Authoritative deposit balance" />
-      <Metric label="Rating" value={snapshot.profile?.ratingAvg === null || snapshot.profile?.ratingAvg === undefined ? "—" : snapshot.profile.ratingAvg.toFixed(1)} help="Driver profile rating" />
+      <Metric label={copy.availableJobs} value={jobsCount === null ? "—" : String(jobsCount)} help={activeTrip ? "Locked while trip is active" : "Authorized marketplace"} />
+      <Metric label={copy.assignedTruck} value={truck?.plateNumber ?? (snapshot.trucks ? "None" : "—")} help={truck?.vehicleType ?? undefined} />
+      <Metric label={copy.releasedGross} value={formatWalletEtb(snapshot.financial?.grossReleasedEtb ?? null)} help="Authoritative released trip funds" />
+      <Metric label={copy.commissionDue} value={formatWalletEtb(due)} help={blocked === null ? "Access state unavailable" : blocked ? "Job access blocked" : "Job access active"} />
+      <Metric label={copy.availableDeposit} value={formatWalletEtb(snapshot.financial?.availableDepositEtb ?? null)} help="Authoritative deposit balance" />
+      <Metric label={copy.rating} value={snapshot.profile?.ratingAvg === null || snapshot.profile?.ratingAvg === undefined ? "—" : snapshot.profile.ratingAvg.toFixed(1)} help="Driver profile rating" />
     </section>
 
     <section className="mt-5 rounded-[24px] border border-halo-line bg-white p-4 shadow-halo-card">
-      <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">Important alerts</p><h2 className="mt-1 text-lg font-black text-halo-navy">Operational attention</h2></div><button type="button" onClick={() => onNavigate("alerts")} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">Notifications</button></div>
+      <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{copy.alerts}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{copy.attention}</h2></div><button type="button" onClick={() => onNavigate("alerts")} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">{copy.notifications}</button></div>
       <div className="mt-4 space-y-2 text-xs leading-5 text-halo-muted">
         {activeTrip && <p className="rounded-xl bg-emerald-50 px-3 py-2 font-bold text-emerald-800">Active trip {activeTrip.trackingId} needs operational attention.</p>}
         {blocked === true && <p className="rounded-xl bg-red-50 px-3 py-2 font-bold text-red-700">Commission status currently blocks new job access.</p>}
@@ -220,14 +250,14 @@ export function DriverHomeView({
     </section>
 
     <section className="mt-5">
-      <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">Quick actions</p><h2 className="mt-1 text-lg font-black text-halo-navy">Driver workspace</h2></div><button type="button" onClick={() => void load(true)} disabled={refreshing} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue disabled:opacity-60">{refreshing ? "Refreshing…" : "Refresh"}</button></div>
+      <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">{copy.quick}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{copy.workspace}</h2></div><button type="button" onClick={() => void load(true)} disabled={refreshing} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue disabled:opacity-60">{refreshing ? copy.refreshing : copy.refresh}</button></div>
       <div className="grid grid-cols-2 gap-3">
-        <Action title="Jobs" detail="Available loads and truck selection" onClick={() => onNavigate("jobs")} />
-        <Action title="Active Trip" detail="GPS, route, payment and delivery" onClick={() => onNavigate("trip")} />
-        <Action title="Wallet & History" detail="Deposit, commission and trip history" onClick={() => onNavigate("wallet")} />
-        <Action title="Documents" detail="Exact 8-file verification set" onClick={() => onNavigate("profile")} />
-        <Action title="Notifications" detail="Assignment and review alerts" onClick={() => onNavigate("alerts")} />
-        <Action title="HALLO Support" detail="Secure Operations chat" onClick={onOpenSupport} />
+        <Action title={copy.jobs} detail={copy.jobsDetail} onClick={() => onNavigate("jobs")} />
+        <Action title={copy.activeTrip} detail={copy.tripDetail} onClick={() => onNavigate("trip")} />
+        <Action title={copy.history} detail={copy.historyDetail} onClick={() => onNavigate("wallet")} />
+        <Action title={copy.docs} detail={copy.docsDetail} onClick={() => onNavigate("profile")} />
+        <Action title={copy.notifications} detail={copy.alerts} onClick={() => onNavigate("alerts")} />
+        <Action title={copy.support} detail={copy.supportDetail} onClick={onOpenSupport} />
       </div>
     </section>
   </main>;

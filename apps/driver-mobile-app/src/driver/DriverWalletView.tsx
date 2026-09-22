@@ -59,7 +59,7 @@ function SourceNotice({ message, onRetry }: { message: string; onRetry: () => vo
   </div>;
 }
 
-export function DriverWalletView({ userId }: { userId: string }) {
+export function DriverWalletView({ userId, language = "om" }: { userId: string; language?: "om" | "en" | "am" }) {
   const mountedRef = useRef(false);
   const requestIdRef = useRef(0);
   const inFlightRef = useRef(false);
@@ -172,7 +172,7 @@ export function DriverWalletView({ userId }: { userId: string }) {
 
   return <div className="space-y-5 px-4 pb-7 pt-5 sm:px-6" data-mobile-driver-wallet aria-busy={refreshing}>
     <div className="flex items-start justify-between gap-3">
-      <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">Driver finance</p><h1 className="mt-1 text-2xl font-black text-halo-navy">Wallet fi galii kee</h1><p className="mt-2 text-xs leading-5 text-halo-muted">Customer collection, deposit, commission fi released earnings walitti hin makamu.</p></div>
+      <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{language === "en" ? "Driver finance" : language === "am" ? "የDriver ፋይናንስ" : "Faayinaansii Driver"}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{language === "en" ? "Wallet & earnings" : language === "am" ? "Wallet እና ገቢ" : "Wallet fi galii kee"}</h1><p className="mt-2 text-xs leading-5 text-halo-muted">Customer collection, deposit, commission fi released earnings walitti hin makamu.</p></div>
       <button type="button" onClick={() => void load(true)} disabled={refreshing} className="min-h-11 shrink-0 rounded-2xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-halo-card disabled:opacity-60">{refreshing ? "Fe'aa…" : "Refresh"}</button>
     </div>
 
@@ -208,7 +208,7 @@ export function DriverWalletView({ userId }: { userId: string }) {
     />}
 
     <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">Recent activity</p><h2 className="mt-1 text-lg font-black text-halo-navy">Trip payment history</h2></div>{lastUpdated && <span className="text-[9px] font-bold text-halo-muted">Updated {dateLabel(lastUpdated)}</span>}</div>
+      <div className="flex items-end justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">Recent activity</p><h2 className="mt-1 text-lg font-black text-halo-navy">{language === "en" ? "Trip history" : language === "am" ? "የጉዞ ታሪክ" : "Seenaa imalaa"}</h2></div>{lastUpdated && <span className="text-[9px] font-bold text-halo-muted">Updated {dateLabel(lastUpdated)}</span>}</div>
       {errors.trips && <SourceNotice message={errors.trips} onRetry={() => void load(true)} />}
       {trips && trips.length === 0 && <div className="rounded-[22px] border border-dashed border-halo-line bg-white p-6 text-center"><p className="text-sm font-black text-halo-navy">Trip payment history hin jiru</p><p className="mt-2 text-xs leading-5 text-halo-muted">Finish Trip fi payment result galmaa'e booda as irratti mul'ata.</p></div>}
       {trips?.map((trip) => <article key={trip.id} className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card">

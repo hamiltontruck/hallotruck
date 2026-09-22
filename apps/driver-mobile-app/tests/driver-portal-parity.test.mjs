@@ -76,3 +76,19 @@ test("V4 CSS remains the design base and adds responsive parity selectors", () =
   ]) assert.match(css, new RegExp(selector));
   for (const width of ["430px", "390px", "360px", "320px"]) assert.match(css, new RegExp(width.replace("px", "\\px")));
 });
+
+test("Driver V4 authenticated UX exposes language, scroll, location sharing and trip history", () => {
+  const androidCss = source("src/driver-android-responsive.css");
+  assert.match(workspace, /hallo-driver-language/);
+  assert.match(workspace, /<option value="en">EN<\/option>/);
+  assert.match(workspace, /<option value="om">OR<\/option>/);
+  assert.match(workspace, /<option value="am">አማ<\/option>/);
+  assert.match(workspace, /className="driver-app/);
+  assert.match(androidCss, /\[data-driver-v4-workspace\]\.driver-app/);
+  assert.match(androidCss, /overflow-y:\s*auto/);
+  assert.match(trip, /data-driver-live-location/);
+  assert.match(trip, /navigator\.share/);
+  assert.match(trip, /navigator\.clipboard\.writeText/);
+  assert.match(home, /Trip History \/ Wallet/);
+  assert.match(wallet, /fetchDriverWalletTrips/);
+});

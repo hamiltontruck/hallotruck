@@ -48,7 +48,7 @@ function JobRoute({ job }: { job: DriverAvailableJob }) {
   );
 }
 
-function ActiveTripCard({ snapshot, onOpenTrip }: { snapshot: DriverWorkboardSnapshot; onOpenTrip: () => void }) {
+function ActiveTripCard({ snapshot, onOpenTrip, openLabel }: { snapshot: DriverWorkboardSnapshot; onOpenTrip: () => void; openLabel: string }) {
   const trip = snapshot.activeTrip;
   if (!trip) return null;
 
@@ -78,7 +78,7 @@ function ActiveTripCard({ snapshot, onOpenTrip }: { snapshot: DriverWorkboardSna
         <strong className="text-sm">{formatEtb(trip.priceEtb)}</strong>
       </div>
       <p className="mt-4 text-xs leading-5 text-white/55">Hojii haaraa fudhachuu dura trip kana xumuri. GPS, route, customer contact fi delivery controls Active Trip keessatti jiru.</p>
-      <button type="button" onClick={onOpenTrip} className="mt-4 min-h-12 w-full rounded-2xl bg-white px-4 text-xs font-black text-halo-navy">Active Trip bani →</button>
+      <button type="button" onClick={onOpenTrip} className="mt-4 min-h-12 w-full rounded-2xl bg-white px-4 text-xs font-black text-halo-navy">{openLabel}</button>
     </section>
   );
 }
@@ -131,7 +131,12 @@ function TruckSelector({
   );
 }
 
-export function DriverJobsBoard({ userId, fullName, onOpenTrip = () => undefined }: { userId: string; fullName: string; onOpenTrip?: () => void }) {
+export function DriverJobsBoard({ userId, fullName, onOpenTrip = () => undefined, language = "om" }: { userId: string; fullName: string; onOpenTrip?: () => void; language?: "om" | "en" | "am" }) {
+  const ui = language === "en"
+    ? { title:"Driver Jobs", subtitle:"Available loads", refresh:"Refresh", empty:"No available jobs right now.", active:"Active Trip", open:"Open Active Trip →" }
+    : language === "am"
+      ? { title:"የDriver ስራዎች", subtitle:"የሚገኙ ጭነቶች", refresh:"አድስ", empty:"አሁን የሚገኝ ስራ የለም።", active:"ንቁ ጉዞ", open:"ንቁ ጉዞን ክፈት →" }
+      : { title:"Hojii Driver", subtitle:"Fe'umsa jiran", refresh:"Haaromsi", empty:"Amma hojii argamu hin jiru.", active:"Imala hojii irra jiru", open:"Imala hojii irra jiru bani →" };
   const [snapshot, setSnapshot] = useState<DriverWorkboardSnapshot | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -336,7 +341,7 @@ export function DriverJobsBoard({ userId, fullName, onOpenTrip = () => undefined
         </section>
       )}
 
-      {snapshot?.activeTrip && <ActiveTripCard snapshot={snapshot} onOpenTrip={onOpenTrip} />}
+      {snapshot?.activeTrip && <ActiveTripCard snapshot={snapshot} onOpenTrip={onOpenTrip} openLabel={ui.open} />}
 
       {snapshot && !snapshot.activeTrip && jobs.length === 0 && (
         <section className="rounded-[24px] border border-halo-line bg-white p-8 text-center shadow-halo-card">
