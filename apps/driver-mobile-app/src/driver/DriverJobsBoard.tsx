@@ -192,7 +192,7 @@ export function DriverJobsBoard({
       }
     } catch (caught) {
       if (!mountedRef.current || requestId !== requestIdRef.current) return;
-      setError(caught instanceof Error ? caught.message : t.jobs.loadError);
+      setError(t.jobs.loadError);
     } finally {
       if (requestId === requestIdRef.current && mountedRef.current) setRefreshing(false);
       busyRef.current = false;
@@ -213,7 +213,7 @@ export function DriverJobsBoard({
     try {
       unsubscribe = subscribeToMyDriverOrders(userId, () => void refreshRef.current());
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t.jobs.realtimeError);
+      setError(t.jobs.realtimeError);
     }
 
     return () => {
@@ -237,7 +237,7 @@ export function DriverJobsBoard({
         setSelectedTruckIds((current) => ({ ...current, [jobId]: options[0].id }));
       }
     } catch (caught) {
-      if (mountedRef.current) setError(caught instanceof Error ? caught.message : t.jobs.truckError);
+      if (mountedRef.current) setError(t.jobs.truckError);
     } finally {
       if (truckRequestRef.current === jobId) truckRequestRef.current = null;
       if (mountedRef.current) setLoadingTrucksFor(null);
@@ -267,7 +267,7 @@ export function DriverJobsBoard({
           return next;
         });
         setSelectedTruckIds((current) => ({ ...current, [job.id]: "" }));
-        setError(caught instanceof Error ? caught.message : t.jobs.claimError);
+        setError(t.jobs.claimError);
         queuedRefreshRef.current = true;
         await refreshRef.current();
       }
