@@ -23,6 +23,7 @@ import {
   type DriverCommissionSummary,
   type DriverFinancialSummary,
 } from "./driver-wallet.model";
+import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
 export type DriverWorkspaceDestination = "home" | "jobs" | "trip" | "wallet" | "profile" | "alerts";
 
@@ -50,12 +51,16 @@ function message(error: unknown, fallback: string) {
   return error instanceof Error && error.message.trim() ? error.message : fallback;
 }
 
-function statusLabel(status: DriverProfileRecord["driverStatus"] | undefined) {
-  if (status === "approved") return "APPROVED";
-  if (status === "pending") return "PENDING";
-  if (status === "rejected") return "REJECTED";
-  if (status === "suspended") return "SUSPENDED";
-  return "UNAVAILABLE";
+function statusLabel(
+  status: DriverProfileRecord["driverStatus"] | undefined,
+  language: DriverLanguage,
+) {
+  const t = getDriverV4Copy(language);
+  if (status === "approved") return t.common.approved;
+  if (status === "pending") return t.common.pending;
+  if (status === "rejected") return t.common.rejected;
+  if (status === "suspended") return t.common.suspended;
+  return t.common.unavailable;
 }
 
 function Metric({ label, value, help }: { label: string; value: string; help?: string }) {
@@ -84,7 +89,7 @@ export function DriverHomeView({
   onNavigate: (destination: DriverWorkspaceDestination) => void;
   onProfileName?: (name: string) => void;
   onOpenSupport: () => void;
-  language?: "om" | "en" | "am";
+  language?: DriverLanguage;
 }) {
   const mountedRef = useRef(false);
   const requestIdRef = useRef(0);
@@ -92,34 +97,7 @@ export function DriverHomeView({
   const [errors, setErrors] = useState<SourceErrors>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const copy = language === "en" ? {
-    welcome: "Welcome", description: "Jobs, trip, documents and finance below come from your signed-in Driver account.",
-    current: "Current operation", documents: "Documents", availableJobs: "Available jobs", assignedTruck: "Assigned truck",
-    releasedGross: "Released gross", commissionDue: "Commission due", availableDeposit: "Available deposit", rating: "Rating",
-    alerts: "Important alerts", attention: "Operational attention", notifications: "Notifications", quick: "Quick actions",
-    workspace: "Driver workspace", refreshing: "Refreshing…", refresh: "Refresh", jobs: "Jobs",
-    jobsDetail: "Available loads and truck selection", activeTrip: "Active Trip", tripDetail: "GPS, route, payment and delivery",
-    history: "Trip History / Wallet", historyDetail: "Completed trips, deposit and commission", docs: "Documents",
-    docsDetail: "Verification documents", support: "HALLO Support", supportDetail: "Secure Operations chat",
-  } : language === "am" ? {
-    welcome: "እንኳን ደህና መጡ", description: "ስራዎች፣ ጉዞ፣ ሰነዶች እና ፋይናንስ ከDriver መለያዎ ይመጣሉ።",
-    current: "የአሁኑ ስራ", documents: "ሰነዶች", availableJobs: "የሚገኙ ስራዎች", assignedTruck: "የተመደበ መኪና",
-    releasedGross: "የተለቀቀ ገቢ", commissionDue: "የሚከፈል ኮሚሽን", availableDeposit: "የሚገኝ ዲፖዚት", rating: "ደረጃ",
-    alerts: "አስፈላጊ ማሳወቂያዎች", attention: "የስራ ትኩረት", notifications: "ማሳወቂያዎች", quick: "ፈጣን እርምጃዎች",
-    workspace: "Driver workspace", refreshing: "በማደስ ላይ…", refresh: "አድስ", jobs: "ስራዎች",
-    jobsDetail: "የሚገኙ ጭነቶች እና መኪና", activeTrip: "ንቁ ጉዞ", tripDetail: "GPS፣ መንገድ፣ ክፍያ እና ማድረስ",
-    history: "የጉዞ ታሪክ / Wallet", historyDetail: "የተጠናቀቁ ጉዞዎች፣ ዲፖዚት እና ኮሚሽን", docs: "ሰነዶች",
-    docsDetail: "የማረጋገጫ ሰነዶች", support: "HALLO Support", supportDetail: "ደህንነቱ የተጠበቀ Operations chat",
-  } : {
-    welcome: "Baga nagaan dhuftan", description: "Hojii, imala, dokumentii fi faayinaansi akkaawuntii Driver kee irraa dhufu.",
-    current: "Hojii ammaa", documents: "Dokumentii", availableJobs: "Hojii jiran", assignedTruck: "Truck ramadame",
-    releasedGross: "Galii gadhiifame", commissionDue: "Komishinii hafee", availableDeposit: "Deposit jiru", rating: "Sadarkaa",
-    alerts: "Beeksisa barbaachisaa", attention: "Xiyyeeffannoo hojii", notifications: "Beeksisa", quick: "Tarkaanfii saffisaa",
-    workspace: "Driver workspace", refreshing: "Haaromsaa…", refresh: "Haaromsi", jobs: "Hojii",
-    jobsDetail: "Fe'umsa jiran fi truck filannoo", activeTrip: "Imala hojii irra jiru", tripDetail: "GPS, route, payment fi delivery",
-    history: "Seenaa Imalaa / Wallet", historyDetail: "Imala xumurame, deposit fi komishinii", docs: "Dokumentii",
-    docsDetail: "Dokumentii mirkaneessaa", support: "HALLO Support", supportDetail: "Operations chat nageenya qabu",
-  };
+  const t = getDriverV4Copy(language);
 
   const load = useCallback(async (silent = false) => {
     const requestId = ++requestIdRef.current;
@@ -138,28 +116,37 @@ export function DriverHomeView({
 
     const nextErrors: SourceErrors = {};
     const [profile, trucks, documents, workboard, financial, commission] = results;
-    setSnapshot((current) => {
-      const next = { ...current };
+    setSnapshot((currentSnapshot) => {
+      const next = { ...currentSnapshot };
       if (profile.status === "fulfilled") {
         next.profile = profile.value;
         onProfileName?.(profile.value.fullName);
-      } else nextErrors.profile = message(profile.reason, "Driver profile is unavailable.");
+      } else nextErrors.profile = message(profile.reason, t.home.profileUnavailable);
       if (trucks.status === "fulfilled") next.trucks = trucks.value;
-      else nextErrors.trucks = message(trucks.reason, "Assigned vehicle is unavailable.");
+      else nextErrors.trucks = message(trucks.reason, t.home.truckUnavailable);
       if (documents.status === "fulfilled") next.documents = documents.value;
-      else nextErrors.documents = message(documents.reason, "Document status is unavailable.");
+      else nextErrors.documents = message(documents.reason, t.home.documentsUnavailable);
       if (workboard.status === "fulfilled") next.workboard = workboard.value;
-      else nextErrors.workboard = message(workboard.reason, "Jobs and active trip are unavailable.");
+      else nextErrors.workboard = message(workboard.reason, t.home.workboardUnavailable);
       if (financial.status === "fulfilled") next.financial = financial.value;
-      else nextErrors.financial = message(financial.reason, "Driver financial summary is unavailable.");
+      else nextErrors.financial = message(financial.reason, t.home.financeUnavailable);
       if (commission.status === "fulfilled") next.commission = commission.value;
-      else nextErrors.commission = message(commission.reason, "Commission summary is unavailable.");
+      else nextErrors.commission = message(commission.reason, t.home.commissionUnavailable);
       return next;
     });
     setErrors(nextErrors);
     setLoading(false);
     setRefreshing(false);
-  }, [onProfileName, userId]);
+  }, [
+    onProfileName,
+    t.home.commissionUnavailable,
+    t.home.documentsUnavailable,
+    t.home.financeUnavailable,
+    t.home.profileUnavailable,
+    t.home.truckUnavailable,
+    t.home.workboardUnavailable,
+    userId,
+  ]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -197,7 +184,7 @@ export function DriverHomeView({
 
   if (loading && Object.values(snapshot).every((value) => value === null)) {
     return <main className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-6 text-center">
-      <div><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-halo-line border-t-halo-blue"/><p className="mt-4 text-sm font-bold text-halo-muted">Driver dashboard loading…</p></div>
+      <div><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-halo-line border-t-halo-blue"/><p className="mt-4 text-sm font-bold text-halo-muted">{t.common.loading}</p></div>
     </main>;
   }
 
@@ -207,57 +194,68 @@ export function DriverHomeView({
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-[.18em] text-halo-gold">HALLO DRIVER</p>
-          <h1 className="mt-2 break-words text-2xl font-black">{copy.welcome}, {firstName}</h1>
-          <p className="mt-2 text-xs leading-5 text-white/70">{copy.description}</p>
+          <h1 className="mt-2 break-words text-2xl font-black">{t.home.welcome}, {firstName}</h1>
+          <p className="mt-2 text-xs leading-5 text-white/70">{t.home.description}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-white/10 px-3 py-2 text-[9px] font-black">{statusLabel(snapshot.profile?.driverStatus)}</span>
+        <span className="shrink-0 rounded-full bg-white/10 px-3 py-2 text-[9px] font-black">{statusLabel(snapshot.profile?.driverStatus, language)}</span>
       </div>
       <div className="relative mt-5 grid grid-cols-2 gap-3">
         <button type="button" onClick={() => onNavigate(activeTrip ? "trip" : "jobs")} className="min-h-20 rounded-2xl bg-white/10 p-3 text-left">
-          <span className="text-[9px] font-bold text-white/55">{copy.current}</span>
-          <strong className="mt-1 block break-words text-sm">{activeTrip ? activeTrip.trackingId : jobsCount === null ? "Unavailable" : `${jobsCount} available job${jobsCount === 1 ? "" : "s"}`}</strong>
+          <span className="text-[9px] font-bold text-white/55">{t.home.current}</span>
+          <strong className="mt-1 block break-words text-sm">
+            {activeTrip ? activeTrip.trackingId : jobsCount === null ? t.common.unavailable : `${jobsCount} · ${t.home.availableJobs}`}
+          </strong>
         </button>
         <button type="button" onClick={() => onNavigate("profile")} className="min-h-20 rounded-2xl bg-white/10 p-3 text-left">
-          <span className="text-[9px] font-bold text-white/55">{copy.documents}</span>
-          <strong className="mt-1 block text-sm">{progress ? `${progress.submitted}/${progress.total} submitted` : "Unavailable"}</strong>
-          {progress && <span className="mt-1 block text-[9px] text-white/55">{progress.verified}/{progress.total} verified</span>}
+          <span className="text-[9px] font-bold text-white/55">{t.home.documents}</span>
+          <strong className="mt-1 block text-sm">{progress ? `${progress.submitted}/${progress.total} ${t.common.submitted}` : t.common.unavailable}</strong>
+          {progress && <span className="mt-1 block text-[9px] text-white/55">{progress.verified}/{progress.total} {t.common.verified}</span>}
         </button>
       </div>
     </section>
 
     {hasAnyError && <section role="status" className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
-      <div className="flex items-center gap-3"><p className="min-w-0 flex-1 text-[11px] font-bold leading-5 text-amber-900">Some dashboard sources are unavailable. Confirmed sources remain visible; unavailable values are not replaced with zero.</p><button type="button" onClick={() => void load(true)} className="min-h-10 shrink-0 rounded-xl bg-halo-navy px-3 text-[10px] font-black text-white">Retry</button></div>
+      <div className="flex items-center gap-3">
+        <p className="min-w-0 flex-1 text-[11px] font-bold leading-5 text-amber-900">{Object.values(errors).filter(Boolean).join(" · ")}</p>
+        <button type="button" onClick={() => void load(true)} className="min-h-10 shrink-0 rounded-xl bg-halo-navy px-3 text-[10px] font-black text-white">{t.common.retry}</button>
+      </div>
     </section>}
 
-    <section className="mt-4 grid grid-cols-2 gap-3" aria-label="Driver operational summary">
-      <Metric label={copy.availableJobs} value={jobsCount === null ? "—" : String(jobsCount)} help={activeTrip ? "Locked while trip is active" : "Authorized marketplace"} />
-      <Metric label={copy.assignedTruck} value={truck?.plateNumber ?? (snapshot.trucks ? "None" : "—")} help={truck?.vehicleType ?? undefined} />
-      <Metric label={copy.releasedGross} value={formatWalletEtb(snapshot.financial?.grossReleasedEtb ?? null)} help="Authoritative released trip funds" />
-      <Metric label={copy.commissionDue} value={formatWalletEtb(due)} help={blocked === null ? "Access state unavailable" : blocked ? "Job access blocked" : "Job access active"} />
-      <Metric label={copy.availableDeposit} value={formatWalletEtb(snapshot.financial?.availableDepositEtb ?? null)} help="Authoritative deposit balance" />
-      <Metric label={copy.rating} value={snapshot.profile?.ratingAvg === null || snapshot.profile?.ratingAvg === undefined ? "—" : snapshot.profile.ratingAvg.toFixed(1)} help="Driver profile rating" />
+    <section className="mt-4 grid grid-cols-2 gap-3" aria-label={t.home.current}>
+      <Metric label={t.home.availableJobs} value={jobsCount === null ? "—" : String(jobsCount)} help={activeTrip ? t.home.lockedWhileTrip : t.home.authorizedMarketplace} />
+      <Metric label={t.home.assignedTruck} value={truck?.plateNumber ?? (snapshot.trucks ? t.common.none : "—")} help={truck?.vehicleType ?? undefined} />
+      <Metric label={t.home.releasedGross} value={formatWalletEtb(snapshot.financial?.grossReleasedEtb ?? null)} help={t.home.releasedFunds} />
+      <Metric label={t.home.commissionDue} value={formatWalletEtb(due)} help={blocked === null ? t.home.accessUnavailable : blocked ? t.home.jobAccessBlocked : t.home.jobAccessActive} />
+      <Metric label={t.home.availableDeposit} value={formatWalletEtb(snapshot.financial?.availableDepositEtb ?? null)} help={t.home.depositBalance} />
+      <Metric label={t.home.rating} value={snapshot.profile?.ratingAvg === null || snapshot.profile?.ratingAvg === undefined ? "—" : snapshot.profile.ratingAvg.toFixed(1)} help={t.home.profileRating} />
     </section>
 
     <section className="mt-5 rounded-[24px] border border-halo-line bg-white p-4 shadow-halo-card">
-      <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{copy.alerts}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{copy.attention}</h2></div><button type="button" onClick={() => onNavigate("alerts")} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">{copy.notifications}</button></div>
+      <div className="flex items-start justify-between gap-3">
+        <div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.home.alerts}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{t.home.attention}</h2></div>
+        <button type="button" onClick={() => onNavigate("alerts")} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">{t.home.notifications}</button>
+      </div>
       <div className="mt-4 space-y-2 text-xs leading-5 text-halo-muted">
-        {activeTrip && <p className="rounded-xl bg-emerald-50 px-3 py-2 font-bold text-emerald-800">Active trip {activeTrip.trackingId} needs operational attention.</p>}
-        {blocked === true && <p className="rounded-xl bg-red-50 px-3 py-2 font-bold text-red-700">Commission status currently blocks new job access.</p>}
-        {rejectedDocuments !== null && rejectedDocuments > 0 && <p className="rounded-xl bg-red-50 px-3 py-2 font-bold text-red-700">{rejectedDocuments} required document{rejectedDocuments === 1 ? " is" : "s are"} rejected and can be resubmitted.</p>}
-        {progress && progress.submitted < progress.total && <p className="rounded-xl bg-amber-50 px-3 py-2 font-bold text-amber-800">Required documents: {progress.submitted}/{progress.total} submitted.</p>}
-        {!activeTrip && blocked !== true && (!progress || progress.submitted === progress.total) && rejectedDocuments === 0 && <p>No urgent local alert was found in the confirmed dashboard sources.</p>}
+        {activeTrip && <p className="rounded-xl bg-emerald-50 px-3 py-2 font-bold text-emerald-800">{activeTrip.trackingId} · {t.home.activeTripAttention}</p>}
+        {blocked === true && <p className="rounded-xl bg-red-50 px-3 py-2 font-bold text-red-700">{t.home.commissionBlocked}</p>}
+        {rejectedDocuments !== null && rejectedDocuments > 0 && <p className="rounded-xl bg-red-50 px-3 py-2 font-bold text-red-700">{rejectedDocuments} · {t.home.rejectedDocuments}</p>}
+        {progress && progress.submitted < progress.total && <p className="rounded-xl bg-amber-50 px-3 py-2 font-bold text-amber-800">{progress.submitted}/{progress.total} · {t.home.requiredDocuments}</p>}
+        {!activeTrip && blocked !== true && (!progress || progress.submitted === progress.total) && rejectedDocuments === 0 && <p>{t.home.noUrgentAlert}</p>}
       </div>
     </section>
 
     <section className="mt-5">
-      <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">{copy.quick}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{copy.workspace}</h2></div><button type="button" onClick={() => void load(true)} disabled={refreshing} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue disabled:opacity-60">{refreshing ? copy.refreshing : copy.refresh}</button></div>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">{t.home.quick}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{t.home.workspace}</h2></div>
+        <button type="button" onClick={() => void load(true)} disabled={refreshing} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue disabled:opacity-60">{refreshing ? t.common.refreshing : t.common.refresh}</button>
+      </div>
       <div className="grid grid-cols-2 gap-3">
-        <Action title={copy.jobs} detail={copy.jobsDetail} onClick={() => onNavigate("jobs")} />
-        <Action title={copy.activeTrip} detail={copy.tripDetail} onClick={() => onNavigate("trip")} />
-        <Action title={copy.history} detail={copy.historyDetail} onClick={() => onNavigate("wallet")} />
-        <Action title={copy.docs} detail={copy.docsDetail} onClick={() => onNavigate("profile")} />
-        <Action title={copy.notifications} detail={copy.alerts} onClick={() => onNavigate("alerts")} />
-        <Action title={copy.support} detail={copy.supportDetail} onClick={onOpenSupport} />
+        <Action title={t.home.jobs} detail={t.home.jobsDetail} onClick={() => onNavigate("jobs")} />
+        <Action title={t.home.activeTrip} detail={t.home.tripDetail} onClick={() => onNavigate("trip")} />
+        <Action title={t.home.history} detail={t.home.historyDetail} onClick={() => onNavigate("wallet")} />
+        <Action title={t.home.docs} detail={t.home.docsDetail} onClick={() => onNavigate("profile")} />
+        <Action title={t.home.notifications} detail={t.home.alerts} onClick={() => onNavigate("alerts")} />
+        <Action title={t.home.support} detail={t.home.supportDetail} onClick={onOpenSupport} />
       </div>
     </section>
   </main>;
