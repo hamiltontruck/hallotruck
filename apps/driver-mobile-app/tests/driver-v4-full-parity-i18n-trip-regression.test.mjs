@@ -44,7 +44,8 @@ test("Driver V4 uses one typed authenticated EN OR AM copy layer", () => {
   assert.match(i18n, /export type DriverLanguage = "om" \| "en" \| "am"/);
   assert.match(i18n, /export const DRIVER_LANGUAGE_KEY = "hallo-driver-language"/);
   assert.match(i18n, /export const driverV4Copy/);
-  for (const lang of ["en:", "om:", "am:"]) assert.match(i18n, new RegExp(lang));
+  for (const lang of ["en", "om", "am"]) assert.match(i18n, new RegExp(`const ${lang} =`));
+  assert.match(i18n, /driverV4Copy = \{ en, om, am \}/);
   assert.match(workspace, /DRIVER_LANGUAGE_KEY/);
 });
 
