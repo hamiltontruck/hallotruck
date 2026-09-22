@@ -56,13 +56,18 @@ export function CustomerAssignmentCard({
   const driverInitials = useMemo(() => initials(assignment?.driver_name), [assignment?.driver_name]);
   const truckType = assignment?.vehicle_type || orderVehicleType || "Truck details pending";
   const phone = assignment?.driver_phone?.trim() || "";
+  const assignmentStatus = !assignment
+    ? "ASSIGNMENT PENDING"
+    : assignment.driver_verified
+      ? "✓ VERIFIED DRIVER"
+      : "VERIFICATION PENDING";
 
   return (
     <section className="customer-v4-assignment" aria-busy={photosLoading}>
       <header className="customer-v4-assignment__header">
         <strong>ASSIGNED DRIVER &amp; TRUCK</strong>
         <span className={assignment?.driver_verified ? "is-verified" : "is-pending"}>
-          {assignment?.driver_verified ? "✓ VERIFIED DRIVER" : "VERIFICATION PENDING"}
+          {assignmentStatus}
         </span>
       </header>
 
@@ -112,6 +117,7 @@ export function CustomerAssignmentCard({
       )}
 
       {photoError && <p className="customer-v4-assignment__note" role="status">{photoError} Fallback is shown instead.</p>}
+      <p className="customer-v4-assignment__note">Private assignment details are shown only for this signed-in Customer&apos;s order.</p>
       {trackingAvailable && onTrack && (
         <button type="button" className="customer-v4-track-action" onClick={onTrack}>Live trip tracking →</button>
       )}

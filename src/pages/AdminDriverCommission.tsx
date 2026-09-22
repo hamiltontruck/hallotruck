@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatEtb } from "../utils/currency";
+import { PlatformTaxControl } from "../components/admin/PlatformTaxControl";
 import { supabase } from "../services/supabase.client";
 import type { FinancialCorrection } from "../services/financial-correction.service";
 import {
@@ -111,6 +112,8 @@ export function AdminDriverCommission() {
       </div>
 
       {error && <p className="mb-5 border border-route/30 bg-route/10 p-3 text-sm text-route">{error}</p>}
+
+      <PlatformTaxControl />
 
       <section className="mb-8 border border-asphalt/10 bg-white">
         <div className="border-b border-asphalt/10 bg-asphalt p-5 text-white">

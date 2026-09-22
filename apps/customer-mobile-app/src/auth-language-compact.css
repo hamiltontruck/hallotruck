@@ -1,25 +1,14 @@
-/* Customer auth language control aligned with the approved Driver auth placement. */
-main>div[style*="430px"]{position:relative!important;box-sizing:border-box!important;padding-top:54px!important}
-main>div[style*="430px"]>section>label:first-child{position:absolute!important;top:4px;right:0;z-index:5;width:132px!important;display:block!important;margin:0!important;gap:0!important;color:transparent!important;font-size:0!important;line-height:0!important}
-main>div[style*="430px"]>section>label:first-child select{display:block!important;width:100%!important;min-width:0!important;min-height:40px!important;height:40px!important;margin:0!important;padding:0 34px 0 12px!important;border:1px solid #d7e0ec!important;border-radius:12px!important;background-color:rgba(255,255,255,.97)!important;color:#10213d!important;font-size:12px!important;font-weight:850!important;line-height:1!important;box-shadow:0 8px 24px rgba(16,33,61,.08)!important;outline:none!important;cursor:pointer!important}
-main>div[style*="430px"]>section>label:first-child select:focus{border-color:#0759c7!important;box-shadow:0 0 0 3px rgba(7,89,199,.12),0 8px 24px rgba(16,33,61,.08)!important}
-main>div[style*="430px"]>section>label:first-child select:disabled{cursor:wait!important;opacity:.65!important}
-
-/* Signed-out login only: remove the redundant Customer intro regardless of label DOM ordering. */
-main>div[style*="430px"]>section>p:first-of-type,
-main>div[style*="430px"]>section>h1:first-of-type,
-main>div[style*="430px"]>section>p:nth-of-type(2){display:none!important}
-main>div[style*="430px"]>section>form{margin-top:0!important}
-
-/* Access/error/boot states keep the same top-right language placement. */
-main>section[style*="430px"]{position:relative!important;box-sizing:border-box!important;padding-top:76px!important}
-main>section[style*="430px"]>label{position:absolute!important;top:18px;right:18px;z-index:5;width:132px!important;display:block!important;margin:0!important;gap:0!important;color:transparent!important;font-size:0!important;line-height:0!important}
-main>section[style*="430px"]>label select{display:block!important;width:100%!important;min-width:0!important;min-height:40px!important;height:40px!important;margin:0!important;padding:0 34px 0 12px!important;border:1px solid #d7e0ec!important;border-radius:12px!important;background-color:rgba(255,255,255,.97)!important;color:#10213d!important;font-size:12px!important;font-weight:850!important;line-height:1!important;box-shadow:0 8px 24px rgba(16,33,61,.08)!important;outline:none!important}
+/* Compact Customer auth language control.
+   Layout is intentionally semantic; final geometry lives in customer-final-ui.css. */
+.customer-auth-screen{box-sizing:border-box}
+.customer-auth-shell{position:relative;box-sizing:border-box;padding-top:54px}
+.customer-auth-language{position:absolute;top:4px;right:0;z-index:5}
+.customer-auth-language select{min-width:74px;min-height:40px}
+.customer-auth-language select:focus{outline:none}
+.customer-auth-language select:disabled{cursor:wait;opacity:.65}
 
 @media(max-width:360px){
-  main>div[style*="430px"]{padding-top:50px!important}
-  main>div[style*="430px"]>section>label:first-child{top:4px;width:118px!important}
-  main>div[style*="430px"]>section>label:first-child select{height:38px!important;min-height:38px!important;padding-left:10px!important;font-size:11px!important}
-  main>section[style*="430px"]>label{right:14px;width:118px!important}
-  main>section[style*="430px"]>label select{height:38px!important;min-height:38px!important;padding-left:10px!important;font-size:11px!important}
+  .customer-auth-shell{padding-top:50px}
+  .customer-auth-language{top:4px}
+  .customer-auth-language select{min-height:38px}
 }

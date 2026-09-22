@@ -3,11 +3,13 @@ import maplibregl, { type GeoJSONSource, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./booking-map.css";
 import {
+  isHalloOperatingCoordinate,
   reverseCustomerPlace,
   searchCustomerPlaces,
   type CustomerPlaceOption,
   type CustomerRoutePreview,
 } from "./customer-quote.service";
+import { customerBookingMapCopy, useCustomerLanguage, type CustomerLanguage } from "./customer-language";
 
 type ActiveField = "pickup" | "dropoff";
 
@@ -19,7 +21,7 @@ type CustomerBookingMapProps = {
   routePreview: CustomerRoutePreview | null;
   routeLoading: boolean;
   routeError: string;
-  vehicleType: string;
+  vehicleDisplayName: string;
   onPickupChange: (value: string) => void;
   onDropoffChange: (value: string) => void;
   onPickupSelect: (place: CustomerPlaceOption) => void;
@@ -34,12 +36,25 @@ const mapStyle = mapTilerKey
   ? `https://api.maptiler.com/maps/basic-v2/style.json?key=${encodeURIComponent(mapTilerKey)}`
   : "https://tiles.openfreemap.org/styles/liberty";
 
-function markerElement(kind: ActiveField) {
+function markerElement(kind: ActiveField, pickupLabel: string, dropoffLabel: string) {
   const element = document.createElement("div");
   element.className = `booking-map-marker booking-map-marker-${kind}`;
-  element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : "Drop-off location");
+  element.setAttribute("aria-label", kind === "pickup" ? pickupLabel : dropoffLabel);
   element.innerHTML = `<span>${kind === "pickup" ? "P" : "D"}</span>`;
   return element;
+}
+
+function readCurrentPosition(options: PositionOptions) {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+function locationErrorMessage(error: GeolocationPositionError, copy: typeof customerBookingMapCopy[CustomerLanguage]) {
+  if (error.code === 1) return copy.permissionDenied;
+  if (error.code === 2) return copy.locationUnavailable;
+  if (error.code === 3) return copy.locationTimeout;
+  return copy.locationUnreadable;
 }
 
 function PlaceSearch({
@@ -48,6 +63,8 @@ function PlaceSearch({
   placeholder,
   value,
   selected,
+  language,
+  copy,
   onActivate,
   onChange,
   onSelect,
@@ -57,6 +74,8 @@ function PlaceSearch({
   placeholder: string;
   value: string;
   selected: CustomerPlaceOption | null;
+  language: CustomerLanguage;
+  copy: typeof customerBookingMapCopy[CustomerLanguage];
   onActivate: (field: ActiveField) => void;
   onChange: (value: string) => void;
   onSelect: (place: CustomerPlaceOption) => void;
@@ -78,13 +97,13 @@ function PlaceSearch({
       setSearching(true);
       setMessage("");
       try {
-        const places = await searchCustomerPlaces(value, controller.signal);
+        const places = await searchCustomerPlaces(value, language, controller.signal);
         setResults(places);
-        if (!places.length) setMessage("No matching places found.");
+        if (!places.length) setMessage(copy.noPlaces);
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           setResults([]);
-          setMessage(error instanceof Error ? error.message : "Could not search places.");
+          setMessage(copy.searchUnavailable);
         }
       } finally {
         if (!controller.signal.aborted) setSearching(false);
@@ -95,7 +114,7 @@ function PlaceSearch({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [selected?.label, value]);
+  }, [copy.noPlaces, copy.searchUnavailable, language, selected?.label, value]);
 
   return (
     <div className="booking-place-field">
@@ -110,10 +129,10 @@ function PlaceSearch({
           aria-autocomplete="list"
         />
       </label>
-      {searching && <small className="booking-place-message">Finding places…</small>}
+      {searching && <small className="booking-place-message">{copy.findingPlaces}</small>}
       {!searching && message && <small className="booking-place-message booking-place-error">{message}</small>}
       {results.length > 0 && (
-        <div className="booking-place-results" role="listbox" aria-label={`${label} results`}>
+        <div className="booking-place-results" role="listbox" aria-label={`${label} ${copy.results}`}>
           {results.map((place) => (
             <button
               type="button"
@@ -144,7 +163,7 @@ export function CustomerBookingMap({
   routePreview,
   routeLoading,
   routeError,
-  vehicleType,
+  vehicleDisplayName,
   onPickupChange,
   onDropoffChange,
   onPickupSelect,
@@ -153,11 +172,15 @@ export function CustomerBookingMap({
   onReset,
   onBook,
 }: CustomerBookingMapProps) {
+  const { language, ui } = useCustomerLanguage();
+  const mapCopy = customerBookingMapCopy[language];
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const pickupMarkerRef = useRef<Marker | null>(null);
   const dropoffMarkerRef = useRef<Marker | null>(null);
   const activeFieldRef = useRef<ActiveField>("pickup");
+  const languageRef = useRef(language);
+  const mapCopyRef = useRef(mapCopy);
   const pickupSelectRef = useRef(onPickupSelect);
   const dropoffSelectRef = useRef(onDropoffSelect);
   const [mapReady, setMapReady] = useState(false);
@@ -166,6 +189,8 @@ export function CustomerBookingMap({
 
   useEffect(() => { pickupSelectRef.current = onPickupSelect; }, [onPickupSelect]);
   useEffect(() => { dropoffSelectRef.current = onDropoffSelect; }, [onDropoffSelect]);
+  useEffect(() => { languageRef.current = language; }, [language]);
+  useEffect(() => { mapCopyRef.current = mapCopy; }, [mapCopy]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -183,8 +208,8 @@ export function CustomerBookingMap({
     map.on("click", (event) => {
       const coordinates: [number, number] = [event.lngLat.lng, event.lngLat.lat];
       const field = activeFieldRef.current;
-      setMapMessage("Resolving the selected map position…");
-      void reverseCustomerPlace(coordinates)
+      setMapMessage(mapCopyRef.current.resolvingPosition);
+      void reverseCustomerPlace(coordinates, languageRef.current)
         .then((place) => {
           if (field === "pickup") {
             pickupSelectRef.current(place);
@@ -195,7 +220,7 @@ export function CustomerBookingMap({
           setMapMessage("");
         })
         .catch((error: unknown) => {
-          setMapMessage(error instanceof Error ? error.message : "Could not select this map position.");
+          setMapMessage(mapCopyRef.current.selectPositionError);
         });
     });
     mapRef.current = map;
@@ -228,7 +253,7 @@ export function CustomerBookingMap({
       }
 
       const marker = new maplibregl.Marker({
-        element: markerElement(kind),
+        element: markerElement(kind, mapCopyRef.current.pickupLocation, mapCopyRef.current.dropoffLocation),
         anchor: "bottom",
         draggable: true,
       })
@@ -238,15 +263,15 @@ export function CustomerBookingMap({
       marker.on("dragend", () => {
         const position = marker.getLngLat();
         const coordinates: [number, number] = [position.lng, position.lat];
-        setMapMessage("Updating the route point…");
-        void reverseCustomerPlace(coordinates)
+        setMapMessage(mapCopyRef.current.updatingPosition);
+        void reverseCustomerPlace(coordinates, languageRef.current)
           .then((updated) => {
             if (kind === "pickup") pickupSelectRef.current(updated);
             else dropoffSelectRef.current(updated);
             setMapMessage("");
           })
           .catch((error: unknown) => {
-            setMapMessage(error instanceof Error ? error.message : "Could not update this route point.");
+            setMapMessage(mapCopyRef.current.updatePositionError);
           });
       });
       return marker;
@@ -296,34 +321,48 @@ export function CustomerBookingMap({
     }
   }, [dropoffPlace, mapReady, pickupPlace, routePreview]);
 
-  function useMyLocation() {
+  async function useMyLocation() {
     if (locating) return;
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setMapMessage("Device location is not available.");
+      setMapMessage(mapCopy.deviceLocationUnavailable);
       return;
     }
 
     setLocating(true);
-    setMapMessage("");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coordinates: [number, number] = [position.coords.longitude, position.coords.latitude];
-        void reverseCustomerPlace(coordinates)
-          .then((place) => {
-            onPickupSelect(place);
-            activeFieldRef.current = "dropoff";
-          })
-          .catch((error: unknown) => {
-            setMapMessage(error instanceof Error ? error.message : "Your current location could not be read.");
-          })
-          .finally(() => setLocating(false));
-      },
-      () => {
-        setLocating(false);
-        setMapMessage("Location permission was not granted. Check your browser or device settings.");
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
-    );
+    setMapMessage(mapCopy.findingLocation);
+    try {
+      let position: GeolocationPosition;
+      try {
+        position = await readCurrentPosition({ enableHighAccuracy: true, timeout: 12_000, maximumAge: 30_000 });
+      } catch (caught) {
+        const locationError = caught as GeolocationPositionError;
+        if (locationError.code === 1) throw locationError;
+        setMapMessage(mapCopy.gpsSlow);
+        position = await readCurrentPosition({ enableHighAccuracy: false, timeout: 10_000, maximumAge: 120_000 });
+      }
+
+      const coordinates: [number, number] = [position.coords.longitude, position.coords.latitude];
+      if (!isHalloOperatingCoordinate(coordinates)) {
+        setMapMessage(mapCopy.outsideCorridor);
+        return;
+      }
+
+      let place: CustomerPlaceOption;
+      try {
+        place = await reverseCustomerPlace(coordinates, language);
+      } catch {
+        place = { label: `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`, coordinates };
+      }
+
+      onPickupSelect(place);
+      activeFieldRef.current = "dropoff";
+      mapRef.current?.flyTo({ center: coordinates, zoom: 10, duration: 500 });
+      setMapMessage("");
+    } catch (caught) {
+      setMapMessage(locationErrorMessage(caught as GeolocationPositionError, mapCopy));
+    } finally {
+      setLocating(false);
+    }
   }
 
   const routeSelected = Boolean(pickupPlace && dropoffPlace);
@@ -332,35 +371,37 @@ export function CustomerBookingMap({
   const routeMinutes = routePreview ? Math.round(routePreview.duration_minutes % 60) : 0;
 
   const statusTitle = routeLoading
-    ? "Calculating truck route…"
+    ? ui.calculatingRoute
     : routeError
-      ? "Truck route unavailable"
+      ? ui.routeUnavailable
       : routeReady
-        ? "Truck route ready"
+        ? ui.routeReady
         : routeSelected
-          ? "Route selected"
-          : "Start your booking";
+          ? ui.routeSelected
+          : ui.startBooking;
   const statusText = routeLoading
-    ? `Finding the live ${vehicleType} HGV road distance.`
+    ? mapCopy.findingRoute
     : routeError
       ? routeError
       : routePreview
-        ? `${routePreview.distance_km.toFixed(1)} km · ${routeHours > 0 ? `${routeHours}h ` : ""}${routeMinutes}m estimated driving time`
+        ? `${routePreview.distance_km.toFixed(1)} km · ${routeHours > 0 ? `${routeHours}${mapCopy.hourShort} ` : ""}${routeMinutes}${mapCopy.minuteShort} ${mapCopy.estimatedDrivingTime}`
         : routeSelected
-          ? "Distance will calculate automatically."
-          : "Search, use your location, or tap the map to choose pickup and drop-off.";
+          ? mapCopy.distanceWillCalculate
+          : ui.startBookingHelp;
 
   return (
-    <section className="map-surface real-booking-map" aria-label="Customer booking map">
+    <section className="map-surface real-booking-map" aria-label={mapCopy.mapLabel}>
       <div ref={containerRef} className="booking-map-canvas" />
 
       <div className="route-card real-route-card">
         <PlaceSearch
           field="pickup"
-          label="PICKUP PLACE"
-          placeholder="Find pickup place"
+          label={ui.pickup}
+          placeholder={ui.findPickup}
           value={pickup}
           selected={pickupPlace}
+          language={language}
+          copy={mapCopy}
           onActivate={(field) => { activeFieldRef.current = field; }}
           onChange={onPickupChange}
           onSelect={(place) => {
@@ -371,27 +412,29 @@ export function CustomerBookingMap({
         <div className="route-divider" />
         <PlaceSearch
           field="dropoff"
-          label="DROP-OFF PLACE"
-          placeholder="Find delivery place"
+          label={ui.dropoff}
+          placeholder={ui.findDropoff}
           value={dropoff}
           selected={dropoffPlace}
+          language={language}
+          copy={mapCopy}
           onActivate={(field) => { activeFieldRef.current = field; }}
           onChange={onDropoffChange}
           onSelect={onDropoffSelect}
         />
       </div>
 
-      <div className="portal-map-actions" aria-label="Route controls">
-        <button type="button" onClick={useMyLocation} disabled={locating}>{locating ? "Locating…" : "My location"}</button>
-        <button type="button" onClick={onSwap} disabled={!routeSelected}>Swap</button>
-        <button type="button" onClick={onReset} disabled={!pickup && !dropoff}>Reset</button>
+      <div className="portal-map-actions" aria-label={mapCopy.routeControls}>
+        <button type="button" onClick={useMyLocation} disabled={locating}>{locating ? ui.locating : ui.myLocation}</button>
+        <button type="button" onClick={onSwap} disabled={!routeSelected}>{ui.swap}</button>
+        <button type="button" onClick={onReset} disabled={!pickup && !dropoff}>{ui.reset}</button>
       </div>
 
       {routePreview && !routeLoading && (
-        <div className="real-route-summary" aria-label="HGV route summary">
-          <small>AUTO DISTANCE</small>
+        <div className="real-route-summary" aria-label={mapCopy.routeSummary}>
+          <small>{ui.distanceAuto}</small>
           <strong>{routePreview.distance_km.toFixed(1)} km</strong>
-          <span>{Math.round(routePreview.duration_minutes)} min · {vehicleType}</span>
+          <span>{Math.round(routePreview.duration_minutes)} {mapCopy.minuteShort} · {vehicleDisplayName}</span>
         </div>
       )}
       {mapMessage && <div className="booking-map-message" role="status">{mapMessage}</div>}
@@ -402,7 +445,7 @@ export function CustomerBookingMap({
           <strong>{statusTitle}</strong>
           <small>{statusText}</small>
         </div>
-        <button type="button" onClick={onBook} disabled={!routeReady}>Continue <span aria-hidden="true">→</span></button>
+        <button type="button" onClick={onBook} disabled={!routeReady}>{ui.continue} <span aria-hidden="true">→</span></button>
       </div>
     </section>
   );

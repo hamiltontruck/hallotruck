@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Truck as TruckIcon } from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
 import maplibregl, { type LngLatLike, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { CustomerLiveTrip } from "./customer-tracking.service";
@@ -8,6 +10,7 @@ const mapTilerKey = (import.meta.env.VITE_MAPTILER_KEY as string | undefined)?.t
 const mapStyle = mapTilerKey ? `https://api.maptiler.com/maps/basic-v2/style.json?key=${encodeURIComponent(mapTilerKey)}` : "https://tiles.openfreemap.org/styles/liberty";
 const ROUTE_SOURCE_ID = "customer-mobile-trip-route";
 const ROUTE_LAYER_ID = "customer-mobile-trip-route-line";
+const TRUCK_ICON_MARKUP = renderToStaticMarkup(<TruckIcon aria-hidden="true" size={22} strokeWidth={2.6}/>);
 
 type RouteResult = { coordinates: [number, number][]; distanceM: number; durationS: number };
 
@@ -43,7 +46,7 @@ function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: num
     element.style.width = "20px"; element.style.height = "20px"; element.style.borderRadius = "50%"; element.style.background = kind === "pickup" ? "#10213d" : "#d68e25";
     element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : "Drop-off location");
   } else {
-    element.style.width = "34px"; element.style.height = "34px"; element.style.borderRadius = "12px"; element.style.background = "#10213d"; element.style.color = "#f5b400"; element.style.fontSize = "17px"; element.style.fontWeight = "900"; element.innerHTML = '<span data-truck-arrow aria-hidden="true">➤</span>';
+    element.style.width = "42px"; element.style.height = "42px"; element.style.borderRadius = "13px"; element.style.background = "#10213d"; element.style.color = "#f5b400"; element.innerHTML = `<span data-truck-arrow aria-hidden="true" style="display:grid;place-items:center">${TRUCK_ICON_MARKUP}</span>`;
     applyTruckHeading(element, heading); applyTruckFreshness(element, freshness);
   }
   return element;
@@ -56,6 +59,23 @@ function setMarker(current: Marker | null, map: maplibregl.Map, position: LngLat
     return current;
   }
   return new maplibregl.Marker({ element: createMarkerElement(kind, heading, freshness), anchor: "center" }).setLngLat(position).addTo(map);
+}
+
+function formatDuration(seconds: number) {
+  const minutes = Math.max(0, Math.round(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return hours ? `${hours}h ${mins}m` : `${mins}m`;
+}
+
+function formatGpsAge(recordedAt: string) {
+  const ms = new Date(recordedAt).getTime();
+  if (!Number.isFinite(ms)) return "unknown age";
+  const seconds = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.round(minutes / 60)}h ago`;
 }
 
 function timelineIndex(status: string | null | undefined) {
@@ -75,18 +95,42 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
   const [remaining, setRemaining] = useState<RouteResult | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
+  const [mapLoading, setMapLoading] = useState(true);
+  const [mapError, setMapError] = useState("");
 
   const hasTruck = Boolean(trip && validCoordinate(trip.truck_lng, trip.truck_lat));
   const freshness = classifyTrackingFreshness(hasTruck ? trip?.recorded_at : null);
   const gpsLive = hasTruck && freshness === "LIVE";
-  const gpsBadge = freshness === "LIVE" ? "GPS LIVE" : freshness === "STALE" ? "GPS STALE" : "GPS OFFLINE";
+  const delivered = trip?.status === "delivered";
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = new maplibregl.Map({ container: containerRef.current, style: mapStyle, center: [39.6, 8.8], zoom: 6, dragPan: true, scrollZoom: true, touchZoomRotate: true, doubleClickZoom: true });
+    let active = true;
+    let mapReady = false;
+    setMapLoading(true);
+    setMapError("");
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({ container: containerRef.current, style: mapStyle, center: [39.6, 8.8], zoom: 6, dragPan: true, scrollZoom: true, touchZoomRotate: true, doubleClickZoom: true });
+    } catch {
+      setMapLoading(false);
+      setMapError("Interactive map unavailable on this device.");
+      return;
+    }
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.once("load", () => {
+      mapReady = true;
+      if (!active) return;
+      setMapLoading(false);
+      setMapError("");
+    });
+    map.on("error", (event) => {
+      if (!active || mapReady) return;
+      setMapLoading(false);
+      setMapError(event.error?.message || "Map tiles could not be loaded.");
+    });
     mapRef.current = map;
-    return () => { pickupMarkerRef.current?.remove(); dropoffMarkerRef.current?.remove(); truckMarkerRef.current?.remove(); map.remove(); mapRef.current = null; };
+    return () => { active = false; pickupMarkerRef.current?.remove(); dropoffMarkerRef.current?.remove(); truckMarkerRef.current?.remove(); map.remove(); mapRef.current = null; };
   }, []);
 
   useEffect(() => {
@@ -110,7 +154,13 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
     const dropoff = trip && validCoordinate(trip.dropoff_lng, trip.dropoff_lat) ? [Number(trip.dropoff_lng), Number(trip.dropoff_lat)] as [number, number] : null;
     const truck = trip && validCoordinate(trip.truck_lng, trip.truck_lat) ? [Number(trip.truck_lng), Number(trip.truck_lat)] as [number, number] : null;
     const controller = new AbortController();
-    if (!pickup || !dropoff) { setRoute(null); setRemaining(null); return () => controller.abort(); }
+    if (!pickup || !dropoff) {
+      setRoute(null);
+      setRemaining(null);
+      setRouteLoading(false);
+      setRouteError("");
+      return () => controller.abort();
+    }
     setRouteLoading(true); setRouteError("");
     void fetchRoute(pickup, dropoff, controller.signal).then(setRoute).catch((caught: unknown) => { if (!controller.signal.aborted) setRouteError(caught instanceof Error ? caught.message : "Route could not be loaded."); }).finally(() => { if (!controller.signal.aborted) setRouteLoading(false); });
     if (truck && gpsLive) void fetchRoute(truck, dropoff, controller.signal).then(setRemaining).catch(() => { if (!controller.signal.aborted) setRemaining(null); });
@@ -133,26 +183,31 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
   const status = trip?.status || "accepted";
   const step = timelineIndex(status);
   const remainingKm = remaining ? remaining.distanceM / 1000 : null;
-  const eta = remaining && gpsLive ? new Date(Date.now() + remaining.durationS * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+  const eta = remaining && gpsLive ? formatDuration(remaining.durationS) : "—";
   const routeDistance = route ? route.distanceM / 1000 : Number(totalDistanceKm || 0);
-  const completedPercent = status === "delivered" ? 100 : remainingKm != null && routeDistance > 0 ? Math.max(0, Math.min(99, Math.round((1 - remainingKm / routeDistance) * 100))) : step * 28;
-  const gpsText = !hasTruck ? "Waiting for GPS" : freshness === "LIVE" ? `Live${trip?.speed_kmh != null ? ` · ${Math.round(Number(trip.speed_kmh))} km/h` : ""}` : `${freshness} · last known`;
+  const completedPercent = gpsLive && remainingKm != null && routeDistance > 0
+    ? Math.max(0, Math.min(99, Math.round((1 - remainingKm / routeDistance) * 100)))
+    : null;
+  const gpsText = delivered ? "Trip complete" : !hasTruck ? "Waiting for GPS" : freshness === "LIVE" ? `Live${trip?.speed_kmh != null ? ` · ${Math.round(Number(trip.speed_kmh))} km/h` : ""}` : `${freshness} · last known`;
   const timeline = ["Assigned", "Pickup", "On route", "Delivered"];
   const lastUpdate = trip?.recorded_at ? new Date(trip.recorded_at).toLocaleString(undefined, { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "short" }) : "Waiting for GPS update";
 
   return (
     <section className="customer-track-v4" data-tracking-freshness={freshness}>
       <div className="customer-track-v4__timeline" aria-label="Trip progress">{timeline.map((label, index) => <div key={label} className={index <= step ? "is-done" : ""}><span>{index + 1}</span><small>{label}</small></div>)}</div>
-      <div className="customer-track-v4__progress"><span style={{ width: `${completedPercent}%` }}/></div>
-      <div className="customer-track-v4__metrics"><Metric label="Trip status" value={(status || "pending").replaceAll("_", " ")}/><Metric label="Truck GPS status" value={gpsText}/><Metric label="Remaining distance" value={status === "delivered" ? "0 km" : remainingKm == null ? "—" : `${remainingKm.toFixed(1)} km`}/><Metric label="ETA" value={status === "delivered" ? "Delivered" : eta}/></div>
+      {completedPercent != null && <div className="customer-track-v4__progress" aria-label={`Live route progress ${completedPercent}%`}><span style={{ width: `${completedPercent}%` }}/></div>}
+      <div className="customer-track-v4__metrics"><Metric label="Trip status" value={(status || "pending").replaceAll("_", " ")}/><Metric label="Truck GPS" value={gpsText}/><Metric label="Remaining distance" value={status === "delivered" ? "0 km" : remainingKm == null ? "—" : `${remainingKm.toFixed(1)} km`}/><Metric label="ETA" value={status === "delivered" ? "Delivered" : eta}/></div>
       <div className="customer-track-v4__map-shell">
-        <div className="customer-track-v4__map-head"><div><small>LIVE TRIP MAP</small><strong>Pickup → Drop-off → Truck</strong></div><b className={gpsLive ? "is-live" : ""}>{gpsBadge}</b></div>
+        <span className={`customer-track-v4__gps-badge customer-track-v4__gps-badge--${freshness.toLowerCase()}`}>{delivered ? "TRIP COMPLETE" : freshness === "STALE" ? "GPS STALE" : freshness === "LIVE" ? "GPS LIVE" : "GPS OFFLINE"}</span>
         <div ref={containerRef} className="customer-track-v4__map" aria-label="Trip tracking map"/>
+        {mapLoading && <p className="customer-track-v4__message" role="status">Loading map…</p>}
+        {mapError && <p className="customer-track-v4__message customer-track-v4__message--warn" role="alert">Map unavailable: {mapError}</p>}
         {routeLoading && <p className="customer-track-v4__message">Loading route…</p>}
         {routeError && <p className="customer-track-v4__message">Route line unavailable: {routeError}</p>}
         {!hasTruck && <p className="customer-track-v4__message">Waiting for the assigned Driver's first GPS location.</p>}
-        {hasTruck && !gpsLive && <p className="customer-track-v4__message customer-track-v4__message--warn">{freshness} — last known location, not a current/live position.</p>}
-        <div className="customer-track-v4__legend"><span>● Pickup</span><span>● Drop-off</span><span>▣ Truck</span></div>
+        {delivered && <p className="customer-track-v4__message customer-track-v4__message--complete">Delivery complete — map shows the completed trip route and final recorded Driver location.</p>}
+        {!delivered && hasTruck && !gpsLive && <p className="customer-track-v4__message customer-track-v4__message--warn">{freshness} — last known location, not a current/live position.</p>}
+        <div className="customer-track-v4__legend"><span>● Pickup</span><span>● Drop-off</span><span><TruckIcon aria-hidden="true" size={14}/> Truck</span></div>
       </div>
       <div className="customer-track-v4__last-update"><span>Latest location timestamp</span><strong>{lastUpdate}</strong></div>
     </section>

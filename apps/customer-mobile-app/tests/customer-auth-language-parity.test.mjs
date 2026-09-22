@@ -6,12 +6,12 @@ const css = fs.readFileSync(new URL("../src/auth-language-compact.css", import.m
 const labels = fs.readFileSync(new URL("../src/auth-language-labels.ts", import.meta.url), "utf8");
 const main = fs.readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
 
-test("Customer auth language control uses Driver-style top-right placement instead of clipping above the viewport", () => {
-  assert.match(css, /padding-top:54px/);
-  assert.match(css, /top:4px/);
-  assert.doesNotMatch(css, /top:-48px/);
-  assert.doesNotMatch(css, /top:-44px/);
+test("Customer auth language control uses semantic top-right placement without brittle style selectors", () => {
+  assert.match(css, /\.customer-auth-shell\{[^}]*padding-top:54px/);
+  assert.match(css, /\.customer-auth-language\{[^}]*top:4px/);
   assert.match(css, /@media\(max-width:360px\)/);
+  assert.doesNotMatch(css, /\[style\*=/);
+  assert.doesNotMatch(css, /nth-of-type|first-of-type/);
 });
 
 test("Customer auth language labels are compact EN, OR and Amharic abbreviation", () => {
@@ -24,10 +24,9 @@ test("Customer auth language labels are compact EN, OR and Amharic abbreviation"
   assert.match(main, /import "\.\/auth-language-labels"/);
 });
 
-test("Customer signed-out card robustly hides the redundant intro block and lifts the form", () => {
-  assert.match(css, />p:first-of-type,/);
-  assert.match(css, />h1:first-of-type,/);
-  assert.match(css, />p:nth-of-type\(2\)\{display:none!important\}/);
-  assert.match(css, />form\{margin-top:0!important\}/);
-  assert.doesNotMatch(css, /label:first-child\+p\+h1\+p/);
+test("Customer auth styling uses stable semantic classes rather than DOM-position overrides", () => {
+  assert.match(css, /\.customer-auth-screen/);
+  assert.match(css, /\.customer-auth-shell/);
+  assert.match(css, /\.customer-auth-language/);
+  assert.doesNotMatch(css, /main>div|main>section|label:first-child/);
 });

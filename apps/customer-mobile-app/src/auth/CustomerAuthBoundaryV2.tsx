@@ -1,8 +1,14 @@
+import { Mail, LockKeyhole, Eye, EyeOff } from "lucide-react";
+import wordmark from "./assets/wordmark.webp";
+import splashImage from "./assets/splash.webp";
+import skyline from "./assets/skyline.webp";
+import googleMark from "./assets/google.svg";
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
+  type FocusEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
@@ -15,6 +21,14 @@ import {
   customerSupabase,
   customerSupabaseConfigured,
 } from "./customer-supabase";
+import { roleDestination } from "./role-destination";
+import {
+  isValidCustomerFullName,
+  isValidSixDigitPin,
+  normalizeEthiopianMobile,
+  sanitizeCustomerFullName,
+  sanitizeEthiopianPhoneInput,
+} from "./customer-auth-validation";
 
 export type CustomerIdentity = {
   userId: string;
@@ -27,7 +41,7 @@ type AuthState =
   | { kind: "configuration-error" }
   | { kind: "signed-out"; error: string | null; notice: string | null }
   | { kind: "allowed"; identity: CustomerIdentity }
-  | { kind: "unsupported-role" }
+  | { kind: "unsupported-role"; role: string | null }
   | { kind: "missing-profile" }
   | { kind: "load-error"; message: string };
 
@@ -41,14 +55,15 @@ const COPY = {
   om: {
     customerOnly: "CUSTOMER QOFA",
     createTitle: "Akkaawuntii HALLO kee uumi",
-    signInTitle: "Gara akkaawuntii keetti seeni",
-    createDescription: "Maqaa, lakkoofsa bilbilaa Itoophiyaa, imeelii fi password fayyadamuun akkaawuntii Customer uumi.",
-    signInDescription: "Geejjiba ajajuu fi hordofuuf akkaawuntii HALLO Customer kee fayyadami.",
+    signInTitle: "Baga nagaan deebite",
+    createDescription: "Maqaa, lakkoofsa bilbilaa Itoophiyaa, imeelii fi PIN lakkoofsa 6 fayyadamuun akkaawuntii Customer uumi.",
+    signInDescription: "Gara akkaawuntii keetti seeni.",
     language: "Afaan",
     fullName: "Maqaa guutuu",
     phone: "Bilbila",
     email: "Imeelii",
-    password: "Password",
+    password: "PIN lakkoofsa 6",
+    continueWithGoogle: "Google'n itti fufi",
     creating: "AKKAAWUNTII UUMAA JIRA…",
     verifying: "AKKAAWUNTII MIRKANEESSAA JIRA…",
     createAccount: "CREATE ACCOUNT",
@@ -57,13 +72,13 @@ const COPY = {
     invalidLogin: "Imeeliin ykn password dogoggora.",
     emailNotConfirmed: "Seenuu dura imeelii kee mirkaneessi.",
     alreadyRegistered: "Imeelii kanaan akkaawuntiin duraan jira.",
-    weakPassword: "Password cimaa qubee 6 ol qabu fayyadami.",
+    weakPassword: "PIN lakkoofsa 6 qofa galchi.",
     network: "Server bira ga'uun hin danda'amne. Internet kee ilaali.",
     authUnavailable: "Authentication yeroo ammaatti hin hojjatu. Irra deebi'ii yaali.",
     phoneInvalid: "Lakkoofsa bilbilaa Itoophiyaa sirrii galchi.",
     nameInvalid: "Maqaa guutuu kee galchi.",
     emailInvalid: "Imeelii sirrii galchi.",
-    passwordInvalid: "Password qubee 6 ol qabu fayyadami.",
+    passwordInvalid: "PIN lakkoofsa 6 qofa galchi.",
     createdNotice: "Akkaawuntiin uumameera. Imeelii kee mirkaneessi; sana booda seeni.",
     retry: "Mirkaneessa irra deebi'i",
     signOut: "Ba'i",
@@ -74,6 +89,10 @@ const COPY = {
     deniedEyebrow: "SEENUUN DHORKAME",
     deniedTitle: "Akkaawuntii Customer barbaachisa",
     deniedDescription: "Akkaawuntiin kun database keessatti role Customer hin qabu. Driver, Admin, CEO fi Partner app kana banuu hin danda'an.",
+    driverRedirectEyebrow: "DRIVER ARGAME",
+    driverRedirectTitle: "Gara Driver app geessaa jira",
+    driverRedirectDescription: "Akkaawuntiin kun database keessatti role Driver qaba. Gara HALLO Driver app sirriitti si geessaa jira.",
+    openDriverApp: "DRIVER APP BANI",
     missingEyebrow: "PROFILE HIN JIRU",
     missingTitle: "Database profile hin argamne",
     missingDescription: "Auth account jira, garuu profile row hin deebine. Authorization tilmaamaan hin murtaa'u.",
@@ -84,29 +103,30 @@ const COPY = {
   en: {
     customerOnly: "CUSTOMER ONLY",
     createTitle: "Create your HALLO account",
-    signInTitle: "Sign in to your account",
-    createDescription: "Create a Customer account using your name, Ethiopian phone number, email and password.",
-    signInDescription: "Use your HALLO Customer account to book and track transport.",
+    signInTitle: "Welcome Back",
+    createDescription: "Create a Customer account using your name, Ethiopian phone number, email and 6-digit PIN.",
+    signInDescription: "Sign in to your account",
     language: "Language",
     fullName: "Full name",
     phone: "Phone",
-    email: "Email",
-    password: "Password",
+    email: "Email address",
+    password: "6-digit PIN",
+    continueWithGoogle: "Continue with Google",
     creating: "CREATING ACCOUNT…",
     verifying: "VERIFYING ACCOUNT…",
     createAccount: "CREATE ACCOUNT",
-    signIn: "SIGN IN",
+    signIn: "Sign In",
     backToSignIn: "Back to Sign in",
     invalidLogin: "The email or password is incorrect.",
     emailNotConfirmed: "Confirm your email before signing in.",
     alreadyRegistered: "An account already exists for this email.",
-    weakPassword: "Use a stronger password with at least 6 characters.",
+    weakPassword: "Enter exactly 6 digits for your PIN.",
     network: "The server could not be reached. Check your internet connection.",
     authUnavailable: "Authentication is temporarily unavailable. Please try again.",
     phoneInvalid: "Enter a valid Ethiopian mobile number.",
     nameInvalid: "Enter your full name.",
     emailInvalid: "Enter a valid email address.",
-    passwordInvalid: "Use a password with at least 6 characters.",
+    passwordInvalid: "Enter exactly 6 digits for your PIN.",
     createdNotice: "Account created. Confirm your email, then sign in.",
     retry: "Retry verification",
     signOut: "Sign out",
@@ -117,6 +137,10 @@ const COPY = {
     deniedEyebrow: "ACCESS DENIED",
     deniedTitle: "Customer account required",
     deniedDescription: "This account does not have the Customer database role. Driver, Admin, CEO and Partner workspaces cannot open this app.",
+    driverRedirectEyebrow: "DRIVER DETECTED",
+    driverRedirectTitle: "Opening the Driver app",
+    driverRedirectDescription: "This account has the Driver database role. You are being sent to the correct HALLO Driver app.",
+    openDriverApp: "OPEN DRIVER APP",
     missingEyebrow: "PROFILE MISSING",
     missingTitle: "Database profile not found",
     missingDescription: "An auth account exists, but no profile row was returned. Authorization is never guessed.",
@@ -127,14 +151,15 @@ const COPY = {
   am: {
     customerOnly: "ለደንበኛ ብቻ",
     createTitle: "የHALLO መለያዎን ይፍጠሩ",
-    signInTitle: "ወደ መለያዎ ይግቡ",
-    createDescription: "ስምዎን፣ የኢትዮጵያ ስልክ ቁጥር፣ ኢሜይል እና የይለፍ ቃል በመጠቀም የCustomer መለያ ይፍጠሩ።",
-    signInDescription: "መጓጓዣ ለማዘዝ እና ለመከታተል የHALLO Customer መለያዎን ይጠቀሙ።",
+    signInTitle: "እንኳን ደህና መጡ",
+    createDescription: "ስምዎን፣ የኢትዮጵያ ስልክ ቁጥር፣ ኢሜይል እና ባለ 6 አሃዝ PIN በመጠቀም የCustomer መለያ ይፍጠሩ።",
+    signInDescription: "ወደ መለያዎ ይግቡ።",
     language: "ቋንቋ",
     fullName: "ሙሉ ስም",
     phone: "ስልክ",
     email: "ኢሜይል",
-    password: "የይለፍ ቃል",
+    password: "ባለ 6 አሃዝ PIN",
+    continueWithGoogle: "በGoogle ይቀጥሉ",
     creating: "መለያ በመፍጠር ላይ…",
     verifying: "መለያ በማረጋገጥ ላይ…",
     createAccount: "መለያ ይፍጠሩ",
@@ -143,13 +168,13 @@ const COPY = {
     invalidLogin: "ኢሜይሉ ወይም የይለፍ ቃሉ ትክክል አይደለም።",
     emailNotConfirmed: "ከመግባትዎ በፊት ኢሜይልዎን ያረጋግጡ።",
     alreadyRegistered: "በዚህ ኢሜይል መለያ አስቀድሞ አለ።",
-    weakPassword: "ቢያንስ 6 ፊደላት ያሉት ጠንካራ የይለፍ ቃል ይጠቀሙ።",
+    weakPassword: "ባለ 6 አሃዝ PIN ብቻ ያስገቡ።",
     network: "Server ላይ መድረስ አልተቻለም። ኢንተርኔትዎን ይፈትሹ።",
     authUnavailable: "Authentication ለጊዜው አይገኝም። እንደገና ይሞክሩ።",
     phoneInvalid: "ትክክለኛ የኢትዮጵያ ሞባይል ቁጥር ያስገቡ።",
     nameInvalid: "ሙሉ ስምዎን ያስገቡ።",
     emailInvalid: "ትክክለኛ ኢሜይል ያስገቡ።",
-    passwordInvalid: "ቢያንስ 6 ፊደላት ያሉት የይለፍ ቃል ይጠቀሙ።",
+    passwordInvalid: "ባለ 6 አሃዝ PIN ብቻ ያስገቡ።",
     createdNotice: "መለያ ተፈጥሯል። ኢሜይልዎን ያረጋግጡ፣ ከዚያ ይግቡ።",
     retry: "እንደገና ያረጋግጡ",
     signOut: "ውጣ",
@@ -160,6 +185,10 @@ const COPY = {
     deniedEyebrow: "መዳረሻ ተከልክሏል",
     deniedTitle: "የCustomer መለያ ያስፈልጋል",
     deniedDescription: "ይህ መለያ በdatabase ውስጥ Customer role የለውም። Driver፣ Admin፣ CEO እና Partner ይህን app መክፈት አይችሉም።",
+    driverRedirectEyebrow: "DRIVER ተገኝቷል",
+    driverRedirectTitle: "የDriver app በመክፈት ላይ",
+    driverRedirectDescription: "ይህ መለያ በdatabase ውስጥ Driver role አለው። ወደ ትክክለኛው HALLO Driver app እየተላኩ ነው።",
+    openDriverApp: "DRIVER APP ክፈት",
     missingEyebrow: "PROFILE አልተገኘም",
     missingTitle: "Database profile አልተገኘም",
     missingDescription: "Auth account አለ፣ ነገር ግን profile row አልተመለሰም። Authorization በግምት አይወሰንም።",
@@ -233,40 +262,44 @@ function friendlyAuthError(message: string | undefined, language: Language) {
 }
 
 function Screen({ children }: { children: ReactNode }) {
-  return (
-    <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: "20px", background: "linear-gradient(180deg,#edf5ff 0%,#f7f9fc 55%,#fff 100%)", color: "#10213d", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" }}>
-      {children}
-    </main>
-  );
+  return <main className="customer-auth-screen">{children}</main>;
 }
 
 function Brand() {
-  return (
-    <div style={{ display: "grid", justifyItems: "center", gap: "10px", marginBottom: "22px", textAlign: "center" }}>
-      <div aria-label="HALLO logo" style={{ width: "68px", height: "68px", display: "grid", placeItems: "center", borderRadius: "22px", background: "#10213d", color: "#f5b400", fontWeight: 950, fontSize: "28px", boxShadow: "0 12px 28px rgba(16,33,61,.18)" }}>H</div>
-      <div>
-        <div style={{ color: "#10213d", fontSize: "26px", fontWeight: 950, lineHeight: 1 }}>HALLO<span style={{ color: "#d68e25" }}>TRUCK</span></div>
-        <div style={{ marginTop: "5px", color: "#66758c", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em" }}>Customer Mobile</div>
-      </div>
-    </div>
-  );
+  return <div className="customer-entry-brand" data-language-static="true"><strong>HALLO</strong><img src={wordmark} alt="HALLO" aria-label="HALLO logo" width="240" height="80" /><small>Smart Logistics</small></div>;
+}
+
+function AuthFooter() {
+  return <footer className="customer-entry-footer" data-language-static="true"><img src={skyline} alt="" /><div><strong>HALLO Smart Logistics</strong><span>Move Anything. Anywhere.</span></div></footer>;
 }
 
 function LanguageSelect({ language, setLanguage, disabled = false }: { language: Language; setLanguage: (language: Language) => void; disabled?: boolean }) {
-  const text = COPY[language];
   return (
-    <label style={{ display: "grid", gap: "8px", marginBottom: "18px", fontSize: "13px", fontWeight: 800 }}>
-      {text.language}
-      <select value={language} disabled={disabled} onChange={(event) => setLanguage(event.target.value as Language)} style={{ ...inputStyle, marginTop: 0 }}>
-        <option value="om">Afaan Oromoo</option>
-        <option value="en">English</option>
-        <option value="am">አማርኛ</option>
+    <label className="customer-auth-language">
+      <span className="customer-auth-language-label">{COPY[language].language}</span>
+      <select value={language} disabled={disabled} onChange={(event) => setLanguage(event.target.value as Language)} aria-label={COPY[language].language}>
+        <option value="en">EN</option>
+        <option value="om">OR</option>
+        <option value="am">አማ</option>
       </select>
     </label>
   );
 }
 
-function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSignUp }: {
+function Splash({ onStart }: { onStart: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onStart, 4500);
+    return () => window.clearTimeout(timer);
+  }, [onStart]);
+  return <main className="customer-welcome" style={{ backgroundImage: `url(${splashImage})` }}>
+    <button type="button" className="customer-welcome-surface" onClick={onStart} aria-label="Continue to sign in">
+      <div className="customer-welcome-heading"><Brand /><p>Move Anything. Anywhere.<br/>Safer. Faster. Together.</p></div>
+      <div className="customer-welcome-bottom"><div className="customer-welcome-dots" aria-hidden="true"><i/><i/><i/></div><p>Reliable Trucking for a Stronger Ethiopia</p><small>People <span>|</span> Business <span>|</span> Progress</small></div>
+    </button>
+  </main>;
+}
+
+function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSignUp, onGoogleSignIn }: {
   busy: boolean;
   error: string | null;
   notice: string | null;
@@ -274,18 +307,48 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
   setLanguage: (language: Language) => void;
   onSignIn: (email: string, password: string) => Promise<void>;
   onSignUp: (fullName: string, phone: string, email: string, password: string) => Promise<void>;
+  onGoogleSignIn: () => Promise<void>;
 }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [resetFeedback, setResetFeedback] = useState<{ message: string; kind: "success" | "error" } | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [touched, setTouched] = useState({ fullName: false, phone: false, email: false, password: false });
   const submitLock = useRef(false);
   const text = COPY[language];
+  const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
+  const pinValid = isValidSixDigitPin(password);
+  const nameValid = isValidCustomerFullName(fullName);
+  const phoneValid = normalizeEthiopianMobile(phone) !== null;
+  const formReady = mode === "signup"
+    ? nameValid && phoneValid && emailValid && pinValid && termsAccepted
+    : emailValid && pinValid;
+
+  async function resetPassword() {
+    if (busy || resetBusy || !customerSupabase) return;
+    if (!emailValid) { setTouched((current) => ({ ...current, email: true })); setResetFeedback({ message: text.emailInvalid, kind: "error" }); return; }
+    setResetBusy(true);
+    try {
+      const { error: resetError } = await customerSupabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: new URL("../", window.location.href).href,
+      });
+      if (resetError) throw resetError;
+      setResetFeedback({ message: language === "en" ? "If an account exists for this email, a reset link will arrive shortly." : language === "om" ? "Imeelii kanaan akkaawuntiin yoo jiraate, linkiin haaromsuu siif ergama." : "በዚህ ኢሜይል መለያ ካለ፣ የማደሻ አገናኝ ይደርሳል።", kind: "success" });
+    } catch { setResetFeedback({ message: text.authUnavailable, kind: "error" }); }
+    finally { setResetBusy(false); }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || submitLock.current) return;
+    if (busy || submitLock.current || !formReady) {
+      setTouched({ fullName: mode === "signup", phone: mode === "signup", email: true, password: true });
+      return;
+    }
     submitLock.current = true;
     try {
       if (mode === "signup") await onSignUp(fullName, phone, email, password);
@@ -295,37 +358,47 @@ function AuthForm({ busy, error, notice, language, setLanguage, onSignIn, onSign
     }
   }
 
+  function bringIntoView(event: FocusEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    window.setTimeout(() => input.scrollIntoView({ block: "center", behavior: "smooth" }), 180);
+  }
+
   return (
-    <Screen>
-      <div style={{ width: "min(100%, 430px)", display: "grid", justifyItems: "stretch" }}>
+    <main className="customer-entry">
+      <div className="customer-entry-shell">
+        <LanguageSelect language={language} setLanguage={setLanguage} disabled={busy} />
         <Brand />
-        <section style={{ ...panelStyle, width: "100%", boxSizing: "border-box" }}>
-          <LanguageSelect language={language} setLanguage={setLanguage} disabled={busy} />
-          <p style={{ margin: 0, color: "#9a6700", fontSize: "10px", fontWeight: 900, letterSpacing: ".16em" }}>{text.customerOnly}</p>
-          <h1 style={{ margin: "8px 0 0", fontSize: "26px", lineHeight: 1.15 }}>{mode === "signup" ? text.createTitle : text.signInTitle}</h1>
-          <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>{mode === "signup" ? text.createDescription : text.signInDescription}</p>
-
-          {error && <div role="alert" style={{ marginTop: "18px", border: "1px solid #fecaca", borderRadius: "14px", background: "#fef2f2", padding: "12px", color: "#b91c1c", fontSize: "13px" }}>{error}</div>}
-          {notice && <div role="status" style={{ marginTop: "18px", border: "1px solid #bbf7d0", borderRadius: "14px", background: "#f0fdf4", padding: "12px", color: "#166534", fontSize: "13px" }}>{notice}</div>}
-
-          <form onSubmit={submit} style={{ display: "grid", gap: "16px", marginTop: "22px" }} aria-busy={busy}>
+        <section className={`customer-entry-card is-${mode}`}>
+          <h1>{mode === "signup" ? text.createTitle : text.signInTitle}</h1>
+          <p>{mode === "signup" ? text.createDescription : text.signInDescription}</p>
+          {error && <div className="customer-entry-alert is-error" role="alert">{error}</div>}
+          {notice && <div className="customer-entry-alert is-success" role="status">{notice}</div>}
+          {resetFeedback && <div className={`customer-entry-alert is-${resetFeedback.kind}`} role={resetFeedback.kind === "error" ? "alert" : "status"}>{resetFeedback.message}</div>}
+          <form className="customer-entry-form" onSubmit={submit} aria-busy={busy}>
             {mode === "signup" && <>
-              <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.fullName}<input style={inputStyle} type="text" autoComplete="name" required disabled={busy} value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
-              <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.phone}<input style={inputStyle} type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} placeholder="09XXXXXXXX or +2519XXXXXXXX" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
+              <label><span>{text.fullName}</span><input type="text" autoComplete="name" maxLength={80} required disabled={busy} value={fullName} aria-invalid={touched.fullName && !nameValid} aria-describedby="customer-name-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, fullName: true }))} onChange={(event) => setFullName(sanitizeCustomerFullName(event.target.value))} />{touched.fullName && !nameValid && <small id="customer-name-error" className="customer-entry-field-error">{text.nameInvalid}</small>}</label>
+              <label><span>{text.phone}</span><input type="tel" autoComplete="tel" inputMode="tel" maxLength={13} required disabled={busy} placeholder="09XXXXXXXX / +2519XXXXXXXX" value={phone} aria-invalid={touched.phone && !phoneValid} aria-describedby="customer-phone-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, phone: true }))} onChange={(event) => setPhone(sanitizeEthiopianPhoneInput(event.target.value))} />{touched.phone && !phoneValid && <small id="customer-phone-error" className="customer-entry-field-error">{text.phoneInvalid}</small>}</label>
             </>}
-            <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.email}<input style={inputStyle} type="email" autoComplete="email" inputMode="email" required disabled={busy} value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-            <label style={{ fontSize: "13px", fontWeight: 800 }}>{text.password}<input style={inputStyle} type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} required disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-            <button type="submit" disabled={busy} style={{ ...primaryButtonStyle, opacity: busy ? .6 : 1 }}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
+            <label><span className="customer-entry-sr-only">{text.email}</span><div className="customer-entry-field"><Mail size={19} aria-hidden="true"/><input type="email" autoComplete="email" inputMode="email" required disabled={busy} placeholder={text.email} value={email} aria-invalid={touched.email && !emailValid} aria-describedby="customer-email-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, email: true }))} onChange={(event) => { setEmail(event.target.value.replace(/\s/g, "")); setResetFeedback(null); }} /></div>{touched.email && !emailValid && <small id="customer-email-error" className="customer-entry-field-error">{text.emailInvalid}</small>}</label>
+            <label><span className="customer-entry-sr-only">{text.password}</span><div className="customer-entry-field"><LockKeyhole size={19} aria-hidden="true"/><input placeholder={text.password} type={passwordVisible ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} required disabled={busy} value={password} aria-invalid={touched.password && !pinValid} aria-describedby="customer-pin-error" onFocus={bringIntoView} onBlur={() => setTouched((current) => ({ ...current, password: true }))} onChange={(event) => setPassword(event.target.value.replace(/\D/g, "").slice(0, 6))} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={19}/> : <Eye size={19}/>}</button></div>{touched.password && !pinValid && <small id="customer-pin-error" className="customer-entry-field-error">{text.passwordInvalid}</small>}</label>
+            {mode === "login" && <button type="button" className="customer-entry-forgot" disabled={busy || resetBusy} onClick={() => void resetPassword()}>{language === "om" ? "Password dagattee?" : language === "am" ? "የይለፍ ቃል ረሱ?" : "Forgot Password?"}</button>}
+            {mode === "signup" && <label className="customer-entry-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} disabled={busy}/><span>{language === "om" ? "Ulaagaa fi Haala irratti walii gala" : language === "am" ? "በውሎች እና ሁኔታዎች እስማማለሁ" : "I agree to the Terms & Conditions"}</span></label>}
+            <button className="customer-entry-primary" type="submit" disabled={busy || !formReady}>{busy ? (mode === "signup" ? text.creating : text.verifying) : (mode === "signup" ? text.createAccount : text.signIn)}</button>
           </form>
+          {mode === "login" && <>
+            <div className="customer-entry-divider">{language === "om" ? "ykn" : language === "am" ? "ወይም" : "or"}</div>
+            <button type="button" className="customer-entry-google" disabled={busy} onClick={() => void onGoogleSignIn()}><img src={googleMark} width="20" height="20" alt=""/>{text.continueWithGoogle}</button>
+          </>}
+          <div className="customer-entry-mode">
+            <span>{mode === "login" ? (language === "om" ? "Akkaawuntii hin qabduu?" : language === "am" ? "መለያ የለዎትም?" : "Don't have an account?") : (language === "om" ? "Akkaawuntii qabdaa?" : language === "am" ? "መለያ አለዎት?" : "Already have an account?")}</span>
+            <button type="button" disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setPassword(""); setTermsAccepted(false); setResetFeedback(null); setTouched({ fullName: false, phone: false, email: false, password: false }); }}>
+              {mode === "login" ? (language === "om" ? "Galmaa'i" : language === "am" ? "ይመዝገቡ" : "Create Account") : text.signIn}
+            </button>
+          </div>
         </section>
-
-        <div style={{ display: "grid", placeItems: "center", marginTop: "18px" }}>
-          <button type="button" disabled={busy} onClick={() => setMode(mode === "login" ? "signup" : "login")} style={{ ...modeLinkStyle, opacity: busy ? .55 : 1 }}>
-            {mode === "login" ? "Create Account" : text.backToSignIn}
-          </button>
-        </div>
       </div>
-    </Screen>
+      <AuthFooter />
+    </main>
   );
 }
 
@@ -354,10 +427,39 @@ function AccessState({ language, setLanguage, eyebrow, title, description, onSig
   );
 }
 
+function DriverRedirect({ language, setLanguage, onSignOut }: {
+  language: Language;
+  setLanguage: (language: Language) => void;
+  onSignOut: () => Promise<void>;
+}) {
+  const text = COPY[language];
+  const destination = roleDestination("driver", window.location.href);
+
+  useEffect(() => {
+    if (!destination) return;
+    window.location.replace(destination);
+  }, [destination]);
+
+  return (
+    <Screen>
+      <section style={{ ...panelStyle, textAlign: "center" }}>
+        <Brand />
+        <LanguageSelect language={language} setLanguage={setLanguage} />
+        <p style={{ margin: 0, color: "#087a52", fontSize: "10px", fontWeight: 900, letterSpacing: ".14em" }}>{text.driverRedirectEyebrow}</p>
+        <h1 style={{ margin: "10px 0 0", fontSize: "24px" }}>{text.driverRedirectTitle}</h1>
+        <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>{text.driverRedirectDescription}</p>
+        {destination && <a href={destination} style={{ ...primaryButtonStyle, display: "grid", placeItems: "center", boxSizing: "border-box", marginTop: "20px", textDecoration: "none" }}>{text.openDriverApp}</a>}
+        <button type="button" onClick={() => void onSignOut()} style={{ ...primaryButtonStyle, marginTop: "10px", background: "#fff", color: "#10213d", border: "1px solid #d8e2ef" }}>{text.signOut}</button>
+      </section>
+    </Screen>
+  );
+}
+
 export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   const [language, setLanguage] = useState<Language>(storedLanguage);
   const [state, setState] = useState<AuthState>(() => customerSupabaseConfigured ? { kind: "booting" } : { kind: "configuration-error" });
   const [authenticating, setAuthenticating] = useState(false);
+  const [showSplash, setShowSplash] = useState(() => typeof window !== "undefined" && window.sessionStorage.getItem("hallo-customer-splash-seen") !== "1");
   const requestIdRef = useRef(0);
   const loginLockRef = useRef(false);
   const text = COPY[language];
@@ -381,7 +483,7 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (error) throw error;
       const access = classifyCustomerProfile(data);
       if (access.kind === "allowed") { setState({ kind: "allowed", identity: { userId: session.user.id, fullName: access.fullName } }); return; }
-      if (access.kind === "unsupported-role") { setState({ kind: "unsupported-role" }); return; }
+      if (access.kind === "unsupported-role") { setState({ kind: "unsupported-role", role: access.role }); return; }
       setState({ kind: "missing-profile" });
     } catch {
       if (requestId !== requestIdRef.current) return;
@@ -412,7 +514,9 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (error) throw error;
       await resolveSession(data.session);
     } catch (error) {
-      setState({ kind: "signed-out", error: friendlyAuthError(error instanceof Error ? error.message : undefined, language), notice: null });
+      const message = error instanceof Error ? error.message : undefined;
+      const localValidation = message && [text.emailInvalid, text.passwordInvalid].includes(message as never);
+      setState({ kind: "signed-out", error: localValidation ? message! : friendlyAuthError(message, language), notice: null });
     } finally { loginLockRef.current = false; setAuthenticating(false); }
   }
 
@@ -424,15 +528,11 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("network");
       const cleanName = fullName.trim();
       const cleanEmail = email.trim().toLowerCase();
-      if (cleanName.length < 2) throw new Error(text.nameInvalid);
+      if (!isValidCustomerFullName(cleanName)) throw new Error(text.nameInvalid);
       if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) throw new Error(text.emailInvalid);
-      if (password.length < 6) throw new Error(text.passwordInvalid);
-      const compact = phone.replace(/[\s()-]/g, "");
-      let normalizedPhone = "";
-      if (/^09\d{8}$/.test(compact)) normalizedPhone = `+251${compact.slice(1)}`;
-      else if (/^2519\d{8}$/.test(compact)) normalizedPhone = `+${compact}`;
-      else if (/^\+2519\d{8}$/.test(compact)) normalizedPhone = compact;
-      else throw new Error(text.phoneInvalid);
+      if (!isValidSixDigitPin(password)) throw new Error(text.passwordInvalid);
+      const normalizedPhone = normalizeEthiopianMobile(phone);
+      if (!normalizedPhone) throw new Error(text.phoneInvalid);
 
       const { data, error } = await client.auth.signUp({
         email: cleanEmail,
@@ -447,6 +547,26 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       const localValidation = message && [text.nameInvalid, text.emailInvalid, text.passwordInvalid, text.phoneInvalid].includes(message as never);
       setState({ kind: "signed-out", error: localValidation ? message! : friendlyAuthError(message, language), notice: null });
     } finally { loginLockRef.current = false; setAuthenticating(false); }
+  }
+
+  async function signInWithGoogle() {
+    const client = customerSupabase;
+    if (!client || loginLockRef.current) return;
+    loginLockRef.current = true;
+    setAuthenticating(true);
+    setState({ kind: "signed-out", error: null, notice: null });
+    try {
+      const redirectTo = `${window.location.origin}${window.location.pathname}`;
+      const { error } = await client.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
+      if (error) throw error;
+    } catch (error) {
+      setState({ kind: "signed-out", error: friendlyAuthError(error instanceof Error ? error.message : undefined, language), notice: null });
+      setAuthenticating(false);
+      loginLockRef.current = false;
+    }
   }
 
   async function signOut() {
@@ -465,8 +585,10 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
 
   if (state.kind === "configuration-error") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.configurationEyebrow} title={text.configurationTitle} description={text.configurationDescription} onSignOut={async () => undefined} />;
   if (state.kind === "booting") return <Screen><section style={{ ...panelStyle, textAlign: "center" }}><Brand/><LanguageSelect language={language} setLanguage={setLanguage}/><div style={{ width: "38px", height: "38px", margin: "12px auto", border: "4px solid #e4edf8", borderTopColor: "#0759c7", borderRadius: "50%" }}/><strong role="status">{text.verifyingAccount}</strong></section></Screen>;
-  if (state.kind === "signed-out") return <AuthForm busy={authenticating} error={state.error} notice={state.notice} language={language} setLanguage={setLanguage} onSignIn={signIn} onSignUp={signUp} />;
+  if (state.kind === "signed-out" && showSplash) return <Splash onStart={() => { window.sessionStorage.setItem("hallo-customer-splash-seen", "1"); setShowSplash(false); }} />;
+  if (state.kind === "signed-out") return <AuthForm busy={authenticating} error={state.error} notice={state.notice} language={language} setLanguage={setLanguage} onSignIn={signIn} onSignUp={signUp} onGoogleSignIn={signInWithGoogle} />;
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
+  if (state.kind === "unsupported-role" && state.role === "driver") return <DriverRedirect language={language} setLanguage={setLanguage} onSignOut={signOut} />;
   if (state.kind === "unsupported-role") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.deniedEyebrow} title={text.deniedTitle} description={text.deniedDescription} onSignOut={signOut} />;
   if (state.kind === "missing-profile") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.missingEyebrow} title={text.missingTitle} description={text.missingDescription} onSignOut={signOut} onRetry={retryProfile} />;
   if (state.kind === "load-error") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.connectionEyebrow} title={text.connectionTitle} description={state.message} onSignOut={signOut} onRetry={retryProfile} />;

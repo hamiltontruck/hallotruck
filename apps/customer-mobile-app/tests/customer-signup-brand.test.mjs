@@ -20,11 +20,23 @@ test("Customer Mobile keeps database-role verification after signup", () => {
   assert.match(auth, /classifyCustomerProfile\(data\)/);
   assert.match(auth, /unsupported-role/);
   assert.match(auth, /missing-profile/);
+  assert.match(auth, /state\.role === "driver"/);
+  assert.match(auth, /window\.location\.replace\(destination\)/);
 });
 
-test("Customer Mobile shows HALLO branding at the top of auth", () => {
+test("Customer Mobile shows the official HALLO Smart Logistics brand on splash and auth", () => {
   assert.match(auth, /aria-label="HALLO logo"/);
-  assert.match(auth, /HALLO<span/);
-  assert.match(auth, /Customer Mobile/);
+  assert.match(auth, /<strong>HALLO<\/strong>/);
+  assert.match(auth, /<small>Smart Logistics<\/small>/);
+  assert.match(auth, /function Splash/);
   assert.match(main, /CustomerAuthBoundaryV2/);
+});
+
+
+test("Customer auth keeps six-digit PIN sanitization executable", () => {
+  assert.ok(auth.includes('event.target.value.replace(/\\s/g, "")'));
+  assert.ok(auth.includes('event.target.value.replace(/\\D/g, "").slice(0, 6)'));
+  assert.ok(auth.includes('if (!isValidSixDigitPin(password)) throw new Error(text.passwordInvalid);'));
+  assert.ok(!auth.includes('replace(/\\\\D/g, "")'));
+  assert.ok(!auth.includes('/^\\\\d{6}$/'));
 });
