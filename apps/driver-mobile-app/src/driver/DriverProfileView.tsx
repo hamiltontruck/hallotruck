@@ -111,12 +111,12 @@ function statusCopy(status: DriverProfileRecord["driverStatus"], language: Drive
   return { label: "SUSPENDED", detail: "Driver account yeroo ammaa hojii fudhachuu hin danda'u.", className: "bg-red-50 text-red-700" };
 }
 
-function ProgressCard({ title, verified, submitted, total }: { title: string; verified: number; submitted: number; total: number }) {
+function ProgressCard({ title, verified, submitted, total, language }: { title: string; verified: number; submitted: number; total: number; language: DriverLanguage }) {\n  const c = profileCopy[language];
   const percent = total > 0 ? Math.round((verified / total) * 100) : 0;
   return <div className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card">
-    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">{title}</p><p className="mt-2 text-xl font-black text-halo-navy">{verified}/{total} verified</p></div><span className="rounded-xl bg-halo-soft px-3 py-2 text-xs font-black text-halo-blue">{percent}%</span></div>
+    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">{title}</p><p className="mt-2 text-xl font-black text-halo-navy">{verified}/{total} {c.verified}</p></div><span className="rounded-xl bg-halo-soft px-3 py-2 text-xs font-black text-halo-blue">{percent}%</span></div>
     <div className="mt-4 h-2 overflow-hidden rounded-full bg-halo-line"><div className="h-full rounded-full bg-halo-blue transition-all" style={{ width: `${percent}%` }} /></div>
-    <p className="mt-2 text-[10px] text-halo-muted">Submitted: {submitted}/{total}</p>
+    <p className="mt-2 text-[10px] text-halo-muted">{c.submitted}: {submitted}/{total}</p>
   </div>;
 }
 
@@ -138,7 +138,7 @@ function DocumentRow({
   uploadDisabled?: boolean;
 }) {
   const health = documentHealth(record);
-  const copy = healthCopy[health];
+  const copy = healthCopy[health];\n  const healthLabel = health === "missing" ? c.missing : health === "pending" ? c.pending : health === "verified" ? c.docVerified : health === "rejected" ? c.rejected : c.expired;
   const expiry = documentExpiryWarning(record);
   const expiryMessage = expiry.level === "expired"
     ? "Yeroon isaa darbeera — document haaraa galchi."
@@ -153,7 +153,7 @@ function DocumentRow({
     ? "border-red-100 bg-red-50 text-red-700"
     : "border-amber-100 bg-amber-50 text-amber-800";
   return <article className="border-t border-halo-line px-4 py-3 first:border-t-0">
-    <div className="flex items-start gap-3"><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ${copy.className}`}>{health === "verified" ? "✓" : health === "rejected" || health === "expired" ? "!" : "•"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-extrabold leading-5 text-halo-navy">{localizedLabels[documentKey]}</p><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${copy.className}`}>{copy.label}</span></div>{record?.expiryDate && <p className="mt-1 text-[10px] text-halo-muted">{c.expiry}: {formatDate(record.expiryDate)}</p>}{expiryMessage && <p className={`mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-4 ${expiryClass}`}>{expiryMessage}</p>}{record?.rejectionReason && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold leading-4 text-red-700">{c.reason}: {record.rejectionReason}</p>}{!record && <p className="mt-1 text-[10px] text-halo-muted">{c.notFound}</p>}<div className="mt-3 flex flex-wrap gap-2">{record && <button type="button" onClick={onPreview} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">{c.preview}</button>}<button type="button" onClick={onUpload} disabled={uploadDisabled} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{record ? c.replace : c.upload}</button></div></div></div>
+    <div className="flex items-start gap-3"><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ${copy.className}`}>{health === "verified" ? "✓" : health === "rejected" || health === "expired" ? "!" : "•"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-extrabold leading-5 text-halo-navy">{localizedLabels[documentKey]}</p><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${copy.className}`}>{healthLabel}</span></div>{record?.expiryDate && <p className="mt-1 text-[10px] text-halo-muted">{c.expiry}: {formatDate(record.expiryDate)}</p>}{expiryMessage && <p className={`mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-4 ${expiryClass}`}>{expiryMessage}</p>}{record?.rejectionReason && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold leading-4 text-red-700">{c.reason}: {record.rejectionReason}</p>}{!record && <p className="mt-1 text-[10px] text-halo-muted">{c.notFound}</p>}<div className="mt-3 flex flex-wrap gap-2">{record && <button type="button" onClick={onPreview} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">{c.preview}</button>}<button type="button" onClick={onUpload} disabled={uploadDisabled} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{record ? c.replace : c.upload}</button></div></div></div>
   </article>;
 }
 
@@ -290,7 +290,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       <div className="mt-4 grid grid-cols-2 gap-3 border-t border-halo-line pt-4 text-xs"><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">Preferred vehicle</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(profile?.vehicleType ?? null)}</p></div><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">Member since</p><p className="mt-1 font-extrabold text-halo-navy">{formatDate(profile?.createdAt ?? null)}</p></div></div>
     </section>
 
-    <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2"><ProgressCard title={c.driverDocs} {...identityProgress} /><ProgressCard title={c.vehicleDocs} {...vehicleProgress} /></div>
+    <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2"><ProgressCard title={c.driverDocs} {...identityProgress} language={language} /><ProgressCard title={c.vehicleDocs} {...vehicleProgress} language={language} /></div>
 
     {expiryWarningCount > 0 && <section data-driver-document-expiry-warning className="rounded-[22px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-lg font-black text-amber-700">!</span><div className="min-w-0"><p className="text-sm font-black text-amber-900">Document expiry attention</p><p className="mt-1 text-xs leading-5 text-amber-800">Expired: {expirySummary.expired} · 7 days keessatti: {expirySummary.critical} · 30 days keessatti: {expirySummary.soon}</p><p className="mt-2 text-[10px] leading-4 text-amber-700">Expired evidence verified count keessatti hin lakkaa'amu. Xumuramuu dura replacement galchi.</p></div></div></section>}
 
