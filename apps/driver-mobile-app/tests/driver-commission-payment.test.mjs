@@ -128,7 +128,10 @@ test("panel subtracts pending review, locks submission and surfaces review statu
   assert.match(panelSource, /Math\.max\(0, balanceEtb - pendingEtb\)/);
   assert.match(panelSource, /if \(submitting\) return/);
   assert.match(panelSource, /disabled=\{!canSubmit\}/);
-  assert.match(panelSource, /driverCommissionPaymentStatusLabel/);
+  assert.match(panelSource, /function paymentStatusLabel/);
+  assert.match(panelSource, /t\.common\.approved/);
+  assert.match(panelSource, /t\.common\.rejected/);
+  assert.match(panelSource, /t\.common\.pending/);
   assert.match(panelSource, /rejectionReason/);
   assert.match(panelSource, /accept="image\/jpeg,image\/png,image\/webp,application\/pdf"/);
 });
