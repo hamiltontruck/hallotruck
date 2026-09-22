@@ -4,6 +4,7 @@ import {
   updateDriverPresence,
   type DriverPresence,
 } from "./driver-presence.service";
+import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
 const UPDATE_INTERVAL_MS = 60_000;
 
@@ -17,16 +18,19 @@ export function DriverAvailabilityCard({
   userId,
   hasActiveTrip,
   onOpenTrip,
+  language = "om",
 }: {
   userId: string;
   hasActiveTrip: boolean;
   onOpenTrip: () => void;
+  language?: DriverLanguage;
 }) {
   const [presence, setPresence] = useState<DriverPresence | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const watchIdRef = useRef<number | null>(null);
   const lastSentAtRef = useRef(0);
+  const t = getDriverV4Copy(language);
 
   function stopWatch() {
     if (watchIdRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) {
@@ -63,13 +67,13 @@ export function DriverAvailabilityCard({
         if (!hasActiveTrip && value?.isAvailable) startWatch();
       })
       .catch((caught) => {
-        if (active) setError(caught instanceof Error ? caught.message : "Driver availability could not be loaded.");
+        if (active) setError(caught instanceof Error ? caught.message : t.availability.loadError);
       });
     return () => {
       active = false;
       stopWatch();
     };
-  }, [userId, hasActiveTrip]);
+  }, [hasActiveTrip, t.availability.loadError, userId]);
 
   useEffect(() => {
     if (!hasActiveTrip) return;
@@ -78,7 +82,7 @@ export function DriverAvailabilityCard({
 
   async function goOnline() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setError("This device does not support location.");
+      setError(t.availability.noLocation);
       return;
     }
     setBusy(true);
@@ -95,11 +99,11 @@ export function DriverAvailabilityCard({
           lastSentAtRef.current = Date.now();
           startWatch();
         }).catch((caught) => {
-          setError(caught instanceof Error ? caught.message : "Location permission is required to go online.");
+          setError(caught instanceof Error ? caught.message : t.availability.permission);
         }).finally(() => setBusy(false));
       },
       () => {
-        setError("Location permission is required to go online.");
+        setError(t.availability.permission);
         setBusy(false);
       },
       { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
@@ -113,7 +117,7 @@ export function DriverAvailabilityCard({
       stopWatch();
       setPresence(await updateDriverPresence(userId, { isAvailable: false }));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Driver availability could not be updated.");
+      setError(caught instanceof Error ? caught.message : t.availability.updateError);
     } finally {
       setBusy(false);
     }
@@ -124,12 +128,12 @@ export function DriverAvailabilityCard({
       <div className="flex items-start gap-3">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-amber-100 text-lg">🚚</span>
         <div className="min-w-0 flex-1">
-          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-700">ACTIVE DELIVERY</p>
-          <h2 className="mt-1 text-base font-black text-halo-navy">Trip itti fufaa jira</h2>
-          <p className="mt-1 text-[11px] leading-5 text-halo-muted">Hojii haaraa availability dhaabbateera. Customer akka hordofuuf active trip GPS itti fufi.</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-700">{t.availability.activeEyebrow}</p>
+          <h2 className="mt-1 text-base font-black text-halo-navy">{t.availability.activeTitle}</h2>
+          <p className="mt-1 text-[11px] leading-5 text-halo-muted">{t.availability.activeHelp}</p>
         </div>
       </div>
-      <button type="button" onClick={onOpenTrip} className="mt-4 min-h-12 w-full rounded-2xl bg-halo-navy px-4 text-xs font-black text-white">Active Trip bani →</button>
+      <button type="button" onClick={onOpenTrip} className="mt-4 min-h-12 w-full rounded-2xl bg-halo-navy px-4 text-xs font-black text-white">{t.availability.openTrip}</button>
     </section>;
   }
 
@@ -142,14 +146,14 @@ export function DriverAvailabilityCard({
       <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-lg ${online ? "bg-emerald-100" : "bg-halo-soft"}`}>⌖</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">DRIVER AVAILABILITY</p>
-          <span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${online ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-600"}`}>{online ? "ONLINE" : "OFFLINE"}</span>
+          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">{t.availability.eyebrow}</p>
+          <span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${online ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-600"}`}>{online ? t.availability.online : t.availability.offline}</span>
         </div>
-        <h2 className="mt-1 text-base font-black text-halo-navy">{online ? "Hojii fudhachuuf qophaa'eera" : "Hojii dhihoo argachuuf online ta'i"}</h2>
-        <p className="mt-1 text-[11px] leading-5 text-halo-muted">Dispatch pickup distance, truck type fi capacity irratti approved Driver filata.</p>
+        <h2 className="mt-1 text-base font-black text-halo-navy">{online ? t.availability.onlineTitle : t.availability.offlineTitle}</h2>
+        <p className="mt-1 text-[11px] leading-5 text-halo-muted">{t.availability.help}</p>
         {online && presence && <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-halo-muted">
-          <span className={fresh ? "text-emerald-700" : "text-amber-700"}>● {fresh ? "LIVE" : "STALE"}</span>
-          <span>Updated {new Date(presence.updatedAt).toLocaleTimeString()}</span>
+          <span className={fresh ? "text-emerald-700" : "text-amber-700"}>● {fresh ? t.common.live : t.common.stale}</span>
+          <span>{t.common.updated} {new Date(presence.updatedAt).toLocaleTimeString()}</span>
           {presence.accuracyM !== null && <span>±{Math.round(presence.accuracyM)} m</span>}
         </div>}
       </div>
@@ -161,7 +165,7 @@ export function DriverAvailabilityCard({
       onClick={() => void (online ? goOffline() : goOnline())}
       className={`mt-4 min-h-12 w-full rounded-2xl px-4 text-xs font-black text-white disabled:opacity-60 ${online ? "bg-red-700" : "bg-emerald-700"}`}
     >
-      {busy ? "GPS mirkaneessaa jira…" : online ? "Offline ta'i" : "Online ta'i & location qoodi"}
+      {busy ? t.availability.checkingGps : online ? t.availability.goOffline : t.availability.goOnline}
     </button>
   </section>;
 }
