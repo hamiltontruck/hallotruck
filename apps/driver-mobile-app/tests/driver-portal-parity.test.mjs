@@ -44,9 +44,10 @@ test("jobs parity includes GPS availability and assigned cancellation", () => {
   assert.match(workboardService, /driver_id/);
 });
 
-test("trip and wallet expose portal customer payment workflow", () => {
+test("trip keeps customer payment workflow while wallet payment actions stay read-only", () => {
   assert.match(trip, /DriverTripCustomerPaymentPanel/);
-  assert.match(wallet, /DriverPendingPaymentActions/);
+  assert.doesNotMatch(wallet, /DriverPendingPaymentActions/);
+  assert.doesNotMatch(wallet, /DriverCommissionPaymentPanel/);
   for (const rpc of [
     "driver_order_contact",
     "driver_payment_status",
