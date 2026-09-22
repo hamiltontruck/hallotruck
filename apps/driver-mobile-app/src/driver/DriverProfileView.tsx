@@ -40,6 +40,50 @@ const documentLabels: Record<VerificationDocumentKey, string> = {
   truck_loading_area: "Bakka fe'umsaa",
 };
 
+type DriverLanguage = "om" | "en" | "am";
+
+const profileCopy = {
+  en: {
+    eyebrow: "Driver profile", title: "Identity & compliance", help: "View your database profile and Admin/CEO verification status in real time.",
+    loading: "Loading driver profile…", preferredVehicle: "{c.preferredVehicle}", memberSince: "{c.memberSince}", driverDocs: "Driver documents", vehicleDocs: "Vehicle documents",
+    verified: "verified", submitted: "Submitted", fleet: "Fleet", yourVehicles: "Your vehicles", total: "total", noVehicle: "No vehicle assigned",
+    noVehicleHelp: "Vehicle assignment or onboarding completion is required from Admin/CEO.", identityChecklist: "Identity checklist", vehicleChecklist: "Vehicle checklist",
+    chooseVehicle: "No vehicle selected", chooseVehicleHelp: "Select a vehicle to view its document status.", uploadNote: "Document upload/replacement:", uploadHelp: "A new file becomes Pending and waits for Admin/CEO review. Replacing a verified document does not inherit its previous verification.",
+    plate: "Plate", type: "Type", capacity: "Capacity", expiry: "Expiry", missing: "Missing", pending: "Pending", docVerified: "Verified", rejected: "Rejected", expired: "Expired",
+    preview: "Preview", replace: "Replace", upload: "Upload", notFound: "This document is not available in the mobile profile.", reason: "Reason",
+    expiryAttention: "Document expiry attention", expiryHelp: "Expired evidence is not counted as verified. Upload a replacement before expiry.",
+    approvedDetail: "Driver account is approved to accept work.", pendingDetail: "Waiting for Admin/CEO verification.", rejectedDetail: "Driver profile was rejected; correct the documents and profile information.", suspendedDetail: "Driver account cannot accept work right now."
+  },
+  om: {
+    eyebrow: "Profaayilii Driver", title: "Eenyummaa fi mirkaneessa", help: "Odeeffannoo database fi haala mirkaneessa Admin/CEO yeroo dhugaa ilaali.",
+    loading: "Profaayilii Driver fe'aa jira…", preferredVehicle: "Konkolaataa filatamaa", memberSince: "Miseensa ta'e", driverDocs: "Dokumentii Driver", vehicleDocs: "Dokumentii konkolaataa",
+    verified: "mirkanaa'e", submitted: "Ergame", fleet: "Fleet", yourVehicles: "Konkolaataa kee", total: "waliigala", noVehicle: "Konkolaataan hin ramadamne",
+    noVehicleHelp: "Ramaddii konkolaataa ykn xumura onboarding Admin/CEO irraa barbaachisa.", identityChecklist: "Tarree eenyummaa", vehicleChecklist: "Tarree konkolaataa",
+    chooseVehicle: "Konkolaataan hin filatamne", chooseVehicleHelp: "Haala dokumentii isaa ilaaluuf konkolaataa fili.", uploadNote: "Dokumentii galchuu/bakka buusuu:", uploadHelp: "Faayilli haaraan Pending ta'ee ilaallamuuf Admin/CEO eeggata. Dokumentii mirkanaa'e bakka buusuun mirkaneessa duraanii hin dhaalu.",
+    plate: "Plate", type: "Gosa", capacity: "Dandeettii", expiry: "Guyyaa xumuraa", missing: "Hin galmoofne", pending: "Eeggachaa jira", docVerified: "Mirkanaa'e", rejected: "Deebi'e", expired: "Yeroon darbe",
+    preview: "Ilaali", replace: "Jijjiiri", upload: "Galchi", notFound: "Dokumentiin kun mobile profile irratti hin argamne.", reason: "Sababa",
+    expiryAttention: "Dokumentii yeroo xumuraa ilaali", expiryHelp: "Dokumentiin yeroon darbe verified keessatti hin lakkaa'amu. Xumuramuu dura bakka buusi.",
+    approvedDetail: "Account Driver hojii fudhachuuf eeyyamameera.", pendingDetail: "Mirkaneessa Admin/CEO eeggachaa jira.", rejectedDetail: "Profaayiliin Driver deebi'eera; dokumentii fi odeeffannoo sirreessi.", suspendedDetail: "Account Driver yeroo ammaa hojii fudhachuu hin danda'u."
+  },
+  am: {
+    eyebrow: "የአሽከርካሪ ፕሮፋይል", title: "መታወቂያ እና ማረጋገጫ", help: "የዳታቤዝ ፕሮፋይልዎን እና የAdmin/CEO ማረጋገጫ ሁኔታን በቀጥታ ይመልከቱ።",
+    loading: "የአሽከርካሪ ፕሮፋይል በመጫን ላይ…", preferredVehicle: "ተመራጭ መኪና", memberSince: "አባል ከ", driverDocs: "የአሽከርካሪ ሰነዶች", vehicleDocs: "የመኪና ሰነዶች",
+    verified: "ተረጋግጧል", submitted: "ተልኳል", fleet: "Fleet", yourVehicles: "የእርስዎ መኪና", total: "ጠቅላላ", noVehicle: "የተመደበ መኪና የለም",
+    noVehicleHelp: "ከAdmin/CEO የመኪና ምደባ ወይም onboarding ማጠናቀቅ ያስፈልጋል።", identityChecklist: "የመታወቂያ ዝርዝር", vehicleChecklist: "የመኪና ዝርዝር",
+    chooseVehicle: "መኪና አልተመረጠም", chooseVehicleHelp: "የሰነድ ሁኔታውን ለማየት መኪና ይምረጡ።", uploadNote: "ሰነድ መጫን/መተካት:", uploadHelp: "አዲስ ፋይል Pending ሆኖ የAdmin/CEO ግምገማን ይጠብቃል። የተረጋገጠ ሰነድ መተካት የቀድሞውን ማረጋገጫ አይወርስም።",
+    plate: "ታርጋ", type: "ዓይነት", capacity: "አቅም", expiry: "የሚያበቃበት", missing: "የለም", pending: "በመጠበቅ ላይ", docVerified: "ተረጋግጧል", rejected: "ውድቅ ተደርጓል", expired: "ጊዜው አልፏል",
+    preview: "ይመልከቱ", replace: "ይተኩ", upload: "ይጫኑ", notFound: "ይህ ሰነድ በmobile profile ውስጥ አልተገኘም።", reason: "ምክንያት",
+    expiryAttention: "የሰነድ ማብቂያ ማስጠንቀቂያ", expiryHelp: "ጊዜው ያለፈ ማስረጃ እንደ verified አይቆጠርም። ከማብቃቱ በፊት ይተኩ።",
+    approvedDetail: "የአሽከርካሪ መለያ ስራ ለመቀበል ተፈቅዷል።", pendingDetail: "የAdmin/CEO ማረጋገጫን በመጠበቅ ላይ።", rejectedDetail: "የአሽከርካሪ ፕሮፋይል ውድቅ ተደርጓል፤ ሰነዶችን እና መረጃን ያስተካክሉ።", suspendedDetail: "የአሽከርካሪ መለያ አሁን ስራ መቀበል አይችልም።"
+  }
+} as const;
+
+const documentLabelsByLanguage: Record<DriverLanguage, Record<VerificationDocumentKey, string>> = {
+  en: { driver_photo:"Driver profile photo", license_front:"Driving license — front", license_back:"Driving license — back", national_id_front:"National ID — front", national_id_back:"National ID — back", vehicle_registration:"Vehicle registration", insurance:"Insurance", transport_permit:"Transport permit", truck_front:"Truck photo — front", truck_back:"Truck photo — back", truck_side:"Truck photo — side", truck_loading_area:"Loading area photo" },
+  om: documentLabels,
+  am: { driver_photo:"የአሽከርካሪ ፕሮፋይል ፎቶ", license_front:"መንጃ ፈቃድ — ፊት", license_back:"መንጃ ፈቃድ — ጀርባ", national_id_front:"ብሔራዊ መታወቂያ — ፊት", national_id_back:"ብሔራዊ መታወቂያ — ጀርባ", vehicle_registration:"የመኪና ምዝገባ", insurance:"ኢንሹራንስ", transport_permit:"የትራንስፖርት ፈቃድ", truck_front:"የመኪና ፎቶ — ፊት", truck_back:"የመኪና ፎቶ — ጀርባ", truck_side:"የመኪና ፎቶ — ጎን", truck_loading_area:"የመጫኛ ቦታ ፎቶ" }
+};
+
 const healthCopy: Record<DocumentHealth, { label: string; className: string }> = {
   missing: { label: "Hin galmoofne", className: "bg-slate-100 text-slate-600" },
   pending: { label: "Eeggachaa jira", className: "bg-amber-50 text-amber-800" },
@@ -59,9 +103,10 @@ function formatDate(value: string | null): string {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
 }
 
-function statusCopy(status: DriverProfileRecord["driverStatus"]) {
-  if (status === "approved") return { label: "APPROVED", detail: "Driver account hojii fudhachuuf eeyyamameera.", className: "bg-emerald-50 text-emerald-700" };
-  if (status === "pending") return { label: "PENDING", detail: "Admin/CEO verification eeggachaa jira.", className: "bg-amber-50 text-amber-800" };
+function statusCopy(status: DriverProfileRecord["driverStatus"], language: DriverLanguage) {
+  const c = profileCopy[language];
+  if (status === "approved") return { label: "APPROVED", detail: c.approvedDetail, className: "bg-emerald-50 text-emerald-700" };
+  if (status === "pending") return { label: "PENDING", detail: c.pendingDetail, className: "bg-amber-50 text-amber-800" };
   if (status === "rejected") return { label: "REJECTED", detail: "Driver profile deebi'eera; dokumentii fi odeeffannoo sirreessi.", className: "bg-red-50 text-red-700" };
   return { label: "SUSPENDED", detail: "Driver account yeroo ammaa hojii fudhachuu hin danda'u.", className: "bg-red-50 text-red-700" };
 }
@@ -226,15 +271,17 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   );
   const expirySummary = useMemo(() => documentExpirySummary(documents), [documents]);
   const expiryWarningCount = expirySummary.expired + expirySummary.critical + expirySummary.soon;
-  const profileStatus = profile ? statusCopy(profile.driverStatus) : null;
+  const c = profileCopy[language];
+  const localizedDocumentLabels = documentLabelsByLanguage[language];
+  const profileStatus = profile ? statusCopy(profile.driverStatus, language) : null;
   const initials = (profile?.fullName || fallbackName).trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toUpperCase()).join("") || "D";
 
   if (loading && !profileConfirmed && !trucksConfirmed && !documentsConfirmed) {
-    return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-6 text-center"><div><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-halo-line border-t-halo-blue"/><p className="mt-4 text-sm font-bold text-halo-muted">Driver profile fe'aa jira…</p></div></div>;
+    return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-6 text-center"><div><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-halo-line border-t-halo-blue"/><p className="mt-4 text-sm font-bold text-halo-muted">{c.loading}</p></div></div>;
   }
 
   return <div className="space-y-5 px-4 pb-8 pt-5 sm:px-6" data-mobile-driver-profile>
-    <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{language === "en" ? "Driver profile" : language === "am" ? "የDriver profile" : "Profile Driver"}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{language === "en" ? "Identity & compliance" : language === "am" ? "መታወቂያ እና compliance" : "Eenyummaa fi compliance"}</h1><p className="mt-2 text-xs leading-5 text-halo-muted">Odeeffannoo database fi Admin/CEO verification status yeroo dhugaa ilaali.</p></div>
+    <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{c.eyebrow}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{c.title}</h1><p className="mt-2 text-xs leading-5 text-halo-muted">{c.help}</p></div>
 
     {uploadNotice && <div role="status" className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-700">{uploadNotice}</div>}
     {profileError && <SourceError message={profileError} onRetry={() => void refresh()} />}
@@ -243,24 +290,24 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       <div className="mt-4 grid grid-cols-2 gap-3 border-t border-halo-line pt-4 text-xs"><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">Preferred vehicle</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(profile?.vehicleType ?? null)}</p></div><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">Member since</p><p className="mt-1 font-extrabold text-halo-navy">{formatDate(profile?.createdAt ?? null)}</p></div></div>
     </section>
 
-    <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2"><ProgressCard title="Driver documents" {...identityProgress} /><ProgressCard title="Vehicle documents" {...vehicleProgress} /></div>
+    <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2"><ProgressCard title={c.driverDocs} {...identityProgress} /><ProgressCard title={c.vehicleDocs} {...vehicleProgress} /></div>
 
     {expiryWarningCount > 0 && <section data-driver-document-expiry-warning className="rounded-[22px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-lg font-black text-amber-700">!</span><div className="min-w-0"><p className="text-sm font-black text-amber-900">Document expiry attention</p><p className="mt-1 text-xs leading-5 text-amber-800">Expired: {expirySummary.expired} · 7 days keessatti: {expirySummary.critical} · 30 days keessatti: {expirySummary.soon}</p><p className="mt-2 text-[10px] leading-4 text-amber-700">Expired evidence verified count keessatti hin lakkaa'amu. Xumuramuu dura replacement galchi.</p></div></div></section>}
 
-    <section className="space-y-3"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Fleet</p><h2 className="mt-1 text-xl font-black text-halo-navy">Konkolaataa kee</h2></div><span className="text-xs font-bold text-halo-muted">{trucks.length} total</span></div>{trucksError && <SourceError message={trucksError} onRetry={() => void refresh()} />}{trucksConfirmed && trucks.length === 0 ? <div className="rounded-[22px] border border-dashed border-halo-line bg-white p-5 text-center"><p className="text-sm font-black text-halo-navy">Konkolaataan assign hin taane</p><p className="mt-2 text-xs leading-5 text-halo-muted">Admin/CEO irraa vehicle assignment ykn onboarding completion barbaachisa.</p></div> : <div className="flex snap-x gap-3 overflow-x-auto pb-2">{trucks.map((truck) => <TruckCard key={truck.id} truck={truck} selected={selectedTruck?.id === truck.id} onSelect={() => setSelectedTruckId(truck.id)} />)}</div>}</section>
+    <section className="space-y-3"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">{c.fleet}</p><h2 className="mt-1 text-xl font-black text-halo-navy">{c.yourVehicles}</h2></div><span className="text-xs font-bold text-halo-muted">{trucks.length} {c.total}</span></div>{trucksError && <SourceError message={trucksError} onRetry={() => void refresh()} />}{trucksConfirmed && trucks.length === 0 ? <div className="rounded-[22px] border border-dashed border-halo-line bg-white p-5 text-center"><p className="text-sm font-black text-halo-navy">{c.noVehicle}</p><p className="mt-2 text-xs leading-5 text-halo-muted">{c.noVehicleHelp}</p></div> : <div className="flex snap-x gap-3 overflow-x-auto pb-2">{trucks.map((truck) => <TruckCard key={truck.id} truck={truck} selected={selectedTruck?.id === truck.id} onSelect={() => setSelectedTruckId(truck.id)} />)}</div>}</section>
 
-    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Identity checklist</p><h2 className="mt-1 text-lg font-black text-halo-navy">Driver documents</h2></div>{documentsError && <div className="px-4 pb-4"><SourceError message={documentsError} onRetry={() => void refresh()} /></div>}{identityDocumentKeys.map((key) => {
+    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">{c.identityChecklist}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{c.driverDocs}</h2></div>{documentsError && <div className="px-4 pb-4"><SourceError message={documentsError} onRetry={() => void refresh()} /></div>}{identityDocumentKeys.map((key) => {
   const record = documents.find((item) => item.documentKey === key && item.truckId === null);
   return <DocumentRow key={key} documentKey={key} record={record} onPreview={() => { if (record) setPreviewTarget({ documentKey: key, record }); }} onUpload={() => { setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: null, record }); }} />;
 })}</section>
 
-    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">Vehicle checklist</p><h2 className="mt-1 text-lg font-black text-halo-navy">{selectedTruck ? selectedTruck.plateNumber : "Konkolaataa hin filatamne"}</h2><p className="mt-1 text-[10px] text-halo-muted">Vehicle tokko filachuun document status isaa ilaali.</p></div>{vehicleDocumentKeys.map((key) => {
+    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">{c.vehicleChecklist}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{selectedTruck ? selectedTruck.plateNumber : c.chooseVehicle}</h2><p className="mt-1 text-[10px] text-halo-muted">{c.chooseVehicleHelp}</p></div>{vehicleDocumentKeys.map((key) => {
   const record = selectedTruck ? documents.find((item) => item.documentKey === key && item.truckId === selectedTruck.id) : undefined;
   return <DocumentRow key={key} documentKey={key} record={record} uploadDisabled={!selectedTruck} onPreview={() => { if (record) setPreviewTarget({ documentKey: key, record }); }} onUpload={() => { if (!selectedTruck) return; setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: selectedTruck.id, record }); }} />;
 })}</section>
 
     <div className="rounded-2xl bg-halo-gold-soft p-4 text-xs leading-5 text-halo-gold-dark"><strong>Document upload/replacement:</strong> File haaraan Pending ta'ee Admin/CEO review eeggata. Verified document jijjiiruun verification duraanii hin dhaalu.</div>
-    {previewTarget && <DriverDocumentPreviewSheet expectedUserId={userId} record={previewTarget.record} documentLabel={documentLabels[previewTarget.documentKey]} onClose={() => setPreviewTarget(null)} />}
-    {uploadTarget && <DriverDocumentUploadSheet userId={userId} documentKey={uploadTarget.documentKey} documentLabel={documentLabels[uploadTarget.documentKey]} truckId={uploadTarget.truckId} currentRecord={uploadTarget.record} onClose={() => setUploadTarget(null)} onUploaded={async (message) => { setUploadNotice(message); setUploadTarget(null); await refresh(); }} />}
+    {previewTarget && <DriverDocumentPreviewSheet expectedUserId={userId} record={previewTarget.record} documentLabel={localizedDocumentLabels[previewTarget.documentKey]} onClose={() => setPreviewTarget(null)} />}
+    {uploadTarget && <DriverDocumentUploadSheet userId={userId} documentKey={uploadTarget.documentKey} documentLabel={localizedDocumentLabels[uploadTarget.documentKey]} truckId={uploadTarget.truckId} currentRecord={uploadTarget.record} onClose={() => setUploadTarget(null)} onUploaded={async (message) => { setUploadNotice(message); setUploadTarget(null); await refresh(); }} />}
   </div>;
 }
