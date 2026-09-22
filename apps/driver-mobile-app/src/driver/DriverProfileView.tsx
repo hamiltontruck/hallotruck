@@ -33,8 +33,8 @@ const healthClass: Record<DocumentHealth, string> = {
   expired: "bg-red-50 text-red-700",
 };
 
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.trim() ? error.message : fallback;
+function errorMessage(_error: unknown, fallback: string): string {
+  return fallback;
 }
 
 function localeFor(language: DriverLanguage) {
