@@ -144,3 +144,36 @@ article:has(select[id^="truck-"]) button:not(:disabled):active{transform:scale(.
  [data-driver-v4-workspace]>nav button{padding-inline:0}
  [data-driver-availability],[data-driver-cancellation-notice],[data-driver-trip-customer-payment]>article,[data-driver-pending-payments]{border-radius:18px}
 }
+
+
+/* Driver V4 profile parity polish — preserves the existing V4 design tokens. */
+[data-mobile-driver-profile] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(245, 166, 35, 0.10), transparent 18rem),
+    var(--driver-v4-canvas, #f7f3e8);
+  min-height: calc(100dvh - 137px);
+}
+[data-mobile-driver-profile] > section {
+  scroll-margin-top: 5.5rem;
+}
+[data-mobile-driver-profile] article,
+[data-mobile-driver-profile] button,
+[data-mobile-driver-profile] section {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 389px) {
+  [data-mobile-driver-profile] {
+    padding-inline: 0.75rem;
+  }
+  [data-mobile-driver-profile] .grid-cols-2 {
+    min-width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-mobile-driver-profile] *,
+  [data-mobile-driver-profile] *::before,
+  [data-mobile-driver-profile] *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
