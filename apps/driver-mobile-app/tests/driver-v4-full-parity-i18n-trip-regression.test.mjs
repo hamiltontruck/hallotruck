@@ -64,7 +64,7 @@ test("language is passed through every authenticated Driver V4 utility and workf
 
 test("English profile cannot inherit the Oromo missing-value fallback", () => {
   assert.doesNotMatch(profileModel, /return "Hin galmoofne"/);
-  assert.match(profile, /copy\.missing|t\.profile\.missing/);
+  assert.match(profile, /copy\.missing|t\.profile\.missing|p\.missing/);
 });
 
 test("major authenticated surfaces consume centralized copy rather than screen-local language ternaries", () => {
@@ -80,6 +80,21 @@ test("major authenticated surfaces consume centralized copy rather than screen-l
     ["availability", availability],
   ]) {
     assert.match(source, /driverV4Copy|useDriverV4Copy|getDriverV4Copy/, name + " must use centralized Driver V4 copy");
+  }
+});
+
+test("visible authenticated error paths do not surface raw service-language exception messages", () => {
+  for (const [name, source] of [
+    ["trip", trip],
+    ["jobs", jobs],
+    ["wallet", wallet],
+    ["delivery", delivery],
+    ["payment", payment],
+    ["notifications", notifications],
+    ["chat", chat],
+    ["availability", availability],
+  ]) {
+    assert.doesNotMatch(source, /caught instanceof Error\s*\?\s*caught\.message|reason instanceof Error\s*\?\s*[^:]+\.message/, name + " must localize visible errors");
   }
 });
 
