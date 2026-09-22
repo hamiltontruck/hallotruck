@@ -27,8 +27,8 @@ type SourceErrors = {
 const EMPTY_ERRORS: SourceErrors = { financial: null, commission: null, payments: null, trips: null };
 const REFRESH_MS = 30_000;
 
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.trim() ? error.message : fallback;
+function errorMessage(_error: unknown, fallback: string): string {
+  return fallback;
 }
 
 function dateLabel(value: string, language: DriverLanguage): string {
