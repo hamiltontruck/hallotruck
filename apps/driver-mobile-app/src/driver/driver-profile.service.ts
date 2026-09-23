@@ -60,7 +60,7 @@ export async function fetchDriverProfile(expectedUserId: string): Promise<Driver
   const { client, user } = await requireExpectedDriver(expectedUserId);
   const { data, error } = await client
     .from("profiles")
-    .select("id,full_name,phone,vehicle_type,driver_status,rating_avg,created_at")
+    .select("id,full_name,phone,email,home_address,vehicle_type,driver_status,rating_avg,created_at")
     .eq("id", user.id)
     .eq("role", "driver")
     .maybeSingle();
@@ -143,6 +143,45 @@ export async function createDriverDocumentPreview({
     originalName,
     expiresInSeconds: DRIVER_PREVIEW_SECONDS,
   };
+}
+
+export type DriverRatingEntry = { score: number; comment: string | null; createdAt: string | null };
+export type DriverRatingSummary = { average: number | null; count: number; recent: DriverRatingEntry[] };
+
+export async function fetchDriverRatingSummary(expectedUserId: string): Promise<DriverRatingSummary> {
+  const { client, user } = await requireExpectedDriver(expectedUserId);
+  const { data, error } = await client
+    .from("ratings")
+    .select("score,comment,created_at")
+    .eq("driver_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  const rows = (Array.isArray(data) ? data : []).flatMap((row) => {
+    const score = Number(row?.score);
+    if (!Number.isFinite(score) || score < 1 || score > 5) return [];
+    return [{ score, comment: requiredText(row?.comment), createdAt: requiredText(row?.created_at) }];
+  });
+  const average = rows.length > 0 ? rows.reduce((sum, row) => sum + row.score, 0) / rows.length : null;
+  return { average, count: rows.length, recent: rows.slice(0, 3) };
+}
+
+export async function saveDriverVehicleProfile(expectedUserId: string, input: { plateNumber: string; vehicleType: string; capacityTons: number }): Promise<DriverTruckRecord> {
+  const { client } = await requireExpectedDriver(expectedUserId);
+  const plateNumber = input.plateNumber.trim();
+  const vehicleType = input.vehicleType.trim();
+  if (plateNumber.length < 3) throw new Error("Enter a valid plate number.");
+  if (!vehicleType) throw new Error("Choose a valid vehicle type.");
+  if (!Number.isFinite(input.capacityTons) || input.capacityTons < 0.1 || input.capacityTons > 60) throw new Error("Vehicle capacity must be between 0.1 and 60 tons.");
+  const { data, error } = await client.rpc("driver_save_vehicle_profile", {
+    p_plate_number: plateNumber,
+    p_vehicle_type: vehicleType,
+    p_capacity_tons: input.capacityTons,
+  });
+  if (error) throw new Error(error.message);
+  const normalized = normalizeDriverTruck(Array.isArray(data) ? data[0] : data);
+  if (!normalized) throw new Error("Vehicle details could not be saved.");
+  return normalized;
 }
 
 export function subscribeToDriverProfile(

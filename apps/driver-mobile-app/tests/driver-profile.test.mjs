@@ -102,7 +102,7 @@ test("progress uses five identity plus three vehicle files", () => {
 });
 
 test("formatters preserve unknown values instead of false zero", () => {
-  assert.equal(formatVehicleType(null), "Hin galmoofne");
+  assert.equal(formatVehicleType(null), "—");
   assert.equal(formatVehicleType("flatbed_30t"), "Flatbed 30t");
   assert.equal(formatCapacityTons(null), "—");
   assert.equal(formatCapacityTons(30), "30 ton");
@@ -143,7 +143,7 @@ test("profile view surfaces signed preview controls and expiry attention", () =>
   assert.match(componentSource, /DriverDocumentPreviewSheet/);
   assert.match(componentSource, /documentExpirySummary/);
   assert.match(componentSource, /data-driver-document-expiry-warning/);
-  assert.match(componentSource, /c\.preview/);
+  assert.match(componentSource, /p\.preview/);
 });
 
 test("App routes only Driver profile to production profile component", () => {

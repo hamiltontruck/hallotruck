@@ -22,6 +22,14 @@ export type DriverWalletTrip = {
   trackingId: string;
   pickupAddress: string;
   dropoffAddress: string;
+  vehicleType: string | null;
+  distanceKm: number | null;
+  tripAmountEtb: number | null;
+  cargoDescription: string | null;
+  selectedPaymentMethod: string | null;
+  acceptedAt: string | null;
+  deliveredAt: string | null;
+  truckId: string | null;
   resultType: "cash_received" | "bank_telebirr" | "payment_not_received";
   paymentMethod: "cash" | "bank_telebirr" | "none";
   amountCollectedEtb: number;
@@ -58,6 +66,12 @@ function requiredMoney(value: unknown, field: string): number {
     throw new Error(`Driver wallet returned an invalid ${field} value.`);
   }
   return amount;
+}
+
+function optionalMoney(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const amount = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
 }
 
 function requiredCount(value: unknown, field: string): number {
@@ -123,6 +137,14 @@ export function normalizeDriverWalletTrip(value: unknown): DriverWalletTrip | nu
       trackingId,
       pickupAddress,
       dropoffAddress,
+      vehicleType: requiredText(order?.vehicle_type),
+      distanceKm: optionalMoney(order?.distance_km),
+      tripAmountEtb: optionalMoney(order?.price_etb),
+      cargoDescription: requiredText(order?.cargo_description),
+      selectedPaymentMethod: requiredText(order?.selected_payment_method),
+      acceptedAt: requiredText(order?.accepted_at),
+      deliveredAt: requiredText(order?.delivered_at),
+      truckId: requiredText(order?.truck_id),
       resultType,
       paymentMethod,
       amountCollectedEtb: requiredMoney(row.amount_collected, "amount_collected"),

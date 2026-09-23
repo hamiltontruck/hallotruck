@@ -15,6 +15,7 @@ const wallet = source("src/driver/DriverWalletView.tsx");
 const paymentService = source("src/driver/driver-trip-payment.service.ts");
 const chatService = source("src/driver/driver-chat.service.ts");
 const css = source("src/driver-v4.css");
+const i18n = source("src/driver/driver-v4-i18n.ts");
 
 test("Driver V4 keeps five portal primary destinations and header utilities", () => {
   assert.match(workspace, /grid-cols-5/);
@@ -43,9 +44,10 @@ test("jobs parity includes GPS availability and assigned cancellation", () => {
   assert.match(workboardService, /driver_id/);
 });
 
-test("trip and wallet expose portal customer payment workflow", () => {
+test("trip keeps customer payment workflow while wallet exposes only the secure commission settlement action", () => {
   assert.match(trip, /DriverTripCustomerPaymentPanel/);
-  assert.match(wallet, /DriverPendingPaymentActions/);
+  assert.doesNotMatch(wallet, /DriverPendingPaymentActions/);
+  assert.match(wallet, /DriverCommissionPaymentPanel/);
   for (const rpc of [
     "driver_order_contact",
     "driver_payment_status",
@@ -74,12 +76,13 @@ test("V4 CSS remains the design base and adds responsive parity selectors", () =
     "data-driver-pending-payments",
     "data-driver-operations-chat",
   ]) assert.match(css, new RegExp(selector));
-  for (const width of ["430px", "390px", "360px", "320px"]) assert.match(css, new RegExp(width.replace("px", "\\px")));
+  for (const width of ["430px", "412px", "390px", "360px", "320px"]) assert.match(css, new RegExp(width.replace("px", "\\px")));
 });
 
 test("Driver V4 authenticated UX exposes language, scroll, location sharing and trip history", () => {
   const androidCss = source("src/driver-android-responsive.css");
-  assert.match(workspace, /hallo-driver-language/);
+  assert.match(workspace, /DRIVER_LANGUAGE_KEY/);
+  assert.match(i18n, /hallo-driver-language/);
   assert.match(workspace, /<option value="en">EN<\/option>/);
   assert.match(workspace, /<option value="om">OR<\/option>/);
   assert.match(workspace, /<option value="am">አማ<\/option>/);
@@ -89,6 +92,7 @@ test("Driver V4 authenticated UX exposes language, scroll, location sharing and 
   assert.match(trip, /data-driver-live-location/);
   assert.match(trip, /navigator\.share/);
   assert.match(trip, /navigator\.clipboard\.writeText/);
-  assert.match(home, /Trip History \/ Wallet/);
+  assert.match(home, /t\.home\.history/);
+  assert.match(i18n, /Trip History \/ Wallet/);
   assert.match(wallet, /fetchDriverWalletTrips/);
 });
