@@ -6,19 +6,19 @@ const authSource = readFileSync(
   new URL("../src/auth/CustomerAuthBoundaryV2.tsx", import.meta.url),
   "utf8",
 );
+const supabaseSource = readFileSync(
+  new URL("../src/auth/customer-supabase.ts", import.meta.url),
+  "utf8",
+);
 
-test("restored non-Customer sessions are cleared without changing the Customer URL", () => {
-  assert.match(authSource, /CUSTOMER_AUTH_INTENT_KEY/);
-  assert.match(authSource, /resolveSession\(data\.session,\s*"restore"\)/);
-  assert.match(authSource, /source === "restore"/);
-  assert.match(authSource, /await client\.auth\.signOut\(\)/);
-  assert.match(authSource, /setShowSplash\(false\)/);
-  assert.doesNotMatch(authSource, /window\.location\.replace\(/);
+test("Customer direct entry does not reuse the legacy cross-role auth namespace", () => {
+  assert.match(supabaseSource, /storageKey:\s*"hallo-customer-mobile-auth-v2"/);
+  assert.doesNotMatch(supabaseSource, /storageKey:\s*"hallo-customer-mobile-auth-v1"/);
 });
 
-test("an explicit wrong-role sign-in stays on Customer Mobile and shows Customer access denial", () => {
-  assert.match(authSource, /resolveSession\(data\.session,\s*"explicit"\)/);
+test("wrong-role Customer access never changes the browser URL", () => {
   assert.match(authSource, /state\.kind === "unsupported-role"/);
   assert.match(authSource, /text\.deniedTitle/);
+  assert.doesNotMatch(authSource, /window\.location\.replace\(/);
   assert.doesNotMatch(authSource, /<DriverRedirect/);
 });
