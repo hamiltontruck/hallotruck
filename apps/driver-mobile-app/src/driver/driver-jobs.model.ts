@@ -27,9 +27,19 @@ export type DriverActiveTrip = {
   acceptedAt: string | null;
 };
 
+export type DriverCancelledOrder = {
+  id: string;
+  trackingId: string;
+  pickupAddress: string;
+  dropoffAddress: string;
+  cancellationReason: string | null;
+  cancelledAt: string | null;
+};
+
 export type DriverWorkboardSnapshot = {
   activeTrip: DriverActiveTrip | null;
   availableJobs: DriverAvailableJob[];
+  latestCancellation: DriverCancelledOrder | null;
   loadedAt: number;
 };
 
@@ -127,5 +137,23 @@ export function normalizeDriverActiveTrip(value: unknown): DriverActiveTrip | nu
     dropoffAddress,
     priceEtb: optionalFiniteNumber(row.price_etb),
     acceptedAt: optionalText(row.accepted_at),
+  };
+}
+
+export function normalizeDriverCancelledOrder(value: unknown): DriverCancelledOrder | null {
+  const row = recordOf(value);
+  if (!row) return null;
+  const id = requiredText(row.id);
+  const trackingId = requiredText(row.tracking_id);
+  const pickupAddress = requiredText(row.pickup_address);
+  const dropoffAddress = requiredText(row.dropoff_address);
+  if (!id || !trackingId || !pickupAddress || !dropoffAddress) return null;
+  return {
+    id,
+    trackingId,
+    pickupAddress,
+    dropoffAddress,
+    cancellationReason: optionalText(row.cancellation_reason),
+    cancelledAt: optionalText(row.cancelled_at),
   };
 }
