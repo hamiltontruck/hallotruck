@@ -20,8 +20,10 @@ test("Customer phone onboarding accepts Ethiopian 07 and 09 families", () => {
 
 test("non-Customer database roles stay outside the Customer workspace", () => {
   assert.match(source, /unsupported-role/);
-  assert.match(source, /state\.role === "driver"/);
-  assert.match(source, /DriverRedirect/);
+  assert.match(source, /state\.kind === "unsupported-role"/);
+  assert.match(source, /text\.deniedTitle/);
+  assert.doesNotMatch(source, /DriverRedirect/);
+  assert.doesNotMatch(source, /window\.location\.replace\(/);
 });
 
 
