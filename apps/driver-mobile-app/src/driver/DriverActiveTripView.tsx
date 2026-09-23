@@ -1,14 +1,13 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
 import {
   formatRouteDistance,
   formatRouteDuration,
-  projectRouteToSvg,
+  localizeRouteInstruction,
   type DriverActiveTripOrder,
   type DriverNavigationRoute,
 } from "./driver-active-trip.model";
@@ -26,6 +25,7 @@ import {
   getQueuedDriverPingCount,
   syncQueuedDriverPings,
 } from "./driver-gps-queue";
+import { DriverActiveTripMap } from "./DriverActiveTripMap";
 import { DriverDeliveryProofPanel } from "./DriverDeliveryProofPanel";
 import { DriverTripCustomerPaymentPanel } from "./DriverTripCustomerPaymentPanel";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
@@ -368,10 +368,6 @@ export function DriverActiveTripView({
     return () => window.removeEventListener("online", handleOnline);
   }, [syncQueue]);
 
-  const projectedRoute = useMemo(
-    () => route ? projectRouteToSvg(route.coordinates, driverPosition) : null,
-    [driverPosition, route],
-  );
 
   const shareLocation = useCallback(async () => {
     if (!driverPosition) return;
@@ -429,18 +425,7 @@ export function DriverActiveTripView({
   const firstStep = route?.steps[0] ?? null;
 
   return <div className="relative min-h-[calc(100dvh-137px)] overflow-hidden bg-[#e9f1ec]" data-mobile-driver-active-trip data-gps-state={gpsState}>
-    <div className="absolute inset-0 halo-map-grid" />
-    <svg viewBox="0 0 420 560" preserveAspectRatio="xMidYMid meet" className="absolute inset-x-0 top-20 h-[58dvh] min-h-[390px] w-full" aria-label={t.trip.locationTitle}>
-      <path d="M20 105 C105 72 115 205 215 215 S310 145 405 188" stroke="#d5dfd9" strokeWidth="14" fill="none" />
-      <path d="M-10 330 C80 290 132 382 220 342 S320 290 440 375" stroke="#d5dfd9" strokeWidth="11" fill="none" />
-      {projectedRoute ? <>
-        <path d={projectedRoute.path} stroke="white" strokeWidth="15" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <path d={projectedRoute.path} stroke="#0759c7" strokeWidth="7" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={projectedRoute.start[0]} cy={projectedRoute.start[1]} r="12" fill="#16a36a" stroke="white" strokeWidth="5" />
-        <circle cx={projectedRoute.end[0]} cy={projectedRoute.end[1]} r="12" fill="#ef4444" stroke="white" strokeWidth="5" />
-        {projectedRoute.driver && <g transform={`translate(${projectedRoute.driver[0]} ${projectedRoute.driver[1]})`}><circle r="22" fill="#0759c7" stroke="white" strokeWidth="5"/><path d="M-11-5h13v10h-13zM2-2h7l5 5v2H2z" fill="white"/><circle cx="-6" cy="8" r="3" fill="white"/><circle cx="8" cy="8" r="3" fill="white"/></g>}
-      </> : null}
-    </svg>
+    <DriverActiveTripMap route={route} driverPosition={driverPosition} ariaLabel={t.trip.locationTitle} />
 
     <div className="absolute inset-x-3 top-3 z-10 rounded-[22px] border border-white/70 bg-white/95 p-4 shadow-halo-float backdrop-blur-xl">
       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-halo-muted">{fullName} · {trip.trackingId}</p><h1 className="mt-1 break-words text-lg font-black text-halo-navy">{concisePlace(trip.pickupAddress)} → {concisePlace(trip.dropoffAddress)}</h1></div><span className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black ${trip.status === "in_transit" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{statusLabel}</span></div>
@@ -460,7 +445,7 @@ export function DriverActiveTripView({
         <div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${gpsState === "live" ? "animate-pulse bg-emerald-600" : gpsState === "queued" || gpsState === "syncing" ? "bg-amber-500" : "bg-halo-muted"}`}/><div className="min-w-0"><p className="text-sm font-black text-halo-navy">{gps.title}</p><p role="status" aria-live="polite" className="mt-1 text-[11px] leading-5 text-halo-muted">{gps.help}</p>{lastPingAt && <p className="mt-2 text-[10px] font-bold text-emerald-700">{t.trip.lastServerUpdate}: {lastPingAt}{speedKmh !== null ? ` · ${speedKmh.toFixed(1)} km/h` : ""}</p>}</div></div>
       </div>
 
-      {firstStep && <div className="mt-3 rounded-2xl border border-halo-line bg-white p-3"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.trip.next}</p><p className="mt-1 text-xs font-bold leading-5 text-halo-navy">{firstStep.instruction}</p><p className="mt-1 text-[10px] text-halo-muted">{Math.round(firstStep.distanceM).toLocaleString()} m</p></div>}
+      {firstStep && <div className="mt-3 rounded-2xl border border-halo-line bg-white p-3"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.trip.next}</p><p className="mt-1 text-xs font-bold leading-5 text-halo-navy">{localizeRouteInstruction(firstStep.instruction, language)}</p><p className="mt-1 text-[10px] text-halo-muted">{Math.round(firstStep.distanceM).toLocaleString()} m</p></div>}
 
       <div className="mt-4 grid gap-3">
         {gpsState === "queued" ? <>

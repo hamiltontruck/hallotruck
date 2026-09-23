@@ -34,3 +34,17 @@ test("profile parity polish stays scoped to Driver V4 profile", () => {
   assert.match(css, /\[data-mobile-driver-profile\]/);
   assert.doesNotMatch(css, /auth-shell|login-form|sign-in-form|\.driver-auth/);
 });
+
+
+test("profile restores contact, rating and current vehicle parity through existing Driver contracts", () => {
+  const service = readFileSync(new URL("../src/driver/driver-profile.service.ts", import.meta.url), "utf8");
+  assert.match(service, /email,home_address/);
+  assert.match(service, /fetchDriverRatingSummary/);
+  assert.match(service, /\.eq\("driver_id", user\.id\)/);
+  assert.match(service, /driver_save_vehicle_profile/);
+  assert.match(profile, /p\.contact/);
+  assert.match(profile, /p\.homeAddress/);
+  assert.match(profile, /p\.currentVehicle/);
+  assert.match(profile, /p\.registerVehicle/);
+  assert.match(profile, /ratingSummary/);
+});

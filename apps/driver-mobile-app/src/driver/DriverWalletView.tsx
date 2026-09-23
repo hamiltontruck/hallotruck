@@ -11,6 +11,7 @@ import {
   fetchDriverWalletTrips,
   subscribeToDriverWallet,
 } from "./driver-wallet.service";
+import { DriverCommissionPaymentPanel } from "./DriverCommissionPaymentPanel";
 import type { DriverCommissionPayment } from "./driver-commission-payment.model";
 import { fetchDriverCommissionPayments } from "./driver-commission-payment.service";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
@@ -232,6 +233,17 @@ export function DriverWalletView({
         <Metric label={t.wallet.balance} value={formatWalletEtb(commission?.balanceEtb ?? financial?.commissionDueEtb ?? null)} />
       </div>
     </section>
+
+    {commission && <DriverCommissionPaymentPanel
+      userId={userId}
+      balanceEtb={commission.balanceEtb}
+      pendingEtb={commission.pendingEtb}
+      payments={payments}
+      sourceError={errors.payments}
+      onRetry={() => void load(true)}
+      onSubmitted={async () => { await load(true); }}
+      language={language}
+    />}
 
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">

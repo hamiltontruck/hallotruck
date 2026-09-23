@@ -105,8 +105,9 @@ test("wallet component loads sources independently and preserves confirmed snaps
   assert.match(componentSource, /setTrips\(tripsResult\.value\)/);
 });
 
-test("Driver wallet keeps commission and trip payment history read-only", () => {
-  assert.doesNotMatch(componentSource, /DriverCommissionPaymentPanel/);
+test("Driver wallet composes secure commission settlement while trip payment actions stay read-only", () => {
+  assert.match(componentSource, /DriverCommissionPaymentPanel/);
+  assert.match(componentSource, /language={language}/);
   assert.doesNotMatch(componentSource, /DriverPendingPaymentActions/);
   assert.doesNotMatch(componentSource, /submitDriverCommissionPayment|confirmDriverTripPayment|reportDriverTripPaymentNotReceived/);
   assert.match(componentSource, /fetchDriverCommissionPayments/);

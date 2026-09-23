@@ -11,6 +11,17 @@ type DriverNotification = {
   created_at: string;
 };
 
+function localizeDriverNotification(item: DriverNotification, language: DriverLanguage) {
+  const copy = getDriverV4Copy(language).notifications;
+  const event = item.event_type.trim().toLowerCase();
+  const title = item.title.trim().toLowerCase();
+  const assigned = event.includes("assign") || title === "new delivery assigned";
+  const delivered = event.includes("deliver") || title === "delivery recorded";
+  if (assigned) return { title: copy.newDeliveryAssigned, body: copy.newDeliveryBody };
+  if (delivered) return { title: copy.deliveryRecorded, body: copy.deliveryRecordedBody };
+  return { title: item.title, body: item.body };
+}
+
 function notificationTime(value: string, language: DriverLanguage) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -73,10 +84,10 @@ export function DriverNotificationsView({
       ? <p className="mt-6 text-sm text-halo-muted">{t.notifications.loading}</p>
       : items.length === 0
         ? <div className="mt-6 rounded-[22px] border border-dashed border-halo-line bg-white p-6 text-center text-sm text-halo-muted">{t.notifications.empty}</div>
-        : <section className="mt-5 space-y-3">{items.map((item) => <button key={item.id} type="button" onClick={() => void markRead(item)} className={`w-full rounded-[22px] border p-4 text-left shadow-halo-card ${item.read_at ? "border-halo-line bg-white" : "border-halo-gold bg-halo-gold-soft"}`}>
-          <strong className="block text-sm text-halo-navy">{item.title}</strong>
-          <span className="mt-2 block text-xs leading-5 text-halo-muted">{item.body}</span>
+        : <section className="mt-5 space-y-3">{items.map((item) => { const localized = localizeDriverNotification(item, language); return <button key={item.id} type="button" onClick={() => void markRead(item)} className={`w-full rounded-[22px] border p-4 text-left shadow-halo-card ${item.read_at ? "border-halo-line bg-white" : "border-halo-gold bg-halo-gold-soft"}`}>
+          <strong className="block text-sm text-halo-navy">{localized.title}</strong>
+          <span className="mt-2 block text-xs leading-5 text-halo-muted">{localized.body}</span>
           <time className="mt-2 block text-[9px] text-halo-muted">{notificationTime(item.created_at, language)}</time>
-        </button>)}</section>}
+        </button>; })}</section>}
   </main>;
 }

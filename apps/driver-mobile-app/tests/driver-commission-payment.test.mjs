@@ -136,11 +136,11 @@ test("panel subtracts pending review, locks submission and surfaces review statu
   assert.match(panelSource, /accept="image\/jpeg,image\/png,image\/webp,application\/pdf"/);
 });
 
-test("wallet loads commission payment history independently and keeps settlement read-only", () => {
+test("wallet loads commission payment history independently and exposes the secure settlement panel", () => {
   assert.match(walletSource, /fetchDriverCommissionPayments\(userId\)/);
   assert.match(walletSource, /paymentsResult\.status === "fulfilled"/);
   assert.match(walletSource, /setPayments\(paymentsResult\.value\)/);
-  assert.match(walletSource, /t\.wallet\.readOnly/);
-  assert.doesNotMatch(walletSource, /DriverCommissionPaymentPanel/);
-  assert.doesNotMatch(walletSource, /onSubmitted=/);
+  assert.match(walletSource, /DriverCommissionPaymentPanel/);
+  assert.match(walletSource, /onSubmitted=/);
+  assert.match(walletSource, /language={language}/);
 });

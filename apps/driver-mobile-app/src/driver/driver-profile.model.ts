@@ -18,6 +18,8 @@ export type DriverProfileRecord = {
   id: string;
   fullName: string;
   phone: string;
+  email: string | null;
+  homeAddress: string | null;
   vehicleType: string | null;
   driverStatus: DriverAccountStatus;
   ratingAvg: number | null;
@@ -103,7 +105,7 @@ export function normalizeDriverProfile(value: unknown, expectedUserId?: string):
   const phone = requiredText(row.phone);
   const driverStatus = row.driver_status === "pending" || row.driver_status === "approved" || row.driver_status === "rejected" || row.driver_status === "suspended" ? row.driver_status : null;
   if (!id || !fullName || !phone || !driverStatus || (expectedUserId && id !== expectedUserId)) return null;
-  return { id, fullName, phone, vehicleType: optionalText(row.vehicle_type), driverStatus, ratingAvg: optionalNumber(row.rating_avg), createdAt: optionalIsoDateTime(row.created_at) };
+  return { id, fullName, phone, email: optionalText(row.email), homeAddress: optionalText(row.home_address), vehicleType: optionalText(row.vehicle_type), driverStatus, ratingAvg: optionalNumber(row.rating_avg), createdAt: optionalIsoDateTime(row.created_at) };
 }
 
 export function normalizeDriverTruck(value: unknown): DriverTruckRecord | null {

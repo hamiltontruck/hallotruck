@@ -109,14 +109,15 @@ test("wallet keeps portal-backed trip history and financial contracts", () => {
   assert.match(wallet, /fetchDriverWalletTrips/);
   assert.match(wallet, /fetchDriverFinancialSummary/);
   assert.match(wallet, /fetchDriverCommissionSummary/);
-  assert.doesNotMatch(wallet, /DriverCommissionPaymentPanel|DriverPendingPaymentActions/);
+  assert.match(wallet, /DriverCommissionPaymentPanel/);
+  assert.doesNotMatch(wallet, /DriverPendingPaymentActions/);
 });
 
-test("final Driver card is concise and profile omits rating badge", () => {
+test("final Driver card is concise and profile includes customer trust rating", () => {
   assert.match(trip, /function concisePlace/);
-  assert.match(trip, /\{fullName\} · \{trip\.trackingId\}/);
+  assert.match(trip, /\{fullName\}.*\{trip\.trackingId\}/);
   assert.match(trip, /concisePlace\(trip\.pickupAddress\).*concisePlace\(trip\.dropoffAddress\)/s);
-  assert.doesNotMatch(profile, /ratingAvg\.toFixed/);
+  assert.match(profile, /ratingSummary|ratingAvg/);
 });
 
 test("authenticated shell remains scrollable with sticky five-tab navigation at target widths", () => {
@@ -132,4 +133,24 @@ test("authenticated shell remains scrollable with sticky five-tab navigation at 
 
 test("scope lock keeps authenticated parity work out of login and auth selectors", () => {
   assert.doesNotMatch(css, /\.driver-auth|\.login|sign-in-form/);
+});
+
+
+test("notification payloads are localized and the current authenticated tab survives refresh", () => {
+  assert.match(notifications, /localizeDriverNotification/);
+  assert.match(notifications, /localized\.title/);
+  assert.match(notifications, /localized\.body/);
+  assert.doesNotMatch(notifications, /\{item\.title\}<\/strong>/);
+  assert.match(i18n, /newDeliveryAssigned/);
+  assert.match(i18n, /deliveryRecorded/);
+  assert.match(workspace, /DRIVER_TAB_KEY/);
+  assert.match(workspace, /localStorage\.getItem/);
+  assert.match(workspace, /localStorage\.setItem/);
+});
+
+test("Amharic authenticated copy removes the visible English leftovers reported in smoke", () => {
+  const start = i18n.indexOf("const am = {");
+  const end = i18n.indexOf("export const driverV4Copy", start);
+  const amBlock = i18n.slice(start, end);
+  assert.doesNotMatch(amBlock, /"[^"]*\b(?:Customer|customer|CUSTOMER|Admin\/CEO|Provider|Receipt|Depart left)\b[^"]*"/);
 });

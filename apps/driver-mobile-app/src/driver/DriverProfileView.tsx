@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DRIVER_VEHICLE_TYPES } from "../../../../src/domain/driver-vehicle-types";
 import { DriverDocumentPreviewSheet } from "./DriverDocumentPreviewSheet";
 import { DriverDocumentUploadSheet } from "./DriverDocumentUploadSheet";
 import {
@@ -17,9 +18,12 @@ import {
 } from "./driver-profile.model";
 import {
   fetchDriverProfile,
+  fetchDriverRatingSummary,
   fetchDriverTrucks,
   fetchDriverVerificationFiles,
+  saveDriverVehicleProfile,
   subscribeToDriverProfile,
+  type DriverRatingSummary,
 } from "./driver-profile.service";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
@@ -181,6 +185,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   const [profile, setProfile] = useState<DriverProfileRecord | null>(null);
   const [trucks, setTrucks] = useState<DriverTruckRecord[]>([]);
   const [documents, setDocuments] = useState<DriverVerificationRecord[]>([]);
+  const [ratingSummary, setRatingSummary] = useState<DriverRatingSummary | null>(null);
   const [profileConfirmed, setProfileConfirmed] = useState(false);
   const [trucksConfirmed, setTrucksConfirmed] = useState(false);
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
@@ -192,8 +197,15 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   const [uploadTarget, setUploadTarget] = useState<{ documentKey: VerificationDocumentKey; truckId: string | null; record: DriverVerificationRecord | undefined } | null>(null);
   const [previewTarget, setPreviewTarget] = useState<{ documentKey: VerificationDocumentKey; record: DriverVerificationRecord } | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [vehicleNotice, setVehicleNotice] = useState<string | null>(null);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
+  const [savingVehicle, setSavingVehicle] = useState(false);
+  const [plateNumber, setPlateNumber] = useState("");
+  const [vehicleType, setVehicleType] = useState<string>(DRIVER_VEHICLE_TYPES[0]);
+  const [capacityTons, setCapacityTons] = useState("5");
   const t = getDriverV4Copy(language);
   const c = t.profile;
+  const p = c;
 
   const refresh = useCallback(async () => {
     if (refreshInFlightRef.current) {
@@ -204,10 +216,11 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
     const requestId = ++requestIdRef.current;
     if (!profileConfirmed && !trucksConfirmed && !documentsConfirmed) setLoading(true);
 
-    const [profileResult, trucksResult, documentsResult] = await Promise.allSettled([
+    const [profileResult, trucksResult, documentsResult, ratingResult] = await Promise.allSettled([
       fetchDriverProfile(userId),
       fetchDriverTrucks(userId),
       fetchDriverVerificationFiles(userId),
+      fetchDriverRatingSummary(userId),
     ]);
 
     if (!mountedRef.current || requestId !== requestIdRef.current) {
@@ -241,6 +254,8 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
     } else {
       setDocumentsError(errorMessage(documentsResult.reason, c.documentsError));
     }
+
+    if (ratingResult.status === "fulfilled") setRatingSummary(ratingResult.value);
 
     setLoading(false);
     refreshInFlightRef.current = false;
@@ -286,6 +301,24 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   const profileStatus = profile ? statusCopy(profile.driverStatus, language) : null;
   const initials = (profile?.fullName || fallbackName).trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toUpperCase()).join("") || "D";
 
+  async function handleVehicleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (savingVehicle) return;
+    setSavingVehicle(true);
+    setVehicleError(null);
+    setVehicleNotice(null);
+    try {
+      const saved = await saveDriverVehicleProfile(userId, { plateNumber, vehicleType, capacityTons: Number(capacityTons) });
+      setSelectedTruckId(saved.id);
+      setVehicleNotice(p.vehicleSaved);
+      await refresh();
+    } catch {
+      setVehicleError(p.vehicleSaveError);
+    } finally {
+      setSavingVehicle(false);
+    }
+  }
+
   if (loading && !profileConfirmed && !trucksConfirmed && !documentsConfirmed) {
     return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-6 text-center"><div><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-halo-line border-t-halo-blue"/><p className="mt-4 text-sm font-bold text-halo-muted">{c.loading}</p></div></div>;
   }
@@ -300,7 +333,18 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       <div className="mt-4 grid grid-cols-2 gap-3 border-t border-halo-line pt-4 text-xs"><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">{c.preferredVehicle}</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(profile?.vehicleType ?? null)}</p></div><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">{c.memberSince}</p><p className="mt-1 font-extrabold text-halo-navy">{formatDate(profile?.createdAt ?? null, language)}</p></div></div>
     </section>
 
+    <section data-driver-profile-contact className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2">
+      <article className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{p.contact}</p><dl className="mt-3 space-y-3 text-xs"><div><dt className="font-black text-halo-muted">{p.phone}</dt><dd className="mt-1 break-all font-extrabold text-halo-navy">{profile?.phone || "—"}</dd></div><div><dt className="font-black text-halo-muted">{p.email}</dt><dd className="mt-1 break-all font-extrabold text-halo-navy">{profile?.email || "—"}</dd></div><div><dt className="font-black text-halo-muted">{p.homeAddress}</dt><dd className="mt-1 break-words font-extrabold text-halo-navy">{profile?.homeAddress || "—"}</dd></div></dl></article>
+      <article className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{p.rating}</p><div className="mt-2 flex items-end gap-2"><span className="text-3xl font-black text-halo-navy">{(ratingSummary?.average ?? profile?.ratingAvg)?.toFixed(1) ?? "—"}</span><span className="pb-1 text-lg text-amber-500">★</span></div><p className="mt-1 text-[10px] font-bold text-halo-muted">{ratingSummary?.count ?? 0} {p.reviews}</p>{ratingSummary && ratingSummary.recent.length > 0 ? <div className="mt-3 space-y-2">{ratingSummary.recent.map((entry, index) => <div key={index} className="rounded-xl bg-halo-soft p-2.5"><p className="text-[10px] font-black text-amber-700">{"★".repeat(Math.round(entry.score))}</p>{entry.comment && <p className="mt-1 text-[10px] leading-4 text-halo-muted">{entry.comment}</p>}</div>)}</div> : <p className="mt-3 text-[10px] text-halo-muted">{p.noRatings}</p>}</article>
+    </section>
+
     <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2"><ProgressCard title={c.driverDocs} {...identityProgress} language={language} /><ProgressCard title={c.vehicleDocs} {...vehicleProgress} language={language} /></div>
+
+    <section data-driver-current-vehicle className="rounded-[24px] border border-halo-line bg-white p-4 shadow-halo-card">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{p.currentVehicle}</p>
+      {selectedTruck ? <div className="mt-3"><TruckCard truck={selectedTruck} selected={true} onSelect={() => setSelectedTruckId(selectedTruck.id)} language={language} /></div> : <p className="mt-2 text-xs text-halo-muted">{p.noVehicle}</p>}
+      <form onSubmit={(event) => void handleVehicleSave(event)} className="mt-4 border-t border-halo-line pt-4"><h3 className="text-sm font-black text-halo-navy">{p.registerVehicle}</h3><p className="mt-1 text-[10px] leading-4 text-halo-muted">{p.registerVehicleHelp}</p>{vehicleNotice && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-2.5 text-[10px] font-bold text-emerald-700">{vehicleNotice}</p>}{vehicleError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-2.5 text-[10px] font-bold text-red-700">{vehicleError}</p>}<div className="mt-3 grid gap-3 min-[390px]:grid-cols-2"><label className="text-[10px] font-black text-halo-muted">{p.plate}<input required value={plateNumber} onChange={(e) => setPlateNumber(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line px-3 text-sm text-halo-navy" /></label><label className="text-[10px] font-black text-halo-muted">{p.vehicleType}<select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line bg-white px-3 text-sm text-halo-navy">{DRIVER_VEHICLE_TYPES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label className="text-[10px] font-black text-halo-muted min-[390px]:col-span-2">{p.capacityTons}<input required type="number" min="0.1" max="60" step="0.1" value={capacityTons} onChange={(e) => setCapacityTons(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line px-3 text-sm text-halo-navy" /></label></div><button type="submit" disabled={savingVehicle} className="mt-3 min-h-11 w-full rounded-xl bg-halo-blue px-4 text-xs font-black text-white disabled:opacity-60">{savingVehicle ? p.savingVehicle : p.saveVehicle}</button></form>
+    </section>
 
     {expiryWarningCount > 0 && <section data-driver-document-expiry-warning className="rounded-[22px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-lg font-black text-amber-700">!</span><div className="min-w-0"><p className="text-sm font-black text-amber-900">{c.expiryAttention}</p><p className="mt-1 text-xs leading-5 text-amber-800">{c.expiryExpiredCount}: {expirySummary.expired} · {c.expiryCriticalCount}: {expirySummary.critical} · {c.expirySoonCount}: {expirySummary.soon}</p><p className="mt-2 text-[10px] leading-4 text-amber-700">{c.expiryHelp}</p></div></div></section>}
 

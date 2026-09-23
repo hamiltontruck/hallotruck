@@ -15,6 +15,13 @@ import { supabase } from "./supabase";
 
 type PrimaryTab = Exclude<DriverWorkspaceDestination, "alerts">;
 
+const DRIVER_TAB_KEY = "hallo-driver-v4-tab";
+const DRIVER_TABS: DriverWorkspaceDestination[] = ["home", "jobs", "trip", "wallet", "profile", "alerts"];
+function storedDriverTab(userId: string): DriverWorkspaceDestination {
+  const saved = window.localStorage.getItem(`${DRIVER_TAB_KEY}:${userId}`);
+  return DRIVER_TABS.includes(saved as DriverWorkspaceDestination) ? saved as DriverWorkspaceDestination : "home";
+}
+
 const tabs: Array<{ id: PrimaryTab; icon: string }> = [
   { id: "home", icon: "⌂" },
   { id: "jobs", icon: "▣" },
@@ -73,7 +80,7 @@ class DriverWorkspaceErrorBoundary extends Component<
 }
 
 export function DriverWorkspace({ userId }: { userId: string }) {
-  const [tab, setTab] = useState<DriverWorkspaceDestination>("home");
+  const [tab, setTab] = useState<DriverWorkspaceDestination>(() => storedDriverTab(userId));
   const [driverName, setDriverName] = useState("HALLO Driver");
   const [supportOpen, setSupportOpen] = useState(false);
   const [language, setLanguage] = useState<DriverLanguage>(() => {
@@ -87,6 +94,10 @@ export function DriverWorkspace({ userId }: { userId: string }) {
     window.localStorage.setItem(DRIVER_LANGUAGE_KEY, language);
     document.documentElement.lang = language;
   }, [language]);
+
+  useEffect(() => {
+    window.localStorage.setItem(`${DRIVER_TAB_KEY}:${userId}`, tab);
+  }, [tab, userId]);
 
   let content;
   if (tab === "home") {
