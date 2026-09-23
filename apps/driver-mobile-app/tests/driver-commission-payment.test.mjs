@@ -136,10 +136,11 @@ test("panel subtracts pending review, locks submission and surfaces review statu
   assert.match(panelSource, /accept="image\/jpeg,image\/png,image\/webp,application\/pdf"/);
 });
 
-test("wallet loads commission payment history independently and refreshes after submission", () => {
+test("wallet loads commission payment history independently and keeps settlement read-only", () => {
   assert.match(walletSource, /fetchDriverCommissionPayments\(userId\)/);
   assert.match(walletSource, /paymentsResult\.status === "fulfilled"/);
   assert.match(walletSource, /setPayments\(paymentsResult\.value\)/);
-  assert.match(walletSource, /DriverCommissionPaymentPanel/);
-  assert.match(walletSource, /onSubmitted=\{async \(\) => \{ await load\(true\); \}\}/);
+  assert.match(walletSource, /t\.wallet\.readOnly/);
+  assert.doesNotMatch(walletSource, /DriverCommissionPaymentPanel/);
+  assert.doesNotMatch(walletSource, /onSubmitted=/);
 });
