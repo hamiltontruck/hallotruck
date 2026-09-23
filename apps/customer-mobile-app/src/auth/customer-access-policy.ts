@@ -24,7 +24,7 @@ export function classifyCustomerProfile(
 
   const role = normalized(profile.role);
   if (role !== "customer") {
-    return { kind: "unsupported-role", role };
+    return { kind: "unsupported-role", role: role === "driver" ? null : role };
   }
 
   return {

@@ -158,7 +158,7 @@ const customerMobileJavaScript = listFiles(customerMobileRoot)
 assert(customerMobileJavaScript.length > 0, "Customer Mobile Pages artifact contains no JavaScript bundle.");
 
 const requiredCustomerBoundaries = [
-  "hallo-customer-mobile-auth-v1",
+  "hallo-customer-mobile-auth-v2",
   "customer_driver_assignment_cards",
   "customer_get_live_trip",
   "calculate_transport_quote_v2",

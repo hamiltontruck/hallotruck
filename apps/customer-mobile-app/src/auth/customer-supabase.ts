@@ -11,7 +11,7 @@ export const customerSupabase: SupabaseClient | null = customerSupabaseConfigure
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: "hallo-customer-mobile-auth-v1",
+        storageKey: "hallo-customer-mobile-auth-v2",
       },
     })
   : null;
