@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { roleDestination } from "../.test-dist/role-destination.js";
 
-test("Driver role from Customer Mobile routes to the standalone Driver app", () => {
+test("Driver role stays in Customer Mobile instead of redirecting to Driver Mobile", () => {
   assert.equal(
     roleDestination(
       " DRIVER ",
       "https://hamiltontruck.github.io/hallotruck/customer-mobile/?from=login",
     ),
-    "https://hamiltontruck.github.io/hallotruck/driver-mobile/",
+    null,
   );
 });
 
