@@ -22,6 +22,8 @@ test("Customer signup keeps only a bounded Ethiopian phone input", () => {
   assert.equal(sanitizeEthiopianPhoneInput("09 11-250-415"), "0911250415");
   assert.equal(normalizeEthiopianMobile("0911250415"), "+251911250415");
   assert.equal(normalizeEthiopianMobile("+251911250415"), "+251911250415");
+  assert.equal(normalizeEthiopianMobile("0711250415"), "+251711250415");
+  assert.equal(normalizeEthiopianMobile("+251711250415"), "+251711250415");
   assert.equal(normalizeEthiopianMobile("+2519112504155528"), null);
 });
 

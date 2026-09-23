@@ -79,21 +79,143 @@ async function uploadDocument(
   if (current?.file_path) await supabase.storage.from('driver-verification').remove([current.file_path]);
 }
 
-export async function getDriverProfile(userId: string): Promise<Profile> {
+export async function getDriverProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('role,driver_status').eq('id', userId).maybeSingle();
   if (error) throw new Error(error.message);
-  return data ?? { role: null, driver_status: null };
+  return data ?? null;
 }
 
 export function DriverAccess({ session, children }: { session: Session; children: React.ReactNode }) {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [error, setError] = useState('');
-  useEffect(() => { void getDriverProfile(session.user.id).then(setProfile).catch((reason: Error) => setError(reason.message)); }, [session.user.id]);
+
+  async function refreshProfile() {
+    setError('');
+    try { setProfile(await getDriverProfile(session.user.id)); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Driver profile could not be loaded.'); }
+  }
+
+  useEffect(() => { void refreshProfile(); }, [session.user.id]);
+
   if (error) return <AccessDenied message={error} />;
-  if (!profile) return <div className="splash"><b>Loading driver account…</b></div>;
+  if (profile === undefined) return <div className="splash"><b>Loading driver account…</b></div>;
+  if (profile === null) return <DriverProfileCompletion session={session} onCompleted={refreshProfile} />;
   if (profile.role !== 'driver' || profile.driver_status === 'suspended') return <AccessDenied message="This driver account is not allowed to access the Driver Mobile App." />;
   if (profile.driver_status === 'approved') return <>{children}</>;
   return <Onboarding session={session} />;
+}
+
+type DriverOnboardingLanguage = 'om' | 'en' | 'am';
+
+const DRIVER_PROFILE_COPY = {
+  om: {
+    eyebrow: 'GOOGLE GALMEE',
+    title: 'Driver profile kee xumuri',
+    description: 'Google\'n seenteetta. Driver onboarding itti fufuuf maqaa fi lakkoofsa bilbilaa Itoophiyaa mirkaneessi. Sana booda plate fi document 8 guutuu galchita.',
+    fullName: 'Maqaa guutuu',
+    phone: 'Bilbila',
+    submit: 'DRIVER GALMEE ITTI FUFI',
+    saving: 'GALMEE XUMURAA JIRA…',
+    invalidName: 'Maqaan guutuun qubee 2–120 qabaachuu qaba.',
+    invalidPhone: 'Bilbila sirrii galchi: 09xxxxxxxx, 07xxxxxxxx, +2519xxxxxxxx ykn +2517xxxxxxxx.',
+    failed: 'Driver profile uumuu hin dandeenye. Odeeffannoo kee ilaalii irra deebi\'i.',
+    signOut: 'Ba\'i',
+  },
+  en: {
+    eyebrow: 'GOOGLE ONBOARDING',
+    title: 'Complete your Driver profile',
+    description: 'Google sign-in succeeded. Confirm your name and Ethiopian mobile number. Next you will add your plate, vehicle details and all 8 required verification files.',
+    fullName: 'Full name',
+    phone: 'Phone',
+    submit: 'CONTINUE DRIVER ONBOARDING',
+    saving: 'COMPLETING SETUP…',
+    invalidName: 'Full name must contain 2–120 characters.',
+    invalidPhone: 'Enter 09xxxxxxxx, 07xxxxxxxx, +2519xxxxxxxx or +2517xxxxxxxx.',
+    failed: 'The Driver profile could not be created. Check your details and try again.',
+    signOut: 'Sign out',
+  },
+  am: {
+    eyebrow: 'GOOGLE ምዝገባ',
+    title: 'የDriver profile ያጠናቁ',
+    description: 'በGoogle መግባት ተሳክቷል። ስምዎን እና የኢትዮጵያ ሞባይል ቁጥርዎን ያረጋግጡ። ቀጥሎ plate፣ የተሽከርካሪ መረጃ እና 8 አስፈላጊ ሰነዶችን ያስገባሉ።',
+    fullName: 'ሙሉ ስም',
+    phone: 'ስልክ',
+    submit: 'DRIVER ምዝገባ ቀጥል',
+    saving: 'ምዝገባ በማጠናቀቅ ላይ…',
+    invalidName: 'ሙሉ ስም 2–120 ፊደላት መሆን አለበት።',
+    invalidPhone: 'ትክክለኛ የኢትዮጵያ ሞባይል ቁጥር ያስገቡ።',
+    failed: 'የDriver profile መፍጠር አልተቻለም። መረጃዎን ያረጋግጡና እንደገና ይሞክሩ።',
+    signOut: 'ውጣ',
+  },
+} as const;
+
+function normalizeDriverPhone(value: string) {
+  const compact = value.trim().replace(/[\s()-]/g, '');
+  if (!/^(?:\+251|251|0)?[79]\d{8}$/.test(compact)) return null;
+  if (compact.startsWith('+251')) return `0${compact.slice(4)}`;
+  if (compact.startsWith('251')) return `0${compact.slice(3)}`;
+  if (/^[79]/.test(compact)) return `0${compact}`;
+  return compact;
+}
+
+function DriverProfileCompletion({ session, onCompleted }: { session: Session; onCompleted: () => Promise<void> }) {
+  const [language, setLanguage] = useState<DriverOnboardingLanguage>(() => {
+    const value = window.localStorage.getItem('hallo-driver-language');
+    return value === 'en' || value === 'am' || value === 'om' ? value : 'om';
+  });
+  const copy = DRIVER_PROFILE_COPY[language];
+  const initialName = String(session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? session.user.email?.split('@')[0] ?? '');
+  const [fullName, setFullName] = useState(initialName);
+  const [phone, setPhone] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    window.localStorage.setItem('hallo-driver-language', language);
+    document.documentElement.lang = language;
+  }, [language]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const cleanName = fullName.trim().replace(/\s+/g, ' ');
+    if (cleanName.length < 2 || cleanName.length > 120) { setError(copy.invalidName); return; }
+    const normalizedPhone = normalizeDriverPhone(phone);
+    if (!normalizedPhone) { setError(copy.invalidPhone); return; }
+    setBusy(true);
+    setError('');
+    try {
+      const { error: profileError } = await supabase.rpc('complete_public_mobile_profile', {
+        p_role: 'driver',
+        p_full_name: cleanName,
+        p_phone: normalizedPhone,
+      });
+      if (profileError) throw profileError;
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) throw refreshError;
+      await onCompleted();
+    } catch {
+      setError(copy.failed);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <main className="onboarding">
+    <header className="onboarding-head"><span className="mark">H</span><div><b>HALLO DRIVER V4</b><small>{copy.eyebrow}</small></div></header>
+    <section className="onboarding-panel">
+      <label>Language<select value={language} disabled={busy} onChange={(event) => setLanguage(event.target.value as DriverOnboardingLanguage)}><option value="en">EN</option><option value="om">OR</option><option value="am">አማ</option></select></label>
+      <h1>{copy.title}</h1>
+      <p className="notice">{copy.description}</p>
+      {error && <p className="error notice-box" role="alert">{error}</p>}
+      <form onSubmit={submit}>
+        <label>{copy.fullName}<input autoComplete="name" maxLength={120} value={fullName} disabled={busy} onChange={(event) => setFullName(event.target.value)} /></label>
+        <label>{copy.phone}<input type="tel" inputMode="tel" autoComplete="tel" placeholder="09xxxxxxxx / 07xxxxxxxx" maxLength={17} value={phone} disabled={busy} onChange={(event) => setPhone(event.target.value)} /></label>
+        <button className="primary" disabled={busy}>{busy ? copy.saving : copy.submit}</button>
+      </form>
+      <button className="secondary" type="button" disabled={busy} onClick={() => void supabase.auth.signOut()}>{copy.signOut}</button>
+    </section>
+  </main>;
 }
 
 function AccessDenied({ message }: { message: string }) {
