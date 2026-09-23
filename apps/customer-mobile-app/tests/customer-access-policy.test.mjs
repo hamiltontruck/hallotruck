@@ -16,8 +16,15 @@ test("role matching is normalized but still database-backed", () => {
   );
 });
 
-test("Driver, Admin, CEO, Partner and unknown roles fail closed", () => {
-  for (const role of ["driver", "admin", "ceo", "partner", "owner", null]) {
+test("Driver role fails closed without triggering a cross-app redirect", () => {
+  assert.deepEqual(
+    classifyCustomerProfile({ role: "driver", full_name: "Driver user" }),
+    { kind: "unsupported-role", role: null },
+  );
+});
+
+test("other unsupported roles fail closed", () => {
+  for (const role of ["admin", "ceo", "partner", "owner", null]) {
     assert.deepEqual(
       classifyCustomerProfile({ role, full_name: "Other role" }),
       { kind: "unsupported-role", role },

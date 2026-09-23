@@ -21,7 +21,6 @@ import {
   customerSupabase,
   customerSupabaseConfigured,
 } from "./customer-supabase";
-import { roleDestination } from "./role-destination";
 import {
   isValidCustomerFullName,
   isValidSixDigitPin,
@@ -534,34 +533,6 @@ function CustomerProfileCompletion({ session, language, setLanguage, onCompleted
   </Screen>;
 }
 
-function DriverRedirect({ language, setLanguage, onSignOut }: {
-  language: Language;
-  setLanguage: (language: Language) => void;
-  onSignOut: () => Promise<void>;
-}) {
-  const text = COPY[language];
-  const destination = roleDestination("driver", window.location.href);
-
-  useEffect(() => {
-    if (!destination) return;
-    window.location.replace(destination);
-  }, [destination]);
-
-  return (
-    <Screen>
-      <section style={{ ...panelStyle, textAlign: "center" }}>
-        <Brand />
-        <LanguageSelect language={language} setLanguage={setLanguage} />
-        <p style={{ margin: 0, color: "#087a52", fontSize: "10px", fontWeight: 900, letterSpacing: ".14em" }}>{text.driverRedirectEyebrow}</p>
-        <h1 style={{ margin: "10px 0 0", fontSize: "24px" }}>{text.driverRedirectTitle}</h1>
-        <p style={{ margin: "10px 0 0", color: "#66758c", fontSize: "13px", lineHeight: 1.7 }}>{text.driverRedirectDescription}</p>
-        {destination && <a href={destination} style={{ ...primaryButtonStyle, display: "grid", placeItems: "center", boxSizing: "border-box", marginTop: "20px", textDecoration: "none" }}>{text.openDriverApp}</a>}
-        <button type="button" onClick={() => void onSignOut()} style={{ ...primaryButtonStyle, marginTop: "10px", background: "#fff", color: "#10213d", border: "1px solid #d8e2ef" }}>{text.signOut}</button>
-      </section>
-    </Screen>
-  );
-}
-
 export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   const [language, setLanguage] = useState<Language>(storedLanguage);
   const [state, setState] = useState<AuthState>(() => customerSupabaseConfigured ? { kind: "booting" } : { kind: "configuration-error" });
@@ -695,7 +666,6 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
   if (state.kind === "signed-out" && showSplash) return <Splash onStart={() => { window.sessionStorage.setItem("hallo-customer-splash-seen", "1"); setShowSplash(false); }} />;
   if (state.kind === "signed-out") return <AuthForm busy={authenticating} error={state.error} notice={state.notice} language={language} setLanguage={setLanguage} onSignIn={signIn} onSignUp={signUp} onGoogleSignIn={signInWithGoogle} />;
   if (state.kind === "allowed") return <>{children(state.identity)}</>;
-  if (state.kind === "unsupported-role" && state.role === "driver") return <DriverRedirect language={language} setLanguage={setLanguage} onSignOut={signOut} />;
   if (state.kind === "unsupported-role") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.deniedEyebrow} title={text.deniedTitle} description={text.deniedDescription} onSignOut={signOut} />;
   if (state.kind === "missing-profile") return <CustomerProfileCompletion session={state.session} language={language} setLanguage={setLanguage} onCompleted={retryProfile} onSignOut={signOut} />;
   if (state.kind === "load-error") return <AccessState language={language} setLanguage={setLanguage} eyebrow={text.connectionEyebrow} title={text.connectionTitle} description={state.message} onSignOut={signOut} onRetry={retryProfile} />;
