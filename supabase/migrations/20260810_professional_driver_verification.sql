@@ -222,3 +222,28 @@ $$;
 
 revoke all on function public.customer_driver_assignment_cards() from public, anon;
 grant execute on function public.customer_driver_assignment_cards() to authenticated;
+
+-- Clean-replay compatibility: the audit migration sorts before this table-creating migration.
+-- Reinstall deferred audit hardening after driver_verification_files exists.
+drop trigger if exists driver_verification_archive_trigger on public.driver_verification_files;
+create trigger driver_verification_archive_trigger
+before update or delete on public.driver_verification_files
+for each row execute function public.archive_driver_verification_version();
+
+drop policy if exists "driver verification storage own delete" on storage.objects;
+create policy "driver verification storage own delete"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'driver-verification'
+    and split_part(name, '/', 1) = auth.uid()::text
+    and not exists (
+      select 1 from public.driver_verification_files current_file
+      where current_file.file_path = name
+        and current_file.driver_id = auth.uid()
+    )
+    and not exists (
+      select 1 from public.driver_verification_history history_file
+      where history_file.file_path = name
+        and history_file.driver_id = auth.uid()
+    )
+  );
