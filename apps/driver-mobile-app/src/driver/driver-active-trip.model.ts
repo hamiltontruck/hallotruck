@@ -176,3 +176,15 @@ export function formatRouteDuration(durationMin: number | null): string {
   if (hours === 0) return `${minutes} min`;
   return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
 }
+
+export function localizeRouteInstruction(instruction: string, language: "en" | "om" | "am"): string {
+  if (language === "en") return instruction;
+  const normalized = instruction.trim().toLowerCase();
+  const table = language === "om" ? [
+    [/^depart left/, "Bitaa irraa ka'i"], [/^depart right/, "Mirga irraa ka'i"], [/^turn left/, "Bitaa gali"], [/^turn right/, "Mirga gali"], [/^continue straight|^continue/, "Qajeelaa itti fufi"], [/^keep left/, "Bitaa qabadhu"], [/^keep right/, "Mirga qabadhu"], [/^arrive|^you have arrived/, "Bakka geesse"],
+  ] as const : [
+    [/^depart left/, "በግራ በኩል ይነሱ"], [/^depart right/, "በቀኝ በኩል ይነሱ"], [/^turn left/, "ወደ ግራ ይታጠፉ"], [/^turn right/, "ወደ ቀኝ ይታጠፉ"], [/^continue straight|^continue/, "ቀጥታ ይቀጥሉ"], [/^keep left/, "በግራ ይቆዩ"], [/^keep right/, "በቀኝ ይቆዩ"], [/^arrive|^you have arrived/, "መድረሻዎ ደርሷል"],
+  ] as const;
+  for (const [pattern, copy] of table) if (pattern.test(normalized)) return copy;
+  return instruction;
+}

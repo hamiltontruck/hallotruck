@@ -136,7 +136,7 @@ test("service preserves assignment, storage and atomic RPC boundaries", () => {
 
 test("panel supports camera, gallery, signature and locked submission", () => {
   assert.match(panelSource, /capture="environment"/);
-  assert.match(panelSource, /Receiver signature pad/);
+  assert.match(panelSource, /aria-label=\{t\.deliveryProof\.signatureStep\}/);
   assert.match(panelSource, /submittingRef\.current/);
   assert.match(panelSource, /submitDriverDeliveryProof/);
   assert.match(panelSource, /payment_not_received/);

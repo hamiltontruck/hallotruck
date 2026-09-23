@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { mobileSupabase } from "../auth/mobile-supabase";
+import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
 type DriverNotification = {
   id: string;
@@ -10,35 +11,50 @@ type DriverNotification = {
   created_at: string;
 };
 
-function notificationTime(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+function localizeDriverNotification(item: DriverNotification, language: DriverLanguage) {
+  const copy = getDriverV4Copy(language).notifications;
+  const event = item.event_type.trim().toLowerCase();
+  const title = item.title.trim().toLowerCase();
+  const assigned = event.includes("assign") || title === "new delivery assigned";
+  const delivered = event.includes("deliver") || title === "delivery recorded";
+  if (assigned) return { title: copy.newDeliveryAssigned, body: copy.newDeliveryBody };
+  if (delivered) return { title: copy.deliveryRecorded, body: copy.deliveryRecordedBody };
+  return { title: item.title, body: item.body };
 }
 
-export function DriverNotificationsView({ userId, language = "om" }: { userId: string; language?: "om" | "en" | "am" }) {
-  const ui = language === "en"
-    ? { eyebrow:"Driver alerts", title:"Notifications", refresh:"Refresh", loading:"Loading notifications…", empty:"No new notifications." }
-    : language === "am"
-      ? { eyebrow:"የDriver ማሳወቂያዎች", title:"ማሳወቂያዎች", refresh:"አድስ", loading:"ማሳወቂያዎች በመጫን ላይ…", empty:"አዲስ ማሳወቂያ የለም።" }
-      : { eyebrow:"Beeksisa Driver", title:"Beeksisa", refresh:"Haaromsi", loading:"Beeksisa fe'aa jira…", empty:"Beeksisa haaraan hin jiru." };
+function notificationTime(value: string, language: DriverLanguage) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const locale = language === "am" ? "am-ET" : language === "om" ? "om-ET" : "en-ET";
+  return date.toLocaleString(locale);
+}
+
+export function DriverNotificationsView({
+  userId,
+  language = "om",
+}: {
+  userId: string;
+  language?: DriverLanguage;
+}) {
+  const t = getDriverV4Copy(language);
   const [items, setItems] = useState<DriverNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
     if (!mobileSupabase) {
-      setError("HALLO Supabase configuration is missing.");
+      setError(t.notifications.configError);
       setLoading(false);
       return;
     }
     const { data, error: requestError } = await mobileSupabase.rpc("my_notifications", { p_limit: 100 });
-    if (requestError) setError(requestError.message);
+    if (requestError) setError(t.notifications.configError);
     else {
       setItems((data ?? []) as DriverNotification[]);
       setError("");
     }
     setLoading(false);
-  }, []);
+  }, [t.notifications.configError]);
 
   useEffect(() => {
     void refresh();
@@ -54,13 +70,24 @@ export function DriverNotificationsView({ userId, language = "om" }: { userId: s
   async function markRead(item: DriverNotification) {
     if (!mobileSupabase || item.read_at) return;
     const { error: requestError } = await mobileSupabase.rpc("mark_notification_read", { p_notification_id: item.id });
-    if (requestError) setError(requestError.message);
-    else setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read_at: new Date().toISOString() } : entry));
+    if (requestError) setError(t.notifications.configError);
+    else setItems((currentItems) => currentItems.map((entry) => entry.id === item.id ? { ...entry, read_at: new Date().toISOString() } : entry));
   }
 
   return <main className="min-h-[calc(100dvh-74px)] bg-halo-canvas px-4 pb-8 pt-5">
-    <div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{ui.eyebrow}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{ui.title}</h1></div><button type="button" onClick={() => void refresh()} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black">{ui.refresh}</button></div>
+    <div className="flex items-end justify-between gap-3">
+      <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{t.notifications.eyebrow}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{t.notifications.title}</h1></div>
+      <button type="button" onClick={() => void refresh()} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black">{t.notifications.refresh}</button>
+    </div>
     {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</p>}
-    {loading ? <p className="mt-6 text-sm text-halo-muted">{ui.loading}</p> : items.length === 0 ? <div className="mt-6 rounded-[22px] border border-dashed border-halo-line bg-white p-6 text-center text-sm text-halo-muted">{ui.empty}</div> : <section className="mt-5 space-y-3">{items.map((item) => <button key={item.id} type="button" onClick={() => void markRead(item)} className={`w-full rounded-[22px] border p-4 text-left shadow-halo-card ${item.read_at ? "border-halo-line bg-white" : "border-halo-gold bg-halo-gold-soft"}`}><span className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-blue">{item.event_type.replaceAll("_", " ")}</span><strong className="mt-1 block text-sm text-halo-navy">{item.title}</strong><span className="mt-2 block text-xs leading-5 text-halo-muted">{item.body}</span><time className="mt-2 block text-[9px] text-halo-muted">{notificationTime(item.created_at)}</time></button>)}</section>}
+    {loading
+      ? <p className="mt-6 text-sm text-halo-muted">{t.notifications.loading}</p>
+      : items.length === 0
+        ? <div className="mt-6 rounded-[22px] border border-dashed border-halo-line bg-white p-6 text-center text-sm text-halo-muted">{t.notifications.empty}</div>
+        : <section className="mt-5 space-y-3">{items.map((item) => { const localized = localizeDriverNotification(item, language); return <button key={item.id} type="button" onClick={() => void markRead(item)} className={`w-full rounded-[22px] border p-4 text-left shadow-halo-card ${item.read_at ? "border-halo-line bg-white" : "border-halo-gold bg-halo-gold-soft"}`}>
+          <strong className="block text-sm text-halo-navy">{localized.title}</strong>
+          <span className="mt-2 block text-xs leading-5 text-halo-muted">{localized.body}</span>
+          <time className="mt-2 block text-[9px] text-halo-muted">{notificationTime(item.created_at, language)}</time>
+        </button>; })}</section>}
   </main>;
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DRIVER_VEHICLE_TYPES } from "../../../../src/domain/driver-vehicle-types";
 import { DriverDocumentPreviewSheet } from "./DriverDocumentPreviewSheet";
 import { DriverDocumentUploadSheet } from "./DriverDocumentUploadSheet";
 import {
@@ -6,7 +7,6 @@ import {
   documentExpiryWarning,
   documentHealth,
   documentProgress,
-  formatCapacityTons,
   formatVehicleType,
   identityDocumentKeys,
   vehicleDocumentKeys,
@@ -18,111 +18,88 @@ import {
 } from "./driver-profile.model";
 import {
   fetchDriverProfile,
+  fetchDriverRatingSummary,
   fetchDriverTrucks,
   fetchDriverVerificationFiles,
+  saveDriverVehicleProfile,
   subscribeToDriverProfile,
+  type DriverRatingSummary,
 } from "./driver-profile.service";
+import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
 const PROFILE_REFRESH_MS = 30_000;
 
-const documentLabels: Record<VerificationDocumentKey, string> = {
-  driver_photo: "Suuraa Driver",
-  license_front: "Hayyama konkolaachisummaa — fuuldura",
-  license_back: "Hayyama konkolaachisummaa — duuba",
-  national_id_front: "Fayda / ID — fuuldura",
-  national_id_back: "Fayda / ID — duuba",
-  vehicle_registration: "Galmee konkolaataa",
-  insurance: "Inshuraansii",
-  transport_permit: "Hayyama geejjibaa",
-  truck_front: "Suuraa konkolaataa — fuuldura",
-  truck_back: "Suuraa konkolaataa — duuba",
-  truck_side: "Suuraa konkolaataa — cinaa",
-  truck_loading_area: "Bakka fe'umsaa",
+const healthClass: Record<DocumentHealth, string> = {
+  missing: "bg-slate-100 text-slate-600",
+  pending: "bg-amber-50 text-amber-800",
+  verified: "bg-emerald-50 text-emerald-700",
+  rejected: "bg-red-50 text-red-700",
+  expired: "bg-red-50 text-red-700",
 };
 
-type DriverLanguage = "om" | "en" | "am";
-
-const profileCopy = {
-  en: {
-    eyebrow: "Driver profile", title: "Identity & compliance", help: "View your database profile and Admin/CEO verification status in real time.",
-    loading: "Loading driver profile…", preferredVehicle: "Preferred vehicle", memberSince: "Member since", driverDocs: "Driver documents", vehicleDocs: "Vehicle documents",
-    verified: "verified", submitted: "Submitted", fleet: "Fleet", yourVehicles: "Your vehicles", total: "total", noVehicle: "No vehicle assigned",
-    noVehicleHelp: "Vehicle assignment or onboarding completion is required from Admin/CEO.", identityChecklist: "Identity checklist", vehicleChecklist: "Vehicle checklist",
-    chooseVehicle: "No vehicle selected", chooseVehicleHelp: "Select a vehicle to view its document status.", uploadNote: "Document upload/replacement:", uploadHelp: "A new file becomes Pending and waits for Admin/CEO review. Replacing a verified document does not inherit its previous verification.",
-    plate: "Plate", type: "Type", capacity: "Capacity", expiry: "Expiry", missing: "Missing", pending: "Pending", docVerified: "Verified", rejected: "Rejected", expired: "Expired",
-    preview: "Preview", replace: "Replace", upload: "Upload", notFound: "This document is not available in the mobile profile.", reason: "Reason",
-    expiryAttention: "Document expiry attention", expiryHelp: "Expired evidence is not counted as verified. Upload a replacement before expiry.",
-    approvedDetail: "Driver account is approved to accept work.", pendingDetail: "Waiting for Admin/CEO verification.", rejectedDetail: "Driver profile was rejected; correct the documents and profile information.", suspendedDetail: "Driver account cannot accept work right now."
-  },
-  om: {
-    eyebrow: "Profaayilii Driver", title: "Eenyummaa fi mirkaneessa", help: "Odeeffannoo database fi haala mirkaneessa Admin/CEO yeroo dhugaa ilaali.",
-    loading: "Profaayilii Driver fe'aa jira…", preferredVehicle: "Konkolaataa filatamaa", memberSince: "Miseensa ta'e", driverDocs: "Dokumentii Driver", vehicleDocs: "Dokumentii konkolaataa",
-    verified: "mirkanaa'e", submitted: "Ergame", fleet: "Fleet", yourVehicles: "Konkolaataa kee", total: "waliigala", noVehicle: "Konkolaataan hin ramadamne",
-    noVehicleHelp: "Ramaddii konkolaataa ykn xumura onboarding Admin/CEO irraa barbaachisa.", identityChecklist: "Tarree eenyummaa", vehicleChecklist: "Tarree konkolaataa",
-    chooseVehicle: "Konkolaataan hin filatamne", chooseVehicleHelp: "Haala dokumentii isaa ilaaluuf konkolaataa fili.", uploadNote: "Dokumentii galchuu/bakka buusuu:", uploadHelp: "Faayilli haaraan Pending ta'ee ilaallamuuf Admin/CEO eeggata. Dokumentii mirkanaa'e bakka buusuun mirkaneessa duraanii hin dhaalu.",
-    plate: "Plate", type: "Gosa", capacity: "Dandeettii", expiry: "Guyyaa xumuraa", missing: "Hin galmoofne", pending: "Eeggachaa jira", docVerified: "Mirkanaa'e", rejected: "Deebi'e", expired: "Yeroon darbe",
-    preview: "Ilaali", replace: "Jijjiiri", upload: "Galchi", notFound: "Dokumentiin kun mobile profile irratti hin argamne.", reason: "Sababa",
-    expiryAttention: "Dokumentii yeroo xumuraa ilaali", expiryHelp: "Dokumentiin yeroon darbe verified keessatti hin lakkaa'amu. Xumuramuu dura bakka buusi.",
-    approvedDetail: "Account Driver hojii fudhachuuf eeyyamameera.", pendingDetail: "Mirkaneessa Admin/CEO eeggachaa jira.", rejectedDetail: "Profaayiliin Driver deebi'eera; dokumentii fi odeeffannoo sirreessi.", suspendedDetail: "Account Driver yeroo ammaa hojii fudhachuu hin danda'u."
-  },
-  am: {
-    eyebrow: "የአሽከርካሪ ፕሮፋይል", title: "መታወቂያ እና ማረጋገጫ", help: "የዳታቤዝ ፕሮፋይልዎን እና የAdmin/CEO ማረጋገጫ ሁኔታን በቀጥታ ይመልከቱ።",
-    loading: "የአሽከርካሪ ፕሮፋይል በመጫን ላይ…", preferredVehicle: "ተመራጭ መኪና", memberSince: "አባል ከ", driverDocs: "የአሽከርካሪ ሰነዶች", vehicleDocs: "የመኪና ሰነዶች",
-    verified: "ተረጋግጧል", submitted: "ተልኳል", fleet: "Fleet", yourVehicles: "የእርስዎ መኪና", total: "ጠቅላላ", noVehicle: "የተመደበ መኪና የለም",
-    noVehicleHelp: "ከAdmin/CEO የመኪና ምደባ ወይም onboarding ማጠናቀቅ ያስፈልጋል።", identityChecklist: "የመታወቂያ ዝርዝር", vehicleChecklist: "የመኪና ዝርዝር",
-    chooseVehicle: "መኪና አልተመረጠም", chooseVehicleHelp: "የሰነድ ሁኔታውን ለማየት መኪና ይምረጡ።", uploadNote: "ሰነድ መጫን/መተካት:", uploadHelp: "አዲስ ፋይል Pending ሆኖ የAdmin/CEO ግምገማን ይጠብቃል። የተረጋገጠ ሰነድ መተካት የቀድሞውን ማረጋገጫ አይወርስም።",
-    plate: "ታርጋ", type: "ዓይነት", capacity: "አቅም", expiry: "የሚያበቃበት", missing: "የለም", pending: "በመጠበቅ ላይ", docVerified: "ተረጋግጧል", rejected: "ውድቅ ተደርጓል", expired: "ጊዜው አልፏል",
-    preview: "ይመልከቱ", replace: "ይተኩ", upload: "ይጫኑ", notFound: "ይህ ሰነድ በmobile profile ውስጥ አልተገኘም።", reason: "ምክንያት",
-    expiryAttention: "የሰነድ ማብቂያ ማስጠንቀቂያ", expiryHelp: "ጊዜው ያለፈ ማስረጃ እንደ verified አይቆጠርም። ከማብቃቱ በፊት ይተኩ።",
-    approvedDetail: "የአሽከርካሪ መለያ ስራ ለመቀበል ተፈቅዷል።", pendingDetail: "የAdmin/CEO ማረጋገጫን በመጠበቅ ላይ።", rejectedDetail: "የአሽከርካሪ ፕሮፋይል ውድቅ ተደርጓል፤ ሰነዶችን እና መረጃን ያስተካክሉ።", suspendedDetail: "የአሽከርካሪ መለያ አሁን ስራ መቀበል አይችልም።"
-  }
-} as const;
-
-const documentLabelsByLanguage: Record<DriverLanguage, Record<VerificationDocumentKey, string>> = {
-  en: { driver_photo:"Driver profile photo", license_front:"Driving license — front", license_back:"Driving license — back", national_id_front:"National ID — front", national_id_back:"National ID — back", vehicle_registration:"Vehicle registration", insurance:"Insurance", transport_permit:"Transport permit", truck_front:"Truck photo — front", truck_back:"Truck photo — back", truck_side:"Truck photo — side", truck_loading_area:"Loading area photo" },
-  om: documentLabels,
-  am: { driver_photo:"የአሽከርካሪ ፕሮፋይል ፎቶ", license_front:"መንጃ ፈቃድ — ፊት", license_back:"መንጃ ፈቃድ — ጀርባ", national_id_front:"ብሔራዊ መታወቂያ — ፊት", national_id_back:"ብሔራዊ መታወቂያ — ጀርባ", vehicle_registration:"የመኪና ምዝገባ", insurance:"ኢንሹራንስ", transport_permit:"የትራንስፖርት ፈቃድ", truck_front:"የመኪና ፎቶ — ፊት", truck_back:"የመኪና ፎቶ — ጀርባ", truck_side:"የመኪና ፎቶ — ጎን", truck_loading_area:"የመጫኛ ቦታ ፎቶ" }
-};
-
-const healthCopy: Record<DocumentHealth, { label: string; className: string }> = {
-  missing: { label: "Hin galmoofne", className: "bg-slate-100 text-slate-600" },
-  pending: { label: "Eeggachaa jira", className: "bg-amber-50 text-amber-800" },
-  verified: { label: "Mirkanaa'e", className: "bg-emerald-50 text-emerald-700" },
-  rejected: { label: "Deebi'e", className: "bg-red-50 text-red-700" },
-  expired: { label: "Yeroon darbe", className: "bg-red-50 text-red-700" },
-};
-
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.trim() ? error.message : fallback;
+function errorMessage(_error: unknown, fallback: string): string {
+  return fallback;
 }
 
-function formatDate(value: string | null): string {
+function localeFor(language: DriverLanguage) {
+  return language === "am" ? "am-ET" : language === "om" ? "om-ET" : "en-GB";
+}
+
+function formatDate(value: string | null, language: DriverLanguage): string {
   if (!value) return "—";
   const parsed = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
   if (Number.isNaN(parsed.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
+  return new Intl.DateTimeFormat(localeFor(language), {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsed);
 }
 
 function statusCopy(status: DriverProfileRecord["driverStatus"], language: DriverLanguage) {
-  const c = profileCopy[language];
-  if (status === "approved") return { label: "APPROVED", detail: c.approvedDetail, className: "bg-emerald-50 text-emerald-700" };
-  if (status === "pending") return { label: "PENDING", detail: c.pendingDetail, className: "bg-amber-50 text-amber-800" };
-  if (status === "rejected") return { label: "REJECTED", detail: "Driver profile deebi'eera; dokumentii fi odeeffannoo sirreessi.", className: "bg-red-50 text-red-700" };
-  return { label: "SUSPENDED", detail: "Driver account yeroo ammaa hojii fudhachuu hin danda'u.", className: "bg-red-50 text-red-700" };
+  const t = getDriverV4Copy(language);
+  if (status === "approved") return { label: t.common.approved, detail: t.profile.approvedDetail, className: "bg-emerald-50 text-emerald-700" };
+  if (status === "pending") return { label: t.common.pending, detail: t.profile.pendingDetail, className: "bg-amber-50 text-amber-800" };
+  if (status === "rejected") return { label: t.common.rejected, detail: t.profile.rejectedDetail, className: "bg-red-50 text-red-700" };
+  return { label: t.common.suspended, detail: t.profile.suspendedDetail, className: "bg-red-50 text-red-700" };
 }
 
-function ProgressCard({ title, verified, submitted, total, language }: { title: string; verified: number; submitted: number; total: number; language: DriverLanguage }) {
-  const c = profileCopy[language];
+function vehicleStatusLabel(status: string | null, language: DriverLanguage) {
+  const p = getDriverV4Copy(language).profile;
+  const normalized = status?.toLowerCase().replace(/[- ]+/g, "_") ?? "";
+  if (normalized === "available") return p.vehicleAvailable;
+  if (normalized === "assigned") return p.vehicleAssigned;
+  if (normalized === "on_trip" || normalized === "in_transit") return p.vehicleOnTrip;
+  if (normalized === "maintenance") return p.vehicleMaintenance;
+  if (normalized === "suspended") return p.vehicleSuspended;
+  if (normalized === "inactive") return p.vehicleInactive;
+  return p.vehicleStatus;
+}
+
+function ProgressCard({ title, verified, submitted, total, language }: {
+  title: string;
+  verified: number;
+  submitted: number;
+  total: number;
+  language: DriverLanguage;
+}) {
+  const p = getDriverV4Copy(language).profile;
   const percent = total > 0 ? Math.round((verified / total) * 100) : 0;
   return <div className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card">
-    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">{title}</p><p className="mt-2 text-xl font-black text-halo-navy">{verified}/{total} {c.verified}</p></div><span className="rounded-xl bg-halo-soft px-3 py-2 text-xs font-black text-halo-blue">{percent}%</span></div>
+    <div className="flex items-start justify-between gap-3">
+      <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">{title}</p><p className="mt-2 text-xl font-black text-halo-navy">{verified}/{total} {p.verified}</p></div>
+      <span className="rounded-xl bg-halo-soft px-3 py-2 text-xs font-black text-halo-blue">{percent}%</span>
+    </div>
     <div className="mt-4 h-2 overflow-hidden rounded-full bg-halo-line"><div className="h-full rounded-full bg-halo-blue transition-all" style={{ width: `${percent}%` }} /></div>
-    <p className="mt-2 text-[10px] text-halo-muted">{c.submitted}: {submitted}/{total}</p>
+    <p className="mt-2 text-[10px] text-halo-muted">{p.submitted}: {submitted}/{total}</p>
   </div>;
 }
 
-function SourceError({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50 p-3"><p className="min-w-0 flex-1 text-xs font-bold leading-5 text-red-700">{message}</p><button type="button" onClick={onRetry} className="min-h-10 shrink-0 rounded-xl bg-white px-3 text-[10px] font-black text-red-700 shadow-sm">Retry</button></div>;
+function SourceError({ message, retryLabel, onRetry }: { message: string; retryLabel: string; onRetry: () => void }) {
+  return <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50 p-3">
+    <p className="min-w-0 flex-1 text-xs font-bold leading-5 text-red-700">{message}</p>
+    <button type="button" onClick={onRetry} className="min-h-10 shrink-0 rounded-xl bg-white px-3 text-[10px] font-black text-red-700 shadow-sm">{retryLabel}</button>
+  </div>;
 }
 
 function DocumentRow({
@@ -140,38 +117,67 @@ function DocumentRow({
   uploadDisabled?: boolean;
   language: DriverLanguage;
 }) {
-  const c = profileCopy[language];
-  const localizedLabels = documentLabelsByLanguage[language];
+  const t = getDriverV4Copy(language);
+  const p = t.profile;
   const health = documentHealth(record);
-  const copy = healthCopy[health];
-  const healthLabel = health === "missing" ? c.missing : health === "pending" ? c.pending : health === "verified" ? c.docVerified : health === "rejected" ? c.rejected : c.expired;
+  const className = healthClass[health];
+  const healthLabel = health === "missing" ? p.missing : health === "pending" ? p.pending : health === "verified" ? p.docVerified : health === "rejected" ? p.rejected : p.expired;
   const expiry = documentExpiryWarning(record);
   const expiryMessage = expiry.level === "expired"
-    ? "Yeroon isaa darbeera — document haaraa galchi."
-    : expiry.level === "critical"
+    ? p.expiredMessage
+    : expiry.level === "critical" || expiry.level === "soon"
       ? expiry.daysRemaining === 0
-        ? "Har'a xumurama."
-        : `Guyyaa ${expiry.daysRemaining} keessatti xumurama.`
-      : expiry.level === "soon"
-        ? `Guyyaa ${expiry.daysRemaining} keessatti xumurama.`
-        : null;
+        ? p.expiresToday
+        : `${p.expiresIn} ${expiry.daysRemaining} ${p.days}`
+      : null;
   const expiryClass = expiry.level === "expired" || expiry.level === "critical"
     ? "border-red-100 bg-red-50 text-red-700"
     : "border-amber-100 bg-amber-50 text-amber-800";
+
   return <article className="border-t border-halo-line px-4 py-3 first:border-t-0">
-    <div className="flex items-start gap-3"><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ${copy.className}`}>{health === "verified" ? "✓" : health === "rejected" || health === "expired" ? "!" : "•"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-extrabold leading-5 text-halo-navy">{localizedLabels[documentKey]}</p><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${copy.className}`}>{healthLabel}</span></div>{record?.expiryDate && <p className="mt-1 text-[10px] text-halo-muted">{c.expiry}: {formatDate(record.expiryDate)}</p>}{expiryMessage && <p className={`mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-4 ${expiryClass}`}>{expiryMessage}</p>}{record?.rejectionReason && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold leading-4 text-red-700">{c.reason}: {record.rejectionReason}</p>}{!record && <p className="mt-1 text-[10px] text-halo-muted">{c.notFound}</p>}<div className="mt-3 flex flex-wrap gap-2">{record && <button type="button" onClick={onPreview} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">{c.preview}</button>}<button type="button" onClick={onUpload} disabled={uploadDisabled} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{record ? c.replace : c.upload}</button></div></div></div>
+    <div className="flex items-start gap-3">
+      <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ${className}`}>{health === "verified" ? "✓" : health === "rejected" || health === "expired" ? "!" : "•"}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="text-sm font-extrabold leading-5 text-halo-navy">{t.documents[documentKey]}</p>
+          <span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${className}`}>{healthLabel}</span>
+        </div>
+        {record?.expiryDate && <p className="mt-1 text-[10px] text-halo-muted">{p.expiry}: {formatDate(record.expiryDate, language)}</p>}
+        {expiryMessage && <p className={`mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-4 ${expiryClass}`}>{expiryMessage}</p>}
+        {record?.rejectionReason && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold leading-4 text-red-700">{p.reason}: {record.rejectionReason}</p>}
+        {!record && <p className="mt-1 text-[10px] text-halo-muted">{p.notFound}</p>}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {record && <button type="button" onClick={onPreview} className="min-h-10 rounded-xl bg-halo-soft px-3 text-[10px] font-black text-halo-blue">{p.preview}</button>}
+          <button type="button" onClick={onUpload} disabled={uploadDisabled} className="min-h-10 rounded-xl border border-halo-line bg-white px-3 text-[10px] font-black text-halo-blue shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{record ? p.replace : p.upload}</button>
+        </div>
+      </div>
+    </div>
   </article>;
 }
 
-function TruckCard({ truck, selected, onSelect, language }: { truck: DriverTruckRecord; selected: boolean; onSelect: () => void; language: DriverLanguage }) {
-  const c = profileCopy[language];
+function TruckCard({ truck, selected, onSelect, language }: {
+  truck: DriverTruckRecord;
+  selected: boolean;
+  onSelect: () => void;
+  language: DriverLanguage;
+}) {
+  const p = getDriverV4Copy(language).profile;
+  const capacity = truck.capacityTons === null
+    ? "—"
+    : `${Number.isInteger(truck.capacityTons) ? truck.capacityTons.toFixed(0) : truck.capacityTons.toFixed(1)} t`;
   return <button type="button" onClick={onSelect} aria-pressed={selected} className={`min-w-[230px] rounded-[22px] border p-4 text-left shadow-halo-card transition ${selected ? "border-halo-blue bg-halo-soft" : "border-halo-line bg-white"}`}>
-    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">{c.plate}</p><p className="mt-1 text-lg font-black text-halo-navy">{truck.plateNumber}</p></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${selected ? "bg-halo-blue text-white" : "bg-slate-100 text-slate-600"}`}>{truck.status?.replace(/_/g, " ").toUpperCase() || "STATUS —"}</span></div>
-    <div className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><p className="text-[9px] font-bold uppercase tracking-wider text-halo-muted">{c.type}</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(truck.vehicleType)}</p></div><div><p className="text-[9px] font-bold uppercase tracking-wider text-halo-muted">{c.capacity}</p><p className="mt-1 font-extrabold text-halo-navy">{formatCapacityTons(truck.capacityTons)}</p></div></div>
+    <div className="flex items-start justify-between gap-3">
+      <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-muted">{p.plate}</p><p className="mt-1 text-lg font-black text-halo-navy">{truck.plateNumber}</p></div>
+      <span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${selected ? "bg-halo-blue text-white" : "bg-slate-100 text-slate-600"}`}>{vehicleStatusLabel(truck.status, language)}</span>
+    </div>
+    <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+      <div><p className="text-[9px] font-bold uppercase tracking-wider text-halo-muted">{p.type}</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(truck.vehicleType)}</p></div>
+      <div><p className="text-[9px] font-bold uppercase tracking-wider text-halo-muted">{p.capacity}</p><p className="mt-1 font-extrabold text-halo-navy">{capacity}</p></div>
+    </div>
   </button>;
 }
 
-export function DriverProfileView({ userId, fallbackName, language = "om" }: { userId: string; fallbackName: string; language?: "om" | "en" | "am" }) {
+export function DriverProfileView({ userId, fallbackName, language = "om" }: { userId: string; fallbackName: string; language?: DriverLanguage }) {
   const mountedRef = useRef(false);
   const refreshInFlightRef = useRef(false);
   const queuedRefreshRef = useRef(false);
@@ -179,6 +185,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   const [profile, setProfile] = useState<DriverProfileRecord | null>(null);
   const [trucks, setTrucks] = useState<DriverTruckRecord[]>([]);
   const [documents, setDocuments] = useState<DriverVerificationRecord[]>([]);
+  const [ratingSummary, setRatingSummary] = useState<DriverRatingSummary | null>(null);
   const [profileConfirmed, setProfileConfirmed] = useState(false);
   const [trucksConfirmed, setTrucksConfirmed] = useState(false);
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
@@ -190,6 +197,15 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   const [uploadTarget, setUploadTarget] = useState<{ documentKey: VerificationDocumentKey; truckId: string | null; record: DriverVerificationRecord | undefined } | null>(null);
   const [previewTarget, setPreviewTarget] = useState<{ documentKey: VerificationDocumentKey; record: DriverVerificationRecord } | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [vehicleNotice, setVehicleNotice] = useState<string | null>(null);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
+  const [savingVehicle, setSavingVehicle] = useState(false);
+  const [plateNumber, setPlateNumber] = useState("");
+  const [vehicleType, setVehicleType] = useState<string>(DRIVER_VEHICLE_TYPES[0]);
+  const [capacityTons, setCapacityTons] = useState("5");
+  const t = getDriverV4Copy(language);
+  const c = t.profile;
+  const p = c;
 
   const refresh = useCallback(async () => {
     if (refreshInFlightRef.current) {
@@ -200,10 +216,11 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
     const requestId = ++requestIdRef.current;
     if (!profileConfirmed && !trucksConfirmed && !documentsConfirmed) setLoading(true);
 
-    const [profileResult, trucksResult, documentsResult] = await Promise.allSettled([
+    const [profileResult, trucksResult, documentsResult, ratingResult] = await Promise.allSettled([
       fetchDriverProfile(userId),
       fetchDriverTrucks(userId),
       fetchDriverVerificationFiles(userId),
+      fetchDriverRatingSummary(userId),
     ]);
 
     if (!mountedRef.current || requestId !== requestIdRef.current) {
@@ -216,7 +233,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       setProfileConfirmed(true);
       setProfileError(null);
     } else {
-      setProfileError(errorMessage(profileResult.reason, "Driver profile fe'uun hin danda'amne."));
+      setProfileError(errorMessage(profileResult.reason, c.profileError));
     }
 
     if (trucksResult.status === "fulfilled") {
@@ -227,7 +244,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
         ? current
         : trucksResult.value[0]?.id ?? null);
     } else {
-      setTrucksError(errorMessage(trucksResult.reason, "Konkolaataa Driver fe'uun hin danda'amne."));
+      setTrucksError(errorMessage(trucksResult.reason, c.trucksError));
     }
 
     if (documentsResult.status === "fulfilled") {
@@ -235,8 +252,10 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       setDocumentsConfirmed(true);
       setDocumentsError(null);
     } else {
-      setDocumentsError(errorMessage(documentsResult.reason, "Document status fe'uun hin danda'amne."));
+      setDocumentsError(errorMessage(documentsResult.reason, c.documentsError));
     }
+
+    if (ratingResult.status === "fulfilled") setRatingSummary(ratingResult.value);
 
     setLoading(false);
     refreshInFlightRef.current = false;
@@ -244,7 +263,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       queuedRefreshRef.current = false;
       window.setTimeout(() => void refresh(), 0);
     }
-  }, [documentsConfirmed, profileConfirmed, trucksConfirmed, userId]);
+  }, [c.documentsError, c.profileError, c.trucksError, documentsConfirmed, profileConfirmed, trucksConfirmed, userId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -254,7 +273,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
     try {
       unsubscribe = subscribeToDriverProfile(userId, () => void refresh());
     } catch (caught) {
-      setProfileError(errorMessage(caught, "Profile realtime jalqabuun hin danda'amne."));
+      setProfileError(errorMessage(caught, c.realtimeError));
     }
     return () => {
       mountedRef.current = false;
@@ -262,7 +281,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       window.clearInterval(interval);
       unsubscribe();
     };
-  }, [refresh, userId]);
+  }, [c.realtimeError, refresh, userId]);
 
   const selectedTruck = useMemo(
     () => trucks.find((truck) => truck.id === selectedTruckId) ?? trucks[0] ?? null,
@@ -278,10 +297,27 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   );
   const expirySummary = useMemo(() => documentExpirySummary(documents), [documents]);
   const expiryWarningCount = expirySummary.expired + expirySummary.critical + expirySummary.soon;
-  const c = profileCopy[language];
-  const localizedDocumentLabels = documentLabelsByLanguage[language];
+  const localizedDocumentLabels = t.documents;
   const profileStatus = profile ? statusCopy(profile.driverStatus, language) : null;
   const initials = (profile?.fullName || fallbackName).trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toUpperCase()).join("") || "D";
+
+  async function handleVehicleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (savingVehicle) return;
+    setSavingVehicle(true);
+    setVehicleError(null);
+    setVehicleNotice(null);
+    try {
+      const saved = await saveDriverVehicleProfile(userId, { plateNumber, vehicleType, capacityTons: Number(capacityTons) });
+      setSelectedTruckId(saved.id);
+      setVehicleNotice(p.vehicleSaved);
+      await refresh();
+    } catch {
+      setVehicleError(p.vehicleSaveError);
+    } finally {
+      setSavingVehicle(false);
+    }
+  }
 
   if (loading && !profileConfirmed && !trucksConfirmed && !documentsConfirmed) {
     return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-6 text-center"><div><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-halo-line border-t-halo-blue"/><p className="mt-4 text-sm font-bold text-halo-muted">{c.loading}</p></div></div>;
@@ -291,19 +327,30 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
     <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{c.eyebrow}</p><h1 className="mt-1 text-2xl font-black text-halo-navy">{c.title}</h1><p className="mt-2 text-xs leading-5 text-halo-muted">{c.help}</p></div>
 
     {uploadNotice && <div role="status" className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-700">{uploadNotice}</div>}
-    {profileError && <SourceError message={profileError} onRetry={() => void refresh()} />}
+    {profileError && <SourceError message={profileError} retryLabel={t.common.retry} onRetry={() => void refresh()} />}
     <section className="rounded-[28px] border border-halo-line bg-white p-4 shadow-halo-card">
-      <div className="flex items-start gap-4"><span className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-halo-blue text-lg font-black text-white">{initials}</span><div className="min-w-0 flex-1"><h2 className="break-words text-xl font-black text-halo-navy">{profile?.fullName || fallbackName}</h2><p className="mt-1 break-all text-xs text-halo-muted">{profile?.phone || "Phone —"}</p>{profileStatus && <><span className={`mt-3 inline-flex rounded-full px-3 py-1.5 text-[9px] font-black ${profileStatus.className}`}>{profileStatus.label}</span><p className="mt-2 text-[10px] leading-4 text-halo-muted">{profileStatus.detail}</p></>}</div>{profile?.ratingAvg !== null && profile?.ratingAvg !== undefined && <span className="shrink-0 rounded-xl bg-halo-gold-soft px-3 py-2 text-xs font-black text-halo-gold-dark">{profile.ratingAvg.toFixed(1)} ★</span>}</div>
-      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-halo-line pt-4 text-xs"><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">Preferred vehicle</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(profile?.vehicleType ?? null)}</p></div><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">Member since</p><p className="mt-1 font-extrabold text-halo-navy">{formatDate(profile?.createdAt ?? null)}</p></div></div>
+      <div className="flex items-start gap-4"><span className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-halo-blue text-lg font-black text-white">{initials}</span><div className="min-w-0 flex-1"><h2 className="break-words text-xl font-black text-halo-navy">{profile?.fullName || fallbackName}</h2><p className="mt-1 break-all text-xs text-halo-muted">{profile?.phone || `${c.phone} —`}</p>{profileStatus && <><span className={`mt-3 inline-flex rounded-full px-3 py-1.5 text-[9px] font-black ${profileStatus.className}`}>{profileStatus.label}</span><p className="mt-2 text-[10px] leading-4 text-halo-muted">{profileStatus.detail}</p></>}</div></div>
+      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-halo-line pt-4 text-xs"><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">{c.preferredVehicle}</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(profile?.vehicleType ?? null)}</p></div><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">{c.memberSince}</p><p className="mt-1 font-extrabold text-halo-navy">{formatDate(profile?.createdAt ?? null, language)}</p></div></div>
+    </section>
+
+    <section data-driver-profile-contact className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2">
+      <article className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{p.contact}</p><dl className="mt-3 space-y-3 text-xs"><div><dt className="font-black text-halo-muted">{p.phone}</dt><dd className="mt-1 break-all font-extrabold text-halo-navy">{profile?.phone || "—"}</dd></div><div><dt className="font-black text-halo-muted">{p.email}</dt><dd className="mt-1 break-all font-extrabold text-halo-navy">{profile?.email || "—"}</dd></div><div><dt className="font-black text-halo-muted">{p.homeAddress}</dt><dd className="mt-1 break-words font-extrabold text-halo-navy">{profile?.homeAddress || "—"}</dd></div></dl></article>
+      <article className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{p.rating}</p><div className="mt-2 flex items-end gap-2"><span className="text-3xl font-black text-halo-navy">{(ratingSummary?.average ?? profile?.ratingAvg)?.toFixed(1) ?? "—"}</span><span className="pb-1 text-lg text-amber-500">★</span></div><p className="mt-1 text-[10px] font-bold text-halo-muted">{ratingSummary?.count ?? 0} {p.reviews}</p>{ratingSummary && ratingSummary.recent.length > 0 ? <div className="mt-3 space-y-2">{ratingSummary.recent.map((entry, index) => <div key={index} className="rounded-xl bg-halo-soft p-2.5"><p className="text-[10px] font-black text-amber-700">{"★".repeat(Math.round(entry.score))}</p>{entry.comment && <p className="mt-1 text-[10px] leading-4 text-halo-muted">{entry.comment}</p>}</div>)}</div> : <p className="mt-3 text-[10px] text-halo-muted">{p.noRatings}</p>}</article>
     </section>
 
     <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2"><ProgressCard title={c.driverDocs} {...identityProgress} language={language} /><ProgressCard title={c.vehicleDocs} {...vehicleProgress} language={language} /></div>
 
-    {expiryWarningCount > 0 && <section data-driver-document-expiry-warning className="rounded-[22px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-lg font-black text-amber-700">!</span><div className="min-w-0"><p className="text-sm font-black text-amber-900">Document expiry attention</p><p className="mt-1 text-xs leading-5 text-amber-800">Expired: {expirySummary.expired} · 7 days keessatti: {expirySummary.critical} · 30 days keessatti: {expirySummary.soon}</p><p className="mt-2 text-[10px] leading-4 text-amber-700">Expired evidence verified count keessatti hin lakkaa'amu. Xumuramuu dura replacement galchi.</p></div></div></section>}
+    <section data-driver-current-vehicle className="rounded-[24px] border border-halo-line bg-white p-4 shadow-halo-card">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{p.currentVehicle}</p>
+      {selectedTruck ? <div className="mt-3"><TruckCard truck={selectedTruck} selected={true} onSelect={() => setSelectedTruckId(selectedTruck.id)} language={language} /></div> : <p className="mt-2 text-xs text-halo-muted">{p.noVehicle}</p>}
+      <form onSubmit={(event) => void handleVehicleSave(event)} className="mt-4 border-t border-halo-line pt-4"><h3 className="text-sm font-black text-halo-navy">{p.registerVehicle}</h3><p className="mt-1 text-[10px] leading-4 text-halo-muted">{p.registerVehicleHelp}</p>{vehicleNotice && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-2.5 text-[10px] font-bold text-emerald-700">{vehicleNotice}</p>}{vehicleError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-2.5 text-[10px] font-bold text-red-700">{vehicleError}</p>}<div className="mt-3 grid gap-3 min-[390px]:grid-cols-2"><label className="text-[10px] font-black text-halo-muted">{p.plate}<input required value={plateNumber} onChange={(e) => setPlateNumber(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line px-3 text-sm text-halo-navy" /></label><label className="text-[10px] font-black text-halo-muted">{p.vehicleType}<select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line bg-white px-3 text-sm text-halo-navy">{DRIVER_VEHICLE_TYPES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label className="text-[10px] font-black text-halo-muted min-[390px]:col-span-2">{p.capacityTons}<input required type="number" min="0.1" max="60" step="0.1" value={capacityTons} onChange={(e) => setCapacityTons(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line px-3 text-sm text-halo-navy" /></label></div><button type="submit" disabled={savingVehicle} className="mt-3 min-h-11 w-full rounded-xl bg-halo-blue px-4 text-xs font-black text-white disabled:opacity-60">{savingVehicle ? p.savingVehicle : p.saveVehicle}</button></form>
+    </section>
 
-    <section className="space-y-3"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">{c.fleet}</p><h2 className="mt-1 text-xl font-black text-halo-navy">{c.yourVehicles}</h2></div><span className="text-xs font-bold text-halo-muted">{trucks.length} {c.total}</span></div>{trucksError && <SourceError message={trucksError} onRetry={() => void refresh()} />}{trucksConfirmed && trucks.length === 0 ? <div className="rounded-[22px] border border-dashed border-halo-line bg-white p-5 text-center"><p className="text-sm font-black text-halo-navy">{c.noVehicle}</p><p className="mt-2 text-xs leading-5 text-halo-muted">{c.noVehicleHelp}</p></div> : <div className="flex snap-x gap-3 overflow-x-auto pb-2">{trucks.map((truck) => <TruckCard key={truck.id} truck={truck} selected={selectedTruck?.id === truck.id} onSelect={() => setSelectedTruckId(truck.id)} language={language} />)}</div>}</section>
+    {expiryWarningCount > 0 && <section data-driver-document-expiry-warning className="rounded-[22px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-lg font-black text-amber-700">!</span><div className="min-w-0"><p className="text-sm font-black text-amber-900">{c.expiryAttention}</p><p className="mt-1 text-xs leading-5 text-amber-800">{c.expiryExpiredCount}: {expirySummary.expired} · {c.expiryCriticalCount}: {expirySummary.critical} · {c.expirySoonCount}: {expirySummary.soon}</p><p className="mt-2 text-[10px] leading-4 text-amber-700">{c.expiryHelp}</p></div></div></section>}
 
-    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">{c.identityChecklist}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{c.driverDocs}</h2></div>{documentsError && <div className="px-4 pb-4"><SourceError message={documentsError} onRetry={() => void refresh()} /></div>}{identityDocumentKeys.map((key) => {
+    <section className="space-y-3"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">{c.fleet}</p><h2 className="mt-1 text-xl font-black text-halo-navy">{c.yourVehicles}</h2></div><span className="text-xs font-bold text-halo-muted">{trucks.length} {c.total}</span></div>{trucksError && <SourceError message={trucksError} retryLabel={t.common.retry} onRetry={() => void refresh()} />}{trucksConfirmed && trucks.length === 0 ? <div className="rounded-[22px] border border-dashed border-halo-line bg-white p-5 text-center"><p className="text-sm font-black text-halo-navy">{c.noVehicle}</p><p className="mt-2 text-xs leading-5 text-halo-muted">{c.noVehicleHelp}</p></div> : <div className="flex snap-x gap-3 overflow-x-auto pb-2">{trucks.map((truck) => <TruckCard key={truck.id} truck={truck} selected={selectedTruck?.id === truck.id} onSelect={() => setSelectedTruckId(truck.id)} language={language} />)}</div>}</section>
+
+    <section className="overflow-hidden rounded-[24px] border border-halo-line bg-white shadow-halo-card"><div className="px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-halo-gold-dark">{c.identityChecklist}</p><h2 className="mt-1 text-lg font-black text-halo-navy">{c.driverDocs}</h2></div>{documentsError && <div className="px-4 pb-4"><SourceError message={documentsError} retryLabel={t.common.retry} onRetry={() => void refresh()} /></div>}{identityDocumentKeys.map((key) => {
   const record = documents.find((item) => item.documentKey === key && item.truckId === null);
   return <DocumentRow key={key} documentKey={key} language={language} record={record} onPreview={() => { if (record) setPreviewTarget({ documentKey: key, record }); }} onUpload={() => { setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: null, record }); }} />;
 })}</section>
@@ -313,8 +360,8 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   return <DocumentRow key={key} documentKey={key} language={language} record={record} uploadDisabled={!selectedTruck} onPreview={() => { if (record) setPreviewTarget({ documentKey: key, record }); }} onUpload={() => { if (!selectedTruck) return; setUploadNotice(null); setUploadTarget({ documentKey: key, truckId: selectedTruck.id, record }); }} />;
 })}</section>
 
-    <div className="rounded-2xl bg-halo-gold-soft p-4 text-xs leading-5 text-halo-gold-dark"><strong>Document upload/replacement:</strong> File haaraan Pending ta'ee Admin/CEO review eeggata. Verified document jijjiiruun verification duraanii hin dhaalu.</div>
-    {previewTarget && <DriverDocumentPreviewSheet expectedUserId={userId} record={previewTarget.record} documentLabel={localizedDocumentLabels[previewTarget.documentKey]} onClose={() => setPreviewTarget(null)} />}
-    {uploadTarget && <DriverDocumentUploadSheet userId={userId} documentKey={uploadTarget.documentKey} documentLabel={localizedDocumentLabels[uploadTarget.documentKey]} truckId={uploadTarget.truckId} currentRecord={uploadTarget.record} onClose={() => setUploadTarget(null)} onUploaded={async (message) => { setUploadNotice(message); setUploadTarget(null); await refresh(); }} />}
+    <div className="rounded-2xl bg-halo-gold-soft p-4 text-xs leading-5 text-halo-gold-dark"><strong>{c.uploadNote}</strong> {c.uploadHelp}</div>
+    {previewTarget && <DriverDocumentPreviewSheet expectedUserId={userId} record={previewTarget.record} documentLabel={localizedDocumentLabels[previewTarget.documentKey]} onClose={() => setPreviewTarget(null)} language={language} />}
+    {uploadTarget && <DriverDocumentUploadSheet userId={userId} documentKey={uploadTarget.documentKey} documentLabel={localizedDocumentLabels[uploadTarget.documentKey]} truckId={uploadTarget.truckId} currentRecord={uploadTarget.record} onClose={() => setUploadTarget(null)} onUploaded={async (message) => { setUploadNotice(message); setUploadTarget(null); await refresh(); }} language={language} />}
   </div>;
 }

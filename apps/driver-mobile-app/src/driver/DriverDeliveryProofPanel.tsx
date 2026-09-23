@@ -14,6 +14,7 @@ import {
   type DriverTripPaymentResult,
 } from "./driver-delivery-proof.model";
 import { submitDriverDeliveryProof } from "./driver-delivery-proof.service";
+import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
 const SIGNATURE_WIDTH = 720;
 const SIGNATURE_HEIGHT = 240;
@@ -73,10 +74,12 @@ export function DriverDeliveryProofPanel({
   trip,
   userId,
   onDelivered,
+  language = "om",
 }: {
   trip: DriverActiveTripOrder;
   userId: string;
   onDelivered: (trackingId: string) => void;
+  language?: DriverLanguage;
 }) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +98,7 @@ export function DriverDeliveryProofPanel({
   const [paymentNote, setPaymentNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const t = getDriverV4Copy(language);
 
   useEffect(() => {
     if (!photo) {
@@ -144,11 +148,11 @@ export function DriverDeliveryProofPanel({
     event.target.value = "";
     if (!selected) return;
     if (!selected.type.startsWith("image/")) {
-      setError("Delivery photo suuraa ta'uu qaba.");
+      setError(t.deliveryProof.photoTypeError);
       return;
     }
     if (selected.size > MAX_DELIVERY_PHOTO_BYTES) {
-      setError("Delivery photo 8 MB gadi ta'uu qaba.");
+      setError(t.deliveryProof.photoSizeError);
       return;
     }
     setPhoto(selected);
@@ -197,15 +201,15 @@ export function DriverDeliveryProofPanel({
     if (submittingRef.current || saving) return;
     setError("");
 
-    if (!photo) return setError("Delivery photo barbaachisa.");
-    if (!signed || !canvasRef.current) return setError("Nama fe'umsa fudhate irraa mallattoo fudhadhu.");
-    if (!paymentResult) return setError("Bu'aa kaffaltii fili.");
+    if (!photo) return setError(t.deliveryProof.photoRequired);
+    if (!signed || !canvasRef.current) return setError(t.deliveryProof.signatureRequired);
+    if (!paymentResult) return setError(t.deliveryProof.paymentRequired);
 
     submittingRef.current = true;
     setSaving(true);
     try {
       const signature = await canvasBlob(canvasRef.current);
-      if (!signature?.size) throw new Error("Mallattoo suuraatti jijjiiruun hin danda'amne.");
+      if (!signature?.size) throw new Error(t.deliveryProof.signatureBlobError);
 
       const draft: DriverDeliveryProofDraft = {
         recipientName,
@@ -224,18 +228,18 @@ export function DriverDeliveryProofPanel({
       setOpen(false);
       onDelivered(trip.trackingId);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Trip xumuruun hin danda'amne.");
+      setError(t.deliveryProof.completeError);
       setSaving(false);
       submittingRef.current = false;
     }
   }
 
   const positivePaymentTitle = trip.selectedPaymentMethod === "cash"
-    ? "Maallaqni callaan fudhatame"
-    : "Bank / Telebirr mirkanaa'e";
+    ? t.deliveryProof.cashReceivedTitle
+    : t.deliveryProof.bankConfirmedTitle;
   const positivePaymentHelp = trip.selectedPaymentMethod === "cash"
-    ? `Maallaqa sirrii ${formatEtb(trip.priceEtb)} harkaan fudhadheera.`
-    : `Kaffaltii platform Bank / Telebirr ${formatEtb(trip.priceEtb)} irratti mirkaneessi.`;
+    ? `${t.deliveryProof.cashReceivedHelp} ${formatEtb(trip.priceEtb)}`
+    : `${t.deliveryProof.bankConfirmedHelp} ${formatEtb(trip.priceEtb)}`;
   const positivePaymentValue: DriverTripPaymentResult = trip.selectedPaymentMethod === "cash"
     ? "cash_received"
     : "bank_telebirr";
@@ -247,7 +251,7 @@ export function DriverDeliveryProofPanel({
       className="mt-4 min-h-14 w-full rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-halo-button active:scale-[0.99]"
       data-mobile-finish-trip-action
     >
-      Geessuu xumuri · Ragaa galchi
+      {t.deliveryProof.action}
     </button>
 
     {open && <div className="fixed inset-0 z-[100] bg-halo-navy/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="mobile-delivery-proof-title">
@@ -255,51 +259,51 @@ export function DriverDeliveryProofPanel({
         <header className="sticky top-0 z-10 border-b border-halo-line bg-white/95 px-4 pb-4 pt-4 backdrop-blur-xl sm:px-6">
           <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
           <div className="flex items-start justify-between gap-4">
-            <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{trip.trackingId}</p><h2 id="mobile-delivery-proof-title" className="mt-1 text-xl font-black text-halo-navy">Ragaa geessuu fi Trip xumuri</h2><p className="mt-1 text-xs leading-5 text-halo-muted">Receiver, photo, signature fi bu'aa kaffaltii servertti yeroo tokkoon olkaa'i.</p></div>
-            <button type="button" onClick={closePanel} disabled={saving} aria-label="Close delivery proof" className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-halo-line bg-white text-xl font-black text-halo-navy disabled:opacity-50">×</button>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{trip.trackingId}</p><h2 id="mobile-delivery-proof-title" className="mt-1 text-xl font-black text-halo-navy">{t.deliveryProof.title}</h2><p className="mt-1 text-xs leading-5 text-halo-muted">{t.deliveryProof.subtitle}</p></div>
+            <button type="button" onClick={closePanel} disabled={saving} aria-label={t.deliveryProof.close} className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-halo-line bg-white text-xl font-black text-halo-navy disabled:opacity-50">×</button>
           </div>
           <div className="mt-4 flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-halo-line"><div className="h-full bg-emerald-500 transition-all" style={{ width: `${progress * 25}%` }} /></div><span className="text-xs font-black text-halo-blue">{progress}/4</span></div>
         </header>
 
         <form onSubmit={submit} aria-busy={saving} className="space-y-4 px-4 pb-[calc(32px+env(safe-area-inset-bottom))] pt-5 sm:px-6">
           {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-5 text-red-700">{error}</p>}
-          {saving && <p role="status" aria-live="polite" className="rounded-2xl border border-halo-blue/20 bg-halo-soft px-4 py-3 text-sm font-bold text-halo-blue">Ragaa geessuu, payment result fi trip completion olkaa'aa jira. Actions hundi yeroo muraasaaf cufamaniiru.</p>}
+          {saving && <p role="status" aria-live="polite" className="rounded-2xl border border-halo-blue/20 bg-halo-soft px-4 py-3 text-sm font-bold text-halo-blue">{t.deliveryProof.savingStatus}</p>}
 
           <section className={`rounded-[24px] border p-4 ${receiverReady ? "border-emerald-200 bg-emerald-50" : "border-halo-line bg-white"}`}>
-            <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">1. Nama fe'umsa fudhate</h3><span className={`text-[10px] font-black ${receiverReady ? "text-emerald-700" : "text-halo-muted"}`}>{receiverReady ? "QOPHAA'E" : "BARBAACHISA"}</span></div>
-            <label className="mt-4 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">Maqaa receiver<input value={recipientName} onChange={(event) => { setRecipientName(event.target.value); setError(""); }} minLength={2} maxLength={120} autoComplete="name" disabled={saving} className="mt-2 min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder="Fakkeenya: Abdisa Tola" /></label>
-            <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">Yaada geessuu — filannoo<textarea value={deliveryNote} onChange={(event) => setDeliveryNote(event.target.value)} maxLength={1000} disabled={saving} rows={3} className="mt-2 w-full rounded-2xl border border-halo-line bg-white p-4 text-sm font-medium normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder="Haala fe'umsaa ykn bakka kenname…" /></label>
+            <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">{t.deliveryProof.receiverStep}</h3><span className={`text-[10px] font-black ${receiverReady ? "text-emerald-700" : "text-halo-muted"}`}>{receiverReady ? t.deliveryProof.ready : t.deliveryProof.required}</span></div>
+            <label className="mt-4 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.receiverName}<input value={recipientName} onChange={(event) => { setRecipientName(event.target.value); setError(""); }} minLength={2} maxLength={120} autoComplete="name" disabled={saving} className="mt-2 min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={t.deliveryProof.receiverPlaceholder} /></label>
+            <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.deliveryNote}<textarea value={deliveryNote} onChange={(event) => setDeliveryNote(event.target.value)} maxLength={1000} disabled={saving} rows={3} className="mt-2 w-full rounded-2xl border border-halo-line bg-white p-4 text-sm font-medium normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={t.deliveryProof.deliveryNotePlaceholder} /></label>
           </section>
 
           <section className={`rounded-[24px] border p-4 ${photoReady ? "border-emerald-200 bg-emerald-50" : "border-halo-line bg-white"}`}>
-            <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">2. Suuraa geessuu</h3><span className={`text-[10px] font-black ${photoReady ? "text-emerald-700" : "text-halo-muted"}`}>{photoReady ? "QOPHAA'E" : "BARBAACHISA"}</span></div>
-            <p className="mt-2 text-xs leading-5 text-halo-muted">Fe'umsa fi bakka handover ifatti agarsiisu. Suuraan 8 MB gadi ta'uu qaba.</p>
+            <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">{t.deliveryProof.photoStep}</h3><span className={`text-[10px] font-black ${photoReady ? "text-emerald-700" : "text-halo-muted"}`}>{photoReady ? t.deliveryProof.ready : t.deliveryProof.required}</span></div>
+            <p className="mt-2 text-xs leading-5 text-halo-muted">{t.deliveryProof.photoHelp}</p>
             <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={choosePhoto} disabled={saving} className="sr-only" tabIndex={-1} />
             <input ref={galleryInputRef} type="file" accept="image/*" onChange={choosePhoto} disabled={saving} className="sr-only" tabIndex={-1} />
-            <div className="mt-3 grid grid-cols-2 gap-3"><button type="button" onClick={() => cameraInputRef.current?.click()} disabled={saving} className="min-h-12 rounded-2xl bg-halo-blue px-3 text-xs font-black text-white disabled:opacity-60">📷 Camera bani</button><button type="button" onClick={() => galleryInputRef.current?.click()} disabled={saving} className="min-h-12 rounded-2xl border border-halo-line bg-white px-3 text-xs font-black text-halo-navy disabled:opacity-60">🖼 Gallery keessaa</button></div>
-            {photoPreview && <div className="mt-4 overflow-hidden rounded-2xl border border-halo-line bg-white"><img src={photoPreview} alt="Selected delivery proof" className="max-h-64 w-full object-cover"/><div className="flex items-center justify-between gap-3 p-3"><span className="min-w-0 truncate text-xs font-bold text-halo-navy">{photo?.name}</span><button type="button" onClick={() => setPhoto(null)} disabled={saving} className="min-h-10 rounded-xl border border-red-200 px-3 text-xs font-black text-red-700 disabled:opacity-60">Haqi</button></div></div>}
+            <div className="mt-3 grid grid-cols-2 gap-3"><button type="button" onClick={() => cameraInputRef.current?.click()} disabled={saving} className="min-h-12 rounded-2xl bg-halo-blue px-3 text-xs font-black text-white disabled:opacity-60">{t.deliveryProof.camera}</button><button type="button" onClick={() => galleryInputRef.current?.click()} disabled={saving} className="min-h-12 rounded-2xl border border-halo-line bg-white px-3 text-xs font-black text-halo-navy disabled:opacity-60">{t.deliveryProof.gallery}</button></div>
+            {photoPreview && <div className="mt-4 overflow-hidden rounded-2xl border border-halo-line bg-white"><img src={photoPreview} alt={t.deliveryProof.photoStep} className="max-h-64 w-full object-cover"/><div className="flex items-center justify-between gap-3 p-3"><span className="min-w-0 truncate text-xs font-bold text-halo-navy">{photo?.name}</span><button type="button" onClick={() => setPhoto(null)} disabled={saving} className="min-h-10 rounded-xl border border-red-200 px-3 text-xs font-black text-red-700 disabled:opacity-60">{t.deliveryProof.remove}</button></div></div>}
           </section>
 
           <section className={`rounded-[24px] border p-4 ${signatureReady ? "border-emerald-200 bg-emerald-50" : "border-halo-line bg-white"}`}>
-            <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">3. Mallattoo receiver</h3><span className={`text-[10px] font-black ${signatureReady ? "text-emerald-700" : "text-halo-muted"}`}>{signatureReady ? "QOPHAA'E" : "BARBAACHISA"}</span></div>
-            <p className="mt-2 text-xs leading-5 text-halo-muted">Receiver quba ykn stylus fayyadamuun box kana keessatti mallatteessa.</p>
-            <canvas ref={canvasRef} onPointerDown={startSignature} onPointerMove={moveSignature} onPointerUp={stopSignature} onPointerCancel={stopSignature} onPointerLeave={stopSignature} className="mt-3 h-36 w-full touch-none rounded-2xl border-2 border-dashed border-halo-line bg-white" aria-label="Receiver signature pad" />
-            <button type="button" onClick={clearSignature} disabled={saving || !signed} className="mt-3 min-h-11 rounded-2xl border border-halo-line bg-white px-4 text-xs font-black text-halo-navy disabled:opacity-50">Mallattoo qulqulleessi</button>
+            <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">{t.deliveryProof.signatureStep}</h3><span className={`text-[10px] font-black ${signatureReady ? "text-emerald-700" : "text-halo-muted"}`}>{signatureReady ? t.deliveryProof.ready : t.deliveryProof.required}</span></div>
+            <p className="mt-2 text-xs leading-5 text-halo-muted">{t.deliveryProof.signatureHelp}</p>
+            <canvas ref={canvasRef} onPointerDown={startSignature} onPointerMove={moveSignature} onPointerUp={stopSignature} onPointerCancel={stopSignature} onPointerLeave={stopSignature} className="mt-3 h-36 w-full touch-none rounded-2xl border-2 border-dashed border-halo-line bg-white" aria-label={t.deliveryProof.signatureStep} />
+            <button type="button" onClick={clearSignature} disabled={saving || !signed} className="mt-3 min-h-11 rounded-2xl border border-halo-line bg-white px-4 text-xs font-black text-halo-navy disabled:opacity-50">{t.deliveryProof.clearSignature}</button>
           </section>
 
           <section className={`rounded-[24px] border p-4 ${paymentReady ? "border-emerald-200 bg-emerald-50" : "border-halo-line bg-white"}`}>
-            <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">4. Bu'aa kaffaltii</h3><span className={`text-[10px] font-black ${paymentReady ? "text-emerald-700" : "text-halo-muted"}`}>{paymentReady ? "FILATAME" : "BARBAACHISA"}</span></div>
-            <div className="mt-3 rounded-2xl bg-halo-soft p-3"><p className="text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">Customer filannoo</p><div className="mt-1 flex items-center justify-between gap-3"><strong className="text-sm text-halo-navy">{trip.selectedPaymentMethod === "cash" ? "Cash" : "Bank / Telebirr"}</strong><strong className="text-sm text-halo-blue">{formatEtb(trip.priceEtb)}</strong></div></div>
-            <div role="radiogroup" aria-label="Trip payment result" className="mt-3 grid gap-3">
+            <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">{t.deliveryProof.paymentStep}</h3><span className={`text-[10px] font-black ${paymentReady ? "text-emerald-700" : "text-halo-muted"}`}>{paymentReady ? t.deliveryProof.selected : t.deliveryProof.required}</span></div>
+            <div className="mt-3 rounded-2xl bg-halo-soft p-3"><p className="text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.customerChoice}</p><div className="mt-1 flex items-center justify-between gap-3"><strong className="text-sm text-halo-navy">{trip.selectedPaymentMethod === "cash" ? "Cash" : "Bank / Telebirr"}</strong><strong className="text-sm text-halo-blue">{formatEtb(trip.priceEtb)}</strong></div></div>
+            <div role="radiogroup" aria-label={t.deliveryProof.paymentStep} className="mt-3 grid gap-3">
               {allowedResults.includes(positivePaymentValue) && <PaymentChoice selected={paymentResult === positivePaymentValue} value={positivePaymentValue} title={positivePaymentTitle} help={positivePaymentHelp} onSelect={(value) => { setPaymentResult(value); setError(""); }} disabled={saving} />}
-              <PaymentChoice selected={paymentResult === "payment_not_received"} value="payment_not_received" title="Kaffaltiin hin fudhatamne" help="Trip geessuun xumurameera; kaffaltiin outstanding ta'ee Finance/Admin hordofa." onSelect={(value) => { setPaymentResult(value); setError(""); }} disabled={saving} />
+              <PaymentChoice selected={paymentResult === "payment_not_received"} value="payment_not_received" title={t.deliveryProof.paymentNotReceived} help={t.deliveryProof.paymentNotReceivedHelp} onSelect={(value) => { setPaymentResult(value); setError(""); }} disabled={saving} />
             </div>
-            {paymentResult === "cash_received" && <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">Maallaqa sirriitti fudhatame<input value={amountCollected} onChange={(event) => setAmountCollected(event.target.value)} inputMode="decimal" disabled={saving} className="mt-2 min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-black normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={trip.priceEtb === null ? "ETB" : String(trip.priceEtb)} /></label>}
-            <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">Yaada kaffaltii — filannoo<textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} maxLength={500} disabled={saving} rows={2} className="mt-2 w-full rounded-2xl border border-halo-line bg-white p-4 text-sm font-medium normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder="Reference ykn ibsa gabaabaa…" /></label>
+            {paymentResult === "cash_received" && <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.exactCash}<input value={amountCollected} onChange={(event) => setAmountCollected(event.target.value)} inputMode="decimal" disabled={saving} className="mt-2 min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-black normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={trip.priceEtb === null ? "ETB" : String(trip.priceEtb)} /></label>}
+            <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.paymentNote}<textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} maxLength={500} disabled={saving} rows={2} className="mt-2 w-full rounded-2xl border border-halo-line bg-white p-4 text-sm font-medium normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={t.deliveryProof.paymentNotePlaceholder} /></label>
           </section>
 
-          <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4"><p className="text-xs font-black text-amber-900">Mirkaneessa dhumaa</p><p className="mt-1 text-[11px] leading-5 text-amber-800">“Trip xumuri” erga tuqxee booda order Delivered ta'a; proof fi payment result immutable audit history keessatti olkaa'ama.</p></div>
-          <button type="submit" disabled={saving} className="min-h-14 w-full rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-60">{saving ? "Trip xumuraa jira…" : "Trip xumuri"}</button>
+          <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4"><p className="text-xs font-black text-amber-900">{t.deliveryProof.finalConfirm}</p><p className="mt-1 text-[11px] leading-5 text-amber-800">{t.deliveryProof.finalHelp}</p></div>
+          <button type="submit" disabled={saving} className="min-h-14 w-full rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-60">{saving ? t.deliveryProof.completingTrip : t.deliveryProof.completeTrip}</button>
         </form>
       </div>
     </div>}

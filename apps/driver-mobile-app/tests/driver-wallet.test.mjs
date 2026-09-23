@@ -54,11 +54,15 @@ test("normalizes only valid self-scoped trip result rows", () => {
     driver_net_etb: 49000,
     deposit_consumed_etb: 1000,
     commission_due_after_etb: 0,
-    orders: { tracking_id: "HT-2026-1", pickup_address: "Adama", dropoff_address: "Finfinnee" },
+    orders: { tracking_id: "HT-2026-1", pickup_address: "Adama", dropoff_address: "Finfinnee", vehicle_type: "dry_cargo", distance_km: 88.5, price_etb: 50000, cargo_description: "Coffee", selected_payment_method: "cash", accepted_at: "2026-08-31T08:00:00Z", delivered_at: "2026-08-31T10:00:00Z", truck_id: "truck-1" },
   }, { id: "broken" }]);
   assert.equal(trips.length, 1);
   assert.equal(trips[0].netEtb, 49000);
   assert.equal(trips[0].trackingId, "HT-2026-1");
+  assert.equal(trips[0].vehicleType, "dry_cargo");
+  assert.equal(trips[0].distanceKm, 88.5);
+  assert.equal(trips[0].cargoDescription, "Coffee");
+  assert.equal(trips[0].acceptedAt, "2026-08-31T08:00:00Z");
 });
 
 test("formats unknown money without a false zero", () => {
@@ -72,6 +76,9 @@ test("wallet service uses canonical self-scoped production sources", () => {
   assert.match(serviceSource, /my_driver_commission_summary/);
   assert.match(serviceSource, /driver_trip_payment_results/);
   assert.match(serviceSource, /\.eq\("assigned_driver_id", expectedUserId\)/);
+  for (const field of ["vehicle_type", "distance_km", "price_etb", "cargo_description", "selected_payment_method", "accepted_at", "delivered_at", "truck_id"]) {
+    assert.match(serviceSource, new RegExp(field));
+  }
   assert.match(serviceSource, /user\.id !== expectedUserId/);
   assert.doesNotMatch(serviceSource, /service_role|user_metadata|app_metadata/);
 });
@@ -96,6 +103,15 @@ test("wallet component loads sources independently and preserves confirmed snaps
   assert.match(componentSource, /setFinancial\(financialResult\.value\)/);
   assert.match(componentSource, /setCommission\(commissionResult\.value\)/);
   assert.match(componentSource, /setTrips\(tripsResult\.value\)/);
+});
+
+test("Driver wallet composes secure commission settlement while trip payment actions stay read-only", () => {
+  assert.match(componentSource, /DriverCommissionPaymentPanel/);
+  assert.match(componentSource, /language={language}/);
+  assert.doesNotMatch(componentSource, /DriverPendingPaymentActions/);
+  assert.doesNotMatch(componentSource, /submitDriverCommissionPayment|confirmDriverTripPayment|reportDriverTripPaymentNotReceived/);
+  assert.match(componentSource, /fetchDriverCommissionPayments/);
+  assert.match(componentSource, /fetchDriverWalletTrips/);
 });
 
 test("App routes only Driver wallet to the production wallet view", () => {

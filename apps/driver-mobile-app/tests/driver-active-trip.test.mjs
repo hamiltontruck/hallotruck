@@ -90,3 +90,14 @@ test("App routes Driver map to the real active trip component", () => {
   assert.match(appSource, /DriverActiveTripView/);
   assert.doesNotMatch(appSource, /CustomerLiveMapView|role === "customer"/);
 });
+
+
+test("localizes common navigation maneuvers and renders a real basemap component", () => {
+  const modelSource = readFileSync(new URL("../src/driver/driver-active-trip.model.ts", import.meta.url), "utf8");
+  const mapSource = readFileSync(new URL("../src/driver/DriverActiveTripMap.tsx", import.meta.url), "utf8");
+  assert.match(modelSource, /localizeRouteInstruction/);
+  assert.match(componentSource, /DriverActiveTripMap/);
+  assert.doesNotMatch(componentSource, /<svg/);
+  assert.match(mapSource, /maplibregl\.Map/);
+  assert.match(mapSource, /openfreemap|maptiler/i);
+});
