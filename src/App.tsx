@@ -20,6 +20,7 @@ import {
 } from "./pages/AdminPaymentReferenceConflicts";
 import { AdminFinanceDashboardV3 } from "./pages/AdminFinanceDashboardV3";
 import { AdminIntelligence } from "./pages/AdminIntelligence";
+import { AdminCrmRegistry } from "./pages/AdminCrmRegistry";
 import { AdminReports } from "./pages/AdminReports";
 import { AdminOrderControlQueue } from "./pages/AdminOrderControlQueue";
 import { AdminAiAssistant } from "./pages/AdminAiAssistant";
@@ -123,6 +124,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin/order-queue" element={<AdminGate><AdminToolShell><AdminOrderControlQueue /></AdminToolShell></AdminGate>} />
 <Route path="/admin/more" element={<AdminGate><AdminToolShell><AdminMore /></AdminToolShell></AdminGate>} />
 <Route path="/admin/intelligence" element={<AdminGate><AdminToolShell><AdminIntelligence /></AdminToolShell></AdminGate>} />
+<Route path="/admin/crm" element={<AdminGate><AdminToolShell><AdminCrmRegistry /></AdminToolShell></AdminGate>} />
 <Route path="/admin/ai-assistant" element={<AdminGate><AdminToolShell><AdminAiAssistant /></AdminToolShell></AdminGate>} />
 <Route path="/admin/finance" element={<AdminGate><AdminToolShell><AdminFinanceDashboardV3 /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partner-finance" element={<AdminGate><AdminToolShell><AdminPartnerFinance /></AdminToolShell></AdminGate>} />

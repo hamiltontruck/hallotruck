@@ -21,13 +21,12 @@ export function sanitizeEthiopianPhoneInput(value: string) {
 
 export function normalizeEthiopianMobile(value: string) {
   const compact = value.trim().replace(/[\s()-]/g, "");
-  if (/^09\d{8}$/.test(compact)) return `+251${compact.slice(1)}`;
-  if (/^2519\d{8}$/.test(compact)) return `+${compact}`;
-  if (/^\+2519\d{8}$/.test(compact)) return compact;
+  if (/^0[79]\d{8}$/.test(compact)) return `+251${compact.slice(1)}`;
+  if (/^251[79]\d{8}$/.test(compact)) return `+${compact}`;
+  if (/^\+251[79]\d{8}$/.test(compact)) return compact;
   return null;
 }
 
 export function isValidSixDigitPin(value: string) {
   return /^\d{6}$/.test(value);
 }
-

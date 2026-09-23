@@ -58,6 +58,7 @@ try{
   ["tests/regression/production-index-review.test.ts",path.join(outputDirectory,"production-index-review.test.mjs")],
   ["tests/regression/security-rls-final-hardening.test.ts",path.join(outputDirectory,"security-rls-final-hardening.test.mjs")],
   ["tests/regression/production-mobile-final-smoke.test.ts",path.join(outputDirectory,"production-mobile-final-smoke.test.mjs")],
+  ["tests/regression/mobile-google-crm-foundation.test.ts",path.join(outputDirectory,"mobile-google-crm-foundation.test.mjs")],
   ["tests/regression/posthog-analytics.test.ts",path.join(outputDirectory,"posthog-analytics.test.mjs")],
  ];
  for(const [source,output] of suites){const bundled=run(esbuildBinary,[source,"--bundle","--platform=node","--format=esm","--target=node22",`--outfile=${output}`]);if(!bundled)process.exit(process.exitCode||1);}

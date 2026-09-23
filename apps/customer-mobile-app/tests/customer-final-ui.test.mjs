@@ -85,7 +85,7 @@ test("final responsive CSS explicitly protects all required width classes and sa
 });
 
 test("auth includes Ethiopian phone formats, password visibility, terms and keyboard focus recovery", () => {
-  assert.match(auth, /09XXXXXXXX \/ \+2519XXXXXXXX/);
+  assert.match(auth, /09XXXXXXXX \/ 07XXXXXXXX \/ \+2519XXXXXXXX \/ \+2517XXXXXXXX/);
   assert.match(auth, /normalizeEthiopianMobile/);
   assert.match(auth, /sanitizeEthiopianPhoneInput/);
   assert.match(auth, /maxLength=\{13\}/);

@@ -98,32 +98,14 @@ begin
 end;
 $$;
 
-drop trigger if exists driver_verification_archive_trigger on public.driver_verification_files;
-create trigger driver_verification_archive_trigger
-before update or delete on public.driver_verification_files
-for each row execute function public.archive_driver_verification_version();
-
--- Preserve any document object that is referenced by the current record or audit history.
--- The existing client cleanup still works for failed uploads because those paths are unreferenced.
-drop policy if exists "driver verification storage own delete" on storage.objects;
-create policy "driver verification storage own delete"
-  on storage.objects for delete to authenticated
-  using (
-    bucket_id = 'driver-verification'
-    and split_part(name, '/', 1) = auth.uid()::text
-    and not exists (
-      select 1
-      from public.driver_verification_files current_file
-      where current_file.file_path = name
-        and current_file.driver_id = auth.uid()
-    )
-    and not exists (
-      select 1
-      from public.driver_verification_history history_file
-      where history_file.file_path = name
-        and history_file.driver_id = auth.uid()
-    )
-  );
+do $$
+begin
+  if to_regclass('public.driver_verification_files') is not null then
+    execute 'drop trigger if exists driver_verification_archive_trigger on public.driver_verification_files';
+    execute 'create trigger driver_verification_archive_trigger before update or delete on public.driver_verification_files for each row execute function public.archive_driver_verification_version()';
+  end if;
+end;
+$$;
 
 -- "Remove driver" is intentionally a reversible suspension rather than a destructive delete.
 -- This keeps orders, payments, proof-of-delivery and compliance audit records intact.
