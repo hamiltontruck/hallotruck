@@ -1,9 +1,6 @@
 export function roleDestination(
-  role: string | null | undefined,
-  currentUrl: string,
+  _role: string | null | undefined,
+  _currentUrl: string,
 ) {
-  const normalizedRole = role?.trim().toLowerCase();
-  if (normalizedRole !== "driver") return null;
-
-  return new URL("../driver-mobile/", currentUrl).href;
+  return null;
 }
