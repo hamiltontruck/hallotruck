@@ -118,7 +118,8 @@ test("service revalidates the current Driver and creates only short signed previ
   assert.match(serviceSource, /auth\.getUser\(\)/);
   assert.match(serviceSource, /auth\.getSession\(\)/);
   assert.doesNotMatch(serviceSource, /getPublicUrl|publicUrl|service_role|user_metadata|app_metadata/);
-  assert.doesNotMatch(serviceSource, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
+  assert.match(serviceSource, /\.from\("profiles"\)[\s\S]*\.update\(\{[\s\S]*full_name:[\s\S]*phone:[\s\S]*email:[\s\S]*home_address:[\s\S]*\.eq\("id", user\.id\)[\s\S]*\.eq\("role", "driver"\)/);
+  assert.doesNotMatch(serviceSource, /\.insert\(|\.upsert\(|\.delete\(/);
 });
 
 test("preview sheet is private, accessible and transient", () => {

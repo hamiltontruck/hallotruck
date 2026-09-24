@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import type { DriverCommissionPayment } from "./driver-commission-payment.model";
+import { DRIVER_COMMISSION_RECEIPT_TYPES, type DriverCommissionPayment } from "./driver-commission-payment.model";
 import { submitDriverCommissionPayment } from "./driver-commission-payment.service";
 import { formatWalletEtb } from "./driver-wallet.model";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
+
+const acceptedPaymentEvidenceTypes = new Set<string>(DRIVER_COMMISSION_RECEIPT_TYPES);
 
 function dateLabel(value: string): string {
   const date = new Date(value);
