@@ -377,8 +377,8 @@ export function DriverActiveTripView({
       if (typeof navigator.share === "function") {
         try {
           await navigator.share({
-            title: "HALLO Driver location",
-            text: trip?.trackingId ?? "HALLO Driver",
+            title: t.trip.shareTitle,
+              text: `${t.trip.shareText}: ${trip?.trackingId ?? "HALLO Driver"}`,
             url,
           });
           return;
@@ -396,7 +396,7 @@ export function DriverActiveTripView({
       if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(t.trip.shareError);
     }
-  }, [driverPosition, t.trip.locationCopied, t.trip.shareError, trip?.trackingId]);
+  }, [driverPosition, t.trip.locationCopied, t.trip.shareError, t.trip.shareText, t.trip.shareTitle, trip?.trackingId]);
 
   if (loading && !confirmedSnapshot) {
     return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-6 text-center"><div><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-halo-line border-t-halo-blue"/><p className="mt-4 text-sm font-bold text-halo-muted">{t.trip.loading}</p></div></div>;
@@ -423,6 +423,10 @@ export function DriverActiveTripView({
   const busy = gpsState === "requesting" || gpsState === "syncing";
   const statusLabel = trip.status === "in_transit" ? t.common.inTransit : t.common.assigned;
   const firstStep = route?.steps[0] ?? null;
+  const grossFare = Math.max(0, Number(trip.priceEtb ?? 0));
+  const platformCommission = Math.round(grossFare * 0.02 * 100) / 100;
+  const driverNet = Math.max(0, Math.round((grossFare - platformCommission) * 100) / 100);
+  const expectedNet = driverNet;
 
   return <div className="relative min-h-[calc(100dvh-137px)] overflow-hidden bg-[#e9f1ec]" data-mobile-driver-active-trip data-gps-state={gpsState}>
     <DriverActiveTripMap route={route} driverPosition={driverPosition} ariaLabel={t.trip.locationTitle} />
@@ -440,6 +444,14 @@ export function DriverActiveTripView({
       <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
       {error && <p role="alert" className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold leading-5 text-red-700">{error}</p>}
       <div className="grid grid-cols-3 divide-x divide-halo-line text-center"><div><p className="text-[10px] font-bold text-halo-muted">{t.trip.distance}</p><p className="mt-1 text-sm font-black text-halo-navy">{formatRouteDistance(route?.distanceKm ?? null)}</p></div><div><p className="text-[10px] font-bold text-halo-muted">{t.trip.duration}</p><p className="mt-1 text-sm font-black text-halo-navy">{formatRouteDuration(route?.durationMin ?? null)}</p></div><div><p className="text-[10px] font-bold text-halo-muted">{t.trip.price}</p><p className="mt-1 truncate px-1 text-sm font-black text-halo-navy">{formatEtb(trip.priceEtb)}</p></div></div>
+
+          <section data-driver-trip-finance className="mt-4 rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-halo-muted">{t.trip.grossFare}</span><strong className="text-sm text-halo-navy">{Math.round(grossFare).toLocaleString()} ETB</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-halo-muted">{t.trip.platformCommission}</span><strong className="text-sm text-red-700">? {Math.round(platformCommission).toLocaleString()} ETB</strong></div>
+              <div className="border-t border-halo-line pt-3"><div className="flex items-center justify-between gap-3"><span className="text-xs font-black text-halo-navy">{t.trip.expectedNet}</span><strong className="text-base text-emerald-700">{Math.round(expectedNet).toLocaleString()} ETB</strong></div><p className="mt-2 text-[10px] leading-4 text-halo-muted">{t.trip.expectedNetHelp}</p></div>
+            </div>
+          </section>
 
       <div className={`mt-4 rounded-2xl border p-4 ${gpsState === "live" ? "border-emerald-200 bg-emerald-50" : gpsState === "queued" || gpsState === "syncing" ? "border-amber-200 bg-amber-50" : "border-halo-line bg-halo-soft"}`} aria-busy={busy}>
         <div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${gpsState === "live" ? "animate-pulse bg-emerald-600" : gpsState === "queued" || gpsState === "syncing" ? "bg-amber-500" : "bg-halo-muted"}`}/><div className="min-w-0"><p className="text-sm font-black text-halo-navy">{gps.title}</p><p role="status" aria-live="polite" className="mt-1 text-[11px] leading-5 text-halo-muted">{gps.help}</p>{lastPingAt && <p className="mt-2 text-[10px] font-bold text-emerald-700">{t.trip.lastServerUpdate}: {lastPingAt}{speedKmh !== null ? ` · ${speedKmh.toFixed(1)} km/h` : ""}</p>}</div></div>
