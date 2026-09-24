@@ -68,3 +68,14 @@ test("Commission settlement keeps provider, amount, reference, receipt and histo
   assert.match(commissionPanel, /pending/i);
   assert.match(commissionPanel, /approved/i);
 });
+
+test("Driver V4 finance and visible labels do not expose replacement question-mark artifacts", () => {
+  assert.doesNotMatch(trip, />\? \{Math\.round\(platformCommission\)/);
+  assert.doesNotMatch(i18n, /Refreshing\?|Loading\?|Open Active Trip \?|Call \?|STATUS \?|Seen \?\?|Sent \?|\?\? Camera|\?\? Gallery/);
+  assert.doesNotMatch(i18n, /olkaa\?aa|\?\?\?\? \?\?\?\?\?\? \?\?\?/);
+});
+
+test("Driver V4 localized copy has no lost separator or Oromo apostrophe placeholders", () => {
+  assert.doesNotMatch(i18n, / \? /);
+  assert.doesNotMatch(i18n, /olkaa\?(?:i|ameera|uun|aa)/);
+});
