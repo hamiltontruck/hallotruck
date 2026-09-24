@@ -121,7 +121,18 @@ export function validateDriverCommissionPayment(
     throw new Error("Amount kaffaltii amma hafee caaluu hin danda'u.");
   }
   if (!draft.receipt) throw new Error("Receipt suuraa ykn PDF filadhu.");
-  if (!DRIVER_COMMISSION_RECEIPT_TYPES.includes(draft.receipt.type as typeof DRIVER_COMMISSION_RECEIPT_TYPES[number])) {
+  const declaredType = draft.receipt.type.trim().toLowerCase();
+  const lowerName = draft.receipt.name.trim().toLowerCase();
+  const inferredType = declaredType || (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")
+    ? "image/jpeg"
+    : lowerName.endsWith(".png")
+      ? "image/png"
+      : lowerName.endsWith(".webp")
+        ? "image/webp"
+        : lowerName.endsWith(".pdf")
+          ? "application/pdf"
+          : "");
+  if (!DRIVER_COMMISSION_RECEIPT_TYPES.includes(inferredType as typeof DRIVER_COMMISSION_RECEIPT_TYPES[number])) {
     throw new Error("Receipt JPG, PNG, WebP ykn PDF qofa ta'uu qaba.");
   }
   if (!Number.isFinite(draft.receipt.size) || draft.receipt.size <= 0) {
@@ -131,7 +142,7 @@ export function validateDriverCommissionPayment(
     throw new Error("Receipt 10 MB caaluu hin qabu.");
   }
 
-  return { provider, transactionId, amountEtb, receipt: draft.receipt };
+  return { provider, transactionId, amountEtb, receipt: { ...draft.receipt, type: inferredType } };
 }
 
 export function safeDriverCommissionReceiptName(name: string): string {
