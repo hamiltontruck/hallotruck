@@ -63,7 +63,7 @@ export function CustomerTrackingPage({ userId, initialOrderId, onHome, onOrders 
   return (
     <main className="customer-track-page">
       <section className="customer-track-route">
-        <div className="customer-track-route__top"><div><small>TRACKING / ORDER ID</small><strong>{order.tracking_id || order.id}</strong></div><div className="customer-track-route__controls"><b className="customer-track-route__status">{labelStatus(order.status)}</b><button type="button" onClick={onOrders} aria-label="Close live tracking">×</button></div></div>
+        <div className="customer-track-route__top"><div><small>TRACKING / ORDER ID</small><strong>{order.tracking_id || order.id}</strong></div><div className="customer-track-route__controls"><b className="customer-track-route__status">{labelStatus(order.status)}</b><button type="button" disabled={refreshing} onClick={() => void reload(false)} aria-label="Refresh live position">{refreshing ? "…" : "↻"}</button><button type="button" onClick={onOrders} aria-label="Close live tracking">×</button></div></div>
         <div className="customer-track-route__path"><div><small>Pickup</small><strong>{order.pickup_address || "Pickup pending"}</strong></div><span>→</span><div><small>Drop-off</small><strong>{order.dropoff_address || "Drop-off pending"}</strong></div></div>
         {state.data.orders.length > 1 && !initialOrderId && <label className="customer-track-route__select"><span>Choose active trip</span><select value={order.id} onChange={(event) => setSelectedOrderId(event.target.value)}>{state.data.orders.map((item) => <option key={item.id} value={item.id}>{item.tracking_id || labelStatus(item.status)}</option>)}</select></label>}
       </section>
