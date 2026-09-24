@@ -103,8 +103,8 @@ export function CustomerBookingJourney({
 
   const truck = customerTruckByKey(selectedTruck);
   const truckDisplayLabel = customerTruckDisplayLabel(truck, language);
-  const rawAmount = Number(cargoQuantity);
-  const cargoTons = Number.isFinite(rawAmount) && rawAmount > 0 ? cargoToTons(rawAmount, cargoUnit) : 0;
+  const rawAmount = truck.capacityTons;
+  const cargoTons = truck.capacityTons;
   const routeReady = Boolean(pickupPlace && dropoffPlace && routePreview && routePreview.distance_km > 0 && !routeLoading && !routeError);
   const cargoDetailsError = validateCustomerCargoDetails({ packagingType, vehicleType: truck.label });
   const cargoReady = Boolean(cargoCategory && packagingType && cargoTons > 0 && !cargoDetailsError);
@@ -283,7 +283,7 @@ export function CustomerBookingJourney({
           <p className="customer-final-step-help">{c.stepCargoHelp}</p>
           <label className="customer-final-select-row"><span><b>{c.cargoType}</b><small>{cargoCopy.categories[cargoCategory]}</small></span><select value={cargoCategory} onChange={(event) => setCargoCategory(event.target.value as CustomerCargoCategory)}>{CUSTOMER_CARGO_CATEGORIES.map((value) => <option value={value} key={value}>{cargoCopy.categories[value]}</option>)}</select></label>
           <div className="customer-final-weight-row">
-            <label><span>{c.totalWeight}</span><input type="number" min="0.1" step="0.1" inputMode="decimal" value={cargoQuantity} onChange={(event) => setCargoQuantity(event.target.value)} placeholder="0.0" /></label>
+            <label><span>{c.totalWeight}</span><input type="number" value={truck.capacityTons} readOnly aria-readonly="true" /></label>
             <label><span>{c.unit}</span><select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{c.ton}</option><option value="quintal">{c.quintal}</option></select></label>
           </div>
           <label className="customer-final-select-row"><span><b>{c.packagingType}</b><small>{cargoCopy.packagingTypes[packagingType]}</small></span><select value={packagingType} onChange={(event) => setPackagingType(event.target.value as CustomerPackagingType)}>{CUSTOMER_PACKAGING_TYPES.map((value) => <option value={value} key={value}>{cargoCopy.packagingTypes[value]}</option>)}</select></label>
