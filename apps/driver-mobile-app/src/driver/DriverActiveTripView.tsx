@@ -448,7 +448,7 @@ export function DriverActiveTripView({
           <section data-driver-trip-finance className="mt-4 rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card">
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-halo-muted">{t.trip.grossFare}</span><strong className="text-sm text-halo-navy">{Math.round(grossFare).toLocaleString()} ETB</strong></div>
-              <div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-halo-muted">{t.trip.platformCommission}</span><strong className="text-sm text-red-700">? {Math.round(platformCommission).toLocaleString()} ETB</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-halo-muted">{t.trip.platformCommission}</span><strong className="text-sm text-red-700">{Math.round(platformCommission).toLocaleString()} ETB</strong></div>
               <div className="border-t border-halo-line pt-3"><div className="flex items-center justify-between gap-3"><span className="text-xs font-black text-halo-navy">{t.trip.expectedNet}</span><strong className="text-base text-emerald-700">{Math.round(expectedNet).toLocaleString()} ETB</strong></div><p className="mt-2 text-[10px] leading-4 text-halo-muted">{t.trip.expectedNetHelp}</p></div>
             </div>
           </section>

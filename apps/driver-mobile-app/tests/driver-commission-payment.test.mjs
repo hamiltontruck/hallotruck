@@ -144,3 +144,18 @@ test("wallet loads commission payment history independently and exposes the secu
   assert.match(walletSource, /onSubmitted=/);
   assert.match(walletSource, /language={language}/);
 });
+
+test("accepts mobile receipt files when browser omits MIME but extension is safe", () => {
+  const result = validateDriverCommissionPayment({
+    provider: "Telebirr",
+    transactionId: "TX-MOBILE-1",
+    amountEtb: 100,
+    receipt: { name: "telebirr-receipt.jpg", size: 250_000, type: "" },
+  }, 100);
+  assert.equal(result.receipt.type, "image/jpeg");
+});
+
+test("commission submit surfaces the authoritative failure instead of hiding it", () => {
+  assert.match(panelSource, /caught instanceof Error \? caught\.message/);
+  assert.match(serviceSource, /contentType: validated\.receipt\.type/);
+});
