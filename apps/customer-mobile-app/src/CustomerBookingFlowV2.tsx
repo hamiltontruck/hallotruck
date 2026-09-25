@@ -92,6 +92,8 @@ export function CustomerBookingFlow({
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const todayServiceDate = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Addis_Ababa" });
+  const [serviceDate, setServiceDate] = useState(todayServiceDate);
   const [submitting, setSubmitting] = useState(false);
   const submitLockRef = useRef(false);
 
@@ -225,6 +227,7 @@ export function CustomerBookingFlow({
         cargoNotes,
         paymentMethod,
         expectedQuoteEtb: freshQuote.total_quote_etb,
+        serviceDate,
       });
       onOrderCreated(order);
     } catch (error) {
@@ -385,6 +388,7 @@ export function CustomerBookingFlow({
           </button>
         </div>
 
+        <label className="customer-v4-field"><span>Pickup / service date</span><input type="date" min={todayServiceDate} value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} required /></label>
         {submitError && <p role="alert" className="booking-error customer-submit-error">{submitError}</p>}
         <div className={`customer-confirm-dock ${isFormReady ? "is-ready" : "is-locked"}`}>
           <p>{isFormReady ? text.ready : text.completeRequired}</p>

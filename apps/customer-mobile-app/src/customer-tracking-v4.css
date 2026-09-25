@@ -107,3 +107,16 @@
 @media(max-width:359px){
  .customer-final-stage .customer-track-full-map .customer-track-v4__map{height:54dvh;min-height:340px}
 }
+
+/* Order-card inline live tracking preview. */
+.customer-order-live-preview{display:grid;gap:10px;margin-top:10px;border:1px solid #dfe7f1;border-radius:16px;background:#fff;padding:10px}
+.customer-order-live-preview__header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.customer-order-live-preview__header strong{color:#10213d;font-size:10px;letter-spacing:.08em}
+.customer-order-live-preview__header button,.customer-order-live-preview>button{min-height:40px;border:1px solid #dfe7f1;border-radius:12px;background:#fff;padding:0 12px;color:#0759c7;font-weight:900}
+.customer-order-live-preview>p{margin:0;color:#68778d;font-size:11px;line-height:1.45}
+.customer-order-live-preview .customer-track-v4{margin:0;gap:8px}
+.customer-order-live-preview .customer-track-v4__map-shell{border-radius:14px}
+.customer-order-live-preview .customer-track-v4__map{height:220px;min-height:220px;border-radius:14px}
+.customer-order-live-preview .customer-track-v4__legend{padding:6px 8px 8px}
+.customer-order-live-preview .customer-track-v4__last-update{padding:8px 9px;border-radius:10px;background:#f7f9fc;box-shadow:none}
+@media(max-width:359px){.customer-order-live-preview{padding:8px}.customer-order-live-preview .customer-track-v4__map{height:200px;min-height:200px}}
