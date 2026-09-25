@@ -1,10 +1,10 @@
 import type { RealtimeChannel, SupabaseClient, User } from "@supabase/supabase-js";
 import { mobileSupabase } from "../auth/mobile-supabase";
 import {
-  normalizeDriverActiveTrip,
   normalizeDriverAvailableJobs,
   normalizeDriverCancelledOrder,
   normalizeDriverTruckOptions,
+  splitDriverAssignments,
   type DriverTruckOption,
   type DriverWorkboardSnapshot,
 } from "./driver-jobs.model";
@@ -34,14 +34,14 @@ async function requireExpectedDriver(expectedUserId: string): Promise<{
 export async function fetchDriverWorkboard(expectedUserId: string): Promise<DriverWorkboardSnapshot> {
   const { client, user } = await requireExpectedDriver(expectedUserId);
 
-  const [activeResult, cancellationResult] = await Promise.all([
+  const [assignmentResult, cancellationResult, availableResult] = await Promise.all([
     client
       .from("orders")
-      .select("id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at")
+      .select("id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at,service_date")
       .eq("driver_id", user.id)
       .in("status", ["accepted", "in_transit"])
-      .order("accepted_at", { ascending: true })
-      .limit(1),
+      .order("service_date", { ascending: true })
+      .order("accepted_at", { ascending: true }),
     client
       .from("orders")
       .select("id,tracking_id,pickup_address,dropoff_address,cancellation_reason,cancelled_at")
@@ -49,23 +49,18 @@ export async function fetchDriverWorkboard(expectedUserId: string): Promise<Driv
       .eq("status", "cancelled")
       .order("cancelled_at", { ascending: false })
       .limit(1),
+    client.rpc("get_available_jobs_v2"),
   ]);
 
-  if (activeResult.error) throw new Error(activeResult.error.message);
+  if (assignmentResult.error) throw new Error(assignmentResult.error.message);
   if (cancellationResult.error) throw new Error(cancellationResult.error.message);
-  const activeTrip = normalizeDriverActiveTrip(activeResult.data?.[0] ?? null);
-  const latestCancellation = normalizeDriverCancelledOrder(cancellationResult.data?.[0] ?? null);
-  if (activeTrip) {
-    return { activeTrip, availableJobs: [], latestCancellation, loadedAt: Date.now() };
-  }
-
-  const availableResult = await client.rpc("get_available_jobs");
   if (availableResult.error) throw new Error(availableResult.error.message);
 
+  const assignments = splitDriverAssignments(assignmentResult.data);
   return {
-    activeTrip: null,
+    ...assignments,
     availableJobs: normalizeDriverAvailableJobs(availableResult.data),
-    latestCancellation,
+    latestCancellation: normalizeDriverCancelledOrder(cancellationResult.data?.[0] ?? null),
     loadedAt: Date.now(),
   };
 }
@@ -103,7 +98,9 @@ export function subscribeToMyDriverOrders(
   onChange: () => void,
 ): () => void {
   const client = requireClient();
-  let channel: RealtimeChannel | null = client
+  const channels: RealtimeChannel[] = [];
+
+  channels.push(client
     .channel(`mobile-driver-orders-${userId}`)
     .on(
       "postgres_changes",
@@ -115,12 +112,25 @@ export function subscribeToMyDriverOrders(
       },
       onChange,
     )
-    .subscribe();
+    .subscribe());
+
+  // Marketplace rows are unassigned, so driver_id filtering cannot see them.
+  // Subscribe to placed-order changes and let the authoritative RPC re-filter eligibility.
+  channels.push(client
+    .channel(`mobile-driver-market-${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "orders",
+        filter: "status=eq.placed",
+      },
+      onChange,
+    )
+    .subscribe());
 
   return () => {
-    if (!channel) return;
-    const activeChannel = channel;
-    channel = null;
-    void client.removeChannel(activeChannel);
+    for (const channel of channels) void client.removeChannel(channel);
   };
 }
