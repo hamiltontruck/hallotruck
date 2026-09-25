@@ -49,6 +49,7 @@ export async function createCustomerMobileOrder(input: {
   cargoNotes?: string;
   paymentMethod: CustomerPaymentMethod;
   expectedQuoteEtb: number;
+  serviceDate: string;
 }): Promise<CreatedCustomerOrder> {
   const client = customerSupabase;
   if (!client) throw new Error("Customer Supabase is not configured.");
@@ -118,6 +119,7 @@ export async function createCustomerMobileOrder(input: {
       price_etb: priceEtb,
       selected_payment_method: input.paymentMethod,
       payment_terms: "pay_driver_on_delivery",
+      service_date: input.serviceDate,
       status: "placed",
     })
     .select("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,status")

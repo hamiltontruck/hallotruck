@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CustomerAssignmentCard } from "./CustomerAssignmentCard";
+import { CustomerOrderLiveTrackingPreview } from "./CustomerOrderLiveTrackingPreview";
 import { loadCustomerAssignments, type CustomerMobileAssignment } from "./customer-assignment.service";
 import { subscribeCustomerOrderChanges } from "./customer-orders-realtime.service";
 import {
@@ -18,7 +19,7 @@ import {
 
 export const CUSTOMER_ACTIVE_STATUSES = new Set(["assigned", "accepted", "in_transit"]);
 export const CUSTOMER_CANCELLABLE_STATUSES = new Set(["quoted", "placed"]);
-export const CUSTOMER_TRACKABLE_STATUSES = new Set(["assigned", "accepted", "in_transit", "delivered"]);
+export const CUSTOMER_TRACKABLE_STATUSES = new Set(["assigned", "accepted", "in_transit"]);
 
 type OrderFilter = "all" | "active" | "payment" | "delivered" | "cancelled";
 type PageState = { kind: "loading" } | { kind: "ready"; data: CustomerMobileData } | { kind: "error"; message: string };
@@ -94,7 +95,7 @@ export function CustomerOrdersV4Page({ userId, onHome, onNewOrder, onTrackOrder,
           const orderPayments = data.payments.filter((payment) => payment.order_id === order.id);
           const assignment = assignments.find((item) => item.order_id === order.id);
           return <OrderCard key={order.id} userId={userId} order={order} payments={orderPayments} assignment={assignment} expanded={expanded[order.id] ?? false} onToggle={() => setExpanded((current) => ({ ...current, [order.id]: !(current[order.id] ?? false) }))} onReload={() => load(false)} onTrack={() => onTrackOrder(order.id)} onOpen={() => onOpenOrder(order.id)}/>;
-        }) : <StateCard title="No matching orders" body="No orders match this filter." action="Show all" onAction={() => setFilter("all")}/>} 
+        }) : <StateCard title="No matching orders" body="No orders match this filter." action="Show all" onAction={() => setFilter("all")}/>}
       </section>
       <button type="button" className="customer-v4-link" onClick={onHome}>Back to Home</button>
     </main>
@@ -118,6 +119,7 @@ function OrderCard({ userId, order, payments, assignment, expanded, onToggle, on
   const [cancelling, setCancelling] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [livePreviewOpen, setLivePreviewOpen] = useState(false);
   const summary = useMemo(() => calculateCustomerMobilePaymentSummary(order, payments), [order, payments]);
   const cancellable = CUSTOMER_CANCELLABLE_STATUSES.has(order.status || "");
   const trackable = CUSTOMER_TRACKABLE_STATUSES.has(order.status || "") && order.status !== "cancelled";
@@ -165,7 +167,8 @@ function OrderCard({ userId, order, payments, assignment, expanded, onToggle, on
     <article className={`customer-v4-card customer-v4-order-card customer-v4-order-card--${order.status || "pending"}`}>
       <div className="customer-v4-order-top"><div className="customer-v4-order-route"><small>TRACKING ID</small><strong>{order.tracking_id || "Pending tracking ID"}</strong><p><span className="customer-v4-route-dot is-pickup" aria-hidden="true"/> {order.pickup_address || "Pickup pending"} <b aria-hidden="true">→</b> <span className="customer-v4-route-dot is-dropoff" aria-hidden="true"/> {order.dropoff_address || "Drop-off pending"}</p></div><b className={`customer-v4-order-status is-${order.status || "pending"}`}>{formatOrderStatus(order.status)}</b></div>
       <div className="customer-v4-order-info customer-v4-order-stats"><Info label="Quote" value={formatEtb(order.price_etb)}/><Info label="Distance" value={order.distance_km ? `${Number(order.distance_km).toLocaleString(undefined,{maximumFractionDigits:1})} km` : "Pending"}/><Info label="Load" value={formatCustomerLoad(order)}/><Info label="Payment" value={paymentLabel}/><Info label="Vehicle" value={order.vehicle_type || "Pending"} wide/></div>
-      <div className="customer-v4-actions">{trackable && <button className="customer-v4-actions__track" type="button" onClick={onTrack}>Live trip tracking →</button>}<button type="button" onClick={onOpen}>Open details</button><button type="button" onClick={onToggle}>{expanded ? "Hide details" : "View details"}</button><span className="customer-v4-payment-method">{order.selected_payment_method === "bank_telebirr" ? "Bank / Telebirr" : "Cash"}</span><button type="button" onClick={() => { try { printCustomerMobileInvoice(order, payments); } catch (caught) { setActionError(caught instanceof Error ? caught.message : "Invoice could not be generated."); } }}>Invoice / receipt PDF</button>{cancellable && <button className="is-danger" type="button" disabled={cancelling} onClick={openCancelSheet}>Cancel order</button>}</div>
+      <div className="customer-v4-actions">{trackable && <><button className="customer-v4-actions__track" type="button" onClick={() => setLivePreviewOpen((open) => !open)}>{livePreviewOpen ? "Hide live tracking" : "Live trip tracking →"}</button><button className="customer-v4-actions__full-track" type="button" onClick={onTrack}>Full live tracking →</button></>}<button type="button" onClick={onOpen}>Open details</button><button type="button" onClick={onToggle}>{expanded ? "Hide details" : "View details"}</button><span className="customer-v4-payment-method">{order.selected_payment_method === "bank_telebirr" ? "Bank / Telebirr" : "Cash"}</span><button type="button" onClick={() => { try { printCustomerMobileInvoice(order, payments); } catch (caught) { setActionError(caught instanceof Error ? caught.message : "Invoice could not be generated."); } }}>Invoice / receipt PDF</button>{cancellable && <button className="is-danger" type="button" disabled={cancelling} onClick={openCancelSheet}>Cancel order</button>}</div>
+      {trackable && livePreviewOpen && <CustomerOrderLiveTrackingPreview userId={userId} orderId={order.id} totalDistanceKm={order.distance_km}/>}
       {actionError && !cancelOpen && <p className="customer-v4-error" role="alert">{actionError}</p>}
       {expanded && <div className="customer-v4-details">{(assignment || CUSTOMER_ACTIVE_STATUSES.has(order.status || "") || order.status === "delivered") && <CustomerAssignmentCard userId={userId} assignment={assignment} orderVehicleType={order.vehicle_type} trackingAvailable={trackable} onTrack={onTrack}/>}<div className="customer-v4-order-info"><Info label="Verified paid" value={formatEtb(summary.verifiedPaid)}/><Info label="To pay" value={formatEtb(summary.balanceToPay)}/></div>{payments.length ? <div className="customer-v4-payment-history"><small>PAYMENT HISTORY</small>{payments.map((payment) => <div key={payment.id}><span>{formatOrderStatus(payment.provider)} · {formatEtb(payment.amount_etb)} · {formatOrderStatus(payment.event)}</span>{payment.receipt_path && <button type="button" onClick={() => void openReceipt(payment)}>View receipt</button>}</div>)}</div> : <p className="customer-v4-muted">No payment history recorded for this order.</p>}</div>}
 

@@ -28,15 +28,19 @@ async function fetchRoute(from: [number, number], to: [number, number], signal: 
 }
 
 function applyTruckFreshness(element: HTMLElement, freshness: TrackingFreshness) {
+  const pulse = element.querySelector<HTMLElement>("[data-truck-pulse]");
   element.dataset.trackingFreshness = freshness;
   element.setAttribute("aria-label", freshness === "LIVE" ? "Live truck location" : `Last known truck location, GPS ${freshness.toLowerCase()}`);
   element.style.opacity = freshness === "LIVE" ? "1" : ".68";
+  if (pulse) pulse.style.display = freshness === "LIVE" ? "block" : "none";
 }
 
 function applyTruckHeading(element: HTMLElement, heading?: number | null) {
-  const arrow = element.querySelector<HTMLElement>("[data-truck-arrow]");
-  if (!arrow) return;
-  arrow.style.transform = heading != null && Number.isFinite(Number(heading)) ? `rotate(${Number(heading)}deg)` : "";
+  const bearing = element.querySelector<HTMLElement>("[data-truck-bearing]");
+  const label = element.querySelector<HTMLElement>("[data-truck-heading]");
+  const value = heading != null && Number.isFinite(Number(heading)) ? ((Number(heading) % 360) + 360) % 360 : 0;
+  if (bearing) bearing.style.transform = `rotate(${value}deg)`;
+  if (label) label.textContent = `${Math.round(value)}°`;
 }
 
 function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: number | null, freshness: TrackingFreshness = "OFFLINE") {
@@ -46,7 +50,7 @@ function createMarkerElement(kind: "pickup" | "dropoff" | "truck", heading?: num
     element.style.width = "20px"; element.style.height = "20px"; element.style.borderRadius = "50%"; element.style.background = kind === "pickup" ? "#10213d" : "#d68e25";
     element.setAttribute("aria-label", kind === "pickup" ? "Pickup location" : "Drop-off location");
   } else {
-    element.style.width = "42px"; element.style.height = "42px"; element.style.borderRadius = "13px"; element.style.background = "#10213d"; element.style.color = "#f5b400"; element.innerHTML = `<span data-truck-arrow aria-hidden="true" style="display:grid;place-items:center">${TRUCK_ICON_MARKUP}</span>`;
+    element.style.width = "48px"; element.style.height = "48px"; element.style.position = "relative"; element.style.borderRadius = "14px"; element.style.background = "#10213d"; element.style.color = "#f5b400"; element.innerHTML = `<span data-truck-pulse aria-hidden="true" style="position:absolute;inset:-8px;border:2px solid rgba(7,89,199,.35);border-radius:18px"></span><span data-truck-bearing aria-hidden="true" style="display:grid;place-items:center;transition:transform .2s ease">${TRUCK_ICON_MARKUP}</span><small data-truck-heading aria-hidden="true" style="position:absolute;left:50%;top:100%;transform:translate(-50%,4px);border-radius:999px;background:#10213d;color:#fff;padding:2px 5px;font-size:9px;font-weight:800;white-space:nowrap"></small>`;
     applyTruckHeading(element, heading); applyTruckFreshness(element, freshness);
   }
   return element;
@@ -85,7 +89,7 @@ function timelineIndex(status: string | null | undefined) {
   return 0;
 }
 
-export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerLiveTrip | undefined; totalDistanceKm?: number | null }) {
+export function CustomerTrackingMap({ trip, totalDistanceKm, compact = false }: { trip: CustomerLiveTrip | undefined; totalDistanceKm?: number | null; compact?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const pickupMarkerRef = useRef<Marker | null>(null);
@@ -193,10 +197,10 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
   const lastUpdate = trip?.recorded_at ? new Date(trip.recorded_at).toLocaleString(undefined, { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "short" }) : "Waiting for GPS update";
 
   return (
-    <section className="customer-track-v4" data-tracking-freshness={freshness}>
-      <div className="customer-track-v4__timeline" aria-label="Trip progress">{timeline.map((label, index) => <div key={label} className={index <= step ? "is-done" : ""}><span>{index + 1}</span><small>{label}</small></div>)}</div>
-      {completedPercent != null && <div className="customer-track-v4__progress" aria-label={`Live route progress ${completedPercent}%`}><span style={{ width: `${completedPercent}%` }}/></div>}
-      <div className="customer-track-v4__metrics"><Metric label="Trip status" value={(status || "pending").replaceAll("_", " ")}/><Metric label="Truck GPS" value={gpsText}/><Metric label="Remaining distance" value={status === "delivered" ? "0 km" : remainingKm == null ? "—" : `${remainingKm.toFixed(1)} km`}/><Metric label="ETA" value={status === "delivered" ? "Delivered" : eta}/></div>
+    <section className={`customer-track-v4${compact ? " is-compact" : ""}`} data-tracking-freshness={freshness}>
+      {!compact && <div className="customer-track-v4__timeline" aria-label="Trip progress">{timeline.map((label, index) => <div key={label} className={index <= step ? "is-done" : ""}><span>{index + 1}</span><small>{label}</small></div>)}</div>}
+      {!compact && completedPercent != null && <div className="customer-track-v4__progress" aria-label={`Live route progress ${completedPercent}%`}><span style={{ width: `${completedPercent}%` }}/></div>}
+      {!compact && <div className="customer-track-v4__metrics"><Metric label="Trip status" value={(status || "pending").replaceAll("_", " ")}/><Metric label="Truck GPS" value={gpsText}/><Metric label="Remaining distance" value={status === "delivered" ? "0 km" : remainingKm == null ? "—" : `${remainingKm.toFixed(1)} km`}/><Metric label="ETA" value={status === "delivered" ? "Delivered" : eta}/></div>}
       <div className="customer-track-v4__map-shell">
         <span className={`customer-track-v4__gps-badge customer-track-v4__gps-badge--${freshness.toLowerCase()}`}>{delivered ? "TRIP COMPLETE" : freshness === "STALE" ? "GPS STALE" : freshness === "LIVE" ? "GPS LIVE" : "GPS OFFLINE"}</span>
         <div ref={containerRef} className="customer-track-v4__map" aria-label="Trip tracking map"/>
@@ -209,7 +213,7 @@ export function CustomerTrackingMap({ trip, totalDistanceKm }: { trip: CustomerL
         {!delivered && hasTruck && !gpsLive && <p className="customer-track-v4__message customer-track-v4__message--warn">{freshness} — last known location, not a current/live position.</p>}
         <div className="customer-track-v4__legend"><span>● Pickup</span><span>● Drop-off</span><span><TruckIcon aria-hidden="true" size={14}/> Truck</span></div>
       </div>
-      <div className="customer-track-v4__last-update"><span>Latest location timestamp</span><strong>{lastUpdate}</strong></div>
+      <div className="customer-track-v4__last-update"><span>Last GPS update</span><strong>{lastUpdate}</strong></div>
     </section>
   );
 }
