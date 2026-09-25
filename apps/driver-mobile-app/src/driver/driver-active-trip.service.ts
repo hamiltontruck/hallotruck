@@ -30,6 +30,17 @@ function functionsBaseUrl(): string {
   return `${projectUrl}/functions/v1`;
 }
 
+function ethiopiaServiceDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Addis_Ababa",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
 async function requireExpectedDriver(expectedUserId: string): Promise<{
   client: SupabaseClient;
   user: User;
@@ -60,20 +71,27 @@ async function readError(response: Response, fallback: string): Promise<string> 
   }
 }
 
-const activeTripColumns = "id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at,selected_payment_method";
+const activeTripColumns = "id,tracking_id,status,pickup_address,dropoff_address,price_etb,accepted_at,service_date,selected_payment_method";
 
 export async function fetchDriverActiveTrip(expectedUserId: string): Promise<DriverActiveTripOrder | null> {
   const { client, user } = await requireExpectedDriver(expectedUserId);
+  const today = ethiopiaServiceDate();
   const { data, error } = await client
     .from("orders")
     .select(activeTripColumns)
     .eq("driver_id", user.id)
     .in("status", ["accepted", "in_transit"])
+    .lte("service_date", today)
+    .order("service_date", { ascending: false })
     .order("accepted_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
   if (error) throw new Error(error.message);
-  return normalizeDriverActiveTripOrder(data);
+  const normalized = (data ?? [])
+    .map(normalizeDriverActiveTripOrder)
+    .filter((value): value is DriverActiveTripOrder => value !== null);
+  return normalized.find((value) => value.status === "in_transit")
+    ?? normalized.find((value) => value.status === "accepted")
+    ?? null;
 }
 
 export async function fetchDriverAssignedTrip(
@@ -122,29 +140,15 @@ export async function sendDriverTrackingPing(
   if (!response.ok) throw new Error(await readError(response, "GPS update erguun hin danda'amne."));
 
   const current = await fetchDriverAssignedTrip(expectedUserId, ping.orderId);
-  if (!current) {
-    throw new Error("Trip kun siif assigned miti ykn lifecycle isaa xumurameera.");
-  }
+  if (!current) throw new Error("Trip kun siif assigned miti ykn lifecycle isaa xumurameera.");
   return current;
 }
 
-export function subscribeToDriverActiveTrip(
-  userId: string,
-  onChange: () => void,
-): () => void {
+export function subscribeToDriverActiveTrip(userId: string, onChange: () => void): () => void {
   const client = requireClient();
   let channel: RealtimeChannel | null = client
     .channel(`mobile-driver-active-trip-${userId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "orders",
-        filter: `driver_id=eq.${userId}`,
-      },
-      onChange,
-    )
+    .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `driver_id=eq.${userId}` }, onChange)
     .subscribe();
 
   return () => {
@@ -156,6 +160,5 @@ export function subscribeToDriverActiveTrip(
 }
 
 export function isDriverNetworkFailure(error: unknown): boolean {
-  return (typeof navigator !== "undefined" && navigator.onLine === false)
-    || error instanceof TypeError;
+  return (typeof navigator !== "undefined" && navigator.onLine === false) || error instanceof TypeError;
 }

@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (relative) => readFileSync(new URL("../" + relative, import.meta.url), "utf8");
 const workspace = read("src/DriverWorkspace.tsx");
 const trip = read("src/driver/DriverActiveTripView.tsx");
+const tripService = read("src/driver/driver-active-trip.service.ts");
 const jobs = read("src/driver/DriverJobsBoard.tsx");
 const wallet = read("src/driver/DriverWalletView.tsx");
 const profile = read("src/driver/DriverProfileView.tsx");
@@ -19,12 +20,12 @@ const androidCss = read("src/driver-android-responsive.css");
 const i18nUrl = new URL("../src/driver/driver-v4-i18n.ts", import.meta.url);
 const i18n = existsSync(i18nUrl) ? readFileSync(i18nUrl, "utf8") : "";
 
-test("Active Trip keeps every hook before conditional render exits", () => {
-  const shareHook = trip.indexOf("const shareLocation = useCallback");
+test("Active Trip keeps GPS hooks before conditional render exits", () => {
+  const sharingHook = trip.indexOf("const startSharing = useCallback");
   const firstConditionalExit = trip.indexOf("if (loading && !confirmedSnapshot)");
-  assert.ok(shareHook >= 0, "Share Location callback hook must exist");
+  assert.ok(sharingHook >= 0, "HALLO GPS sharing callback hook must exist");
   assert.ok(firstConditionalExit >= 0, "loading guard must exist");
-  assert.ok(shareHook < firstConditionalExit, "shareLocation hook must run before loading/null early returns");
+  assert.ok(sharingHook < firstConditionalExit, "GPS sharing hook must run before loading/null early returns");
 });
 
 test("Home, Jobs and Trip navigation converge on one stable DriverActiveTripView", () => {
@@ -70,39 +71,24 @@ test("English profile cannot inherit the Oromo missing-value fallback", () => {
 
 test("major authenticated surfaces consume centralized copy rather than screen-local language ternaries", () => {
   for (const [name, source] of [
-    ["workspace", workspace],
-    ["trip", trip],
-    ["jobs", jobs],
-    ["wallet", wallet],
-    ["delivery", delivery],
-    ["payment", payment],
-    ["notifications", notifications],
-    ["chat", chat],
-    ["availability", availability],
-  ]) {
-    assert.match(source, /driverV4Copy|useDriverV4Copy|getDriverV4Copy/, name + " must use centralized Driver V4 copy");
-  }
+    ["workspace", workspace], ["trip", trip], ["jobs", jobs], ["wallet", wallet],
+    ["delivery", delivery], ["payment", payment], ["notifications", notifications],
+    ["chat", chat], ["availability", availability],
+  ]) assert.match(source, /driverV4Copy|useDriverV4Copy|getDriverV4Copy/, name + " must use centralized Driver V4 copy");
 });
 
 test("visible authenticated error paths do not surface raw service-language exception messages", () => {
   for (const [name, source] of [
-    ["trip", trip],
-    ["jobs", jobs],
-    ["wallet", wallet],
-    ["delivery", delivery],
-    ["payment", payment],
-    ["notifications", notifications],
-    ["chat", chat],
-    ["availability", availability],
-  ]) {
-    assert.doesNotMatch(source, /caught instanceof Error\s*\?\s*caught\.message|reason instanceof Error\s*\?\s*[^:]+\.message/, name + " must localize visible errors");
-  }
+    ["trip", trip], ["jobs", jobs], ["wallet", wallet], ["delivery", delivery],
+    ["payment", payment], ["notifications", notifications], ["chat", chat], ["availability", availability],
+  ]) assert.doesNotMatch(source, /caught instanceof Error\s*\?\s*caught\.message|reason instanceof Error\s*\?\s*[^:]+\.message/, name + " must localize visible errors");
 });
 
-test("Share Location retains Web Share and clipboard fallback", () => {
-  assert.match(trip, /navigator\.share/);
-  assert.match(trip, /navigator\.clipboard\.writeText/);
-  assert.match(trip, /google\.com\/maps\?q=/);
+test("customer location sharing stays inside HALLO realtime GPS", () => {
+  assert.match(trip, /navigator\.geolocation\.watchPosition/);
+  assert.match(trip, /data-customer-live-sharing/);
+  assert.match(tripService, /\/tracking/);
+  assert.doesNotMatch(trip, /navigator\.share|navigator\.clipboard\.writeText|google\.com\/maps\?q=/);
 });
 
 test("wallet keeps portal-backed trip history and financial contracts", () => {
@@ -134,7 +120,6 @@ test("authenticated shell remains scrollable with sticky five-tab navigation at 
 test("scope lock keeps authenticated parity work out of login and auth selectors", () => {
   assert.doesNotMatch(css, /\.driver-auth|\.login|sign-in-form/);
 });
-
 
 test("notification payloads are localized and the current authenticated tab survives refresh", () => {
   assert.match(notifications, /localizeDriverNotification/);

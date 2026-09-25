@@ -56,7 +56,7 @@ export function DriverCommissionPaymentPanel({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const t = getDriverV4Copy(language);
 
-  const resolvedProvider = providerChoice === "Other Bank" || providerChoice === "Other Wallet"
+  const resolvedProvider = providerChoice === "Other Bank"
     ? otherProvider.trim()
     : providerChoice;
 
@@ -144,13 +144,13 @@ export function DriverCommissionPaymentPanel({
               {providerKind === "bank" ? <>
                 <option value="CBE">CBE</option><option value="Awash Bank">Awash Bank</option><option value="Dashen Bank">Dashen Bank</option><option value="Other Bank">Other Bank</option>
               </> : <>
-                <option value="Telebirr">Telebirr</option><option value="M-Pesa">M-Pesa</option><option value="eBirr">eBirr</option><option value="Other Wallet">Other Wallet</option>
+                <option value="Telebirr">Telebirr</option><option value="M-Pesa">M-Pesa</option><option value="eBirr">eBirr</option>
               </>}
             </select>
           </label>
         </div>
 
-        {(providerChoice === "Other Bank" || providerChoice === "Other Wallet") && <label className="block">
+        {providerChoice === "Other Bank" && <label className="block">
           <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.commission.otherProvider}</span>
           <input value={otherProvider} onChange={(event) => setOtherProvider(event.target.value)} disabled={submitting} maxLength={80} autoComplete="organization" className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" />
         </label>}
