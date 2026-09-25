@@ -5,21 +5,9 @@ import type { DriverNavigationRoute } from "./driver-active-trip.model";
 
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY?.trim();
 const openFreeMapStyle = "https://tiles.openfreemap.org/styles/liberty";
-const osmRasterStyle: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    "osm-raster": {
-      type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors",
-    },
-  },
-  layers: [{ id: "osm-raster", type: "raster", source: "osm-raster" }],
-};
-const mapStyles: Array<string | maplibregl.StyleSpecification> = mapTilerKey
-  ? [`https://api.maptiler.com/maps/basic-v2/style.json?key=${encodeURIComponent(mapTilerKey)}`, openFreeMapStyle, osmRasterStyle]
-  : [openFreeMapStyle, osmRasterStyle];
+const mapStyles: string[] = mapTilerKey
+  ? [`https://api.maptiler.com/maps/basic-v2/style.json?key=${encodeURIComponent(mapTilerKey)}`, openFreeMapStyle]
+  : [openFreeMapStyle];
 
 function pointElement(kind: "start" | "end" | "driver") {
   const element = document.createElement("div");
@@ -40,6 +28,7 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel }: {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const routeRef = useRef<DriverNavigationRoute | null>(route);
   const fallbackIndexRef = useRef(0);
+  const mapLoadedRef = useRef(false);
   const startMarkerRef = useRef<maplibregl.Marker | null>(null);
   const endMarkerRef = useRef<maplibregl.Marker | null>(null);
   const driverMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -68,11 +57,15 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel }: {
       : null;
     observer?.observe(containerRef.current);
     window.addEventListener("resize", resize);
-    map.on("load", resize);
+    const onLoad = () => {
+      mapLoadedRef.current = true;
+      resize();
+    };
+    map.on("load", onLoad);
     map.on("styledata", resize);
 
     const onError = () => {
-      if (fallbackIndexRef.current >= mapStyles.length - 1) return;
+      if (mapLoadedRef.current || fallbackIndexRef.current >= mapStyles.length - 1) return;
       fallbackIndexRef.current += 1;
       map.setStyle(mapStyles[fallbackIndexRef.current]);
     };
@@ -81,6 +74,7 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel }: {
     return () => {
       observer?.disconnect();
       window.removeEventListener("resize", resize);
+      map.off("load", onLoad);
       map.off("error", onError);
       map.remove();
       mapRef.current = null;
