@@ -3,21 +3,22 @@ begin;
 alter table public.orders
   add column if not exists service_date date;
 
-update public.orders
-set service_date = (created_at at time zone 'Africa/Addis_Ababa')::date
-where service_date is null;
-
 alter table public.orders
-  alter column service_date set default ((now() at time zone 'Africa/Addis_Ababa')::date),
-  alter column service_date set not null;
+  alter column service_date set default ((now() at time zone 'Africa/Addis_Ababa')::date);
 
 create index if not exists idx_orders_driver_service_date
   on public.orders(driver_id, service_date)
-  where driver_id is not null;
+  where driver_id is not null and service_date is not null;
 
 create or replace function public.enforce_order_service_date()
 returns trigger language plpgsql set search_path = public as $$
 begin
+  if tg_op = 'INSERT' and new.service_date is null then
+    raise exception 'Service date is required' using errcode = '23502';
+  end if;
+  if new.service_date is null then
+    raise exception 'Service date cannot be cleared' using errcode = '23502';
+  end if;
   if new.service_date < (now() at time zone 'Africa/Addis_Ababa')::date then
     raise exception 'Service date cannot be in the past' using errcode = '22007';
   end if;
@@ -36,9 +37,18 @@ declare
   v_day date;
   v_conflict uuid;
 begin
+  if tg_op = 'INSERT'
+     and auth.uid() = new.customer_id
+     and new.driver_id is not null then
+    raise exception 'Customers cannot assign a driver during order creation' using errcode = '42501';
+  end if;
+
   v_driver := new.driver_id;
   if v_driver is null then return new; end if;
   v_day := new.service_date;
+  if v_day is null then
+    raise exception 'Service date is required before driver assignment' using errcode = '23502';
+  end if;
 
   perform pg_advisory_xact_lock(hashtextextended(v_driver::text || ':' || v_day::text, 0));
   select o.id into v_conflict
