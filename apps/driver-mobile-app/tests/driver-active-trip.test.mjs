@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
+  calculateRouteProgressPct,
   formatRouteDistance,
   formatRouteDuration,
   normalizeDriverActiveTripOrder,
   normalizeDriverNavigationRoute,
   projectRouteToSvg,
+  resolveNavigationStep,
 } from "../.test-dist-active/driver-active-trip.model.js";
 
 const serviceSource = readFileSync(new URL("../src/driver/driver-active-trip.service.ts", import.meta.url), "utf8");
@@ -15,17 +17,7 @@ const componentSource = readFileSync(new URL("../src/driver/DriverActiveTripView
 const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 
 test("normalizes only assigned active lifecycle rows with authoritative service date", () => {
-  const accepted = normalizeDriverActiveTripOrder({
-    id: "order-1",
-    tracking_id: "HT-2026-1",
-    status: "accepted",
-    pickup_address: "Adama",
-    dropoff_address: "Finfinnee",
-    price_etb: "12000",
-    accepted_at: null,
-    service_date: "2026-09-25",
-    selected_payment_method: "cash",
-  });
+  const accepted = normalizeDriverActiveTripOrder({ id: "order-1", tracking_id: "HT-2026-1", status: "accepted", pickup_address: "Adama", dropoff_address: "Finfinnee", price_etb: "12000", accepted_at: null, service_date: "2026-09-25", selected_payment_method: "cash" });
   assert.equal(accepted?.status, "accepted");
   assert.equal(accepted?.priceEtb, 12000);
   assert.equal(accepted?.serviceDate, "2026-09-25");
@@ -35,15 +27,7 @@ test("normalizes only assigned active lifecycle rows with authoritative service 
 });
 
 test("normalizes server route geometry and rejects malformed payloads", () => {
-  const route = normalizeDriverNavigationRoute({
-    geometry: {
-      type: "LineString",
-      coordinates: [[38.7, 9.0], [39.1, 8.8], [39.4, 8.6]],
-    },
-    distanceKm: 95.4,
-    durationMin: 122,
-    steps: [{ instruction: "Continue straight", distanceM: 420, durationSec: 36, location: [38.7, 9.0] }],
-  });
+  const route = normalizeDriverNavigationRoute({ geometry: { type: "LineString", coordinates: [[38.7, 9.0], [39.1, 8.8], [39.4, 8.6]] }, distanceKm: 95.4, durationMin: 122, steps: [{ instruction: "Continue straight", distanceM: 420, durationSec: 36, location: [38.7, 9.0] }] });
   assert.equal(route?.coordinates.length, 3);
   assert.equal(route?.steps[0].instruction, "Continue straight");
   assert.equal(normalizeDriverNavigationRoute({ geometry: { type: "Point", coordinates: [1, 2] } }), null);
@@ -55,6 +39,25 @@ test("projects real route points into a finite SVG path", () => {
   assert.ok(projected?.path.includes("L"));
   assert.ok(projected?.driver);
   assert.equal(projectRouteToSvg([[1, 2]], null), null);
+});
+
+test("GPS progress advances to a real upcoming maneuver and never regresses below the previous step", () => {
+  const steps = [
+    { instruction: "Depart", distanceM: 100, durationSec: 10, location: [38.70, 9.00] },
+    { instruction: "Turn right", distanceM: 300, durationSec: 30, location: [38.71, 9.00] },
+    { instruction: "Arrive", distanceM: 500, durationSec: 50, location: [38.72, 9.00] },
+  ];
+  const nearSecond = resolveNavigationStep(steps, [38.7101, 9.0], 0);
+  assert.equal(nearSecond.index, 2);
+  const noRegression = resolveNavigationStep(steps, [38.7001, 9.0], 2);
+  assert.equal(noRegression.index, 2);
+});
+
+test("route progress uses the nearest real route coordinate", () => {
+  const coordinates = [[38.70, 9.0], [38.71, 9.0], [38.72, 9.0], [38.73, 9.0]];
+  assert.equal(calculateRouteProgressPct(coordinates, [38.70, 9.0]), 0);
+  assert.equal(calculateRouteProgressPct(coordinates, [38.72, 9.0]), 67);
+  assert.equal(calculateRouteProgressPct(coordinates, [38.73, 9.0]), 100);
 });
 
 test("formats unknown route metrics without false zero", () => {
@@ -81,13 +84,16 @@ test("offline GPS queue is isolated and capped", () => {
   assert.match(queueSource, /throw error/);
 });
 
-test("active trip component guards GPS lifecycle and stale assignment", () => {
+test("active trip component guards GPS lifecycle, stale assignment and navigation progression", () => {
   assert.match(componentSource, /navigator\.geolocation\.watchPosition/);
   assert.match(componentSource, /MIN_PING_INTERVAL_MS = 15_000/);
   assert.match(componentSource, /enqueueDriverPing/);
   assert.match(componentSource, /syncQueuedDriverPings/);
   assert.match(componentSource, /clearQueuedDriverPings\(userId, previous\.id\)/);
   assert.match(componentSource, /confirmed\.status === "in_transit"/);
+  assert.match(componentSource, /resolveNavigationStep/);
+  assert.match(componentSource, /calculateRouteProgressPct/);
+  assert.match(componentSource, /role="progressbar"/);
 });
 
 test("Driver location sharing stays inside HALLO tracking instead of exporting a Maps link", () => {
@@ -119,11 +125,13 @@ test("localizes common navigation maneuvers and renders a real basemap component
   assert.match(mapSource, /emptyLabel/);
 });
 
-test("live map keeps a real reachable basemap instead of cascading to blocked OSM tiles", () => {
+test("live map keeps a real reachable basemap and visible controls", () => {
   const mapSource = readFileSync(new URL("../src/driver/DriverActiveTripMap.tsx", import.meta.url), "utf8");
   assert.match(mapSource, /tiles\.openfreemap\.org\/styles\/liberty/);
   assert.doesNotMatch(mapSource, /tile\.openstreetmap\.org/);
   assert.match(mapSource, /map\.on\("error"/);
   assert.match(mapSource, /mapLoadedRef/);
   assert.match(mapSource, /map\.resize\(\)/);
+  assert.match(mapSource, /keepMapControlsVisible/);
+  assert.match(mapSource, /"top-left"/);
 });
