@@ -7,6 +7,7 @@ export type DriverAvailableJob = {
   distanceKm: number | null;
   priceEtb: number | null;
   cargoDescription: string | null;
+  serviceDate: string;
 };
 
 export type DriverTruckOption = {
@@ -25,7 +26,10 @@ export type DriverActiveTrip = {
   dropoffAddress: string;
   priceEtb: number | null;
   acceptedAt: string | null;
+  serviceDate: string;
 };
+
+export type DriverScheduledTrip = DriverActiveTrip;
 
 export type DriverCancelledOrder = {
   id: string;
@@ -38,6 +42,7 @@ export type DriverCancelledOrder = {
 
 export type DriverWorkboardSnapshot = {
   activeTrip: DriverActiveTrip | null;
+  scheduledTrips: DriverScheduledTrip[];
   availableJobs: DriverAvailableJob[];
   latestCancellation: DriverCancelledOrder | null;
   loadedAt: number;
@@ -68,6 +73,22 @@ function optionalFiniteNumber(value: unknown): number | null {
   return Number.isFinite(normalized) && normalized >= 0 ? normalized : null;
 }
 
+export function normalizeServiceDate(value: unknown): string | null {
+  const text = requiredText(value);
+  return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+export function ethiopiaServiceDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Addis_Ababa",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
 export function normalizeDriverAvailableJobs(value: unknown): DriverAvailableJob[] {
   if (!Array.isArray(value)) return [];
 
@@ -80,7 +101,8 @@ export function normalizeDriverAvailableJobs(value: unknown): DriverAvailableJob
     const pickupAddress = requiredText(row.pickup_address);
     const dropoffAddress = requiredText(row.dropoff_address);
     const vehicleType = requiredText(row.vehicle_type);
-    if (!id || !trackingId || !pickupAddress || !dropoffAddress || !vehicleType) return [];
+    const serviceDate = normalizeServiceDate(row.service_date);
+    if (!id || !trackingId || !pickupAddress || !dropoffAddress || !vehicleType || !serviceDate) return [];
 
     return [{
       id,
@@ -91,6 +113,7 @@ export function normalizeDriverAvailableJobs(value: unknown): DriverAvailableJob
       distanceKm: optionalFiniteNumber(row.distance_km),
       priceEtb: optionalFiniteNumber(row.price_etb),
       cargoDescription: optionalText(row.cargo_description),
+      serviceDate,
     }];
   });
 }
@@ -127,7 +150,8 @@ export function normalizeDriverActiveTrip(value: unknown): DriverActiveTrip | nu
   const pickupAddress = requiredText(row.pickup_address);
   const dropoffAddress = requiredText(row.dropoff_address);
   const status = row.status === "accepted" || row.status === "in_transit" ? row.status : null;
-  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !status) return null;
+  const serviceDate = normalizeServiceDate(row.service_date);
+  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !status || !serviceDate) return null;
 
   return {
     id,
@@ -137,7 +161,24 @@ export function normalizeDriverActiveTrip(value: unknown): DriverActiveTrip | nu
     dropoffAddress,
     priceEtb: optionalFiniteNumber(row.price_etb),
     acceptedAt: optionalText(row.accepted_at),
+    serviceDate,
   };
+}
+
+export function splitDriverAssignments(
+  value: unknown,
+  today = ethiopiaServiceDate(),
+): { activeTrip: DriverActiveTrip | null; scheduledTrips: DriverScheduledTrip[] } {
+  const assignments = Array.isArray(value)
+    ? value.map(normalizeDriverActiveTrip).filter((item): item is DriverActiveTrip => item !== null)
+    : [];
+  const activeTrip = assignments.find((item) => item.status === "in_transit")
+    ?? assignments.find((item) => item.serviceDate <= today)
+    ?? null;
+  const scheduledTrips = assignments
+    .filter((item) => item.id !== activeTrip?.id && item.serviceDate > today)
+    .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
+  return { activeTrip, scheduledTrips };
 }
 
 export function normalizeDriverCancelledOrder(value: unknown): DriverCancelledOrder | null {
