@@ -101,10 +101,11 @@ test("localizes common navigation maneuvers and renders a real basemap component
   assert.match(mapSource, /openfreemap|maptiler/i);
 });
 
-test("live map has resilient basemap fallbacks and explicit resize handling", () => {
+test("live map keeps a real reachable basemap instead of cascading to blocked OSM tiles", () => {
   const mapSource = readFileSync(new URL("../src/driver/DriverActiveTripMap.tsx", import.meta.url), "utf8");
-  assert.match(mapSource, /tile\.openstreetmap\.org/);
+  assert.match(mapSource, /tiles\.openfreemap\.org\/styles\/liberty/);
+  assert.doesNotMatch(mapSource, /tile\.openstreetmap\.org/);
   assert.match(mapSource, /map\.on\("error"/);
+  assert.match(mapSource, /mapLoadedRef/);
   assert.match(mapSource, /map\.resize\(\)/);
-  assert.match(mapSource, /styledata/);
 });
