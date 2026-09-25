@@ -11,6 +11,8 @@ const i18n = read("src/driver/driver-v4-i18n.ts");
 const profileService = read("src/driver/driver-profile.service.ts");
 const profileView = read("src/driver/DriverProfileView.tsx");
 const trip = read("src/driver/DriverActiveTripView.tsx");
+const tripService = read("src/driver/driver-active-trip.service.ts");
+const wallet = read("src/driver/DriverWalletView.tsx");
 const map = read("src/driver/DriverActiveTripMap.tsx");
 const commissionPanel = read("src/driver/DriverCommissionPaymentPanel.tsx");
 
@@ -31,22 +33,18 @@ test("Driver profile can save signed-in contact and home-address fields", () => 
   assert.match(profileView, /saveDriverContactProfile/);
 });
 
-test("Active Trip exposes portal-equivalent dynamic finance breakdown", () => {
-  assert.match(trip, /data-driver-trip-finance/);
-  assert.match(trip, /platformCommission/);
-  assert.match(trip, /driverNet/);
+test("Active Trip shows authoritative trip fare while finance detail remains portal-backed in Wallet", () => {
   assert.match(trip, /trip\.priceEtb/);
-  assert.match(trip, /0\.02/);
-  assert.match(trip, /grossFare/);
-  assert.match(trip, /expectedNet/);
+  assert.match(wallet, /fetchDriverFinancialSummary/);
+  assert.match(wallet, /fetchDriverCommissionSummary/);
+  assert.doesNotMatch(trip, /grossFare \* 0\.02|platformCommission|driverNet|expectedNet/);
 });
 
-test("Active Trip uses localized share text with live GPS coordinates and trip id", () => {
-  assert.match(trip, /t\.trip\.shareTitle/);
-  assert.match(trip, /t\.trip\.shareText/);
-  assert.match(trip, /google\.com\/maps\?q=/);
-  assert.match(trip, /trip\?\.trackingId/);
-  assert.match(trip, /navigator\.share/);
+test("Active Trip shares live GPS with the customer inside HALLO rather than exporting a link", () => {
+  assert.match(trip, /navigator\.geolocation\.watchPosition/);
+  assert.match(trip, /data-customer-live-sharing/);
+  assert.match(tripService, /\/tracking/);
+  assert.doesNotMatch(trip, /google\.com\/maps\?q=|navigator\.share|clipboard\.writeText/);
 });
 
 test("Driver live map contains route, endpoints and current-driver marker", () => {
@@ -55,6 +53,8 @@ test("Driver live map contains route, endpoints and current-driver marker", () =
   assert.match(map, /driverPosition/);
   assert.match(map, /start/);
   assert.match(map, /end/);
+  assert.match(map, /fitBounds/);
+  assert.match(map, /ResizeObserver/);
   assert.match(trip, /<DriverActiveTripMap/);
 });
 
@@ -69,8 +69,7 @@ test("Commission settlement keeps provider, amount, reference, receipt and histo
   assert.match(commissionPanel, /approved/i);
 });
 
-test("Driver V4 finance and visible labels do not expose replacement question-mark artifacts", () => {
-  assert.doesNotMatch(trip, />\? \{Math\.round\(platformCommission\)/);
+test("Driver V4 visible labels do not expose replacement question-mark artifacts", () => {
   assert.doesNotMatch(i18n, /Refreshing\?|Loading\?|Open Active Trip \?|Call \?|STATUS \?|Seen \?\?|Sent \?|\?\? Camera|\?\? Gallery/);
   assert.doesNotMatch(i18n, /olkaa\?aa|\?\?\?\? \?\?\?\?\?\? \?\?\?/);
 });
@@ -80,9 +79,8 @@ test("Driver V4 localized copy has no lost separator or Oromo apostrophe placeho
   assert.doesNotMatch(i18n, /olkaa\?(?:i|ameera|uun|aa)/);
 });
 
-
 test("Active Trip keeps a visible mobile map window and map attribution", () => {
   assert.match(trip, /data-driver-trip-map-window/);
-  assert.doesNotMatch(trip, /max-h-\[58dvh\]/);
+  assert.match(trip, /min-h-\[420px\]/);
   assert.match(map, /AttributionControl|attributionControl:\s*true/);
 });
