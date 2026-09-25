@@ -34,9 +34,14 @@ test('customer booking v2 preserves the complete authoritative v1 booking contra
   assert.match(serviceDateMigration, /customer_create_booking_v1\([\s\S]*p_cargo_quantity[\s\S]*p_cargo_unit[\s\S]*p_expected_quote_etb/i);
 });
 
-test('driver availability and claim conflicts are service-date aware instead of globally blocking future jobs', () => {
-  assert.match(serviceDateMigration, /claim_order_with_truck/i);
-  assert.match(serviceDateMigration, /driver_available_trucks_for_order/i);
+test('Driver Mobile calendar RPCs are service-date aware and keep legacy Driver Portal RPCs unchanged', () => {
+  assert.match(serviceDateMigration, /create or replace function public\.driver_can_view_available_order_v2/i);
+  assert.match(serviceDateMigration, /create or replace function public\.get_available_jobs_v2/i);
+  assert.match(serviceDateMigration, /create or replace function public\.driver_available_trucks_for_order_v2/i);
+  assert.match(serviceDateMigration, /create or replace function public\.claim_order_with_truck_v2/i);
+  assert.doesNotMatch(serviceDateMigration, /create or replace function public\.driver_can_view_available_order\s*\(/i);
+  assert.doesNotMatch(serviceDateMigration, /create or replace function public\.driver_available_trucks_for_order\s*\(/i);
+  assert.doesNotMatch(serviceDateMigration, /create or replace function public\.claim_order_with_truck\s*\(/i);
   assert.match(serviceDateMigration, /active_order\.service_date\s*=\s*v_service_date/i);
   assert.match(serviceDateMigration, /scheduled\.service_date\s*=\s*v_service_date/i);
 });
