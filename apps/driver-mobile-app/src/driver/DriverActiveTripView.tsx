@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  calculateRouteProgressPct,
+  distanceBetweenCoordinatesM,
   formatRouteDistance,
   formatRouteDuration,
   localizeRouteInstruction,
+  resolveNavigationStep,
   type DriverActiveTripOrder,
   type DriverNavigationRoute,
 } from "./driver-active-trip.model";
@@ -26,35 +29,23 @@ import { DriverTripCustomerPaymentPanel } from "./DriverTripCustomerPaymentPanel
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
 type GpsState = "idle" | "requesting" | "queued" | "syncing" | "live";
-
 const TRIP_REFRESH_MS = 15_000;
 const MIN_PING_INTERVAL_MS = 15_000;
 
-function geolocationErrorMessage(
-  error: GeolocationPositionError,
-  copy: ReturnType<typeof getDriverV4Copy>["trip"],
-): string {
+function geolocationErrorMessage(error: GeolocationPositionError, copy: ReturnType<typeof getDriverV4Copy>["trip"]): string {
   if (error.code === error.PERMISSION_DENIED) return copy.gpsPermission;
   if (error.code === error.POSITION_UNAVAILABLE) return copy.gpsUnavailable;
   if (error.code === error.TIMEOUT) return copy.gpsTimeout;
   return copy.gpsReadError;
 }
-
 function formatEtb(value: number | null): string {
   return value === null ? "—" : `ETB ${Math.round(value).toLocaleString()}`;
 }
-
 function concisePlace(value: string): string {
   const [place] = value.split(",");
   return place?.trim() || value.trim();
 }
-
-function statusCopy(
-  state: GpsState,
-  tripStatus: DriverActiveTripOrder["status"],
-  pending: number,
-  copy: ReturnType<typeof getDriverV4Copy>["trip"],
-) {
+function statusCopy(state: GpsState, tripStatus: DriverActiveTripOrder["status"], pending: number, copy: ReturnType<typeof getDriverV4Copy>["trip"]) {
   if (state === "live") return { title: copy.liveTitle, help: copy.liveHelp };
   if (state === "queued") return { title: copy.queuedTitle, help: `${pending} · ${copy.queuedHelp}` };
   if (state === "syncing") return { title: copy.syncingTitle, help: copy.syncingHelp };
@@ -63,12 +54,7 @@ function statusCopy(
   return { title: copy.readyTitle, help: copy.readyHelp };
 }
 
-export function DriverActiveTripView({
-  userId,
-  fullName,
-  onOpenWallet = () => undefined,
-  language = "om",
-}: {
+export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => undefined, language = "om" }: {
   userId: string;
   fullName: string;
   onOpenWallet?: () => void;
@@ -100,16 +86,14 @@ export function DriverActiveTripView({
   const [lastPingAt, setLastPingAt] = useState<string | null>(null);
   const [speedKmh, setSpeedKmh] = useState<number | null>(null);
   const [completedTrackingId, setCompletedTrackingId] = useState<string | null>(null);
+  const [navigationStepIndex, setNavigationStepIndex] = useState(0);
+  const [routeProgressPct, setRouteProgressPct] = useState(0);
   const t = getDriverV4Copy(language);
 
-  useEffect(() => {
-    tripRef.current = trip;
-  }, [trip]);
+  useEffect(() => { tripRef.current = trip; }, [trip]);
 
   const clearWatch = useCallback(() => {
-    if (watchIdRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-    }
+    if (watchIdRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.clearWatch(watchIdRef.current);
     watchIdRef.current = null;
     startingRef.current = false;
     pingInFlightRef.current = false;
@@ -122,10 +106,7 @@ export function DriverActiveTripView({
   }, [clearWatch, pendingCount]);
 
   const refreshTrip = useCallback(async (silent = false) => {
-    if (refreshInFlightRef.current) {
-      queuedRefreshRef.current = true;
-      return;
-    }
+    if (refreshInFlightRef.current) { queuedRefreshRef.current = true; return; }
     refreshInFlightRef.current = true;
     const requestId = ++refreshRequestIdRef.current;
     if (!silent && !confirmedSnapshot) setLoading(true);
@@ -144,6 +125,8 @@ export function DriverActiveTripView({
         setDriverPosition(null);
         setRoute(null);
         setRouteOrderId(null);
+        setNavigationStepIndex(0);
+        setRouteProgressPct(0);
         if (previous) clearQueuedDriverPings(userId, previous.id);
       } else if (!previous || previous.id !== next.id) {
         setCompletedTrackingId(null);
@@ -152,6 +135,8 @@ export function DriverActiveTripView({
         setDriverPosition(null);
         setLastPingAt(null);
         setSpeedKmh(null);
+        setNavigationStepIndex(0);
+        setRouteProgressPct(0);
         setPendingCount(getQueuedDriverPingCount(userId, next.id));
       }
     } catch {
@@ -175,6 +160,8 @@ export function DriverActiveTripView({
       if (!mountedRef.current || requestId !== routeRequestIdRef.current || tripRef.current?.id !== orderId) return;
       setRoute(next);
       setRouteOrderId(orderId);
+      setNavigationStepIndex(0);
+      setRouteProgressPct(0);
     } catch {
       if (!mountedRef.current || requestId !== routeRequestIdRef.current || tripRef.current?.id !== orderId) return;
       setRouteError(t.trip.routeError);
@@ -197,10 +184,7 @@ export function DriverActiveTripView({
       const result = await syncQueuedDriverPings(userId, current.id, (ping) => sendDriverTrackingPing(userId, ping), isDriverNetworkFailure);
       if (!mountedRef.current || tripRef.current?.id !== current.id) return;
       setPendingCount(result.remainingCount);
-      if (result.latestTrip) {
-        setTrip(result.latestTrip);
-        tripRef.current = result.latestTrip;
-      }
+      if (result.latestTrip) { setTrip(result.latestTrip); tripRef.current = result.latestTrip; }
       if (result.remainingCount > 0) setGpsState("queued");
       else if (watchIdRef.current !== null && result.latestTrip?.status === "in_transit") {
         setGpsState("live");
@@ -219,10 +203,7 @@ export function DriverActiveTripView({
   const startSharing = useCallback(() => {
     const current = tripRef.current;
     if (!current || startingRef.current || watchIdRef.current !== null || syncInFlightRef.current) return;
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setError(t.trip.browserNoGps);
-      return;
-    }
+    if (typeof navigator === "undefined" || !navigator.geolocation) { setError(t.trip.browserNoGps); return; }
     startingRef.current = true;
     setGpsState("requesting");
     setError(null);
@@ -233,9 +214,7 @@ export function DriverActiveTripView({
           if (!active) return;
           const now = Date.now();
           const coordinates: [number, number] = [position.coords.longitude, position.coords.latitude];
-          const nextSpeed = position.coords.speed !== null && Number.isFinite(position.coords.speed)
-            ? Math.max(0, position.coords.speed * 3.6)
-            : null;
+          const nextSpeed = position.coords.speed !== null && Number.isFinite(position.coords.speed) ? Math.max(0, position.coords.speed * 3.6) : null;
           setDriverPosition(coordinates);
           setSpeedKmh(nextSpeed);
           if (pingInFlightRef.current || (lastPingAttemptRef.current > 0 && now - lastPingAttemptRef.current < MIN_PING_INTERVAL_MS)) return;
@@ -257,13 +236,8 @@ export function DriverActiveTripView({
               tripRef.current = confirmed;
               setPendingCount(getQueuedDriverPingCount(userId, active.id));
               setLastPingAt(new Date().toLocaleTimeString());
-              if (confirmed.status === "in_transit") {
-                setGpsState("live");
-                setError(null);
-              } else {
-                setGpsState("requesting");
-                setError(t.trip.serverConfirming);
-              }
+              if (confirmed.status === "in_transit") { setGpsState("live"); setError(null); }
+              else { setGpsState("requesting"); setError(t.trip.serverConfirming); }
             })
             .catch((caught) => {
               if (!mountedRef.current || tripRef.current?.id !== active.id) return;
@@ -278,10 +252,7 @@ export function DriverActiveTripView({
               setGpsState(getQueuedDriverPingCount(userId, active.id) > 0 ? "queued" : "idle");
               setError(t.trip.pingError);
             })
-            .finally(() => {
-              startingRef.current = false;
-              pingInFlightRef.current = false;
-            });
+            .finally(() => { startingRef.current = false; pingInFlightRef.current = false; });
         },
         (positionError) => {
           clearWatch();
@@ -308,6 +279,8 @@ export function DriverActiveTripView({
     setSpeedKmh(null);
     setRoute(null);
     setRouteOrderId(null);
+    setNavigationStepIndex(0);
+    setRouteProgressPct(0);
     setCompletedTrackingId(trackingId);
     setTrip(null);
     tripRef.current = null;
@@ -319,11 +292,8 @@ export function DriverActiveTripView({
     void refreshTrip();
     const interval = window.setInterval(() => void refreshTrip(true), TRIP_REFRESH_MS);
     let unsubscribe: () => void = () => undefined;
-    try {
-      unsubscribe = subscribeToDriverActiveTrip(userId, () => void refreshTrip(true));
-    } catch {
-      setError(t.trip.realtimeError);
-    }
+    try { unsubscribe = subscribeToDriverActiveTrip(userId, () => void refreshTrip(true)); }
+    catch { setError(t.trip.realtimeError); }
     return () => {
       mountedRef.current = false;
       refreshRequestIdRef.current += 1;
@@ -339,6 +309,12 @@ export function DriverActiveTripView({
     setPendingCount(getQueuedDriverPingCount(userId, trip.id));
     if (routeOrderId !== trip.id) void loadRoute(trip.id);
   }, [loadRoute, routeOrderId, trip, userId]);
+
+  useEffect(() => {
+    if (!route || !driverPosition || route.steps.length === 0) return;
+    setNavigationStepIndex((previous) => resolveNavigationStep(route.steps, driverPosition, previous).index);
+    setRouteProgressPct((previous) => Math.max(previous, calculateRouteProgressPct(route.coordinates, driverPosition)));
+  }, [driverPosition, route]);
 
   useEffect(() => {
     const handleOnline = () => void syncQueue();
@@ -360,24 +336,18 @@ export function DriverActiveTripView({
   const gps = statusCopy(gpsState, trip.status, pendingCount, t.trip);
   const busy = gpsState === "requesting" || gpsState === "syncing";
   const statusLabel = trip.status === "in_transit" ? t.common.inTransit : t.common.assigned;
-  const currentStep = route?.steps[0] ?? null;
+  const currentStep = route?.steps[navigationStepIndex] ?? null;
+  const maneuverDistanceM = currentStep?.location && driverPosition
+    ? distanceBetweenCoordinatesM(driverPosition, currentStep.location)
+    : currentStep?.distanceM ?? null;
 
   return <div className="relative min-h-[calc(100dvh-137px)] overflow-hidden bg-[#e9f1ec]" data-mobile-driver-active-trip data-gps-state={gpsState}>
     <div className="absolute inset-0 min-h-[420px]" data-driver-trip-map-window>
-      <DriverActiveTripMap
-        route={route}
-        driverPosition={driverPosition}
-        ariaLabel={t.trip.locationTitle}
-        loadingLabel={t.trip.routeLoading}
-        errorLabel={t.trip.routeError}
-        emptyLabel={t.trip.locationUnavailable}
-      />
+      <DriverActiveTripMap route={route} driverPosition={driverPosition} ariaLabel={t.trip.locationTitle} loadingLabel={t.trip.routeLoading} errorLabel={t.trip.routeError} emptyLabel={t.trip.locationUnavailable} />
     </div>
-
     <div className="absolute inset-x-3 top-3 z-10 rounded-[22px] border border-white/70 bg-white/95 p-4 shadow-halo-float backdrop-blur-xl">
       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-halo-muted">{fullName} · {trip.trackingId}</p><h1 className="mt-1 break-words text-lg font-black text-halo-navy">{concisePlace(trip.pickupAddress)} → {concisePlace(trip.dropoffAddress)}</h1></div><span className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black ${trip.status === "in_transit" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{statusLabel}</span></div>
     </div>
-
     <div className="absolute inset-x-3 top-[118px] z-10 flex items-start gap-2">
       {gpsState === "live" && <span className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-emerald-700/95 px-3 py-2 text-[10px] font-black text-white shadow-halo-card"><span className="h-2 w-2 animate-pulse rounded-full bg-white" />{gps.title}</span>}
       {routeLoading && <span role="status" className="rounded-xl bg-white/95 px-3 py-2 text-[10px] font-black text-halo-blue shadow-halo-card">{t.trip.routeLoading}</span>}
@@ -393,19 +363,20 @@ export function DriverActiveTripView({
         <div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${gpsState === "live" ? "animate-pulse bg-emerald-600" : gpsState === "queued" || gpsState === "syncing" ? "bg-amber-500" : "bg-halo-muted"}`}/><div className="min-w-0"><p className="text-sm font-black text-halo-navy">{gps.title}</p><p role="status" aria-live="polite" className="mt-1 text-[11px] leading-5 text-halo-muted">{gps.help}</p>{lastPingAt && <p className="mt-2 text-[10px] font-bold text-emerald-700">{t.trip.lastServerUpdate}: {lastPingAt}{speedKmh !== null ? ` · ${speedKmh.toFixed(1)} km/h` : ""}</p>}</div></div>
       </div>
 
-      {currentStep && <div className="mt-3 rounded-2xl border border-halo-line bg-white p-3"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.trip.next}</p><p className="mt-1 text-xs font-bold leading-5 text-halo-navy">{localizeRouteInstruction(currentStep.instruction, language)}</p><p className="mt-1 text-[10px] text-halo-muted">{Math.round(currentStep.distanceM).toLocaleString()} m</p></div>}
+      {currentStep && <div className="mt-3 rounded-2xl border border-halo-line bg-white p-3" data-driver-navigation-step>
+        <div className="flex items-center justify-between gap-3"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.trip.next}</p><span className="text-[10px] font-black text-halo-blue">{routeProgressPct}%</span></div>
+        <p className="mt-1 text-xs font-bold leading-5 text-halo-navy">{localizeRouteInstruction(currentStep.instruction, language)}</p>
+        <p className="mt-1 text-[10px] text-halo-muted">{maneuverDistanceM === null ? "—" : `${Math.round(maneuverDistanceM).toLocaleString()} m`}</p>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-halo-line" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={routeProgressPct}><div className="h-full rounded-full bg-halo-blue transition-[width] duration-300" style={{ width: `${routeProgressPct}%` }} /></div>
+      </div>}
 
       <div className="mt-4 grid gap-3">
-        {gpsState === "queued" ? <>
-          <button type="button" onClick={() => void syncQueue()} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white disabled:opacity-60">{t.trip.retryQueue}</button>
-          {watchIdRef.current !== null && <button type="button" onClick={stopSharing} className="min-h-12 w-full rounded-2xl border border-halo-line px-5 text-sm font-black text-halo-navy">{t.trip.stop}</button>}
-        </> : gpsState === "live" ? <button type="button" onClick={stopSharing} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-5 text-sm font-black text-halo-navy">{t.trip.stop}</button> : <button type="button" onClick={startSharing} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white shadow-halo-button disabled:opacity-60">{gpsState === "requesting" ? t.trip.requesting : gpsState === "syncing" ? t.trip.syncing : trip.status === "in_transit" ? t.trip.continueGps : t.trip.start}</button>}
+        {gpsState === "queued" ? <><button type="button" onClick={() => void syncQueue()} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white disabled:opacity-60">{t.trip.retryQueue}</button>{watchIdRef.current !== null && <button type="button" onClick={stopSharing} className="min-h-12 w-full rounded-2xl border border-halo-line px-5 text-sm font-black text-halo-navy">{t.trip.stop}</button>}</> : gpsState === "live" ? <button type="button" onClick={stopSharing} className="min-h-13 w-full rounded-2xl border border-halo-line bg-white px-5 text-sm font-black text-halo-navy">{t.trip.stop}</button> : <button type="button" onClick={startSharing} disabled={busy} className="min-h-13 w-full rounded-2xl bg-halo-blue px-5 text-sm font-black text-white shadow-halo-button disabled:opacity-60">{gpsState === "requesting" ? t.trip.requesting : gpsState === "syncing" ? t.trip.syncing : trip.status === "in_transit" ? t.trip.continueGps : t.trip.start}</button>}
       </div>
 
       <section className="mt-3 rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card" data-driver-live-location>
         <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.trip.locationTitle}</p>{driverPosition ? <p className="mt-2 break-all text-xs font-bold text-halo-navy">{driverPosition[1].toFixed(6)}, {driverPosition[0].toFixed(6)}</p> : <p className="mt-2 text-xs leading-5 text-halo-muted">{t.trip.locationUnavailable}</p>}</div><span className={`shrink-0 rounded-xl px-3 py-2 text-[10px] font-black ${gpsState === "live" ? "bg-emerald-100 text-emerald-800" : "bg-halo-soft text-halo-muted"}`}>{gpsState === "live" ? t.trip.liveTitle : t.trip.shareLocation}</span></div>
       </section>
-
       <DriverTripCustomerPaymentPanel userId={userId} trip={trip} language={language} />
       {trip.status === "in_transit" && <DriverDeliveryProofPanel trip={trip} userId={userId} onDelivered={handleDelivered} language={language} />}
       <div className="mt-4 flex items-center gap-3 rounded-2xl bg-halo-soft p-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-blue text-sm font-black text-white">{fullName.trim().slice(0, 1).toUpperCase() || "D"}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-black text-halo-navy">{fullName}</p><p className="mt-0.5 text-[10px] text-halo-muted">{t.trip.assignedDriver}</p></div></div>
