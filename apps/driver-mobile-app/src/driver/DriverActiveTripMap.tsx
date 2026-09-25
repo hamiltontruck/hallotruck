@@ -26,10 +26,20 @@ function pointElement(kind: "start" | "end" | "driver") {
   return element;
 }
 
-export function DriverActiveTripMap({ route, driverPosition, ariaLabel }: {
+export function DriverActiveTripMap({
+  route,
+  driverPosition,
+  ariaLabel,
+  loadingLabel,
+  errorLabel,
+  emptyLabel,
+}: {
   route: DriverNavigationRoute | null;
   driverPosition: [number, number] | null;
   ariaLabel: string;
+  loadingLabel: string;
+  errorLabel: string;
+  emptyLabel: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -52,9 +62,6 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel }: {
 
   useEffect(() => {
     routeRef.current = route;
-    if (!initialBoundsFitRef.current && route?.coordinates.length && route.coordinates.length >= 2) {
-      // The route effect below performs the one-time initial bounds fit once the style is ready.
-    }
   }, [route]);
 
   useEffect(() => {
@@ -143,6 +150,7 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel }: {
       map?.remove();
       mapRef.current = null;
       mapLoadedRef.current = false;
+      initialBoundsFitRef.current = false;
       startMarkerRef.current = null;
       endMarkerRef.current = null;
       driverMarkerRef.current = null;
@@ -211,18 +219,18 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel }: {
     <div className="absolute inset-0" data-driver-map-shell data-driver-map-status={mapStatus}>
       <div ref={containerRef} aria-label={ariaLabel} className="absolute inset-0" data-driver-real-map />
       {mapStatus === "loading" ? (
-        <div className="pointer-events-none absolute inset-0 grid place-items-center bg-slate-100/65 text-xs font-semibold text-slate-600">
-          Loading live map…
+        <div className="pointer-events-none absolute inset-0 grid place-items-center bg-slate-100/65 px-6 text-center text-xs font-semibold text-slate-600" role="status">
+          {loadingLabel}
         </div>
       ) : null}
       {mapStatus === "error" ? (
         <div role="alert" className="pointer-events-none absolute inset-x-4 top-4 rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-red-700 shadow">
-          Live map could not load. GPS tracking remains active; retry when the map connection is available.
+          {errorLabel}
         </div>
       ) : null}
       {mapStatus === "empty" ? (
         <div className="pointer-events-none absolute inset-0 grid place-items-center bg-slate-100 px-6 text-center text-xs font-semibold text-slate-600">
-          Waiting for real route or GPS coordinates…
+          {emptyLabel}
         </div>
       ) : null}
     </div>
