@@ -82,13 +82,16 @@ export async function fetchDriverActiveTrip(expectedUserId: string): Promise<Dri
     .eq("driver_id", user.id)
     .in("status", ["accepted", "in_transit"])
     .lte("service_date", today)
-    .order("status", { ascending: false })
     .order("service_date", { ascending: false })
     .order("accepted_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
   if (error) throw new Error(error.message);
-  return normalizeDriverActiveTripOrder(data);
+  const normalized = (data ?? [])
+    .map(normalizeDriverActiveTripOrder)
+    .filter((value): value is DriverActiveTripOrder => value !== null);
+  return normalized.find((value) => value.status === "in_transit")
+    ?? normalized.find((value) => value.status === "accepted")
+    ?? null;
 }
 
 export async function fetchDriverAssignedTrip(
