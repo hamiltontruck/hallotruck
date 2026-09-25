@@ -59,6 +59,7 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel }: {
       attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
     mapRef.current = map;
 
     const resize = () => map.resize();
