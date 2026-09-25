@@ -21,6 +21,7 @@ import {
   fetchDriverRatingSummary,
   fetchDriverTrucks,
   fetchDriverVerificationFiles,
+  saveDriverContactProfile,
   saveDriverVehicleProfile,
   subscribeToDriverProfile,
   type DriverRatingSummary,
@@ -203,6 +204,13 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   const [plateNumber, setPlateNumber] = useState("");
   const [vehicleType, setVehicleType] = useState<string>(DRIVER_VEHICLE_TYPES[0]);
   const [capacityTons, setCapacityTons] = useState("5");
+  const [contactFullName, setContactFullName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactHomeAddress, setContactHomeAddress] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactNotice, setContactNotice] = useState<string | null>(null);
+  const [contactError, setContactError] = useState<string | null>(null);
   const t = getDriverV4Copy(language);
   const c = t.profile;
   const p = c;
@@ -230,6 +238,12 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
 
     if (profileResult.status === "fulfilled") {
       setProfile(profileResult.value);
+      if (!savingContact) {
+        setContactFullName(profileResult.value.fullName);
+        setContactPhone(profileResult.value.phone);
+        setContactEmail(profileResult.value.email ?? "");
+        setContactHomeAddress(profileResult.value.homeAddress ?? "");
+      }
       setProfileConfirmed(true);
       setProfileError(null);
     } else {
@@ -263,7 +277,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       queuedRefreshRef.current = false;
       window.setTimeout(() => void refresh(), 0);
     }
-  }, [c.documentsError, c.profileError, c.trucksError, documentsConfirmed, profileConfirmed, trucksConfirmed, userId]);
+  }, [c.documentsError, c.profileError, c.trucksError, documentsConfirmed, profileConfirmed, savingContact, trucksConfirmed, userId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -301,6 +315,27 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
   const profileStatus = profile ? statusCopy(profile.driverStatus, language) : null;
   const initials = (profile?.fullName || fallbackName).trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toUpperCase()).join("") || "D";
 
+  async function handleContactSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (savingContact) return;
+    setSavingContact(true);
+    setContactError(null);
+    setContactNotice(null);
+    try {
+      const saved = await saveDriverContactProfile(userId, { fullName: contactFullName, phone: contactPhone, email: contactEmail, homeAddress: contactHomeAddress });
+      setProfile(saved);
+      setContactFullName(saved.fullName);
+      setContactPhone(saved.phone);
+      setContactEmail(saved.email ?? "");
+      setContactHomeAddress(saved.homeAddress ?? "");
+      setContactNotice(p.contactSaved);
+    } catch {
+      setContactError(p.contactSaveError);
+    } finally {
+      setSavingContact(false);
+    }
+  }
+
   async function handleVehicleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (savingVehicle) return;
@@ -332,6 +367,19 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
       <div className="flex items-start gap-4"><span className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-halo-blue text-lg font-black text-white">{initials}</span><div className="min-w-0 flex-1"><h2 className="break-words text-xl font-black text-halo-navy">{profile?.fullName || fallbackName}</h2><p className="mt-1 break-all text-xs text-halo-muted">{profile?.phone || `${c.phone} —`}</p>{profileStatus && <><span className={`mt-3 inline-flex rounded-full px-3 py-1.5 text-[9px] font-black ${profileStatus.className}`}>{profileStatus.label}</span><p className="mt-2 text-[10px] leading-4 text-halo-muted">{profileStatus.detail}</p></>}</div></div>
       <div className="mt-4 grid grid-cols-2 gap-3 border-t border-halo-line pt-4 text-xs"><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">{c.preferredVehicle}</p><p className="mt-1 font-extrabold text-halo-navy">{formatVehicleType(profile?.vehicleType ?? null)}</p></div><div><p className="text-[9px] font-black uppercase tracking-wider text-halo-muted">{c.memberSince}</p><p className="mt-1 font-extrabold text-halo-navy">{formatDate(profile?.createdAt ?? null, language)}</p></div></div>
     </section>
+
+    <form data-driver-profile-contact-editor onSubmit={(event) => void handleContactSave(event)} className="rounded-[24px] border border-halo-line bg-white p-4 shadow-halo-card">
+      <h2 className="text-sm font-black text-halo-navy">{p.editContact}</h2>
+      {contactNotice && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-2.5 text-[10px] font-bold text-emerald-700">{contactNotice}</p>}
+      {contactError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-2.5 text-[10px] font-bold text-red-700">{contactError}</p>}
+      <div className="mt-3 grid gap-3 min-[390px]:grid-cols-2">
+        <label className="text-[10px] font-black text-halo-muted">{p.fullName}<input required autoComplete="name" maxLength={120} value={contactFullName} onChange={(e) => setContactFullName(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line px-3 text-sm text-halo-navy" /></label>
+        <label className="text-[10px] font-black text-halo-muted">{p.phone}<input required type="tel" inputMode="tel" autoComplete="tel" maxLength={17} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line px-3 text-sm text-halo-navy" /></label>
+        <label className="text-[10px] font-black text-halo-muted">{p.email}<input type="email" inputMode="email" autoComplete="email" maxLength={254} value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line px-3 text-sm text-halo-navy" /></label>
+        <label className="text-[10px] font-black text-halo-muted">{p.homeAddress}<input autoComplete="street-address" maxLength={240} value={contactHomeAddress} onChange={(e) => setContactHomeAddress(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-halo-line px-3 text-sm text-halo-navy" /></label>
+      </div>
+      <button type="submit" disabled={savingContact || !profile} className="mt-3 min-h-11 w-full rounded-xl bg-halo-blue px-4 text-xs font-black text-white disabled:opacity-60">{savingContact ? p.savingContact : p.saveContact}</button>
+    </form>
 
     <section data-driver-profile-contact className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2">
       <article className="rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{p.contact}</p><dl className="mt-3 space-y-3 text-xs"><div><dt className="font-black text-halo-muted">{p.phone}</dt><dd className="mt-1 break-all font-extrabold text-halo-navy">{profile?.phone || "—"}</dd></div><div><dt className="font-black text-halo-muted">{p.email}</dt><dd className="mt-1 break-all font-extrabold text-halo-navy">{profile?.email || "—"}</dd></div><div><dt className="font-black text-halo-muted">{p.homeAddress}</dt><dd className="mt-1 break-words font-extrabold text-halo-navy">{profile?.homeAddress || "—"}</dd></div></dl></article>

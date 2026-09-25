@@ -75,7 +75,7 @@ export async function submitDriverCommissionPayment(input: {
 
   const upload = await client.storage.from(RECEIPT_BUCKET).upload(path, receipt, {
     cacheControl: "3600",
-    contentType: receipt.type,
+    contentType: validated.receipt.type,
     upsert: false,
   });
   if (upload.error) throw new Error(upload.error.message);

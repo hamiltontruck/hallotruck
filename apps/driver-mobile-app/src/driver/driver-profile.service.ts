@@ -70,6 +70,30 @@ export async function fetchDriverProfile(expectedUserId: string): Promise<Driver
   return profile;
 }
 
+export async function saveDriverContactProfile(expectedUserId: string, input: { fullName: string; phone: string; email: string; homeAddress: string }): Promise<DriverProfileRecord> {
+  const { client, user } = await requireExpectedDriver(expectedUserId);
+  const fullName = input.fullName.trim().replace(/\s+/g, " ");
+  const phone = input.phone.trim().replace(/[\s()-]/g, "");
+  const email = input.email.trim().toLowerCase();
+  const homeAddress = input.homeAddress.trim().replace(/\s+/g, " ");
+  if (fullName.length < 2 || fullName.length > 120) throw new Error("Driver name must contain 2-120 characters.");
+  if (!/^(?:\+251|251|0)?[79]\d{8}$/.test(phone)) throw new Error("Enter a valid Ethiopian mobile number.");
+  if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,63}$/.test(email))) throw new Error("Enter a valid email address.");
+  if (homeAddress.length > 240) throw new Error("Home address is too long.");
+  const normalizedPhone = phone.startsWith("+251") ? `0${phone.slice(4)}` : phone.startsWith("251") ? `0${phone.slice(3)}` : /^[79]/.test(phone) ? `0${phone}` : phone;
+  const { data, error } = await client
+    .from("profiles")
+    .update({ full_name: fullName, phone: normalizedPhone, email: email || null, home_address: homeAddress || null })
+    .eq("id", user.id)
+    .eq("role", "driver")
+    .select("id,full_name,phone,email,home_address,vehicle_type,driver_status,rating_avg,created_at")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const profile = normalizeDriverProfile(data, user.id);
+  if (!profile) throw new Error("Driver profile could not be saved.");
+  return profile;
+}
+
 export async function fetchDriverTrucks(expectedUserId: string): Promise<DriverTruckRecord[]> {
   const { client, user } = await requireExpectedDriver(expectedUserId);
   const { data, error } = await client
