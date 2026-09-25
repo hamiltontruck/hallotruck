@@ -79,3 +79,10 @@ test("Driver V4 localized copy has no lost separator or Oromo apostrophe placeho
   assert.doesNotMatch(i18n, / \? /);
   assert.doesNotMatch(i18n, /olkaa\?(?:i|ameera|uun|aa)/);
 });
+
+
+test("Active Trip keeps a visible mobile map window and map attribution", () => {
+  assert.match(trip, /data-driver-trip-map-window/);
+  assert.doesNotMatch(trip, /max-h-\[58dvh\]/);
+  assert.match(map, /AttributionControl|attributionControl:\s*true/);
+});
