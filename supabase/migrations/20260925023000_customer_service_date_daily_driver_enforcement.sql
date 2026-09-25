@@ -3,8 +3,8 @@ begin;
 alter table public.orders
   add column if not exists service_date date;
 
--- Preserve history exactly as-is while deriving a calendar day for legacy rows.
--- This does not rewrite order status, assignment, money, route or customer data.
+-- Preserve all legacy order facts. Only derive the service calendar date for rows
+-- created before service_date existed; no status, finance, route or assignment is rewritten.
 update public.orders
 set service_date = (created_at at time zone 'Africa/Addis_Ababa')::date
 where service_date is null;
@@ -70,9 +70,10 @@ create trigger trg_orders_driver_daily_assignment
 before insert or update of driver_id, service_date on public.orders
 for each row execute function public.guard_driver_daily_assignment();
 
--- Existing marketplace eligibility stays authoritative; only the active-truck
--- conflict is scoped to the requested order's calendar date.
-create or replace function public.driver_can_view_available_order(
+-- Driver Mobile V4 gets calendar-aware versioned RPCs. Existing Driver Portal
+-- RPCs are intentionally left unchanged so this rollout cannot alter its current
+-- active-trip semantics while Mobile gains future scheduling.
+create or replace function public.driver_can_view_available_order_v2(
   p_order_id uuid,
   p_vehicle_type text,
   p_cargo_weight_tons numeric
@@ -99,6 +100,13 @@ as $$
     auth.uid() is not null
     and public.is_approved_driver()
     and public.order_payment_ready_for_dispatch(p_order_id)
+    and not exists (
+      select 1
+      from public.orders scheduled
+      where scheduled.driver_id = auth.uid()
+        and scheduled.service_date = (select service_date from target_order)
+        and scheduled.id <> p_order_id
+    )
     and (
       not exists (select 1 from active_request)
       or exists (
@@ -143,9 +151,9 @@ as $$
         )
     );
 $$;
+revoke all on function public.driver_can_view_available_order_v2(uuid,text,numeric) from public, anon;
+grant execute on function public.driver_can_view_available_order_v2(uuid,text,numeric) to authenticated, service_role;
 
--- Calendar-aware extension of get_available_jobs. It delegates eligibility to
--- the existing authoritative RPC instead of copying marketplace rules.
 create or replace function public.get_available_jobs_v2()
 returns table(
   id uuid,
@@ -158,29 +166,52 @@ returns table(
   cargo_description text,
   service_date date
 )
-language sql
+language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
+declare
+  current_user_id uuid := auth.uid();
+begin
+  if current_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+  if not public.is_approved_driver() then
+    raise exception 'Approved driver account required';
+  end if;
+
+  return query
   select
-    jobs.id,
-    jobs.tracking_id,
-    jobs.pickup_address,
-    jobs.dropoff_address,
-    jobs.vehicle_type,
-    jobs.distance_km,
-    jobs.price_etb,
-    jobs.cargo_description,
+    o.id,
+    o.tracking_id,
+    o.pickup_address,
+    o.dropoff_address,
+    o.vehicle_type,
+    o.distance_km,
+    o.price_etb,
+    o.cargo_description,
     o.service_date
-  from public.get_available_jobs() jobs
-  join public.orders o on o.id = jobs.id
-  order by o.service_date asc, jobs.tracking_id asc;
+  from public.orders o
+  where o.status = 'placed'::public.order_status
+    and o.driver_id is null
+    and public.driver_can_view_available_order_v2(o.id, o.vehicle_type, o.cargo_weight_tons)
+  order by
+    o.service_date asc,
+    case when exists (
+      select 1
+      from public.customer_dispatch_requests request
+      where request.order_id = o.id
+        and request.status = 'requested'
+        and request.driver_id = current_user_id
+    ) then 0 else 1 end,
+    o.created_at asc;
+end;
 $$;
 revoke all on function public.get_available_jobs_v2() from public, anon;
 grant execute on function public.get_available_jobs_v2() to authenticated, service_role;
 
-create or replace function public.driver_available_trucks_for_order(p_order_id uuid)
+create or replace function public.driver_available_trucks_for_order_v2(p_order_id uuid)
 returns table(id uuid, plate_number text, vehicle_type text, capacity_tons numeric, status text)
 language plpgsql
 security definer
@@ -199,9 +230,7 @@ begin
   if public.driver_commission_balance(current_user_id) > 0.005 then
     raise exception 'Commission settlement required before accepting another load';
   end if;
-  if not public.order_payment_ready_for_dispatch(p_order_id) then
-    return;
-  end if;
+  if not public.order_payment_ready_for_dispatch(p_order_id) then return; end if;
 
   select o.vehicle_type, o.cargo_weight_tons, o.service_date
     into requested_vehicle_type, requested_weight, v_service_date
@@ -212,6 +241,16 @@ begin
 
   if requested_vehicle_type is null or v_service_date is null then return; end if;
 
+  if exists (
+    select 1
+    from public.orders scheduled
+    where scheduled.driver_id = current_user_id
+      and scheduled.service_date = v_service_date
+      and scheduled.id <> p_order_id
+  ) then
+    return;
+  end if;
+
   select request.driver_id, request.truck_id
     into target_driver_id, target_truck_id
   from public.customer_dispatch_requests request
@@ -219,9 +258,7 @@ begin
     and request.status = 'requested'
   limit 1;
 
-  if target_driver_id is not null and target_driver_id <> current_user_id then
-    return;
-  end if;
+  if target_driver_id is not null and target_driver_id <> current_user_id then return; end if;
 
   return query
   select t.id, t.plate_number, t.vehicle_type, t.capacity_tons, t.status::text
@@ -259,8 +296,10 @@ begin
     t.updated_at asc nulls first;
 end;
 $$;
+revoke all on function public.driver_available_trucks_for_order_v2(uuid) from public, anon;
+grant execute on function public.driver_available_trucks_for_order_v2(uuid) to authenticated, service_role;
 
-create or replace function public.claim_order_with_truck(p_order_id uuid, p_truck_id uuid)
+create or replace function public.claim_order_with_truck_v2(p_order_id uuid, p_truck_id uuid)
 returns boolean
 language plpgsql
 security definer
@@ -382,9 +421,11 @@ begin
   return true;
 end;
 $$;
+revoke all on function public.claim_order_with_truck_v2(uuid,uuid) from public, anon;
+grant execute on function public.claim_order_with_truck_v2(uuid,uuid) to authenticated, service_role;
 
--- Service-date booking wrapper preserves every authoritative v1 argument and
--- only adds the calendar date. No quote, cargo or payment formula is duplicated.
+-- Service-date booking wrapper preserves the complete authoritative v1 contract
+-- and only adds the calendar date. No quote or cargo formula is duplicated.
 create or replace function public.customer_create_booking_v2(
   p_customer_id uuid,
   p_request_id uuid,
@@ -488,7 +529,7 @@ grant execute on function public.customer_create_booking_v2(
 comment on column public.orders.service_date is
   'Authoritative HALLO service/pickup calendar date used by dispatch daily-assignment guards.';
 comment on function public.get_available_jobs_v2() is
-  'Driver marketplace jobs plus authoritative service_date; eligibility remains delegated to get_available_jobs().';
+  'Driver Mobile V4 calendar-aware marketplace. Existing Driver Portal RPC contracts remain unchanged.';
 
 notify pgrst, 'reload schema';
 commit;
