@@ -92,6 +92,8 @@ export function CustomerBookingJourney({
   const [cargoNotes, setCargoNotes] = useState("");
   const [specialRequirements, setSpecialRequirements] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<CustomerPaymentMethod>("cash");
+  const todayServiceDate = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Addis_Ababa" });
+  const [serviceDate, setServiceDate] = useState(todayServiceDate);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [quote, setQuote] = useState<CustomerQuotePreview | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -200,6 +202,7 @@ export function CustomerBookingJourney({
         cargoNotes: note,
         paymentMethod,
         expectedQuoteEtb: fresh.total_quote_etb,
+        serviceDate,
       });
       setCreatedOrder(order);
       setStep("success");
@@ -220,6 +223,7 @@ export function CustomerBookingJourney({
     setSpecialRequirements("");
     setQuote(null);
     setTermsAccepted(false);
+    setServiceDate(todayServiceDate);
     setSubmitError("");
     onReset();
   }

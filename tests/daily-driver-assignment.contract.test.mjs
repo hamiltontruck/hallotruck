@@ -9,13 +9,13 @@ const sql = fs.readdirSync(migrationDir)
   .map((name) => fs.readFileSync(path.join(migrationDir, name), 'utf8'))
   .join('\n');
 
-test('database enforces one driver assignment per calendar day', () => {
-  assert.match(sql, /one[^\n]*driver[^\n]*(day|daily)|daily[^\n]*driver[^\n]*assignment/i);
-  assert.match(sql, /advisory|unique[^\n]*index|exclude|for update/i);
+test('database enforces one driver assignment per service date', () => {
+  assert.match(sql, /guard_driver_daily_assignment/i);
+  assert.match(sql, /pg_advisory_xact_lock/i);
+  assert.match(sql, /o\.service_date\s*=\s*v_day/i);
 });
 
-test('same-day delivered or cancelled assignments still consume the day', () => {
-  assert.match(sql, /delivered/i);
-  assert.match(sql, /cancelled|canceled/i);
-  assert.match(sql, /assigned_at|assignment_date|assigned_on/i);
+test('completed or cancelled status cannot free the service-date slot', () => {
+  assert.doesNotMatch(sql, /o\.service_date\s*=\s*v_day[\s\S]{0,160}status\s+in/i);
+  assert.match(sql, /before insert or update of driver_id, service_date/i);
 });
