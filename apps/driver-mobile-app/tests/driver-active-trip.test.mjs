@@ -131,7 +131,7 @@ test("live map keeps a real reachable basemap and visible controls", () => {
   assert.doesNotMatch(mapSource, /tile\.openstreetmap\.org/);
   assert.match(mapSource, /map\.on\("error"/);
   assert.match(mapSource, /mapLoadedRef/);
-  assert.match(mapSource, /map\.resize\(\)/);
+  assert.match(mapSource, /map\?\.resize\(\)/);
   assert.match(mapSource, /keepMapControlsVisible/);
   assert.match(mapSource, /"top-left"/);
 });

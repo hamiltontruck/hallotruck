@@ -57,8 +57,8 @@ test("only accepted and in_transit rows become active driver trips", () => {
 
 test("service uses calendar-aware canonical server authorization and authenticated-driver isolation", () => {
   assert.match(serviceSource, /\.rpc\("get_available_jobs_v2"\)/);
-  assert.match(serviceSource, /\.rpc\("driver_available_trucks_for_order"/);
-  assert.match(serviceSource, /\.rpc\("claim_order_with_truck"/);
+  assert.match(serviceSource, /\.rpc\("driver_available_trucks_for_order_v2"/);
+  assert.match(serviceSource, /\.rpc\("claim_order_with_truck_v2"/);
   assert.match(serviceSource, /\.eq\("driver_id", user\.id\)/);
   assert.match(serviceSource, /service_date/);
   assert.match(serviceSource, /status=eq\.placed/);
