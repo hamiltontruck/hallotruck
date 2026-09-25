@@ -44,7 +44,9 @@ export function DriverCommissionPaymentPanel({
   onSubmitted: () => Promise<void>;
   language?: DriverLanguage;
 }) {
-  const [provider, setProvider] = useState("");
+  const [providerKind, setProviderKind] = useState<"bank" | "wallet">("bank");
+  const [providerChoice, setProviderChoice] = useState("CBE");
+  const [otherProvider, setOtherProvider] = useState("");
   const [transactionId, setTransactionId] = useState("");
   const [amount, setAmount] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
@@ -54,11 +56,15 @@ export function DriverCommissionPaymentPanel({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const t = getDriverV4Copy(language);
 
+  const resolvedProvider = providerChoice === "Other Bank" || providerChoice === "Other Wallet"
+    ? otherProvider.trim()
+    : providerChoice;
+
   const payableNowEtb = useMemo(
     () => Math.max(0, balanceEtb - pendingEtb),
     [balanceEtb, pendingEtb],
   );
-  const canSubmit = payableNowEtb > 0.005 && !submitting;
+  const canSubmit = payableNowEtb > 0.005 && Boolean(resolvedProvider) && !submitting;
 
   function paymentStatusLabel(status: DriverCommissionPayment["status"]) {
     if (status === "approved") return t.common.approved;
@@ -75,7 +81,7 @@ export function DriverCommissionPaymentPanel({
     try {
       await submitDriverCommissionPayment({
         expectedUserId: userId,
-        provider,
+        provider: resolvedProvider,
         transactionId,
         amountEtb: Number(amount),
         payableNowEtb,
@@ -124,58 +130,42 @@ export function DriverCommissionPaymentPanel({
       </div>
     ) : (
       <form onSubmit={(event) => void submit(event)} className="space-y-3" aria-busy={submitting}>
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.commission.provider}</span>
-          <input
-            list="driver-commission-providers"
-            value={provider}
-            onChange={(event) => setProvider(event.target.value)}
-            disabled={submitting}
-            autoComplete="organization"
-            maxLength={80}
-            placeholder={t.commission.providerPlaceholder}
-            className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
-          />
-          <datalist id="driver-commission-providers">
-            <option value="Commercial Bank of Ethiopia" />
-            <option value="Telebirr" />
-            <option value="Bank of Abyssinia" />
-            <option value="Awash Bank" />
-            <option value="Dashen Bank" />
-          </datalist>
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.commission.providerType}</span>
+            <select value={providerKind} onChange={(event) => { const kind = event.target.value as "bank" | "wallet"; setProviderKind(kind); setProviderChoice(kind === "bank" ? "CBE" : "Telebirr"); setOtherProvider(""); }} disabled={submitting} className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-3 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60">
+              <option value="bank">{t.commission.bank}</option>
+              <option value="wallet">{t.commission.wallet}</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{providerKind === "bank" ? t.commission.bankProvider : t.commission.walletProvider}</span>
+            <select value={providerChoice} onChange={(event) => { setProviderChoice(event.target.value); setOtherProvider(""); }} disabled={submitting} className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-3 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60">
+              {providerKind === "bank" ? <>
+                <option value="CBE">CBE</option><option value="Awash Bank">Awash Bank</option><option value="Dashen Bank">Dashen Bank</option><option value="Other Bank">Other Bank</option>
+              </> : <>
+                <option value="Telebirr">Telebirr</option><option value="M-Pesa">M-Pesa</option><option value="eBirr">eBirr</option><option value="Other Wallet">Other Wallet</option>
+              </>}
+            </select>
+          </label>
+        </div>
 
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.commission.transactionId}</span>
-          <input
-            value={transactionId}
-            onChange={(event) => setTransactionId(event.target.value)}
-            disabled={submitting}
-            maxLength={120}
-            autoCapitalize="characters"
-            autoComplete="off"
-            placeholder={t.commission.transactionPlaceholder}
-            className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
-          />
-        </label>
+        {(providerChoice === "Other Bank" || providerChoice === "Other Wallet") && <label className="block">
+          <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.commission.otherProvider}</span>
+          <input value={otherProvider} onChange={(event) => setOtherProvider(event.target.value)} disabled={submitting} maxLength={80} autoComplete="organization" className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" />
+        </label>}
 
         <label className="block">
           <span className="mb-1.5 flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">
             <span>{t.commission.amount}</span>
             <button type="button" onClick={() => setAmount(payableNowEtb.toFixed(2))} disabled={submitting} className="normal-case tracking-normal text-halo-blue">{t.commission.fullBalance}</button>
           </span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0.01"
-            max={payableNowEtb}
-            step="0.01"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            disabled={submitting}
-            placeholder="0.00"
-            className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60"
-          />
+          <input type="number" inputMode="decimal" min="0.01" max={payableNowEtb} step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={submitting} placeholder="0.00" className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" />
+        </label>
+
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.commission.transactionId}</span>
+          <input value={transactionId} onChange={(event) => setTransactionId(event.target.value)} disabled={submitting} maxLength={120} autoCapitalize="characters" autoComplete="off" placeholder={t.commission.transactionPlaceholder} className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-bold text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" />
         </label>
 
         <label className="block">
@@ -194,8 +184,10 @@ export function DriverCommissionPaymentPanel({
         {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-3 text-[11px] font-bold leading-5 text-red-800">{error}</p>}
         {success && <p role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] font-bold leading-5 text-emerald-800">{success}</p>}
 
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-5 text-amber-900">{t.commission.adminConfirmation}</p>
+
         <button type="submit" disabled={!canSubmit} className="min-h-13 w-full rounded-2xl bg-halo-blue px-4 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-50">
-          {submitting ? t.commission.submitting : t.commission.submit}
+          {submitting ? t.commission.submitting : t.commission.submitDeposit}
         </button>
       </form>
     )}
