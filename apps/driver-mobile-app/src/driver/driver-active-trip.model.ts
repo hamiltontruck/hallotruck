@@ -8,6 +8,7 @@ export type DriverActiveTripOrder = {
   dropoffAddress: string;
   priceEtb: number | null;
   acceptedAt: string | null;
+  serviceDate: string;
   selectedPaymentMethod: DriverSelectedPaymentMethod;
 };
 
@@ -70,6 +71,11 @@ function normalizeCoordinate(value: unknown): [number, number] | null {
   return [lng, lat];
 }
 
+function normalizeServiceDate(value: unknown): string | null {
+  const text = requiredText(value);
+  return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
 export function normalizeDriverActiveTripOrder(value: unknown): DriverActiveTripOrder | null {
   const row = recordOf(value);
   if (!row) return null;
@@ -78,11 +84,12 @@ export function normalizeDriverActiveTripOrder(value: unknown): DriverActiveTrip
   const trackingId = requiredText(row.tracking_id);
   const pickupAddress = requiredText(row.pickup_address);
   const dropoffAddress = requiredText(row.dropoff_address);
+  const serviceDate = normalizeServiceDate(row.service_date);
   const status = row.status === "accepted" || row.status === "in_transit" ? row.status : null;
   const selectedPaymentMethod = row.selected_payment_method === "cash" || row.selected_payment_method === "bank_telebirr"
     ? row.selected_payment_method
     : null;
-  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !status || !selectedPaymentMethod) return null;
+  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !serviceDate || !status || !selectedPaymentMethod) return null;
 
   return {
     id,
@@ -92,6 +99,7 @@ export function normalizeDriverActiveTripOrder(value: unknown): DriverActiveTrip
     dropoffAddress,
     priceEtb: optionalFiniteNumber(row.price_etb),
     acceptedAt: optionalText(row.accepted_at),
+    serviceDate,
     selectedPaymentMethod,
   };
 }
@@ -116,12 +124,7 @@ export function normalizeDriverNavigationRoute(value: unknown): DriverNavigation
         const distanceM = optionalFiniteNumber(step?.distanceM);
         const durationSec = optionalFiniteNumber(step?.durationSec);
         if (!step || !instruction || distanceM === null || durationSec === null) return [];
-        return [{
-          instruction,
-          distanceM,
-          durationSec,
-          location: normalizeCoordinate(step.location),
-        }];
+        return [{ instruction, distanceM, durationSec, location: normalizeCoordinate(step.location) }];
       }).slice(0, 100)
     : [];
 
@@ -155,12 +158,7 @@ export function projectRouteToSvg(
   const projected = coordinates.map(project);
   const path = projected.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x} ${y}`).join(" ");
   const driver = driverPosition ? project(driverPosition) : null;
-  return {
-    path,
-    start: projected[0],
-    end: projected[projected.length - 1],
-    driver,
-  };
+  return { path, start: projected[0], end: projected[projected.length - 1], driver };
 }
 
 export function formatRouteDistance(distanceKm: number | null): string {
