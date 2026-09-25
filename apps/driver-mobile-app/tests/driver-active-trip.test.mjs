@@ -14,7 +14,7 @@ const queueSource = readFileSync(new URL("../src/driver/driver-gps-queue.ts", im
 const componentSource = readFileSync(new URL("../src/driver/DriverActiveTripView.tsx", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 
-test("normalizes only assigned active lifecycle rows", () => {
+test("normalizes only assigned active lifecycle rows with authoritative service date", () => {
   const accepted = normalizeDriverActiveTripOrder({
     id: "order-1",
     tracking_id: "HT-2026-1",
@@ -23,10 +23,12 @@ test("normalizes only assigned active lifecycle rows", () => {
     dropoff_address: "Finfinnee",
     price_etb: "12000",
     accepted_at: null,
+    service_date: "2026-09-25",
     selected_payment_method: "cash",
   });
   assert.equal(accepted?.status, "accepted");
   assert.equal(accepted?.priceEtb, 12000);
+  assert.equal(accepted?.serviceDate, "2026-09-25");
   assert.equal(accepted?.selectedPaymentMethod, "cash");
   assert.equal(normalizeDriverActiveTripOrder({ ...accepted, status: "delivered" }), null);
   assert.equal(normalizeDriverActiveTripOrder({ id: "missing-fields", status: "in_transit" }), null);
@@ -62,8 +64,10 @@ test("formats unknown route metrics without false zero", () => {
   assert.equal(formatRouteDuration(125), "2h 5m");
 });
 
-test("service preserves assigned-driver and server-confirmed boundaries", () => {
+test("service preserves assigned-driver, service-date and server-confirmed boundaries", () => {
   assert.match(serviceSource, /\.eq\("driver_id", user\.id\)/);
+  assert.match(serviceSource, /service_date/);
+  assert.match(serviceSource, /\.lte\("service_date", today\)/);
   assert.match(serviceSource, /\/navigation\?orderId=/);
   assert.match(serviceSource, /\/tracking/);
   assert.match(serviceSource, /fetchDriverAssignedTrip\(expectedUserId, ping\.orderId\)/);
@@ -86,6 +90,17 @@ test("active trip component guards GPS lifecycle and stale assignment", () => {
   assert.match(componentSource, /confirmed\.status === "in_transit"/);
 });
 
+test("Driver location sharing stays inside HALLO tracking instead of exporting a Maps link", () => {
+  assert.doesNotMatch(componentSource, /google\.com\/maps|navigator\.share|clipboard\.writeText/);
+  assert.match(componentSource, /sendDriverTrackingPing/);
+  assert.match(componentSource, /startSharing/);
+  assert.match(componentSource, /stopSharing/);
+});
+
+test("Active Trip does not duplicate the authoritative commission formula", () => {
+  assert.doesNotMatch(componentSource, /grossFare \* 0\.02|driverNet|expectedNet/);
+});
+
 test("App routes Driver map to the real active trip component", () => {
   assert.match(appSource, /DriverActiveTripView/);
   assert.doesNotMatch(appSource, /CustomerLiveMapView|role === "customer"/);
@@ -99,6 +114,9 @@ test("localizes common navigation maneuvers and renders a real basemap component
   assert.doesNotMatch(componentSource, /<svg/);
   assert.match(mapSource, /maplibregl\.Map/);
   assert.match(mapSource, /openfreemap|maptiler/i);
+  assert.match(mapSource, /loadingLabel/);
+  assert.match(mapSource, /errorLabel/);
+  assert.match(mapSource, /emptyLabel/);
 });
 
 test("live map keeps a real reachable basemap instead of cascading to blocked OSM tiles", () => {
