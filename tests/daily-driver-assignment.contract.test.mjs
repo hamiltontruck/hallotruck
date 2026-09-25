@@ -20,14 +20,14 @@ test('completed or cancelled status cannot free the service-date slot', () => {
   assert.match(sql, /before insert or update of driver_id, service_date/i);
 });
 test('service-date migration preserves legacy order history instead of backfilling it', () => {
-  const migration = fs.readFileSync(path.join(migrationDir, '20260925023000_customer_service_date_daily_driver_enforcement.sql'), 'utf8');
+  const migration = fs.readFileSync(path.join(migrationDir, '20260925212158_customer_service_date_daily_driver_enforcement.sql'), 'utf8');
   assert.doesNotMatch(migration, /update\s+public\.orders\s+set\s+service_date\s*=\s*\(created_at/i);
   assert.doesNotMatch(migration, /alter\s+column\s+service_date\s+set\s+not\s+null/i);
   assert.match(migration, /if\s+tg_op\s*=\s*'INSERT'[\s\S]*new\.service_date\s+is\s+null/i);
 });
 
 test('customer-owned inserts cannot pre-assign an arbitrary driver', () => {
-  const migration = fs.readFileSync(path.join(migrationDir, '20260925023000_customer_service_date_daily_driver_enforcement.sql'), 'utf8');
+  const migration = fs.readFileSync(path.join(migrationDir, '20260925212158_customer_service_date_daily_driver_enforcement.sql'), 'utf8');
   assert.match(migration, /tg_op\s*=\s*'INSERT'[\s\S]*auth\.uid\(\)\s*=\s*new\.customer_id[\s\S]*new\.driver_id\s+is\s+not\s+null/i);
   assert.match(migration, /Customers cannot assign a driver during order creation/i);
 });
