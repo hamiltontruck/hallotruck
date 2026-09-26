@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 const source = readFileSync("src/onboarding.tsx", "utf8");
 const auth = readFileSync("src/auth.tsx", "utf8");
 const authCss = readFileSync("src/auth/driver-auth.css", "utf8");
+const viteConfig = readFileSync("vite.config.ts", "utf8");
 const migrationName = readdirSync("../../supabase/migrations").find((name) => name.endsWith("_driver_onboarding_vehicle_model.sql"));
 const vehicleModelMigration = migrationName
   ? readFileSync(`../../supabase/migrations/${migrationName}`, "utf8")
@@ -65,6 +66,14 @@ test("document uploads preserve unsaved one-page vehicle drafts", () => {
   assert.match(source, /async function refresh\(\{ preserveVehicleDraft = false \} = \{\}\)/);
   assert.match(source, /if \(!preserveVehicleDraft\) \{[\s\S]*setPlate\([\s\S]*setTruckModel\([\s\S]*setCapacityTons\(/);
   assert.match(source, /await refresh\(\{ preserveVehicleDraft: true \}\)/);
+});
+
+test("Driver V4 dev server isolates Tailwind v4 from the repository Tailwind v3 PostCSS config", () => {
+  assert.ok(existsSync("postcss.config.mjs"), "expected an app-local PostCSS boundary");
+  const postcssConfig = readFileSync("postcss.config.mjs", "utf8");
+  assert.match(postcssConfig, /plugins:\s*\[\s*\]/);
+  assert.doesNotMatch(postcssConfig, /tailwindcss|autoprefixer/);
+  assert.match(viteConfig, /postcss:\s*fileURLToPath\(new URL\("\.\/?", import\.meta\.url\)\)/);
 });
 
 test("Driver phone completion accepts Ethiopian 07 and 09 families", () => {
