@@ -14,6 +14,7 @@ export type CustomerMobileOrder = {
   cargo_quantity: number | null;
   cargo_unit: string | null;
   cargo_description: string | null;
+  service_date: string | null;
   created_at: string | null;
 };
 
@@ -120,7 +121,7 @@ export async function loadCustomerMobileData(userId: string): Promise<CustomerMo
   const [ordersResult, profileResult] = await Promise.all([
     client
       .from("orders")
-      .select("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,status,payment_status,selected_payment_method,cargo_quantity,cargo_unit,cargo_description,created_at")
+      .select("id,tracking_id,pickup_address,dropoff_address,vehicle_type,distance_km,price_etb,status,payment_status,selected_payment_method,cargo_quantity,cargo_unit,cargo_description,service_date,created_at")
       .eq("customer_id", userId)
       .order("created_at", { ascending: false }),
     client.rpc("customer_get_profile"),

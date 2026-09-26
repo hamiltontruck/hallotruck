@@ -102,7 +102,7 @@ const COPY = {
   en: {
     customerOnly: "CUSTOMER ONLY",
     createTitle: "Create your HALLO account",
-    signInTitle: "Welcome Back",
+    signInTitle: "Welcome Shippers",
     createDescription: "Create a Customer account using your name, Ethiopian phone number, email and 6-digit PIN.",
     signInDescription: "Sign in to your account",
     language: "Language",

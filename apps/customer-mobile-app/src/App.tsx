@@ -23,7 +23,7 @@ function NavIcon({ name }: { name: NavPage | "book" }) {
     orders: <><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 4V2h6v2M8 9h8M8 13h8M8 17h5"/></>,
     payments: <><path d="M4 7h16v12H4z"/><path d="M4 10h16M15 14h3"/></>,
     profile: <><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></>,
-    book: <><path d="M12 5v14M5 12h14"/></>,
+    book: <><g className="customer-final-nav-truck"><path d="M2.5 8.5h11v7h-11z"/><path d="M13.5 11h4l2.5 2.5v2h-6.5z"/><circle cx="6" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/></g><path className="customer-final-nav-arrow" d="M8 5h7m-2.5-2.5L15 5l-2.5 2.5"/></>,
   };
   return <svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{icons[name]}</svg>;
 }
