@@ -30,3 +30,10 @@ test("Customer auth styling uses stable semantic classes rather than DOM-positio
   assert.match(css, /\.customer-auth-language/);
   assert.doesNotMatch(css, /main>div|main>section|label:first-child/);
 });
+
+
+test("Customer English login welcomes Shippers", () => {
+  assert.match(auth, /signInTitle: "Welcome Shippers"/);
+  assert.doesNotMatch(auth, /signInTitle: "Welcome Back"/);
+});
+const auth = fs.readFileSync(new URL("../src/auth/CustomerAuthBoundaryV2.tsx", import.meta.url), "utf8");

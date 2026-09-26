@@ -4,7 +4,9 @@ import test from "node:test";
 
 const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 const booking = readFileSync(new URL("../src/CustomerBookingJourney.tsx", import.meta.url), "utf8");
+const appNav = app;
 const home = readFileSync(new URL("../src/CustomerHomePage.tsx", import.meta.url), "utf8");
+const dataService = readFileSync(new URL("../src/customer-data.service.ts", import.meta.url), "utf8");
 const details = readFileSync(new URL("../src/CustomerOrderDetailsPage.tsx", import.meta.url), "utf8");
 const orders = readFileSync(new URL("../src/CustomerOrdersV4Page.tsx", import.meta.url), "utf8");
 const utilities = readFileSync(new URL("../src/CustomerUtilityPages.tsx", import.meta.url), "utf8");
@@ -131,4 +133,35 @@ test("booking route uses the live visual viewport and keyboard-first map layout"
   assert.match(androidCss, /:has\(\.booking-place-field input:focus\) \.real-start-sheet/);
   assert.match(androidCss, /\.real-start-sheet[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(androidCss, /\.real-start-sheet button[\s\S]*min-height: 44px/);
+});
+
+
+test("truck picker keeps every truck active, scrollable and resets selection on return", () => {
+  assert.doesNotMatch(booking, /disabled=\{!fits\}/);
+  assert.match(booking, /resetTruckSelection/);
+  assert.match(booking, /truckListRef\.current\?\.scrollTo/);
+  assert.match(css, /customer-final-truck-list[\s\S]*overflow-y:auto/);
+  assert.doesNotMatch(css, /customer-final-truck-row:disabled\{opacity:/);
+});
+
+test("booking exposes a future service date through review and customer order reads", () => {
+  assert.match(booking, /type="date"/);
+  assert.match(booking, /serviceDate/);
+  assert.match(booking, /serviceDate,/);
+  assert.match(booking, /disabled=\{!selectedTruck\}/);
+});
+
+
+test("center booking navigation uses a white truck with forward arrow", () => {
+  assert.match(appNav, /customer-final-nav-truck/);
+  assert.match(appNav, /customer-final-nav-arrow/);
+});
+
+
+test("service date is loaded and shown on customer order surfaces", () => {
+  assert.match(dataService, /service_date: string \| null/);
+  assert.match(dataService, /cargo_description,service_date,created_at/);
+  assert.match(orders, /order\.service_date/);
+  assert.match(details, /order\.service_date/);
+  assert.match(copy, /orderDate:/);
 });

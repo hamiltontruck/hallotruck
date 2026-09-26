@@ -102,6 +102,7 @@ export function CustomerBookingJourney({
   const [submitting, setSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<CreatedCustomerOrder | null>(null);
   const submitLock = useRef(false);
+  const truckListRef = useRef<HTMLDivElement | null>(null);
 
   const truck = customerTruckByKey(selectedTruck);
   const truckDisplayLabel = customerTruckDisplayLabel(truck, language);
@@ -134,6 +135,25 @@ export function CustomerBookingJourney({
     const minutes = Math.round(routePreview.duration_minutes % 60);
     return `${hours ? `${hours}h ` : ""}${minutes}m`;
   }, [routePreview]);
+
+  function resetTruckSelection() {
+    onTruckChange("");
+    requestAnimationFrame(() => truckListRef.current?.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+
+  function openTruckStep() {
+    resetTruckSelection();
+    setStep("truck");
+  }
+
+  function goBack() {
+    if (step === "truck") {
+      resetTruckSelection();
+      setStep("route");
+      return;
+    }
+    setStep(STEPS[Math.max(0, activeIndex - 1)]);
+  }
 
   async function calculateQuote() {
     if (!routeReady || !pickupPlace || !dropoffPlace || !truckReady) return null;
@@ -252,7 +272,7 @@ export function CustomerBookingJourney({
   return (
     <section className="customer-final-booking-shell" aria-label={c.routeTitle}>
       <header className="customer-final-booking-header">
-        <button type="button" className="customer-final-back" onClick={step === "route" ? onClose : () => setStep(STEPS[Math.max(0, activeIndex - 1)])} aria-label={c.back}>‹</button>
+        <button type="button" className="customer-final-back" onClick={step === "route" ? onClose : goBack} aria-label={c.back}>‹</button>
         <h1>{step === "cargo" ? c.cargoTitle : step === "truck" ? c.chooseTruck : step === "quote" ? c.yourQuote : step === "review" ? c.reviewBooking : c.routeTitle}</h1>
         <span aria-hidden="true" />
       </header>
@@ -277,7 +297,7 @@ export function CustomerBookingJourney({
             onDropoffSelect={onDropoffSelect}
             onSwap={onSwap}
             onReset={onReset}
-            onBook={() => { if (routeReady) setStep("truck"); }}
+            onBook={() => { if (routeReady) openTruckStep(); }}
           />
         </div>
       )}
@@ -304,18 +324,18 @@ export function CustomerBookingJourney({
         <main className="customer-final-step-body customer-final-step-body--truck">
           <p className="customer-final-step-help">{c.stepTruckHelp}</p>
           <div className="customer-final-truck-filter"><button type="button" className="active">{c.all}</button><span>{cargoTons > 0 ? `${cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} ${c.ton}` : "—"}</span></div>
-          <div className="customer-final-truck-list">
+          <div className="customer-final-truck-list" ref={truckListRef}>
             {CUSTOMER_TRUCKS.map((option) => {
               const fits = cargoTons <= 0 || cargoTons <= option.capacityTons;
               const displayLabel = customerTruckDisplayLabel(option, language);
-              return <button type="button" key={option.key} className={`customer-final-truck-row ${selectedTruck === option.key ? "selected" : ""}`} disabled={!fits} onClick={() => onTruckChange(option.key)}>
+              return <button type="button" key={option.key} className={`customer-final-truck-row ${selectedTruck === option.key ? "selected" : ""}`} onClick={() => onTruckChange(option.key)}>
                 <TruckImage truck={option} alt={displayLabel} />
                 <span><strong>{displayLabel}</strong><small>{c.maxLoad} {option.capacityTons} {c.ton}</small></span>
                 <b aria-hidden="true">{selectedTruck === option.key ? "✓" : "○"}</b>
               </button>;
             })}
           </div>
-          <div className="customer-final-truck-action"><button type="button" className="customer-final-primary" onClick={() => setStep("cargo")}>{c.continue} →</button></div>
+          <div className="customer-final-truck-action"><button type="button" className="customer-final-primary" disabled={!selectedTruck} onClick={() => setStep("cargo")}>{c.continue} →</button></div>
         </main>
       )}
 
@@ -338,10 +358,12 @@ export function CustomerBookingJourney({
       {step === "review" && routePreview && quote && (
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepReviewHelp}</p>
+              <label className="customer-final-service-date"><span>Order Date</span><input type="date" min={todayServiceDate} value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
           <section className="customer-final-review-card">
             <div><span>⌖</span><p><small>{c.route}</small><strong>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong><em>{routePreview.distance_km.toFixed(1)} km · {routeDuration}</em></p></div>
             <div><span>▣</span><p><small>{c.cargo}</small><strong>{cargoCopy.categories[cargoCategory]} · {cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} {c.ton}</strong><em>{cargoCopy.packagingTypes[packagingType]}</em></p></div>
             <div><span>🚚</span><p><small>{c.truck}</small><strong>{truckDisplayLabel}</strong></p></div>
+                <div><span>◷</span><p><small>Order Date</small><strong>{serviceDate}</strong></p></div>
             <div className="total"><p><small>{c.total}</small><strong>{formatEtb(quote.total_quote_etb)}</strong></p></div>
           </section>
           <fieldset className="customer-final-payment-choice">

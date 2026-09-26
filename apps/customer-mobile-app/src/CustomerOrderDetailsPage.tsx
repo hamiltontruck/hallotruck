@@ -75,6 +75,7 @@ export function CustomerOrderDetailsPage({
         <Detail icon="⌖" label={c.route} value={`${order.pickup_address || "—"} → ${order.dropoff_address || "—"}`} />
         <Detail icon="▣" label={c.cargo} value={formatCustomerLoad(order)} />
         <Detail icon="🚚" label={c.truck} value={order.vehicle_type || c.pending} />
+        <Detail icon="◷" label={c.orderDate} value={order.service_date || c.pending} />
         <Detail icon="◫" label={c.distance} value={order.distance_km ? `${Number(order.distance_km).toLocaleString(undefined,{maximumFractionDigits:1})} km` : c.pending} />
         <div className="customer-final-details-total"><span>{c.totalAmount}</span><strong>{formatEtb(order.price_etb)}</strong></div>
         <div className="customer-final-details-created"><span>{c.payment}</span><strong>{formatEtb(payment.verifiedPaid)} / {formatEtb(payment.invoiceTotal)}</strong></div>
