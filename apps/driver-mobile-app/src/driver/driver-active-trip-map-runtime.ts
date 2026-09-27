@@ -13,6 +13,12 @@ export type DriverMapCameraLike = {
   easeTo(options: { center: DriverMapPoint; duration?: number }): unknown;
 };
 
+export type DriverStyleReadyMapLike = {
+  isStyleLoaded(): boolean | void;
+  once(event: "load", listener: () => void): unknown;
+  off(event: "load", listener: () => void): unknown;
+};
+
 export type DriverRouteFeature = {
   type: "Feature";
   properties: Record<string, never>;
@@ -47,4 +53,22 @@ export function updateDriverMarkerAndFollow(
 ) {
   marker.setLngLat(position);
   map.easeTo({ center: position, duration: 650 });
+}
+
+export function runWhenDriverMapStyleReady(
+  map: DriverStyleReadyMapLike,
+  render: () => void,
+) {
+  let cancelled = false;
+  const run = () => {
+    if (!cancelled && map.isStyleLoaded()) render();
+  };
+
+  if (Boolean(map.isStyleLoaded())) run();
+  else map.once("load", run);
+
+  return () => {
+    cancelled = true;
+    map.off("load", run);
+  };
 }
