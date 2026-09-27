@@ -136,7 +136,7 @@ test("panel subtracts pending review, locks submission and surfaces review statu
   assert.match(panelSource, /t\.common\.pending/);
   assert.match(panelSource, /rejectionReason/);
   assert.match(panelSource, /adminDepositEtb/);
-  assert.match(panelSource, /commissionChargedEtb/);
+  assert.match(panelSource, /depositConsumedEtb/);
   assert.match(panelSource, /availableDepositEtb/);
   assert.match(panelSource, /t\.commission\.depositCoverage/);
   assert.match(panelSource, /accept="image\/jpeg,image\/png,image\/webp,application\/pdf"/);

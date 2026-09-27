@@ -30,7 +30,7 @@ export function DriverCommissionPaymentPanel({
   balanceEtb,
   pendingEtb,
   adminDepositEtb,
-  commissionChargedEtb,
+  depositConsumedEtb,
   availableDepositEtb,
   payments,
   sourceError,
@@ -42,7 +42,7 @@ export function DriverCommissionPaymentPanel({
   balanceEtb: number;
   pendingEtb: number;
   adminDepositEtb: number;
-  commissionChargedEtb: number;
+  depositConsumedEtb: number;
   availableDepositEtb: number;
   payments: DriverCommissionPayment[] | null;
   sourceError: string | null;
@@ -136,7 +136,7 @@ export function DriverCommissionPaymentPanel({
         <p className="mt-3 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">{t.commission.depositCoverage}</p>
         <dl className="mt-2 grid grid-cols-3 gap-2 text-left">
           <div className="rounded-xl bg-white/70 p-2"><dt className="text-[8px] font-bold uppercase text-halo-muted">{t.commission.depositTotal}</dt><dd className="mt-1 text-[10px] font-black text-halo-navy">{formatWalletEtb(adminDepositEtb)}</dd></div>
-          <div className="rounded-xl bg-white/70 p-2"><dt className="text-[8px] font-bold uppercase text-halo-muted">{t.commission.commissionCovered}</dt><dd className="mt-1 text-[10px] font-black text-halo-navy">{formatWalletEtb(commissionChargedEtb)}</dd></div>
+          <div className="rounded-xl bg-white/70 p-2"><dt className="text-[8px] font-bold uppercase text-halo-muted">{t.commission.depositUsed}</dt><dd className="mt-1 text-[10px] font-black text-halo-navy">{formatWalletEtb(depositConsumedEtb)}</dd></div>
           <div className="rounded-xl bg-white/70 p-2"><dt className="text-[8px] font-bold uppercase text-halo-muted">{t.commission.depositRemaining}</dt><dd className="mt-1 text-[10px] font-black text-emerald-800">{formatWalletEtb(availableDepositEtb)}</dd></div>
         </dl>
       </div>

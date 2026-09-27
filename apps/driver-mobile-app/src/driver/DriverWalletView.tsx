@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  driverDepositConsumedEtb,
   formatWalletEtb,
   type DriverCommissionSummary,
   type DriverFinancialSummary,
@@ -246,7 +247,7 @@ export function DriverWalletView({
       balanceEtb={commission.balanceEtb}
       pendingEtb={commission.pendingEtb}
       adminDepositEtb={financial?.adminDepositEtb ?? 0}
-      commissionChargedEtb={financial?.commissionChargedEtb ?? commission.chargedEtb}
+      depositConsumedEtb={financial ? driverDepositConsumedEtb(financial) : 0}
       availableDepositEtb={financial?.availableDepositEtb ?? 0}
       payments={payments}
       sourceError={errors.payments}
