@@ -148,6 +148,8 @@ test("live map keeps a real reachable basemap and visible controls", () => {
   assert.doesNotMatch(mapSource, /tile\.openstreetmap\.org/);
   assert.match(mapSource, /map\.on\("error"/);
   assert.match(mapSource, /map\.on\("idle"/);
+  assert.match(mapSource, /const onStyleLoad = \(\) => \{[\s\S]{0,240}setMapStatus\("ready"\)/);
+  assert.match(mapSource, /const onError = \(\) => \{\s*if \(map\?\.isStyleLoaded\(\)\) return;/);
   assert.match(mapSource, /nextDriverMapStyleAfterFailure/);
   assert.match(mapSource, /map\?\.resize\(\)/);
   assert.match(mapSource, /keepMapControlsVisible/);
