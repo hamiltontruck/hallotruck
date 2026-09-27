@@ -10,11 +10,40 @@ import {
   projectRouteToSvg,
   resolveNavigationStep,
 } from "../.test-dist-active/driver-active-trip.model.js";
+import * as mapRuntime from "../.test-dist-active/driver-active-trip-map-runtime.js";
 
 const serviceSource = readFileSync(new URL("../src/driver/driver-active-trip.service.ts", import.meta.url), "utf8");
 const queueSource = readFileSync(new URL("../src/driver/driver-gps-queue.ts", import.meta.url), "utf8");
 const componentSource = readFileSync(new URL("../src/driver/DriverActiveTripView.tsx", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+
+
+test("style-ready map work waits for load and then runs once", () => {
+  assert.equal(typeof mapRuntime.runWhenDriverMapStyleReady, "function");
+  let styleLoaded = false;
+  let loadListener = null;
+  let renderCount = 0;
+  const map = {
+    isStyleLoaded: () => styleLoaded,
+    once: (event, listener) => {
+      assert.equal(event, "load");
+      loadListener = listener;
+    },
+    off: (event, listener) => {
+      assert.equal(event, "load");
+      if (loadListener === listener) loadListener = null;
+    },
+  };
+
+  const cleanup = mapRuntime.runWhenDriverMapStyleReady(map, () => { renderCount += 1; });
+  assert.equal(renderCount, 0);
+  assert.equal(typeof loadListener, "function");
+
+  styleLoaded = true;
+  loadListener();
+  assert.equal(renderCount, 1);
+  cleanup();
+});
 
 test("normalizes only assigned active lifecycle rows with authoritative service date", () => {
   const accepted = normalizeDriverActiveTripOrder({ id: "order-1", tracking_id: "HT-2026-1", status: "accepted", pickup_address: "Adama", dropoff_address: "Finfinnee", price_etb: "12000", accepted_at: null, service_date: "2026-09-25", selected_payment_method: "cash" });
