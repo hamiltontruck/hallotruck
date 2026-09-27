@@ -1,3 +1,4 @@
+
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -169,6 +170,8 @@ test("active trip component guards GPS lifecycle, stale assignment and navigatio
   assert.match(componentSource, /aria-expanded=\{sheetExpanded\}/);
   assert.match(componentSource, /viewportPadding=\{mapViewportPadding\}/);
   assert.match(componentSource, /hidden=\{!sheetExpanded\}/);
+  assert.match(componentSource, /completedTripIdRef/);
+  assert.match(componentSource, /next\?\.trackingId === completedTripIdRef\.current/);
 });
 
 test("Driver location sharing stays inside HALLO tracking instead of exporting a Maps link", () => {

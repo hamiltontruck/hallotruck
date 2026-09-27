@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
@@ -65,6 +66,7 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
 }) {
   const mountedRef = useRef(false);
   const tripRef = useRef<DriverActiveTripOrder | null>(null);
+  const completedTripIdRef = useRef<string | null>(null);
   const refreshInFlightRef = useRef(false);
   const queuedRefreshRef = useRef(false);
   const refreshRequestIdRef = useRef(0);
@@ -121,6 +123,10 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
     try {
       const next = await fetchDriverActiveTrip(userId);
       if (!mountedRef.current || requestId !== refreshRequestIdRef.current) return;
+      // Completion can reach the backend before the realtime/active-trip query
+      // stops returning the just-delivered row. Do not resurrect its map or
+      // delivery-proof panel during that short consistency window.
+      if (next?.trackingId === completedTripIdRef.current) return;
       const previous = tripRef.current;
       setTrip(next);
       tripRef.current = next;
@@ -294,6 +300,7 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
     setRouteOrderId(null);
     setNavigationStepIndex(0);
     setRouteProgressPct(0);
+    completedTripIdRef.current = trackingId;
     setCompletedTrackingId(trackingId);
     setTrip(null);
     tripRef.current = null;
@@ -341,7 +348,7 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
 
   if (!trip) {
     if (completedTrackingId) {
-      return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-5"><section className="w-full max-w-sm rounded-[28px] border border-emerald-200 bg-white p-7 text-center shadow-halo-card" data-mobile-trip-complete><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-3xl text-emerald-700">✓</span><p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{completedTrackingId}</p><h1 className="mt-2 text-2xl font-black text-halo-navy">{t.trip.completedTitle}</h1><p className="mt-3 text-sm leading-6 text-halo-muted">{t.trip.completedHelp}</p>{error && <p role="alert" className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">{error}</p>}<div className="mt-6 grid gap-2"><button type="button" onClick={onOpenWallet} className="min-h-12 w-full rounded-2xl bg-emerald-700 px-5 font-black text-white">{t.trip.openWallet}</button><button type="button" onClick={() => { setCompletedTrackingId(null); void refreshTrip(); }} className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-5 font-black text-halo-navy">{t.trip.nextWork}</button></div></section></div>;
+    return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-5"><section className="w-full max-w-sm rounded-[28px] border border-emerald-200 bg-white p-7 text-center shadow-halo-card" data-mobile-trip-complete><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-3xl text-emerald-700">✓</span><p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{completedTrackingId}</p><h1 className="mt-2 text-2xl font-black text-halo-navy">{t.trip.completedTitle}</h1><p className="mt-3 text-sm leading-6 text-halo-muted">{t.trip.completedHelp}</p>{error && <p role="alert" className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">{error}</p>}<div className="mt-6 grid gap-2"><button type="button" onClick={onOpenWallet} className="min-h-12 w-full rounded-2xl bg-emerald-700 px-5 font-black text-white">{t.trip.openWallet}</button><button type="button" onClick={() => { completedTripIdRef.current = null; setCompletedTrackingId(null); void refreshTrip(); }} className="min-h-12 w-full rounded-2xl border border-halo-line bg-white px-5 font-black text-halo-navy">{t.trip.nextWork}</button></div></section></div>;
     }
     return <div className="grid min-h-[calc(100dvh-137px)] place-items-center bg-halo-canvas px-5"><section className="w-full max-w-sm rounded-[28px] border border-halo-line bg-white p-7 text-center shadow-halo-card"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{t.trip.eyebrow}</p><h1 className="mt-3 text-2xl font-black text-halo-navy">{t.trip.noTripTitle}</h1><p className="mt-3 text-sm leading-6 text-halo-muted">{t.trip.noTripHelp}</p>{error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>}<button type="button" onClick={() => void refreshTrip()} className="mt-6 min-h-12 w-full rounded-2xl bg-halo-blue px-5 font-black text-white">{t.trip.checkAgain}</button></section></div>;
   }
