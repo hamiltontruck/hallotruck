@@ -110,13 +110,18 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
     keepMapControlsVisible(container);
     mapRef.current = map;
 
-    const onStyleLoad = () => {
+    const onLoad = () => {
       loaded = true;
       switchingStyle = false;
       clearLoadTimeout();
       map?.resize();
       keepMapControlsVisible(container);
       setMapStatus("ready");
+    };
+    const onStyleLoad = () => {
+      switchingStyle = false;
+      map?.resize();
+      keepMapControlsVisible(container);
     };
     const onIdle = () => {
       if (!loaded) return;
@@ -128,7 +133,7 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
       if (loaded) return;
       failOrFallback();
     };
-    map.on("load", onStyleLoad);
+    map.on("load", onLoad);
     map.on("style.load", onStyleLoad);
     map.on("idle", onIdle);
     map.on("styledata", onStyleData);
