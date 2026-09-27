@@ -8,7 +8,7 @@ export type DriverActiveTripOrder = {
   dropoffAddress: string;
   priceEtb: number | null;
   acceptedAt: string | null;
-  serviceDate: string;
+  serviceDate: string | null;
   selectedPaymentMethod: DriverSelectedPaymentMethod;
 };
 
@@ -80,7 +80,7 @@ export function normalizeDriverActiveTripOrder(value: unknown): DriverActiveTrip
   const selectedPaymentMethod = row.selected_payment_method === "cash" || row.selected_payment_method === "bank_telebirr"
     ? row.selected_payment_method
     : null;
-  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !serviceDate || !status || !selectedPaymentMethod) return null;
+  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !status || !selectedPaymentMethod) return null;
   return { id, trackingId, status, pickupAddress, dropoffAddress, priceEtb: optionalFiniteNumber(row.price_etb), acceptedAt: optionalText(row.accepted_at), serviceDate, selectedPaymentMethod };
 }
 

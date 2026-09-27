@@ -13,6 +13,9 @@ const serviceDateMigration = fs.readFileSync(
   path.join(migrationDir, '20260925212158_customer_service_date_daily_driver_enforcement.sql'),
   'utf8',
 );
+const productionRecoveryMigration = fs.readdirSync(migrationDir)
+  .filter((name) => name.endsWith('_restore_driver_mobile_v2_rpcs.sql'))
+  .map((name) => path.join(migrationDir, name))[0];
 
 test('database enforces one driver assignment per service date', () => {
   assert.match(sql, /guard_driver_daily_assignment/i);
@@ -55,4 +58,16 @@ test('Driver Mobile calendar RPCs are service-date aware and keep legacy Driver 
   assert.doesNotMatch(serviceDateMigration, /create or replace function public\.claim_order_with_truck\s*\(/i);
   assert.match(serviceDateMigration, /active_order\.service_date\s*=\s*v_service_date/i);
   assert.match(serviceDateMigration, /scheduled\.service_date\s*=\s*v_service_date/i);
+});
+
+test('a later migration restores Driver Mobile v2 RPCs after the production migration drift', () => {
+  assert.equal(
+    Boolean(productionRecoveryMigration && fs.existsSync(productionRecoveryMigration)),
+    true,
+    'production recovery migration must exist after the already-recorded 20260925212158 migration',
+  );
+  const recoverySql = fs.readFileSync(productionRecoveryMigration, 'utf8');
+  assert.match(recoverySql, /create or replace function public\.get_available_jobs_v2\(\)/i);
+  assert.match(recoverySql, /create or replace function public\.driver_available_trucks_for_order_v2\(p_order_id uuid\)/i);
+  assert.match(recoverySql, /create or replace function public\.claim_order_with_truck_v2\(p_order_id uuid, p_truck_id uuid\)/i);
 });

@@ -26,6 +26,23 @@ test("normalizes only assigned active lifecycle rows with authoritative service 
   assert.equal(normalizeDriverActiveTripOrder({ id: "missing-fields", status: "in_transit" }), null);
 });
 
+test("keeps a legacy active trip whose service date is null", () => {
+  const legacyInTransit = normalizeDriverActiveTripOrder({
+    id: "legacy-order",
+    tracking_id: "HT-2026-LEGACY",
+    status: "in_transit",
+    pickup_address: "Shashamane",
+    dropoff_address: "Goba",
+    price_etb: "22000",
+    accepted_at: "2026-09-25T03:19:33Z",
+    service_date: null,
+    selected_payment_method: "cash",
+  });
+
+  assert.ok(legacyInTransit);
+  assert.equal(legacyInTransit.serviceDate, null);
+});
+
 test("normalizes server route geometry and rejects malformed payloads", () => {
   const route = normalizeDriverNavigationRoute({ geometry: { type: "LineString", coordinates: [[38.7, 9.0], [39.1, 8.8], [39.4, 8.6]] }, distanceKm: 95.4, durationMin: 122, steps: [{ instruction: "Continue straight", distanceM: 420, durationSec: 36, location: [38.7, 9.0] }] });
   assert.equal(route?.coordinates.length, 3);
@@ -70,7 +87,7 @@ test("formats unknown route metrics without false zero", () => {
 test("service preserves assigned-driver, service-date and server-confirmed boundaries", () => {
   assert.match(serviceSource, /\.eq\("driver_id", user\.id\)/);
   assert.match(serviceSource, /service_date/);
-  assert.match(serviceSource, /\.lte\("service_date", today\)/);
+  assert.doesNotMatch(serviceSource, /\.lte\("service_date", today\)/);
   assert.match(serviceSource, /\/navigation\?orderId=/);
   assert.match(serviceSource, /\/tracking/);
   assert.match(serviceSource, /fetchDriverAssignedTrip\(expectedUserId, ping\.orderId\)/);
