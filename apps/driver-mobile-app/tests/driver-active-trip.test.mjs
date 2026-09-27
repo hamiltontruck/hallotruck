@@ -130,7 +130,8 @@ test("live map keeps a real reachable basemap and visible controls", () => {
   assert.match(mapSource, /tiles\.openfreemap\.org\/styles\/liberty/);
   assert.doesNotMatch(mapSource, /tile\.openstreetmap\.org/);
   assert.match(mapSource, /map\.on\("error"/);
-  assert.match(mapSource, /mapLoadedRef/);
+  assert.match(mapSource, /map\.on\("idle"/);
+  assert.match(mapSource, /nextDriverMapStyleAfterFailure/);
   assert.match(mapSource, /map\?\.resize\(\)/);
   assert.match(mapSource, /keepMapControlsVisible/);
   assert.match(mapSource, /"top-left"/);

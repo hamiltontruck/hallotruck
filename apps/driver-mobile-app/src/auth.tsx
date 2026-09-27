@@ -45,7 +45,7 @@ const COPY = {
 } as const;
 
 const UI = {
-  en: { welcome: "Welcome Back", subtitle: "Sign in to your account", signIn: "Sign In", forgot: "Forgot Password?", google: "Continue with Google", or: "or", noAccount: "Don’t have an account?", create: "Create Account", reset: "Reset your password", send: "Send reset link", sent: "If an account exists for this email, a reset link will arrive shortly.", googleUnavailable: "Google sign-in is unavailable right now. Please use your email and password.", googleFailed: "Google sign-in was not completed. Try again or sign in with your email.", back: "Back to Sign In" },
+  en: { welcome: "Welcome Drivers", subtitle: "Sign in to your account", signIn: "Sign In", forgot: "Forgot Password?", google: "Continue with Google", or: "or", noAccount: "Don’t have an account?", create: "Create Account", reset: "Reset your password", send: "Send reset link", sent: "If an account exists for this email, a reset link will arrive shortly.", googleUnavailable: "Google sign-in is unavailable right now. Please use your email and password.", googleFailed: "Google sign-in was not completed. Try again or sign in with your email.", back: "Back to Sign In" },
   om: { welcome: "Baga Nagaan Deebitan", subtitle: "Gara akkaawuntii keetti seeni", signIn: "Seeni", forgot: "Password dagattee?", google: "Google waliin itti fufi", or: "ykn", noAccount: "Akkaawuntii hin qabduu?", create: "Akkaawuntii Uumi", reset: "Password kee haaromsi", send: "Linkii haaromsuu ergi", sent: "Imeelii kanaan akkaawuntiin yoo jiraate, linkiin haaromsuu siif ergama.", googleUnavailable: "Google'n seenuun amma hin danda'amu. Imeelii fi password kee fayyadami.", googleFailed: "Google'n seenuun hin xumuramne. Irra deebi'i ykn imeelii keetiin seeni.", back: "Gara Seenuutti Deebi'i" },
   am: { welcome: "እንኳን ደህና ተመለሱ", subtitle: "ወደ መለያዎ ይግቡ", signIn: "ግባ", forgot: "የይለፍ ቃል ረሱ?", google: "በGoogle ይቀጥሉ", or: "ወይም", noAccount: "መለያ የለዎትም?", create: "መለያ ይፍጠሩ", reset: "የይለፍ ቃልዎን ያድሱ", send: "የማደሻ አገናኝ ላክ", sent: "በዚህ ኢሜይል መለያ ካለ፣ የማደሻ አገናኝ ይላካል።", googleUnavailable: "በGoogle መግባት አሁን አይቻልም። ኢሜይልና የይለፍ ቃልዎን ይጠቀሙ።", googleFailed: "በGoogle መግባት አልተጠናቀቀም። እንደገና ይሞክሩ ወይም በኢሜይል ይግቡ።", back: "ወደ መግቢያ ተመለስ" },
 } as const;
@@ -182,7 +182,7 @@ export function Login() {
     <div className="driver-auth-top"><label><span className="driver-sr-only">{text.language}</span><select aria-label={text.language} value={language} onChange={(event) => setLanguage(event.target.value as Language)} disabled={busy}><option value="en">EN</option><option value="om">OR</option><option value="am">አማ</option></select></label></div>
     <div className="driver-auth-content">
       <AuthBrand />
-      <header className="driver-auth-title"><h1>{signup ? ui.create : reset ? ui.reset : ui.welcome}</h1><p>{signup ? text.taglineSignup : reset ? text.email : ui.subtitle}</p></header>
+      <header className={`driver-auth-title ${!signup && !reset ? "driver-auth-title--login" : ""}`}><h1>{signup ? ui.create : reset ? ui.reset : ui.welcome}</h1><p>{signup ? text.taglineSignup : reset ? text.email : ui.subtitle}</p></header>
       {!online && <p className="driver-auth-error" role="alert" aria-live="assertive">{text.offline}</p>}
       <form onSubmit={submit} className="driver-auth-form" noValidate>
         {signup && <>
