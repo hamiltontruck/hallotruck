@@ -27,6 +27,7 @@ import { DriverActiveTripMap } from "./DriverActiveTripMap";
 import { DriverDeliveryProofPanel } from "./DriverDeliveryProofPanel";
 import { DriverTripCustomerPaymentPanel } from "./DriverTripCustomerPaymentPanel";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
+import { driverGpsBlockReason } from "./driver-runtime-resilience";
 
 type GpsState = "idle" | "requesting" | "queued" | "syncing" | "live";
 const TRIP_REFRESH_MS = 15_000;
@@ -203,7 +204,12 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
   const startSharing = useCallback(() => {
     const current = tripRef.current;
     if (!current || startingRef.current || watchIdRef.current !== null || syncInFlightRef.current) return;
-    if (typeof navigator === "undefined" || !navigator.geolocation) { setError(t.trip.browserNoGps); return; }
+    const gpsBlockReason = driverGpsBlockReason({
+      hasGeolocation: typeof navigator !== "undefined" && Boolean(navigator.geolocation),
+      isSecureContext: typeof window === "undefined" || window.isSecureContext,
+    });
+    if (gpsBlockReason === "insecure") { setError(t.trip.gpsSecureContext); return; }
+    if (gpsBlockReason === "unsupported") { setError(t.trip.browserNoGps); return; }
     startingRef.current = true;
     setGpsState("requesting");
     setError(null);

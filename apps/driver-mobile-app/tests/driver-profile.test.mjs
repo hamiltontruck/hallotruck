@@ -133,7 +133,7 @@ test("preview sheet is private, accessible and transient", () => {
 });
 
 test("profile view surfaces signed preview controls and expiry attention", () => {
-  assert.match(componentSource, /Promise\.allSettled/);
+  assert.match(componentSource, /settleDriverSourcesWithin/);
   assert.match(componentSource, /profileConfirmed/);
   assert.match(componentSource, /trucksConfirmed/);
   assert.match(componentSource, /documentsConfirmed/);

@@ -96,7 +96,7 @@ test("wallet realtime subscriptions remain Driver-filtered", () => {
 });
 
 test("wallet component loads sources independently and preserves confirmed snapshots", () => {
-  assert.match(componentSource, /Promise\.allSettled/);
+  assert.match(componentSource, /settleDriverSourcesWithin/);
   assert.match(componentSource, /inFlightRef/);
   assert.match(componentSource, /queuedRefreshRef/);
   assert.match(componentSource, /requestIdRef/);

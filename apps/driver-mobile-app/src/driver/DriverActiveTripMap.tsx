@@ -3,13 +3,16 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { DriverNavigationRoute } from "./driver-active-trip.model";
 import { buildDriverRouteFeature, isVisibleDriverMapViewport, updateDriverMarkerAndFollow } from "./driver-active-trip-map-runtime";
+import { nextDriverMapStyleAfterFailure } from "./driver-runtime-resilience";
 
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY?.trim();
 const openFreeMapStyle = "https://tiles.openfreemap.org/styles/liberty";
+const mapLibreDemoStyle = "https://demotiles.maplibre.org/style.json";
 const mapStyles: string[] = mapTilerKey
-  ? [`https://api.maptiler.com/maps/basic-v2/style.json?key=${encodeURIComponent(mapTilerKey)}`, openFreeMapStyle]
-  : [openFreeMapStyle];
+  ? [`https://api.maptiler.com/maps/basic-v2/style.json?key=${encodeURIComponent(mapTilerKey)}`, openFreeMapStyle, mapLibreDemoStyle]
+  : [openFreeMapStyle, mapLibreDemoStyle];
 type MapRuntimeStatus = "empty" | "loading" | "ready" | "error";
+const MAP_LOAD_TIMEOUT_MS = 12_000;
 
 function pointElement(kind: "start" | "end" | "driver") {
   const element = document.createElement("div");
@@ -42,7 +45,6 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
   const routeRef = useRef<DriverNavigationRoute | null>(route);
   const driverPositionRef = useRef<[number, number] | null>(driverPosition);
   const fallbackIndexRef = useRef(0);
-  const mapLoadedRef = useRef(false);
   const initialBoundsFitRef = useRef(false);
   const startMarkerRef = useRef<maplibregl.Marker | null>(null);
   const endMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -64,7 +66,36 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
     let resizeObserver: ResizeObserver | null = null;
     let map: maplibregl.Map | null = null;
     let cancelled = false;
+    let loadTimeout: number | null = null;
+    let switchingStyle = false;
     const resize = () => map?.resize();
+    const clearLoadTimeout = () => {
+      if (loadTimeout === null) return;
+      window.clearTimeout(loadTimeout);
+      loadTimeout = null;
+    };
+    const failOrFallback = () => {
+      if (!map || cancelled || switchingStyle) return;
+      const nextIndex = nextDriverMapStyleAfterFailure(fallbackIndexRef.current, mapStyles.length);
+      if (nextIndex === null) {
+        clearLoadTimeout();
+        setMapStatus("error");
+        return;
+      }
+      switchingStyle = true;
+      fallbackIndexRef.current = nextIndex;
+      setMapStatus("loading");
+      map.setStyle(mapStyles[nextIndex]);
+      clearLoadTimeout();
+      loadTimeout = window.setTimeout(() => {
+        switchingStyle = false;
+        failOrFallback();
+      }, MAP_LOAD_TIMEOUT_MS);
+    };
+    const armLoadTimeout = () => {
+      clearLoadTimeout();
+      loadTimeout = window.setTimeout(failOrFallback, MAP_LOAD_TIMEOUT_MS);
+    };
     const initialize = () => {
       const container = containerRef.current;
       if (cancelled || !container || mapRef.current) return;
@@ -74,7 +105,6 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
       if (!realCenter) { setMapStatus("empty"); return; }
 
       fallbackIndexRef.current = 0;
-      mapLoadedRef.current = false;
       try {
         map = new maplibregl.Map({
           container,
@@ -93,25 +123,27 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
       keepMapControlsVisible(container);
       mapRef.current = map;
 
-      const onLoad = () => {
-        mapLoadedRef.current = true;
+      const onStyleLoad = () => {
+        switchingStyle = false;
         map?.resize();
         keepMapControlsVisible(container);
+        armLoadTimeout();
+      };
+      const onIdle = () => {
+        switchingStyle = false;
+        clearLoadTimeout();
         setMapStatus("ready");
       };
       const onStyleData = () => map?.resize();
       const onError = () => {
-        if (mapLoadedRef.current || !map) return;
-        if (fallbackIndexRef.current < mapStyles.length - 1) {
-          fallbackIndexRef.current += 1;
-          map.setStyle(mapStyles[fallbackIndexRef.current]);
-          return;
-        }
-        setMapStatus("error");
+        failOrFallback();
       };
-      map.on("load", onLoad);
+      map.on("load", onStyleLoad);
+      map.on("style.load", onStyleLoad);
+      map.on("idle", onIdle);
       map.on("styledata", onStyleData);
       map.on("error", onError);
+      armLoadTimeout();
     };
 
     resizeObserver = typeof ResizeObserver !== "undefined"
@@ -122,11 +154,11 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
     initialize();
     return () => {
       cancelled = true;
+      clearLoadTimeout();
       resizeObserver?.disconnect();
       window.removeEventListener("resize", resize);
       map?.remove();
       mapRef.current = null;
-      mapLoadedRef.current = false;
       initialBoundsFitRef.current = false;
       startMarkerRef.current = null;
       endMarkerRef.current = null;

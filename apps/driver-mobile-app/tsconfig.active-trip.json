@@ -9,6 +9,7 @@
   },
   "include": [
     "src/driver/driver-active-trip.model.ts",
-    "src/driver/driver-active-trip-map-runtime.ts"
+    "src/driver/driver-active-trip-map-runtime.ts",
+    "src/driver/driver-runtime-resilience.ts"
   ]
 }

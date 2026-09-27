@@ -78,16 +78,15 @@ test("Driver signup uses the compact eight-file policy and mobile camera formats
   assert.match(onboarding, /Admin\/CEO review is required before jobs become available/);
 });
 
-test("all clients target the same configured Supabase project", () => {
+test("driver auth reuses the single configured Supabase client", () => {
   const primary = read("../src/supabase.ts");
   const mobile = read("../src/auth/mobile-supabase.ts");
-  for (const source of [primary, mobile]) {
-    assert.match(source, /VITE_SUPABASE_URL/);
-    assert.match(source, /VITE_SUPABASE_ANON_KEY/);
-    assert.doesNotMatch(source, /service[_-]?role/i);
-  }
+
+  assert.match(primary, /VITE_SUPABASE_URL/);
+  assert.match(primary, /VITE_SUPABASE_ANON_KEY/);
   assert.match(primary, /hallo-driver-mobile-v4-auth/);
-  assert.match(mobile, /hallo-driver-mobile-v4-auth/);
+  assert.match(mobile, /import \{ supabase, supabaseConfigured \} from "\.\.\/supabase"/);
+  assert.doesNotMatch(mobile, /createClient|VITE_SUPABASE_URL|VITE_SUPABASE_ANON_KEY|service[_-]?role/i);
 });
 
 test("notifications use existing user-scoped RPC and realtime contracts", () => {

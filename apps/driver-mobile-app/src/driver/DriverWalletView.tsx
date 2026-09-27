@@ -15,6 +15,7 @@ import { DriverCommissionPaymentPanel } from "./DriverCommissionPaymentPanel";
 import type { DriverCommissionPayment } from "./driver-commission-payment.model";
 import { fetchDriverCommissionPayments } from "./driver-commission-payment.service";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
+import { settleDriverSourcesWithin } from "./driver-runtime-resilience";
 
 type SourceErrors = {
   financial: string | null;
@@ -25,6 +26,7 @@ type SourceErrors = {
 
 const EMPTY_ERRORS: SourceErrors = { financial: null, commission: null, payments: null, trips: null };
 const REFRESH_MS = 30_000;
+const SOURCE_TIMEOUT_MS = 12_000;
 
 function errorMessage(_error: unknown, fallback: string): string {
   return fallback;
@@ -98,12 +100,12 @@ export function DriverWalletView({
     if (silent) setRefreshing(true);
     else setLoading(true);
 
-    const results = await Promise.allSettled([
+    const results = await settleDriverSourcesWithin([
       fetchDriverFinancialSummary(userId),
       fetchDriverCommissionSummary(userId),
       fetchDriverCommissionPayments(userId),
       fetchDriverWalletTrips(userId),
-    ]);
+    ] as const, SOURCE_TIMEOUT_MS);
     if (!mountedRef.current || requestId !== requestIdRef.current) {
       inFlightRef.current = false;
       return;
