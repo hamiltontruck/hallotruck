@@ -11,6 +11,7 @@ import type {
   DriverTruckOption,
   DriverWorkboardSnapshot,
 } from "./driver-jobs.model";
+import { retainDriverJobState } from "./driver-jobs.model";
 import { DriverAvailabilityCard } from "./DriverAvailabilityCard";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 
@@ -28,7 +29,8 @@ function formatDistance(value: number | null, missing: string) {
     : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value)} km`;
 }
 
-function formatServiceDate(value: string, language: DriverLanguage) {
+function formatServiceDate(value: string | null, language: DriverLanguage) {
+  if (!value) return "—";
   const locale = language === "am" ? "am-ET" : language === "om" ? "om-ET" : "en-ET";
   const date = new Date(`${value}T12:00:00+03:00`);
   return Number.isNaN(date.getTime())
@@ -167,8 +169,9 @@ export function DriverJobsBoard({ userId, fullName, onOpenTrip = () => undefined
       if (!mountedRef.current || requestId !== requestIdRef.current) return;
       setSnapshot(nextSnapshot);
       setError(null);
-      setTruckOptions({});
-      setSelectedTruckIds({});
+      const visibleJobIds = nextSnapshot.availableJobs.map((job) => job.id);
+      setTruckOptions((current) => retainDriverJobState(visibleJobIds, current));
+      setSelectedTruckIds((current) => retainDriverJobState(visibleJobIds, current));
     } catch {
       if (mountedRef.current && requestId === requestIdRef.current) setError(t.jobs.loadError);
     } finally {

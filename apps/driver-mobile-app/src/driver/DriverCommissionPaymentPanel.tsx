@@ -29,6 +29,9 @@ export function DriverCommissionPaymentPanel({
   userId,
   balanceEtb,
   pendingEtb,
+  adminDepositEtb,
+  commissionChargedEtb,
+  availableDepositEtb,
   payments,
   sourceError,
   onRetry,
@@ -38,6 +41,9 @@ export function DriverCommissionPaymentPanel({
   userId: string;
   balanceEtb: number;
   pendingEtb: number;
+  adminDepositEtb: number;
+  commissionChargedEtb: number;
+  availableDepositEtb: number;
   payments: DriverCommissionPayment[] | null;
   sourceError: string | null;
   onRetry: () => void;
@@ -124,9 +130,15 @@ export function DriverCommissionPaymentPanel({
     {pendingEtb > 0.005 && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-5 text-amber-900">{formatWalletEtb(pendingEtb)} · {t.commission.pendingReview}</p>}
 
     {payableNowEtb <= 0.005 ? (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
         <p className="text-sm font-black text-emerald-800">{t.commission.noPaymentTitle}</p>
         <p className="mt-1 text-[11px] leading-5 text-emerald-700">{t.commission.noPaymentHelp}</p>
+        <p className="mt-3 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">{t.commission.depositCoverage}</p>
+        <dl className="mt-2 grid grid-cols-3 gap-2 text-left">
+          <div className="rounded-xl bg-white/70 p-2"><dt className="text-[8px] font-bold uppercase text-halo-muted">{t.commission.depositTotal}</dt><dd className="mt-1 text-[10px] font-black text-halo-navy">{formatWalletEtb(adminDepositEtb)}</dd></div>
+          <div className="rounded-xl bg-white/70 p-2"><dt className="text-[8px] font-bold uppercase text-halo-muted">{t.commission.commissionCovered}</dt><dd className="mt-1 text-[10px] font-black text-halo-navy">{formatWalletEtb(commissionChargedEtb)}</dd></div>
+          <div className="rounded-xl bg-white/70 p-2"><dt className="text-[8px] font-bold uppercase text-halo-muted">{t.commission.depositRemaining}</dt><dd className="mt-1 text-[10px] font-black text-emerald-800">{formatWalletEtb(availableDepositEtb)}</dd></div>
+        </dl>
       </div>
     ) : (
       <form onSubmit={(event) => void submit(event)} className="space-y-3" aria-busy={submitting}>

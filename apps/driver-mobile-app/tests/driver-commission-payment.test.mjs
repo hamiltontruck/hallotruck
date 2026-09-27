@@ -10,6 +10,7 @@ import {
 } from "../.test-dist-commission/driver-commission-payment.model.js";
 
 const serviceSource = readFileSync(new URL("../src/driver/driver-commission-payment.service.ts", import.meta.url), "utf8");
+const sessionSource = readFileSync(new URL("../src/driver/driver-session.ts", import.meta.url), "utf8");
 const panelSource = readFileSync(new URL("../src/driver/DriverCommissionPaymentPanel.tsx", import.meta.url), "utf8");
 const walletSource = readFileSync(new URL("../src/driver/DriverWalletView.tsx", import.meta.url), "utf8");
 
@@ -111,10 +112,11 @@ test("normalizes only complete self-scoped payment history rows", () => {
 });
 
 test("service preserves authenticated Driver, private owner path and authoritative RPC boundaries", () => {
-  assert.match(serviceSource, /auth\.getUser\(\)/);
-  assert.match(serviceSource, /auth\.getSession\(\)/);
-  assert.match(serviceSource, /user\.id !== expectedUserId/);
-  assert.match(serviceSource, /session\.user\.id !== expectedUserId/);
+  assert.match(serviceSource, /requireExpectedDriverSession/);
+  assert.match(sessionSource, /auth\.getUser\(\)/);
+  assert.match(sessionSource, /auth\.getSession\(\)/);
+  assert.match(sessionSource, /user\.id !== expectedUserId/);
+  assert.match(sessionSource, /session\.user\.id !== expectedUserId/);
   assert.match(serviceSource, /driver-commission-receipts/);
   assert.match(serviceSource, /buildDriverCommissionReceiptPath/);
   assert.match(serviceSource, /upsert: false/);
@@ -133,6 +135,10 @@ test("panel subtracts pending review, locks submission and surfaces review statu
   assert.match(panelSource, /t\.common\.rejected/);
   assert.match(panelSource, /t\.common\.pending/);
   assert.match(panelSource, /rejectionReason/);
+  assert.match(panelSource, /adminDepositEtb/);
+  assert.match(panelSource, /commissionChargedEtb/);
+  assert.match(panelSource, /availableDepositEtb/);
+  assert.match(panelSource, /t\.commission\.depositCoverage/);
   assert.match(panelSource, /accept="image\/jpeg,image\/png,image\/webp,application\/pdf"/);
 });
 

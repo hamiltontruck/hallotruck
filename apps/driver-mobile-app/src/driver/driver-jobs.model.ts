@@ -26,7 +26,7 @@ export type DriverActiveTrip = {
   dropoffAddress: string;
   priceEtb: number | null;
   acceptedAt: string | null;
-  serviceDate: string;
+  serviceDate: string | null;
 };
 
 export type DriverScheduledTrip = DriverActiveTrip;
@@ -47,6 +47,14 @@ export type DriverWorkboardSnapshot = {
   latestCancellation: DriverCancelledOrder | null;
   loadedAt: number;
 };
+
+export function retainDriverJobState<T>(
+  visibleJobIds: string[],
+  current: Record<string, T>,
+): Record<string, T> {
+  const visible = new Set(visibleJobIds);
+  return Object.fromEntries(Object.entries(current).filter(([jobId]) => visible.has(jobId)));
+}
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -151,7 +159,7 @@ export function normalizeDriverActiveTrip(value: unknown): DriverActiveTrip | nu
   const dropoffAddress = requiredText(row.dropoff_address);
   const status = row.status === "accepted" || row.status === "in_transit" ? row.status : null;
   const serviceDate = normalizeServiceDate(row.service_date);
-  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !status || !serviceDate) return null;
+  if (!id || !trackingId || !pickupAddress || !dropoffAddress || !status) return null;
 
   return {
     id,
@@ -173,11 +181,11 @@ export function splitDriverAssignments(
     ? value.map(normalizeDriverActiveTrip).filter((item): item is DriverActiveTrip => item !== null)
     : [];
   const activeTrip = assignments.find((item) => item.status === "in_transit")
-    ?? assignments.find((item) => item.serviceDate <= today)
+    ?? assignments.find((item) => item.serviceDate === null || item.serviceDate <= today)
     ?? null;
   const scheduledTrips = assignments
-    .filter((item) => item.id !== activeTrip?.id && item.serviceDate > today)
-    .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
+    .filter((item) => item.id !== activeTrip?.id && item.serviceDate !== null && item.serviceDate > today)
+    .sort((a, b) => (a.serviceDate ?? "").localeCompare(b.serviceDate ?? ""));
   return { activeTrip, scheduledTrips };
 }
 

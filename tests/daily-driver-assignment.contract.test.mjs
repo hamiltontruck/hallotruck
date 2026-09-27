@@ -16,6 +16,9 @@ const serviceDateMigration = fs.readFileSync(
 const productionRecoveryMigration = fs.readdirSync(migrationDir)
   .filter((name) => name.endsWith('_restore_driver_mobile_v2_rpcs.sql'))
   .map((name) => path.join(migrationDir, name))[0];
+const activeTripGuardMigration = fs.readdirSync(migrationDir)
+  .filter((name) => name.endsWith('_align_driver_mobile_v2_active_trip_guard.sql'))
+  .map((name) => path.join(migrationDir, name))[0];
 
 test('database enforces one driver assignment per service date', () => {
   assert.match(sql, /guard_driver_daily_assignment/i);
@@ -70,4 +73,16 @@ test('a later migration restores Driver Mobile v2 RPCs after the production migr
   assert.match(recoverySql, /create or replace function public\.get_available_jobs_v2\(\)/i);
   assert.match(recoverySql, /create or replace function public\.driver_available_trucks_for_order_v2\(p_order_id uuid\)/i);
   assert.match(recoverySql, /create or replace function public\.claim_order_with_truck_v2\(p_order_id uuid, p_truck_id uuid\)/i);
+});
+
+test('Driver Mobile v2 assignment matches the global one-active-trip database invariant', () => {
+  assert.equal(Boolean(activeTripGuardMigration), true, 'active-trip guard migration must exist');
+  const guardSql = fs.readFileSync(activeTripGuardMigration, 'utf8');
+  assert.match(guardSql, /create or replace function public\.driver_can_view_available_order_v2/i);
+  assert.match(guardSql, /create or replace function public\.driver_available_trucks_for_order_v2/i);
+  assert.match(guardSql, /create or replace function public\.claim_order_with_truck_v2/i);
+  assert.match(guardSql, /active_order\.driver_id\s*=\s*(auth\.uid\(\)|current_user_id)/i);
+  assert.match(guardSql, /active_order\.status\s+in\s*\([\s\S]*'accepted'[\s\S]*'in_transit'/i);
+  assert.doesNotMatch(guardSql, /active_order\.service_date\s*=\s*v_service_date/i);
+  assert.match(guardSql, /Complete the current active trip before accepting another load/i);
 });

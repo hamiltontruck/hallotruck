@@ -3,6 +3,18 @@ export type DriverGpsCapability = {
   isSecureContext: boolean;
 };
 
+export function driverRefreshCompletion(input: {
+  mounted: boolean;
+  requestId: number;
+  currentRequestId: number;
+  queued: boolean;
+}): { accept: boolean; runQueued: boolean } {
+  return {
+    accept: input.mounted && input.requestId === input.currentRequestId,
+    runQueued: input.mounted && input.queued,
+  };
+}
+
 function rejectAfter<T>(source: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timeout = globalThis.setTimeout(

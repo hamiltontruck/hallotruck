@@ -15,7 +15,7 @@ import { DriverCommissionPaymentPanel } from "./DriverCommissionPaymentPanel";
 import type { DriverCommissionPayment } from "./driver-commission-payment.model";
 import { fetchDriverCommissionPayments } from "./driver-commission-payment.service";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
-import { settleDriverSourcesWithin } from "./driver-runtime-resilience";
+import { driverRefreshCompletion, settleDriverSourcesWithin } from "./driver-runtime-resilience";
 
 type SourceErrors = {
   financial: string | null;
@@ -106,8 +106,13 @@ export function DriverWalletView({
       fetchDriverCommissionPayments(userId),
       fetchDriverWalletTrips(userId),
     ] as const, SOURCE_TIMEOUT_MS);
-    if (!mountedRef.current || requestId !== requestIdRef.current) {
+    const completion = driverRefreshCompletion({ mounted: mountedRef.current, requestId, currentRequestId: requestIdRef.current, queued: queuedRefreshRef.current });
+    if (!completion.accept) {
       inFlightRef.current = false;
+      if (completion.runQueued) {
+        queuedRefreshRef.current = false;
+        window.setTimeout(() => void load(true), 0);
+      }
       return;
     }
 
@@ -240,6 +245,9 @@ export function DriverWalletView({
       userId={userId}
       balanceEtb={commission.balanceEtb}
       pendingEtb={commission.pendingEtb}
+      adminDepositEtb={financial?.adminDepositEtb ?? 0}
+      commissionChargedEtb={financial?.commissionChargedEtb ?? commission.chargedEtb}
+      availableDepositEtb={financial?.availableDepositEtb ?? 0}
       payments={payments}
       sourceError={errors.payments}
       onRetry={() => void load(true)}

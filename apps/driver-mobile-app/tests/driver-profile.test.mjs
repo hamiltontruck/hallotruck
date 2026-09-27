@@ -16,6 +16,7 @@ import {
 } from "../.test-dist-profile/driver-profile.model.js";
 
 const serviceSource = readFileSync(new URL("../src/driver/driver-profile.service.ts", import.meta.url), "utf8");
+const sessionSource = readFileSync(new URL("../src/driver/driver-session.ts", import.meta.url), "utf8");
 const componentSource = readFileSync(new URL("../src/driver/DriverProfileView.tsx", import.meta.url), "utf8");
 const previewSource = readFileSync(new URL("../src/driver/DriverDocumentPreviewSheet.tsx", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
@@ -115,8 +116,9 @@ test("service revalidates the current Driver and creates only short signed previ
   assert.match(serviceSource, /filePath\.startsWith\(`\$\{user\.id\}\//);
   assert.match(serviceSource, /createSignedUrl\(filePath, DRIVER_PREVIEW_SECONDS\)/);
   assert.match(serviceSource, /DRIVER_PREVIEW_SECONDS = 120/);
-  assert.match(serviceSource, /auth\.getUser\(\)/);
-  assert.match(serviceSource, /auth\.getSession\(\)/);
+  assert.match(serviceSource, /requireExpectedDriverSession/);
+  assert.match(sessionSource, /auth\.getUser\(\)/);
+  assert.match(sessionSource, /auth\.getSession\(\)/);
   assert.doesNotMatch(serviceSource, /getPublicUrl|publicUrl|service_role|user_metadata|app_metadata/);
   assert.match(serviceSource, /\.from\("profiles"\)[\s\S]*\.update\(\{[\s\S]*full_name:[\s\S]*phone:[\s\S]*email:[\s\S]*home_address:[\s\S]*\.eq\("id", user\.id\)[\s\S]*\.eq\("role", "driver"\)/);
   assert.doesNotMatch(serviceSource, /\.insert\(|\.upsert\(|\.delete\(/);

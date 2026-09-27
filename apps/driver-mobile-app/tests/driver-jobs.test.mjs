@@ -5,6 +5,7 @@ import {
   normalizeDriverActiveTrip,
   normalizeDriverAvailableJobs,
   normalizeDriverTruckOptions,
+  retainDriverJobState,
   splitDriverAssignments,
 } from "../.test-dist/driver-jobs/driver-jobs.model.js";
 
@@ -55,6 +56,18 @@ test("only accepted and in_transit rows become active driver trips", () => {
   assert.equal(active?.priceEtb, 500000);
 });
 
+test("legacy active trips without a service date remain visible", () => {
+  const row = { id: "legacy", tracking_id: "HT-LEGACY", status: "in_transit", pickup_address: "A", dropoff_address: "B", service_date: null };
+  const active = normalizeDriverActiveTrip(row);
+  assert.equal(active?.id, "legacy");
+  assert.equal(active?.serviceDate, null);
+  assert.equal(splitDriverAssignments([row], "2026-09-27").activeTrip?.id, "legacy");
+});
+
+test("market refresh preserves truck choices for jobs that are still visible", () => {
+  assert.deepEqual(retainDriverJobState(["job-1"], { "job-1": "truck-1", "gone": "truck-2" }), { "job-1": "truck-1" });
+});
+
 test("service uses calendar-aware canonical server authorization and authenticated-driver isolation", () => {
   assert.match(serviceSource, /\.rpc\("get_available_jobs_v2"\)/);
   assert.match(serviceSource, /\.rpc\("driver_available_trucks_for_order_v2"/);
@@ -80,6 +93,8 @@ test("job board guards overlapping refresh and claim requests while preserving c
   assert.match(componentSource, /claimLockRef\.current/);
   assert.match(componentSource, /setSnapshot\(nextSnapshot\)/);
   assert.doesNotMatch(componentSource, /setSnapshot\(null\)/);
+  assert.doesNotMatch(componentSource, /setTruckOptions\(\{\}\)/);
+  assert.doesNotMatch(componentSource, /setSelectedTruckIds\(\{\}\)/);
   assert.match(componentSource, /role="alert"/);
   assert.match(componentSource, /aria-busy=\{refreshing\}/);
 });
