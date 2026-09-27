@@ -162,6 +162,8 @@ test("active trip component guards GPS lifecycle, stale assignment and navigatio
   assert.match(componentSource, /calculateRouteProgressPct/);
   assert.match(componentSource, /role="progressbar"/);
   assert.match(componentSource, /data-driver-dispatch-card/);
+  assert.match(componentSource, /hidden=\{!dispatchExpanded\}/);
+  assert.match(componentSource, /dispatchExpanded \? "p-4" : "p-2/);
   assert.match(componentSource, /data-driver-trip-sheet/);
   assert.match(componentSource, /aria-expanded=\{dispatchExpanded\}/);
   assert.match(componentSource, /aria-expanded=\{sheetExpanded\}/);
