@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   calculateRouteProgressPct,
   distanceBetweenCoordinatesM,
@@ -24,6 +25,7 @@ import {
   syncQueuedDriverPings,
 } from "./driver-gps-queue";
 import { DriverActiveTripMap } from "./DriverActiveTripMap";
+import { resolveDriverMapViewportPadding, resolveDriverTripSheetGesture } from "./driver-active-trip-map-runtime";
 import { DriverDeliveryProofPanel } from "./DriverDeliveryProofPanel";
 import { DriverTripCustomerPaymentPanel } from "./DriverTripCustomerPaymentPanel";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
@@ -72,6 +74,9 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
   const pingInFlightRef = useRef(false);
   const syncInFlightRef = useRef(false);
   const lastPingAttemptRef = useRef(0);
+  const tripSheetRef = useRef<HTMLElement | null>(null);
+  const sheetPointerStartRef = useRef<number | null>(null);
+  const sheetWasDraggedRef = useRef(false);
 
   const [trip, setTrip] = useState<DriverActiveTripOrder | null>(null);
   const [confirmedSnapshot, setConfirmedSnapshot] = useState(false);
@@ -89,6 +94,8 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
   const [completedTrackingId, setCompletedTrackingId] = useState<string | null>(null);
   const [navigationStepIndex, setNavigationStepIndex] = useState(0);
   const [routeProgressPct, setRouteProgressPct] = useState(0);
+  const [dispatchExpanded, setDispatchExpanded] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const t = getDriverV4Copy(language);
 
   useEffect(() => { tripRef.current = trip; }, [trip]);
@@ -346,22 +353,52 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
   const maneuverDistanceM = currentStep?.location && driverPosition
     ? distanceBetweenCoordinatesM(driverPosition, currentStep.location)
     : currentStep?.distanceM ?? null;
+  const mapViewportPadding = resolveDriverMapViewportPadding({ dispatchExpanded, sheetExpanded });
+  const toggleSheet = () => {
+    setSheetExpanded((expanded) => {
+      const next = !expanded;
+      if (!next) window.requestAnimationFrame(() => tripSheetRef.current?.scrollTo({ top: 0, behavior: "smooth" }));
+      return next;
+    });
+  };
+  const handleSheetPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    sheetPointerStartRef.current = event.clientY;
+    sheetWasDraggedRef.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const handleSheetPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const startY = sheetPointerStartRef.current;
+    if (startY !== null && Math.abs(event.clientY - startY) >= 8) sheetWasDraggedRef.current = true;
+  };
+  const handleSheetPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const startY = sheetPointerStartRef.current;
+    sheetPointerStartRef.current = null;
+    if (startY === null || !sheetWasDraggedRef.current) return;
+    setSheetExpanded((expanded) => resolveDriverTripSheetGesture(startY, event.clientY, expanded));
+  };
+  const handleSheetClick = () => {
+    if (sheetWasDraggedRef.current) {
+      sheetWasDraggedRef.current = false;
+      return;
+    }
+    toggleSheet();
+  };
 
   return <div className="relative min-h-[calc(100dvh-137px)] overflow-hidden bg-[#e9f1ec]" data-mobile-driver-active-trip data-gps-state={gpsState}>
     <div className="absolute inset-0 min-h-[420px]" data-driver-trip-map-window>
-      <DriverActiveTripMap route={route} driverPosition={driverPosition} ariaLabel={t.trip.locationTitle} loadingLabel={t.trip.routeLoading} errorLabel={t.trip.routeError} emptyLabel={t.trip.locationUnavailable} />
+      <DriverActiveTripMap route={route} driverPosition={driverPosition} viewportPadding={mapViewportPadding} ariaLabel={t.trip.locationTitle} loadingLabel={t.trip.routeLoading} errorLabel={t.trip.routeError} emptyLabel={t.trip.locationUnavailable} />
     </div>
-    <div className="absolute inset-x-3 top-3 z-10 rounded-[22px] border border-white/70 bg-white/95 p-4 shadow-halo-float backdrop-blur-xl">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-halo-muted">{fullName} · {trip.trackingId}</p><h1 className="mt-1 break-words text-lg font-black text-halo-navy">{concisePlace(trip.pickupAddress)} → {concisePlace(trip.dropoffAddress)}</h1></div><span className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black ${trip.status === "in_transit" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{statusLabel}</span></div>
-    </div>
-    <div className="absolute inset-x-3 top-[118px] z-10 flex items-start gap-2">
+    <button type="button" onClick={() => setDispatchExpanded((expanded) => !expanded)} aria-expanded={dispatchExpanded} data-driver-dispatch-card className={`absolute inset-x-3 top-3 z-10 rounded-[22px] border border-white/70 bg-white/95 text-left shadow-halo-float backdrop-blur-xl transition-[padding] ${dispatchExpanded ? "p-4" : "p-3"}`}>
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-halo-muted">{fullName} · {trip.trackingId}</p><h1 className={`${dispatchExpanded ? "mt-1 break-words text-lg" : "mt-0.5 truncate text-sm"} font-black text-halo-navy`}>{concisePlace(trip.pickupAddress)} → {concisePlace(trip.dropoffAddress)}</h1></div><span className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black ${trip.status === "in_transit" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{statusLabel}</span><span aria-hidden="true" className={`mt-1 text-xs text-halo-muted transition-transform ${dispatchExpanded ? "rotate-180" : ""}`}>⌄</span></div>
+    </button>
+    <div className={`absolute inset-x-3 z-10 flex items-start gap-2 transition-[top] ${dispatchExpanded ? "top-[118px]" : "top-[86px]"}`}>
       {gpsState === "live" && <span className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-emerald-700/95 px-3 py-2 text-[10px] font-black text-white shadow-halo-card"><span className="h-2 w-2 animate-pulse rounded-full bg-white" />{gps.title}</span>}
       {routeLoading && <span role="status" className="rounded-xl bg-white/95 px-3 py-2 text-[10px] font-black text-halo-blue shadow-halo-card">{t.trip.routeLoading}</span>}
       {routeError && <div className="flex min-w-0 items-center gap-2 rounded-xl bg-white/95 p-2 shadow-halo-card"><span role="alert" className="min-w-0 flex-1 truncate px-1 text-[10px] font-bold text-red-700">{routeError}</span><button type="button" onClick={() => void loadRoute(trip.id)} disabled={routeLoading} className="min-h-9 shrink-0 rounded-lg bg-halo-blue px-3 text-[10px] font-black text-white">{t.common.retry}</button></div>}
     </div>
 
-    <section className="absolute inset-x-0 bottom-0 z-10 max-h-[46dvh] overflow-y-auto overscroll-contain rounded-t-[30px] border-t border-white bg-white/97 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-4 shadow-[0_-18px_50px_rgba(16,33,61,0.16)] backdrop-blur-xl sm:px-6">
-      <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
+    <section ref={tripSheetRef} data-driver-trip-sheet className={`absolute inset-x-0 bottom-0 z-10 overflow-y-auto overscroll-contain rounded-t-[30px] border-t border-white bg-white/97 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(16,33,61,0.16)] backdrop-blur-xl transition-[max-height] sm:px-6 ${sheetExpanded ? "max-h-[72dvh]" : "max-h-[32dvh]"}`}>
+      <button type="button" onClick={handleSheetClick} onPointerDown={handleSheetPointerDown} onPointerMove={handleSheetPointerMove} onPointerUp={handleSheetPointerUp} aria-expanded={sheetExpanded} className="sticky top-0 z-10 mx-auto mb-3 grid min-h-8 w-20 touch-none place-items-center rounded-full bg-white/95" aria-label={sheetExpanded ? "Collapse trip controls" : "Expand trip controls"}><span className={`h-1.5 w-12 rounded-full bg-halo-line transition-transform ${sheetExpanded ? "rotate-180" : ""}`} /></button>
       {error && <p role="alert" className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold leading-5 text-red-700">{error}</p>}
       <div className="grid grid-cols-3 divide-x divide-halo-line text-center"><div><p className="text-[10px] font-bold text-halo-muted">{t.trip.distance}</p><p className="mt-1 text-sm font-black text-halo-navy">{formatRouteDistance(route?.distanceKm ?? null)}</p></div><div><p className="text-[10px] font-bold text-halo-muted">{t.trip.duration}</p><p className="mt-1 text-sm font-black text-halo-navy">{formatRouteDuration(route?.durationMin ?? null)}</p></div><div><p className="text-[10px] font-bold text-halo-muted">{t.trip.price}</p><p className="mt-1 truncate px-1 text-sm font-black text-halo-navy">{formatEtb(trip.priceEtb)}</p></div></div>
 
@@ -369,6 +406,7 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
         <div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${gpsState === "live" ? "animate-pulse bg-emerald-600" : gpsState === "queued" || gpsState === "syncing" ? "bg-amber-500" : "bg-halo-muted"}`}/><div className="min-w-0"><p className="text-sm font-black text-halo-navy">{gps.title}</p><p role="status" aria-live="polite" className="mt-1 text-[11px] leading-5 text-halo-muted">{gps.help}</p>{lastPingAt && <p className="mt-2 text-[10px] font-bold text-emerald-700">{t.trip.lastServerUpdate}: {lastPingAt}{speedKmh !== null ? ` · ${speedKmh.toFixed(1)} km/h` : ""}</p>}</div></div>
       </div>
 
+      <div hidden={!sheetExpanded}>
       {currentStep && <div className="mt-3 rounded-2xl border border-halo-line bg-white p-3" data-driver-navigation-step>
         <div className="flex items-center justify-between gap-3"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.trip.next}</p><span className="text-[10px] font-black text-halo-blue">{routeProgressPct}%</span></div>
         <p className="mt-1 text-xs font-bold leading-5 text-halo-navy">{localizeRouteInstruction(currentStep.instruction, language)}</p>
@@ -386,6 +424,7 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
       <DriverTripCustomerPaymentPanel userId={userId} trip={trip} language={language} />
       {trip.status === "in_transit" && <DriverDeliveryProofPanel trip={trip} userId={userId} onDelivered={handleDelivered} language={language} />}
       <div className="mt-4 flex items-center gap-3 rounded-2xl bg-halo-soft p-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-blue text-sm font-black text-white">{fullName.trim().slice(0, 1).toUpperCase() || "D"}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-black text-halo-navy">{fullName}</p><p className="mt-0.5 text-[10px] text-halo-muted">{t.trip.assignedDriver}</p></div></div>
+      </div>
     </section>
   </div>;
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { DriverNavigationRoute } from "./driver-active-trip.model";
-import { buildDriverRouteFeature, runWhenDriverMapStyleReady, updateDriverMarkerAndFollow } from "./driver-active-trip-map-runtime";
+import { buildDriverRouteFeature, runWhenDriverMapStyleReady, updateDriverMarkerAndFollow, type DriverMapViewportPadding } from "./driver-active-trip-map-runtime";
 import { nextDriverMapStyleAfterFailure } from "./driver-runtime-resilience";
 
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY?.trim();
@@ -24,17 +24,18 @@ function pointElement(kind: "start" | "end" | "driver") {
   return element;
 }
 
-function keepMapControlsVisible(container: HTMLElement) {
+function keepMapControlsVisible(container: HTMLElement, topPadding: number) {
   for (const selector of [".maplibregl-ctrl-top-right", ".maplibregl-ctrl-top-left"]) {
     const corner = container.querySelector<HTMLElement>(selector);
     if (!corner) continue;
-    corner.style.top = "148px";
+    corner.style.top = `${Math.max(12, topPadding - 12)}px`;
   }
 }
 
-export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingLabel, errorLabel, emptyLabel }: {
+export function DriverActiveTripMap({ route, driverPosition, viewportPadding, ariaLabel, loadingLabel, errorLabel, emptyLabel }: {
   route: DriverNavigationRoute | null;
   driverPosition: [number, number] | null;
+  viewportPadding: DriverMapViewportPadding;
   ariaLabel: string;
   loadingLabel: string;
   errorLabel: string;
@@ -43,6 +44,7 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const routeRef = useRef<DriverNavigationRoute | null>(route);
+  const viewportPaddingRef = useRef(viewportPadding);
   const fallbackIndexRef = useRef(0);
   const initialBoundsFitRef = useRef(false);
   const startMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -51,6 +53,7 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
   const [mapStatus, setMapStatus] = useState<MapRuntimeStatus>("loading");
 
   useEffect(() => { routeRef.current = route; }, [route]);
+  useEffect(() => { viewportPaddingRef.current = viewportPadding; }, [viewportPadding]);
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -107,7 +110,7 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "top-left");
-    keepMapControlsVisible(container);
+    keepMapControlsVisible(container, viewportPaddingRef.current.top);
     mapRef.current = map;
 
     const onLoad = () => {
@@ -115,13 +118,13 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
       switchingStyle = false;
       clearLoadTimeout();
       map?.resize();
-      keepMapControlsVisible(container);
+      keepMapControlsVisible(container, viewportPaddingRef.current.top);
       setMapStatus("ready");
     };
     const onStyleLoad = () => {
       switchingStyle = false;
       map?.resize();
-      keepMapControlsVisible(container);
+      keepMapControlsVisible(container, viewportPaddingRef.current.top);
     };
     const onIdle = () => {
       if (!loaded) return;
@@ -177,16 +180,26 @@ export function DriverActiveTripMap({ route, driverPosition, ariaLabel, loadingL
       endMarkerRef.current?.remove();
       startMarkerRef.current = new maplibregl.Marker({ element: pointElement("start") }).setLngLat(start).addTo(map);
       endMarkerRef.current = new maplibregl.Marker({ element: pointElement("end") }).setLngLat(end).addTo(map);
-      if (!initialBoundsFitRef.current) {
-        const bounds = route.coordinates.reduce((box, point) => box.extend(point), new maplibregl.LngLatBounds(start, start));
-        map.fitBounds(bounds, { padding: { top: 170, bottom: 250, left: 40, right: 40 }, maxZoom: 15, duration: 650 });
-        initialBoundsFitRef.current = true;
-      }
     };
     const cancelReady = runWhenDriverMapStyleReady(map, update);
     map.on("style.load", update);
     return () => { cancelReady(); map.off("style.load", update); };
   }, [route]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const container = containerRef.current;
+    map.resize();
+    if (container) keepMapControlsVisible(container, viewportPadding.top);
+    if (!route || route.coordinates.length < 2) return;
+    return runWhenDriverMapStyleReady(map, () => {
+      const start = route.coordinates[0];
+      const bounds = route.coordinates.reduce((box, point) => box.extend(point), new maplibregl.LngLatBounds(start, start));
+      map.fitBounds(bounds, { padding: viewportPadding, maxZoom: 15, duration: initialBoundsFitRef.current ? 320 : 650 });
+      initialBoundsFitRef.current = true;
+    });
+  }, [route, viewportPadding.bottom, viewportPadding.left, viewportPadding.right, viewportPadding.top]);
 
   useEffect(() => {
     const map = mapRef.current;

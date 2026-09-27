@@ -5,6 +5,18 @@ export type DriverMapViewport = {
   height: number;
 };
 
+export type DriverMapViewportPadding = {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
+
+export type DriverTripOverlayState = {
+  dispatchExpanded: boolean;
+  sheetExpanded: boolean;
+};
+
 export type DriverMarkerLike = {
   setLngLat(position: DriverMapPoint): DriverMarkerLike;
 };
@@ -33,6 +45,29 @@ export function isVisibleDriverMapViewport(viewport: DriverMapViewport) {
     && Number.isFinite(viewport.height)
     && viewport.width > 0
     && viewport.height > 0;
+}
+
+export function resolveDriverMapViewportPadding({
+  dispatchExpanded,
+  sheetExpanded,
+}: DriverTripOverlayState): DriverMapViewportPadding {
+  return {
+    top: dispatchExpanded ? 174 : 112,
+    bottom: sheetExpanded ? 430 : 210,
+    left: 32,
+    right: 32,
+  };
+}
+
+export function resolveDriverTripSheetGesture(
+  startY: number,
+  endY: number,
+  expanded: boolean,
+) {
+  const delta = endY - startY;
+  if (delta <= -32) return true;
+  if (delta >= 32) return false;
+  return expanded;
 }
 
 export function buildDriverRouteFeature(coordinates: DriverMapPoint[]): DriverRouteFeature {

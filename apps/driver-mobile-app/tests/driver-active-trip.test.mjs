@@ -45,6 +45,27 @@ test("style-ready map work waits for load and then runs once", () => {
   cleanup();
 });
 
+test("active trip overlays reserve only the visible map space for each card state", () => {
+  assert.equal(typeof mapRuntime.resolveDriverMapViewportPadding, "function");
+
+  assert.deepEqual(
+    mapRuntime.resolveDriverMapViewportPadding({ dispatchExpanded: false, sheetExpanded: false }),
+    { top: 112, bottom: 210, left: 32, right: 32 },
+  );
+  assert.deepEqual(
+    mapRuntime.resolveDriverMapViewportPadding({ dispatchExpanded: true, sheetExpanded: true }),
+    { top: 174, bottom: 430, left: 32, right: 32 },
+  );
+});
+
+test("trip sheet swipe direction expands upward and collapses downward", () => {
+  assert.equal(typeof mapRuntime.resolveDriverTripSheetGesture, "function");
+  assert.equal(mapRuntime.resolveDriverTripSheetGesture(420, 350, false), true);
+  assert.equal(mapRuntime.resolveDriverTripSheetGesture(350, 420, true), false);
+  assert.equal(mapRuntime.resolveDriverTripSheetGesture(400, 390, false), false);
+  assert.equal(mapRuntime.resolveDriverTripSheetGesture(400, 410, true), true);
+});
+
 test("normalizes only assigned active lifecycle rows with authoritative service date", () => {
   const accepted = normalizeDriverActiveTripOrder({ id: "order-1", tracking_id: "HT-2026-1", status: "accepted", pickup_address: "Adama", dropoff_address: "Finfinnee", price_etb: "12000", accepted_at: null, service_date: "2026-09-25", selected_payment_method: "cash" });
   assert.equal(accepted?.status, "accepted");
@@ -140,6 +161,12 @@ test("active trip component guards GPS lifecycle, stale assignment and navigatio
   assert.match(componentSource, /resolveNavigationStep/);
   assert.match(componentSource, /calculateRouteProgressPct/);
   assert.match(componentSource, /role="progressbar"/);
+  assert.match(componentSource, /data-driver-dispatch-card/);
+  assert.match(componentSource, /data-driver-trip-sheet/);
+  assert.match(componentSource, /aria-expanded=\{dispatchExpanded\}/);
+  assert.match(componentSource, /aria-expanded=\{sheetExpanded\}/);
+  assert.match(componentSource, /viewportPadding=\{mapViewportPadding\}/);
+  assert.match(componentSource, /hidden=\{!sheetExpanded\}/);
 });
 
 test("Driver location sharing stays inside HALLO tracking instead of exporting a Maps link", () => {
