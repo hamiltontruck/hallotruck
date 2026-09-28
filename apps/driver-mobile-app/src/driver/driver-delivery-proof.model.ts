@@ -32,6 +32,22 @@ export const MAX_DELIVERY_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_DELIVERY_NOTE_LENGTH = 1000;
 export const MAX_PAYMENT_NOTE_LENGTH = 500;
 
+export type DriverDeliveryProofReadiness = {
+  receiverReady: boolean;
+  photoReady: boolean;
+  signatureReady: boolean;
+  paymentReady: boolean;
+};
+
+export function canSubmitDriverDeliveryProof(
+  readiness: DriverDeliveryProofReadiness,
+): boolean {
+  return readiness.receiverReady
+    && readiness.photoReady
+    && readiness.signatureReady
+    && readiness.paymentReady;
+}
+
 function normalizedNote(value: string, maxLength: number): string {
   return value.trim().slice(0, maxLength);
 }

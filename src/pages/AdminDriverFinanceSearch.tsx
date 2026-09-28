@@ -303,7 +303,7 @@ export function AdminDriverFinanceSearch() {
               return <article key={driver.id} className="border border-asphalt/10 bg-white">
                 <div className="flex flex-col justify-between gap-4 border-b border-asphalt/10 p-5 sm:p-6 lg:flex-row">
                   <div><div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{nameOf(driver, "Driver")}</h2><span className="border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase text-emerald-800">{driver.driver_status ?? "pending"}</span></div><p className="mt-2 text-sm text-steel">{driver.phone ?? "No phone"}{driver.email ? ` · ${driver.email}` : ""}</p>{assignedTruck && <p className="mt-2 text-xs font-semibold text-amber-dim">{assignedTruck.plate_number} · {assignedTruck.vehicle_type} · {assignedTruck.capacity_tons ?? "—"} tons</p>}</div>
-                  <button onClick={() => setExpandedDriver(expanded ? null : driver.id)} className="self-start border border-asphalt px-4 py-3 text-xs font-semibold">{expanded ? "Hide trips & deposit" : "Open trips & deposit"}</button>
+                  <button onClick={() => setExpandedDriver(expanded ? null : driver.id)} className="self-start border border-asphalt px-4 py-3 text-xs font-semibold">{expanded ? "Hide deposit form & trips" : "Add deposit / view trips"}</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-px bg-asphalt/10 lg:grid-cols-4 xl:grid-cols-7">

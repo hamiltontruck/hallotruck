@@ -1,17 +1,8 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabase, supabaseConfigured } from "../supabase";
 
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
-const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
-
-export const mobileSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const mobileSupabaseConfigured = supabaseConfigured;
 
 export const mobileSupabase: SupabaseClient | null = mobileSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storageKey: "hallo-driver-mobile-v4-auth",
-      },
-    })
+  ? supabase
   : null;

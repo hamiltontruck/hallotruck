@@ -11,6 +11,7 @@ const home = source("src/driver/DriverHomeView.tsx");
 const jobs = source("src/driver/DriverJobsBoard.tsx");
 const workboardService = source("src/driver/driver-jobs.service.ts");
 const trip = source("src/driver/DriverActiveTripView.tsx");
+const tripService = source("src/driver/driver-active-trip.service.ts");
 const wallet = source("src/driver/DriverWalletView.tsx");
 const paymentService = source("src/driver/driver-trip-payment.service.ts");
 const chatService = source("src/driver/driver-chat.service.ts");
@@ -37,10 +38,13 @@ test("Driver V4 home uses real authenticated Driver sources", () => {
   ]) assert.match(home, new RegExp(call));
 });
 
-test("jobs parity includes GPS availability and assigned cancellation", () => {
+test("jobs parity includes GPS availability, calendar work and assigned cancellation", () => {
   assert.match(jobs, /DriverAvailabilityCard/);
   assert.match(jobs, /data-driver-cancellation-notice/);
+  assert.match(jobs, /data-driver-scheduled-trips/);
+  assert.match(jobs, /data-driver-calendar-marketplace/);
   assert.match(workboardService, /cancellation_reason,cancelled_at/);
+  assert.match(workboardService, /service_date/);
   assert.match(workboardService, /driver_id/);
 });
 
@@ -79,7 +83,7 @@ test("V4 CSS remains the design base and adds responsive parity selectors", () =
   for (const width of ["430px", "412px", "390px", "360px", "320px"]) assert.match(css, new RegExp(width.replace("px", "\\px")));
 });
 
-test("Driver V4 authenticated UX exposes language, scroll, location sharing and trip history", () => {
+test("Driver V4 authenticated UX exposes language, scroll, in-app customer GPS sharing and trip history", () => {
   const androidCss = source("src/driver-android-responsive.css");
   assert.match(workspace, /DRIVER_LANGUAGE_KEY/);
   assert.match(i18n, /hallo-driver-language/);
@@ -90,8 +94,10 @@ test("Driver V4 authenticated UX exposes language, scroll, location sharing and 
   assert.match(androidCss, /\[data-driver-v4-workspace\]\.driver-app/);
   assert.match(androidCss, /overflow-y:\s*auto/);
   assert.match(trip, /data-driver-live-location/);
-  assert.match(trip, /navigator\.share/);
-  assert.match(trip, /navigator\.clipboard\.writeText/);
+  assert.match(trip, /data-customer-live-sharing/);
+  assert.match(trip, /navigator\.geolocation\.watchPosition/);
+  assert.match(tripService, /\/tracking/);
+  assert.doesNotMatch(trip, /google\.com\/maps|navigator\.share|clipboard\.writeText/);
   assert.match(home, /t\.home\.history/);
   assert.match(i18n, /Trip History \/ Wallet/);
   assert.match(wallet, /fetchDriverWalletTrips/);

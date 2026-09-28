@@ -41,6 +41,12 @@ export type DriverWalletTrip = {
   completedAt: string;
 };
 
+export function driverDepositConsumedEtb(
+  summary: Pick<DriverFinancialSummary, "adminDepositEtb" | "availableDepositEtb">,
+): number {
+  return Math.max(0, summary.adminDepositEtb - summary.availableDepositEtb);
+}
+
 type UnknownRecord = Record<string, unknown>;
 
 function recordOf(value: unknown): UnknownRecord | null {

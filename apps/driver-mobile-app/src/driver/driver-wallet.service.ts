@@ -8,6 +8,7 @@ import {
   type DriverFinancialSummary,
   type DriverWalletTrip,
 } from "./driver-wallet.model";
+import { requireExpectedDriverSession } from "./driver-session";
 
 function requireClient(): SupabaseClient {
   if (!mobileSupabase) throw new Error("Supabase mobile configuration hin guutamne.");
@@ -15,20 +16,7 @@ function requireClient(): SupabaseClient {
 }
 
 async function requireExpectedDriver(expectedUserId: string): Promise<SupabaseClient> {
-  const client = requireClient();
-  const [userResult, sessionResult] = await Promise.all([
-    client.auth.getUser(),
-    client.auth.getSession(),
-  ]);
-  const user = userResult.data.user;
-  const session = sessionResult.data.session;
-  if (userResult.error || sessionResult.error || !user || !session) {
-    throw new Error("Driver session xumurameera. Deebi'ii seeni.");
-  }
-  if (user.id !== expectedUserId || session.user.id !== expectedUserId) {
-    throw new Error("Mobile session jijjiirameera. Wallet irra deebi'ii bani.");
-  }
-  return client;
+  return (await requireExpectedDriverSession(requireClient(), expectedUserId, "Wallet")).client;
 }
 
 export async function fetchDriverFinancialSummary(expectedUserId: string): Promise<DriverFinancialSummary> {

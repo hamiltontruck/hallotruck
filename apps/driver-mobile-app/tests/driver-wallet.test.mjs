@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
+  driverDepositConsumedEtb,
   formatWalletEtb,
   normalizeDriverCommissionSummary,
   normalizeDriverFinancialSummary,
@@ -10,6 +11,7 @@ import {
 } from "../.test-dist-wallet/driver-wallet.model.js";
 
 const serviceSource = readFileSync(new URL("../src/driver/driver-wallet.service.ts", import.meta.url), "utf8");
+const sessionSource = readFileSync(new URL("../src/driver/driver-session.ts", import.meta.url), "utf8");
 const componentSource = readFileSync(new URL("../src/driver/DriverWalletView.tsx", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 
@@ -27,6 +29,11 @@ test("normalizes complete financial summary without false defaults", () => {
   assert.equal(summary.availableDepositEtb, 8100);
   assert.throws(() => normalizeDriverFinancialSummary([]), /unavailable/);
   assert.throws(() => normalizeDriverFinancialSummary([{ completed_trips: 1 }]), /invalid/);
+});
+
+test("derives only the deposit actually consumed from the deposit balance", () => {
+  assert.equal(driverDepositConsumedEtb({ adminDepositEtb: 35_000, availableDepositEtb: 15_462 }), 19_538);
+  assert.equal(driverDepositConsumedEtb({ adminDepositEtb: 10_000, availableDepositEtb: 12_000 }), 0);
 });
 
 test("normalizes commission summary and requires a boolean job lock", () => {
@@ -79,7 +86,8 @@ test("wallet service uses canonical self-scoped production sources", () => {
   for (const field of ["vehicle_type", "distance_km", "price_etb", "cargo_description", "selected_payment_method", "accepted_at", "delivered_at", "truck_id"]) {
     assert.match(serviceSource, new RegExp(field));
   }
-  assert.match(serviceSource, /user\.id !== expectedUserId/);
+  assert.match(serviceSource, /requireExpectedDriverSession/);
+  assert.match(sessionSource, /user\.id !== expectedUserId/);
   assert.doesNotMatch(serviceSource, /service_role|user_metadata|app_metadata/);
 });
 
@@ -96,7 +104,7 @@ test("wallet realtime subscriptions remain Driver-filtered", () => {
 });
 
 test("wallet component loads sources independently and preserves confirmed snapshots", () => {
-  assert.match(componentSource, /Promise\.allSettled/);
+  assert.match(componentSource, /settleDriverSourcesWithin/);
   assert.match(componentSource, /inFlightRef/);
   assert.match(componentSource, /queuedRefreshRef/);
   assert.match(componentSource, /requestIdRef/);
