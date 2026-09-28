@@ -57,6 +57,37 @@ function locationErrorMessage(error: GeolocationPositionError, copy: typeof cust
   return copy.locationUnreadable;
 }
 
+function bookingMapPoints(
+  routePreview: CustomerRoutePreview | null,
+  pickupPlace: CustomerPlaceOption | null,
+  dropoffPlace: CustomerPlaceOption | null,
+) {
+  const routeCoordinates = routePreview?.route_coordinates ?? [];
+  return routeCoordinates.length >= 2
+    ? routeCoordinates
+    : [pickupPlace?.coordinates ?? null, dropoffPlace?.coordinates ?? null]
+      .filter((point): point is [number, number] => point !== null);
+}
+
+function fitBookingMapToPoints(map: maplibregl.Map, points: [number, number][], duration = 500) {
+  if (points.length < 2) return;
+  map.resize();
+  const bounds = points.slice(1).reduce(
+    (current, point) => current.extend(point),
+    new maplibregl.LngLatBounds(points[0], points[0]),
+  );
+  const container = map.getContainer();
+  const height = Math.max(container.clientHeight, 1);
+  const width = Math.max(container.clientWidth, 1);
+  const horizontal = Math.max(24, Math.min(48, Math.round(width * 0.08)));
+  const top = Math.max(150, Math.min(220, Math.round(height * 0.3)));
+  const bottom = Math.max(112, Math.min(165, Math.round(height * 0.23)));
+  map.fitBounds(bounds, {
+    padding: { top, right: horizontal, bottom, left: horizontal },
+    maxZoom: 13,
+    duration,
+  });
+}
 function PlaceSearch({
   field,
   label,
@@ -308,19 +339,37 @@ export function CustomerBookingMap({
       map.removeSource(sourceId);
     }
 
-    const points = coordinates.length >= 2
-      ? coordinates
-      : [pickupPlace?.coordinates ?? null, dropoffPlace?.coordinates ?? null]
-        .filter((point): point is [number, number] => point !== null);
-    if (points.length >= 2) {
-      const bounds = points.slice(1).reduce(
-        (current, point) => current.extend(point),
-        new maplibregl.LngLatBounds(points[0], points[0]),
-      );
-      map.fitBounds(bounds, { padding: { top: 220, right: 48, bottom: 165, left: 48 }, maxZoom: 13, duration: 500 });
-    }
+    const points = bookingMapPoints(routePreview, pickupPlace, dropoffPlace);
+    fitBookingMapToPoints(map, points);
   }, [dropoffPlace, mapReady, pickupPlace, routePreview]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = containerRef.current;
+    if (!map || !container || !mapReady) return;
+
+    let animationFrame = 0;
+    const syncViewport = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        const points = bookingMapPoints(routePreview, pickupPlace, dropoffPlace);
+        if (points.length >= 2) fitBookingMapToPoints(map, points, 0);
+        else map.resize();
+      });
+    };
+    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(syncViewport);
+    resizeObserver?.observe(container);
+    window.visualViewport?.addEventListener("resize", syncViewport);
+    window.addEventListener("orientationchange", syncViewport);
+    syncViewport();
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      resizeObserver?.disconnect();
+      window.visualViewport?.removeEventListener("resize", syncViewport);
+      window.removeEventListener("orientationchange", syncViewport);
+    };
+  }, [dropoffPlace, mapReady, pickupPlace, routePreview]);
   async function useMyLocation() {
     if (locating) return;
     if (typeof navigator === "undefined" || !navigator.geolocation) {

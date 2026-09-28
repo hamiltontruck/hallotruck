@@ -51,7 +51,7 @@ const HALLO_OPERATING_BOUNDS: readonly OperatingBounds[] = [
   { west: 40.8, south: -1.9, east: 51.7, north: 12.3 },
 ];
 
-const NON_ROUTABLE_PLACE_TYPES = new Set(["continental_marine", "country", "major_landform"]);
+const NON_ROUTABLE_PLACE_TYPES = new Set(["continental_marine", "country", "major_landform", "region", "subregion", "county"]);
 const ROUTE_CACHE_TTL_MS = 2 * 60 * 1000;
 const routeCache = new Map<string, { route: CustomerRoutePreview; storedAt: number }>();
 
@@ -99,6 +99,23 @@ export function isHalloOperatingCoordinate(coordinates: [number, number]) {
   ));
 }
 
+function normalizePlaceSearchText(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function placeMatchesSearchQuery(query: string, label: string) {
+  const normalizedQuery = normalizePlaceSearchText(query);
+  const normalizedLabel = normalizePlaceSearchText(label);
+  if (!normalizedQuery || !normalizedLabel) return false;
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  return queryTokens.every((token) => normalizedLabel.includes(token));
+}
+
 function validSelectedPlace(place: CustomerPlaceOption | null | undefined) {
   return Boolean(place?.label.trim() && isCoordinate(place.coordinates) && isHalloOperatingCoordinate(place.coordinates));
 }
@@ -133,11 +150,12 @@ async function fetchGeocodeFeatures(query: string, autocomplete: boolean, langua
 }
 
 export async function searchCustomerPlaces(query: string, language: CustomerLanguage = "en", signal?: AbortSignal): Promise<CustomerPlaceOption[]> {
-  const features = await fetchGeocodeFeatures(query, true, language, signal);
+  const clean = query.trim();
+  const features = await fetchGeocodeFeatures(clean, true, language, signal);
   const unique = new Map<string, CustomerPlaceOption>();
   for (const feature of features) {
     const place = featureToPlace(feature);
-    if (place && !unique.has(place.label)) unique.set(place.label, place);
+    if (place && placeMatchesSearchQuery(clean, place.label) && !unique.has(place.label)) unique.set(place.label, place);
   }
   return [...unique.values()];
 }
@@ -177,7 +195,7 @@ async function geocodePlace(query: string, language: CustomerLanguage = "en"): P
   const clean = query.trim();
   if (clean.length < 2) throw new Error("Choose both pickup and drop-off places.");
   const features = await fetchGeocodeFeatures(clean, false, language);
-  const place = features.map(featureToPlace).find((item): item is CustomerPlaceOption => item !== null);
+  const place = features.map(featureToPlace).find((item): item is CustomerPlaceOption => item !== null && placeMatchesSearchQuery(clean, item.label));
   if (!place) {
     throw new Error(`"${clean}" was not found inside the HALLO Ethiopia–Djibouti–Somalia operating corridor.`);
   }
