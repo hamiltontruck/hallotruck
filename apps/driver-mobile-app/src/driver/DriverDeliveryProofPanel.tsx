@@ -10,6 +10,7 @@ import type { DriverActiveTripOrder } from "./driver-active-trip.model";
 import {
   MAX_DELIVERY_PHOTO_BYTES,
   allowedDriverPaymentResults,
+  canSubmitDriverDeliveryProof,
   type DriverDeliveryProofDraft,
   type DriverTripPaymentResult,
 } from "./driver-delivery-proof.model";
@@ -141,6 +142,12 @@ export function DriverDeliveryProofPanel({
   const signatureReady = signed;
   const paymentReady = Boolean(paymentResult);
   const progress = [receiverReady, photoReady, signatureReady, paymentReady].filter(Boolean).length;
+  const completionReady = canSubmitDriverDeliveryProof({
+    receiverReady,
+    photoReady,
+    signatureReady,
+    paymentReady,
+  });
 
   function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
     if (saving) return;
@@ -303,7 +310,7 @@ export function DriverDeliveryProofPanel({
           </section>
 
           <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4"><p className="text-xs font-black text-amber-900">{t.deliveryProof.finalConfirm}</p><p className="mt-1 text-[11px] leading-5 text-amber-800">{t.deliveryProof.finalHelp}</p></div>
-          <button type="submit" disabled={saving} className="min-h-14 w-full rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-60">{saving ? t.deliveryProof.completingTrip : t.deliveryProof.completeTrip}</button>
+          <button type="submit" disabled={saving || !completionReady} className="min-h-14 w-full rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-60">{saving ? t.deliveryProof.completingTrip : t.deliveryProof.completeTrip}</button>
         </form>
       </div>
     </div>}
