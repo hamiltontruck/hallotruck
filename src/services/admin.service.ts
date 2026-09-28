@@ -29,6 +29,7 @@ export interface AdminOrder {
   driver_name: string | null;
   plate_number: string | null;
   assignment_label: string;
+  service_date: string | null;
   accepted_at: string | null;
   delivered_at: string | null;
   cancellation_reason: string | null;
@@ -205,10 +206,17 @@ export async function transitionOrder(orderId: string, status: "accepted" | "in_
   if (error) fail(error.message);
 }
 
-export async function adminCancelOrder(orderId: string, reason?: string) {
+export async function adminCancelOrder(orderId: string, reason: string) {
   const { error } = await supabase.rpc("admin_cancel_order", {
     p_order_id: orderId,
-    p_reason: reason?.trim() || "Cancelled by Admin from Manage Order.",
+    p_reason: reason.trim(),
+  });
+  if (error) fail(error.message);
+}
+
+export async function adminReassignOrder(orderId: string, truckId: string, driverId: string, reason: string) {
+  const { error } = await supabase.rpc("admin_reassign_order", {
+    p_order_id: orderId, p_truck_id: truckId, p_driver_id: driverId, p_reason: reason.trim(),
   });
   if (error) fail(error.message);
 }

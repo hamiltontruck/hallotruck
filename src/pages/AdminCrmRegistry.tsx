@@ -33,6 +33,8 @@ function levelClass(level: CustomerLevel) {
 export function AdminCrmRegistry() {
   const [tab, setTab] = useState<Tab>("customers");
   const [query, setQuery] = useState("");
+  const [rowsPerPage, setRowsPerPage] = useState<50 | 100>(50);
+  const [page, setPage] = useState(1);
   const [customers, setCustomers] = useState<AdminCustomerRegistryReport | null>(null);
   const [drivers, setDrivers] = useState<AdminDriverRegistryReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,6 +110,12 @@ export function AdminCrmRegistry() {
     ].some((value) => value.toLowerCase().includes(needle)));
   }, [drivers, query]);
 
+  useEffect(() => { setPage(1); }, [tab, query, rowsPerPage]);
+  const customerPageRows = customerRows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const driverPageRows = driverRows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const activeRowCount = tab === "customers" ? customerRows.length : driverRows.length;
+  const pageCount = Math.max(1, Math.ceil(activeRowCount / rowsPerPage));
+
   function openLevel(customer: AdminCustomerRegistryRow) {
     setEditing({ customer, level: customer.level });
     setReason("");
@@ -182,8 +190,12 @@ export function AdminCrmRegistry() {
         {loading && !customers && !drivers
           ? <div className="p-16 text-center font-mono text-sm text-steel">Loading CRM registry…</div>
           : tab === "customers"
-            ? <CustomerRegistry rows={customerRows} onLevel={openLevel} />
-            : <DriverRegistry rows={driverRows} />}
+            ? <CustomerRegistry rows={customerPageRows} onLevel={openLevel} />
+            : <DriverRegistry rows={driverPageRows} />}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-asphalt/10 p-3 sm:p-4">
+          <label className="text-xs font-semibold text-steel">Rows per page <select value={rowsPerPage} onChange={(event) => setRowsPerPage(Number(event.target.value) as 50 | 100)} className="ml-2 min-h-10 border border-asphalt/15 bg-white px-2 text-asphalt"><option value={50}>50</option><option value={100}>100</option></select></label>
+          <div className="flex items-center gap-2 text-xs text-steel"><button type="button" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="min-h-10 border border-asphalt/15 px-3 disabled:opacity-40">Previous</button><span>Page {Math.min(page, pageCount)} of {pageCount}</span><button type="button" disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="min-h-10 border border-asphalt/15 px-3 disabled:opacity-40">Next</button></div>
+        </div>
       </section>
     </div>
 
@@ -228,8 +240,8 @@ function CustomerRegistry({ rows, onLevel }: { rows: AdminCustomerRegistryRow[];
     <div className="hidden grid-cols-[130px_minmax(180px,1.4fr)_110px_90px_120px_130px_120px] gap-3 border-b border-asphalt/10 bg-[#fbfaf6] px-5 py-3 text-[10px] font-semibold uppercase tracking-[.08em] text-steel xl:grid">
       <span>Customer ID</span><span>Customer</span><span>Level</span><span>Orders</span><span>Lifetime</span><span>Largest order</span><span>Last order</span>
     </div>
-    <div className="divide-y divide-asphalt/10">{rows.map((customer) => <article key={customer.id} className="p-4 sm:p-5">
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[130px_minmax(180px,1.4fr)_110px_90px_120px_130px_120px] xl:items-center xl:gap-3">
+    <div className="divide-y divide-asphalt/10">{rows.map((customer) => <article key={customer.id} className="p-3 sm:p-4">
+      <div className="grid min-w-0 gap-2 xl:grid-cols-[130px_minmax(180px,1.4fr)_110px_90px_120px_130px_120px] xl:items-center xl:gap-3">
         <div><p className="xl:hidden text-[9px] uppercase tracking-wider text-steel">Customer ID</p><p className="break-all font-mono text-xs font-bold">{customer.customerCode}</p></div>
         <div className="min-w-0"><p className="break-words text-sm font-semibold">{customer.fullName}</p><p className="mt-1 break-words text-xs text-steel">{customer.phone}{customer.email ? ` · ${customer.email}` : ""}</p>{customer.companyName && <p className="mt-1 text-[11px] text-steel">{customer.companyName}</p>}</div>
         <button type="button" onClick={() => onLevel(customer)} className={`min-h-10 w-fit border px-3 font-mono text-[10px] font-bold uppercase ${levelClass(customer.level)}`}>{customer.level} ✎</button>
@@ -250,13 +262,13 @@ function DriverRegistry({ rows }: { rows: AdminDriverRegistryReport["drivers"] }
     </div>
     <div className="divide-y divide-asphalt/10">{rows.map((driver) => {
       const ready = driver.requiredDocumentsVerified >= 8 && Boolean(driver.plateNumber);
-      return <article key={driver.id} className="p-4 sm:p-5">
-        <div className="grid min-w-0 gap-4 xl:grid-cols-[130px_minmax(170px,1.3fr)_110px_150px_100px_100px_110px] xl:items-center xl:gap-3">
+      return <article key={driver.id} className="p-3 sm:p-4">
+        <div className="grid min-w-0 gap-2 xl:grid-cols-[130px_minmax(170px,1.3fr)_110px_150px_100px_100px_110px] xl:items-center xl:gap-3">
           <div><p className="xl:hidden text-[9px] uppercase tracking-wider text-steel">Driver ID</p><p className="break-all font-mono text-xs font-bold">{driver.driverCode ?? "ID pending"}</p></div>
           <div className="min-w-0"><p className="break-words text-sm font-semibold">{driver.fullName || "Driver"}</p><p className="mt-1 break-words text-xs text-steel">{driver.phone || "No phone"}{driver.email ? ` · ${driver.email}` : ""}</p></div>
           <span className={`w-fit px-2.5 py-1 font-mono text-[9px] font-bold uppercase ${driver.status === "approved" ? "bg-emerald-100 text-emerald-800" : driver.status === "suspended" ? "bg-route/10 text-route" : "bg-amber/15 text-amber-dim"}`}>{driver.status || "pending"}</span>
           <div><p className="text-sm font-semibold">{driver.plateNumber || "Plate required"}</p><p className="mt-1 text-[11px] text-steel">{[driver.vehicleType, driver.model].filter(Boolean).join(" · ") || "Vehicle details pending"}</p></div>
-          <div><p className={`font-mono text-sm font-bold ${ready ? "text-emerald-800" : "text-amber-dim"}`}>{driver.requiredDocumentsVerified}/8</p><p className="mt-1 text-[10px] text-steel">{driver.requiredDocumentsSubmitted}/8 submitted</p></div>
+          <div><p className={`font-mono text-sm font-bold ${ready ? "text-emerald-800" : "text-amber-dim"}`}>{driver.requiredDocumentsVerified}/8 approved</p><p className="mt-1 text-[10px] text-steel">{driver.requiredDocumentsSubmitted}/8 submitted</p></div>
           <Data label="Orders" value={String(driver.orderCount)} />
           <Data label="Last order" value={when(driver.lastOrderAt)} />
         </div>

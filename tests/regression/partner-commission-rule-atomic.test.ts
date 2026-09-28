@@ -39,8 +39,8 @@ test("Authenticated clients can read rules but cannot mutate them directly", () 
 });
 
 test("Partner finance service uses only the atomic activation RPC", () => {
-  const createRule = service.match(/export async function createCommissionRule[\s\S]*?\n}\n\nexport async function addPartnerVehicle/)?.[0] ?? "";
-  assert.match(createRule, /supabase\.rpc\("admin_activate_partner_commission_rule"/i);
+  const createRule = service.match(/export async function createCommissionRule[\s\S]*?export async function addPartnerVehicle/)?.[0] ?? "";
+  assert.ok(createRule.includes('supabase.rpc("admin_activate_partner_commission_rule"'));
   assert.doesNotMatch(createRule, /\.from\("partner_commission_rules"\)\.update/i);
   assert.doesNotMatch(createRule, /\.from\("partner_commission_rules"\)\.insert/i);
 });

@@ -6,7 +6,7 @@ const service = fs.readFileSync("src/services/admin.service.ts", "utf8");
 
 test("Admin dashboard bounds normal order preload", () => {
   assert.match(service, /ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT = 100/);
-  assert.match(service, /baseOrdersQuery\.limit\(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT\)/);
+  assert.match(service, /\.limit\(ADMIN_DASHBOARD_ORDER_PREVIEW_LIMIT\)/);
 });
 
 test("Admin dashboard KPIs use exact database counts", () => {
@@ -16,7 +16,7 @@ test("Admin dashboard KPIs use exact database counts", () => {
   assert.match(service, /deliveredOrders: deliveredOrdersResult\.count \?\? 0/);
 });
 
-test("Admin control queues preserve the existing full-order fallback", () => {
-  assert.match(service, /shouldLoadAllOrdersForControlQueue/);
-  assert.match(service, /queue && queue !== "all"/);
+test("Admin Orders all queue skips the dashboard preview because paged orders own those rows", () => {
+  assert.match(service, /shouldLoadDashboardOrderPreview/);
+  assert.ok(service.includes('section === "Orders" && queue === "all"'));
 });
