@@ -59,6 +59,7 @@ function normalizeOrder(value: unknown): AdminOrder {
     driver_name: row.driver_name == null ? null : String(row.driver_name),
     plate_number: row.plate_number == null ? null : String(row.plate_number),
     assignment_label: String(row.assignment_label ?? "Driver and truck not assigned"),
+    service_date: row.service_date == null ? null : String(row.service_date),
     accepted_at: row.accepted_at == null ? null : String(row.accepted_at),
     delivered_at: row.delivered_at == null ? null : String(row.delivered_at),
     cancellation_reason: row.cancellation_reason == null ? null : String(row.cancellation_reason),

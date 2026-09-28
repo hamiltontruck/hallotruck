@@ -5,9 +5,9 @@ import path from "node:path";
 
 const root = process.cwd();
 const host = "127.0.0.1";
-const port = 4174;
+const port = Number(process.env.ADMIN_E2E_PORT || 4174);
 const baseUrl = `http://${host}:${port}/hallotruck/`;
-const viteBinary = path.join(root, "node_modules", ".bin", process.platform === "win32" ? "vite.cmd" : "vite");
+const viteCli = path.join(root, "node_modules", "vite", "bin", "vite.js");
 
 function findChrome() {
   for (const candidate of [process.env.CHROME_BIN, "google-chrome", "google-chrome-stable", "chromium", "chromium-browser"].filter(Boolean)) {
@@ -78,7 +78,7 @@ async function render(chrome, route, viewport) {
   }
 }
 
-const preview = spawn(viteBinary, ["preview", "--host", host, "--port", String(port), "--strictPort"], {
+const preview = spawn(process.execPath, [viteCli, "preview", "--host", host, "--port", String(port), "--strictPort"], {
   cwd: root,
   stdio: ["ignore", "pipe", "pipe"],
 });

@@ -18,7 +18,10 @@ stable
 security invoker
 set search_path = public
 as $$
-with input as (
+with authorization as (
+  select private.is_admin_or_ceo() as allowed
+),
+input as (
   select
     greatest(coalesce(p_page, 1), 1) as requested_page,
     case when p_page_size = 50 then 50 else 100 end as page_size,
@@ -63,10 +66,12 @@ base as (
     o.created_at
   from public.orders o
   cross join input i
+  cross join authorization a
   left join public.profiles p on p.id = o.driver_id
   left join public.trucks t on t.id = o.truck_id
   where
-    (
+    a.allowed
+    and (
       not i.today_only
       or (
         o.status = 'delivered'::public.order_status

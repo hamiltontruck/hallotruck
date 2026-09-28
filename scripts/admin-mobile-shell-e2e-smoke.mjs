@@ -7,8 +7,8 @@ const root = process.cwd();
 const host = "127.0.0.1";
 const port = 4198;
 const baseUrl = `http://${host}:${port}/hallotruck/`;
-const vite = path.join(root, "node_modules", ".bin", process.platform === "win32" ? "vite.cmd" : "vite");
-const esbuild = path.join(root, "node_modules", ".bin", process.platform === "win32" ? "esbuild.cmd" : "esbuild");
+const viteCli = path.join(root, "node_modules", "vite", "bin", "vite.js");
+const esbuildCli = path.join(root, "node_modules", "esbuild", "bin", "esbuild");
 const temp = path.join(root, ".admin-mobile-shell-e2e");
 const entry = path.join(temp, "entry.mjs");
 const bundle = path.join(root, "dist", "admin-mobile-shell-e2e.js");
@@ -89,7 +89,7 @@ document.documentElement.dataset.current = String(current);
 `;
 
 await writeFile(entry, fixture, "utf8");
-const built = spawnSync(esbuild, [
+const built = spawnSync(process.execPath, [esbuildCli,
   entry, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120", `--outfile=${bundle}`,
   "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"",
   "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\"",
@@ -97,7 +97,7 @@ const built = spawnSync(esbuild, [
 if (built.status !== 0) throw new Error(built.stderr || "Admin mobile shell fixture bundle failed.");
 await writeFile(html, `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="./assets/${css}"></head><body><div id="root"></div><script type="module" src="./admin-mobile-shell-e2e.js"></script></body></html>`, "utf8");
 
-const preview = spawn(vite, ["preview", "--host", host, "--port", String(port), "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+const preview = spawn(process.execPath, [viteCli, "preview", "--host", host, "--port", String(port), "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
 try {
   await waitForServer();
   const chrome = findChrome();
