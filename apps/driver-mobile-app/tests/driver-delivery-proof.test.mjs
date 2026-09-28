@@ -162,6 +162,13 @@ test("panel supports camera, gallery, signature and locked submission", () => {
   assert.match(panelSource, /disabled=\{saving \|\| !completionReady\}/);
 });
 
+test("delivery proof bottom sheet keeps its header visible while the complete-trip form scrolls", () => {
+  assert.match(panelSource, /data-driver-delivery-proof-sheet[^>]*className="[^"]*flex[^"]*flex-col[^"]*overflow-hidden/);
+  assert.match(panelSource, /data-driver-delivery-proof-header[^>]*className="[^"]*shrink-0/);
+  assert.doesNotMatch(panelSource, /data-driver-delivery-proof-header[^>]*className="[^"]*sticky/);
+  assert.match(panelSource, /data-driver-delivery-proof-scroll-region[^>]*className="[^"]*min-h-0[^"]*flex-1[^"]*overflow-y-auto[^"]*overscroll-contain/);
+});
+
 test("active trip integrates completion only for in-transit orders", () => {
   assert.match(activeTripSource, /DriverDeliveryProofPanel/);
   assert.match(activeTripSource, /trip\.status === "in_transit"/);

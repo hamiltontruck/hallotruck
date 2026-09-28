@@ -262,8 +262,8 @@ export function DriverDeliveryProofPanel({
     </button>
 
     {open && <div className="fixed inset-0 z-[100] bg-halo-navy/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="mobile-delivery-proof-title">
-      <div className="absolute inset-x-0 bottom-0 top-[max(12px,env(safe-area-inset-top))] overflow-y-auto rounded-t-[30px] bg-halo-canvas shadow-[0_-20px_60px_rgba(0,0,0,0.3)]">
-        <header className="sticky top-0 z-10 border-b border-halo-line bg-white/95 px-4 pb-4 pt-4 backdrop-blur-xl sm:px-6">
+      <div data-driver-delivery-proof-sheet className="absolute inset-x-0 bottom-0 top-[max(12px,env(safe-area-inset-top))] flex flex-col overflow-hidden rounded-t-[30px] bg-halo-canvas shadow-[0_-20px_60px_rgba(0,0,0,0.3)]">
+        <header data-driver-delivery-proof-header className="z-10 shrink-0 border-b border-halo-line bg-white/95 px-4 pb-4 pt-4 backdrop-blur-xl sm:px-6">
           <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
           <div className="flex items-start justify-between gap-4">
             <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-halo-gold-dark">{trip.trackingId}</p><h2 id="mobile-delivery-proof-title" className="mt-1 text-xl font-black text-halo-navy">{t.deliveryProof.title}</h2><p className="mt-1 text-xs leading-5 text-halo-muted">{t.deliveryProof.subtitle}</p></div>
@@ -272,7 +272,7 @@ export function DriverDeliveryProofPanel({
           <div className="mt-4 flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-halo-line"><div className="h-full bg-emerald-500 transition-all" style={{ width: `${progress * 25}%` }} /></div><span className="text-xs font-black text-halo-blue">{progress}/4</span></div>
         </header>
 
-        <form onSubmit={submit} aria-busy={saving} className="space-y-4 px-4 pb-[calc(32px+env(safe-area-inset-bottom))] pt-5 sm:px-6">
+        <form data-driver-delivery-proof-scroll-region onSubmit={submit} aria-busy={saving} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-[calc(32px+env(safe-area-inset-bottom))] pt-5 sm:px-6">
           {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-5 text-red-700">{error}</p>}
           {saving && <p role="status" aria-live="polite" className="rounded-2xl border border-halo-blue/20 bg-halo-soft px-4 py-3 text-sm font-bold text-halo-blue">{t.deliveryProof.savingStatus}</p>}
 
