@@ -8,7 +8,9 @@ const host = "127.0.0.1";
 const port = 4198;
 const baseUrl = `http://${host}:${port}/hallotruck/`;
 const viteCli = path.join(root, "node_modules", "vite", "bin", "vite.js");
-const esbuildCli = path.join(root, "node_modules", "esbuild", "bin", "esbuild");
+const esbuildCli = process.platform === "win32"
+  ? path.join(root, "node_modules", "@esbuild", "win32-x64", "esbuild.exe")
+  : path.join(root, "node_modules", "@esbuild", "linux-x64", "bin", "esbuild");
 const temp = path.join(root, ".admin-mobile-shell-e2e");
 const entry = path.join(temp, "entry.mjs");
 const bundle = path.join(root, "dist", "admin-mobile-shell-e2e.js");
@@ -89,7 +91,7 @@ document.documentElement.dataset.current = String(current);
 `;
 
 await writeFile(entry, fixture, "utf8");
-const built = spawnSync(process.execPath, [esbuildCli,
+const built = spawnSync(esbuildCli, [
   entry, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120", `--outfile=${bundle}`,
   "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"",
   "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\"",
