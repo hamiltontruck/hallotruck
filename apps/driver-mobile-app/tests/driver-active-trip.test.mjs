@@ -1,47 +1,101 @@
+
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
+  calculateRouteProgressPct,
   formatRouteDistance,
   formatRouteDuration,
   normalizeDriverActiveTripOrder,
   normalizeDriverNavigationRoute,
   projectRouteToSvg,
+  resolveNavigationStep,
 } from "../.test-dist-active/driver-active-trip.model.js";
+import * as mapRuntime from "../.test-dist-active/driver-active-trip-map-runtime.js";
 
 const serviceSource = readFileSync(new URL("../src/driver/driver-active-trip.service.ts", import.meta.url), "utf8");
 const queueSource = readFileSync(new URL("../src/driver/driver-gps-queue.ts", import.meta.url), "utf8");
 const componentSource = readFileSync(new URL("../src/driver/DriverActiveTripView.tsx", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 
-test("normalizes only assigned active lifecycle rows", () => {
-  const accepted = normalizeDriverActiveTripOrder({
-    id: "order-1",
-    tracking_id: "HT-2026-1",
-    status: "accepted",
-    pickup_address: "Adama",
-    dropoff_address: "Finfinnee",
-    price_etb: "12000",
-    accepted_at: null,
-    selected_payment_method: "cash",
-  });
+
+test("style-ready map work waits for load and then runs once", () => {
+  assert.equal(typeof mapRuntime.runWhenDriverMapStyleReady, "function");
+  let styleLoaded = false;
+  let loadListener = null;
+  let renderCount = 0;
+  const map = {
+    isStyleLoaded: () => styleLoaded,
+    once: (event, listener) => {
+      assert.equal(event, "load");
+      loadListener = listener;
+    },
+    off: (event, listener) => {
+      assert.equal(event, "load");
+      if (loadListener === listener) loadListener = null;
+    },
+  };
+
+  const cleanup = mapRuntime.runWhenDriverMapStyleReady(map, () => { renderCount += 1; });
+  assert.equal(renderCount, 0);
+  assert.equal(typeof loadListener, "function");
+
+  styleLoaded = true;
+  loadListener();
+  assert.equal(renderCount, 1);
+  cleanup();
+});
+
+test("active trip overlays reserve only the visible map space for each card state", () => {
+  assert.equal(typeof mapRuntime.resolveDriverMapViewportPadding, "function");
+
+  assert.deepEqual(
+    mapRuntime.resolveDriverMapViewportPadding({ dispatchExpanded: false, sheetExpanded: false }),
+    { top: 112, bottom: 210, left: 32, right: 32 },
+  );
+  assert.deepEqual(
+    mapRuntime.resolveDriverMapViewportPadding({ dispatchExpanded: true, sheetExpanded: true }),
+    { top: 174, bottom: 430, left: 32, right: 32 },
+  );
+});
+
+test("trip sheet swipe direction expands upward and collapses downward", () => {
+  assert.equal(typeof mapRuntime.resolveDriverTripSheetGesture, "function");
+  assert.equal(mapRuntime.resolveDriverTripSheetGesture(420, 350, false), true);
+  assert.equal(mapRuntime.resolveDriverTripSheetGesture(350, 420, true), false);
+  assert.equal(mapRuntime.resolveDriverTripSheetGesture(400, 390, false), false);
+  assert.equal(mapRuntime.resolveDriverTripSheetGesture(400, 410, true), true);
+});
+
+test("normalizes only assigned active lifecycle rows with authoritative service date", () => {
+  const accepted = normalizeDriverActiveTripOrder({ id: "order-1", tracking_id: "HT-2026-1", status: "accepted", pickup_address: "Adama", dropoff_address: "Finfinnee", price_etb: "12000", accepted_at: null, service_date: "2026-09-25", selected_payment_method: "cash" });
   assert.equal(accepted?.status, "accepted");
   assert.equal(accepted?.priceEtb, 12000);
+  assert.equal(accepted?.serviceDate, "2026-09-25");
   assert.equal(accepted?.selectedPaymentMethod, "cash");
   assert.equal(normalizeDriverActiveTripOrder({ ...accepted, status: "delivered" }), null);
   assert.equal(normalizeDriverActiveTripOrder({ id: "missing-fields", status: "in_transit" }), null);
 });
 
-test("normalizes server route geometry and rejects malformed payloads", () => {
-  const route = normalizeDriverNavigationRoute({
-    geometry: {
-      type: "LineString",
-      coordinates: [[38.7, 9.0], [39.1, 8.8], [39.4, 8.6]],
-    },
-    distanceKm: 95.4,
-    durationMin: 122,
-    steps: [{ instruction: "Continue straight", distanceM: 420, durationSec: 36, location: [38.7, 9.0] }],
+test("keeps a legacy active trip whose service date is null", () => {
+  const legacyInTransit = normalizeDriverActiveTripOrder({
+    id: "legacy-order",
+    tracking_id: "HT-2026-LEGACY",
+    status: "in_transit",
+    pickup_address: "Shashamane",
+    dropoff_address: "Goba",
+    price_etb: "22000",
+    accepted_at: "2026-09-25T03:19:33Z",
+    service_date: null,
+    selected_payment_method: "cash",
   });
+
+  assert.ok(legacyInTransit);
+  assert.equal(legacyInTransit.serviceDate, null);
+});
+
+test("normalizes server route geometry and rejects malformed payloads", () => {
+  const route = normalizeDriverNavigationRoute({ geometry: { type: "LineString", coordinates: [[38.7, 9.0], [39.1, 8.8], [39.4, 8.6]] }, distanceKm: 95.4, durationMin: 122, steps: [{ instruction: "Continue straight", distanceM: 420, durationSec: 36, location: [38.7, 9.0] }] });
   assert.equal(route?.coordinates.length, 3);
   assert.equal(route?.steps[0].instruction, "Continue straight");
   assert.equal(normalizeDriverNavigationRoute({ geometry: { type: "Point", coordinates: [1, 2] } }), null);
@@ -55,6 +109,25 @@ test("projects real route points into a finite SVG path", () => {
   assert.equal(projectRouteToSvg([[1, 2]], null), null);
 });
 
+test("GPS progress advances to a real upcoming maneuver and never regresses below the previous step", () => {
+  const steps = [
+    { instruction: "Depart", distanceM: 100, durationSec: 10, location: [38.70, 9.00] },
+    { instruction: "Turn right", distanceM: 300, durationSec: 30, location: [38.71, 9.00] },
+    { instruction: "Arrive", distanceM: 500, durationSec: 50, location: [38.72, 9.00] },
+  ];
+  const nearSecond = resolveNavigationStep(steps, [38.7101, 9.0], 0);
+  assert.equal(nearSecond.index, 2);
+  const noRegression = resolveNavigationStep(steps, [38.7001, 9.0], 2);
+  assert.equal(noRegression.index, 2);
+});
+
+test("route progress uses the nearest real route coordinate", () => {
+  const coordinates = [[38.70, 9.0], [38.71, 9.0], [38.72, 9.0], [38.73, 9.0]];
+  assert.equal(calculateRouteProgressPct(coordinates, [38.70, 9.0]), 0);
+  assert.equal(calculateRouteProgressPct(coordinates, [38.72, 9.0]), 67);
+  assert.equal(calculateRouteProgressPct(coordinates, [38.73, 9.0]), 100);
+});
+
 test("formats unknown route metrics without false zero", () => {
   assert.equal(formatRouteDistance(null), "—");
   assert.equal(formatRouteDuration(null), "—");
@@ -62,8 +135,10 @@ test("formats unknown route metrics without false zero", () => {
   assert.equal(formatRouteDuration(125), "2h 5m");
 });
 
-test("service preserves assigned-driver and server-confirmed boundaries", () => {
+test("service preserves assigned-driver, service-date and server-confirmed boundaries", () => {
   assert.match(serviceSource, /\.eq\("driver_id", user\.id\)/);
+  assert.match(serviceSource, /service_date/);
+  assert.doesNotMatch(serviceSource, /\.lte\("service_date", today\)/);
   assert.match(serviceSource, /\/navigation\?orderId=/);
   assert.match(serviceSource, /\/tracking/);
   assert.match(serviceSource, /fetchDriverAssignedTrip\(expectedUserId, ping\.orderId\)/);
@@ -77,13 +152,37 @@ test("offline GPS queue is isolated and capped", () => {
   assert.match(queueSource, /throw error/);
 });
 
-test("active trip component guards GPS lifecycle and stale assignment", () => {
+test("active trip component guards GPS lifecycle, stale assignment and navigation progression", () => {
   assert.match(componentSource, /navigator\.geolocation\.watchPosition/);
   assert.match(componentSource, /MIN_PING_INTERVAL_MS = 15_000/);
   assert.match(componentSource, /enqueueDriverPing/);
   assert.match(componentSource, /syncQueuedDriverPings/);
   assert.match(componentSource, /clearQueuedDriverPings\(userId, previous\.id\)/);
   assert.match(componentSource, /confirmed\.status === "in_transit"/);
+  assert.match(componentSource, /resolveNavigationStep/);
+  assert.match(componentSource, /calculateRouteProgressPct/);
+  assert.match(componentSource, /role="progressbar"/);
+  assert.match(componentSource, /data-driver-dispatch-card/);
+  assert.match(componentSource, /hidden=\{!dispatchExpanded\}/);
+  assert.match(componentSource, /dispatchExpanded \? "p-4" : "p-2/);
+  assert.match(componentSource, /data-driver-trip-sheet/);
+  assert.match(componentSource, /aria-expanded=\{dispatchExpanded\}/);
+  assert.match(componentSource, /aria-expanded=\{sheetExpanded\}/);
+  assert.match(componentSource, /viewportPadding=\{mapViewportPadding\}/);
+  assert.match(componentSource, /hidden=\{!sheetExpanded\}/);
+  assert.match(componentSource, /completedTripIdRef/);
+  assert.match(componentSource, /next\?\.trackingId === completedTripIdRef\.current/);
+});
+
+test("Driver location sharing stays inside HALLO tracking instead of exporting a Maps link", () => {
+  assert.doesNotMatch(componentSource, /google\.com\/maps|navigator\.share|clipboard\.writeText/);
+  assert.match(componentSource, /sendDriverTrackingPing/);
+  assert.match(componentSource, /startSharing/);
+  assert.match(componentSource, /stopSharing/);
+});
+
+test("Active Trip does not duplicate the authoritative commission formula", () => {
+  assert.doesNotMatch(componentSource, /grossFare \* 0\.02|driverNet|expectedNet/);
 });
 
 test("App routes Driver map to the real active trip component", () => {
@@ -99,13 +198,23 @@ test("localizes common navigation maneuvers and renders a real basemap component
   assert.doesNotMatch(componentSource, /<svg/);
   assert.match(mapSource, /maplibregl\.Map/);
   assert.match(mapSource, /openfreemap|maptiler/i);
+  assert.match(mapSource, /loadingLabel/);
+  assert.match(mapSource, /errorLabel/);
+  assert.match(mapSource, /emptyLabel/);
 });
 
-test("live map keeps a real reachable basemap instead of cascading to blocked OSM tiles", () => {
+test("live map keeps a real reachable basemap and visible controls", () => {
   const mapSource = readFileSync(new URL("../src/driver/DriverActiveTripMap.tsx", import.meta.url), "utf8");
   assert.match(mapSource, /tiles\.openfreemap\.org\/styles\/liberty/);
   assert.doesNotMatch(mapSource, /tile\.openstreetmap\.org/);
   assert.match(mapSource, /map\.on\("error"/);
-  assert.match(mapSource, /mapLoadedRef/);
-  assert.match(mapSource, /map\.resize\(\)/);
+  assert.match(mapSource, /map\.on\("idle"/);
+  assert.match(mapSource, /const onLoad = \(\) => \{[^}]*setMapStatus\("ready"\)/);
+  assert.doesNotMatch(mapSource, /const onStyleLoad = \(\) => \{[^}]*setMapStatus\("ready"\)/);
+  assert.match(mapSource, /map\.on\("load", onLoad\)/);
+  assert.match(mapSource, /const onError = \(\) => \{\s*if \(map\?\.isStyleLoaded\(\)\) return;/);
+  assert.match(mapSource, /nextDriverMapStyleAfterFailure/);
+  assert.match(mapSource, /map\?\.resize\(\)/);
+  assert.match(mapSource, /keepMapControlsVisible/);
+  assert.match(mapSource, /"top-left"/);
 });

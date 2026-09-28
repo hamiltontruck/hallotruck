@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  driverDepositConsumedEtb,
   formatWalletEtb,
   type DriverCommissionSummary,
   type DriverFinancialSummary,
@@ -15,6 +16,7 @@ import { DriverCommissionPaymentPanel } from "./DriverCommissionPaymentPanel";
 import type { DriverCommissionPayment } from "./driver-commission-payment.model";
 import { fetchDriverCommissionPayments } from "./driver-commission-payment.service";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
+import { driverRefreshCompletion, settleDriverSourcesWithin } from "./driver-runtime-resilience";
 
 type SourceErrors = {
   financial: string | null;
@@ -25,6 +27,7 @@ type SourceErrors = {
 
 const EMPTY_ERRORS: SourceErrors = { financial: null, commission: null, payments: null, trips: null };
 const REFRESH_MS = 30_000;
+const SOURCE_TIMEOUT_MS = 12_000;
 
 function errorMessage(_error: unknown, fallback: string): string {
   return fallback;
@@ -98,14 +101,19 @@ export function DriverWalletView({
     if (silent) setRefreshing(true);
     else setLoading(true);
 
-    const results = await Promise.allSettled([
+    const results = await settleDriverSourcesWithin([
       fetchDriverFinancialSummary(userId),
       fetchDriverCommissionSummary(userId),
       fetchDriverCommissionPayments(userId),
       fetchDriverWalletTrips(userId),
-    ]);
-    if (!mountedRef.current || requestId !== requestIdRef.current) {
+    ] as const, SOURCE_TIMEOUT_MS);
+    const completion = driverRefreshCompletion({ mounted: mountedRef.current, requestId, currentRequestId: requestIdRef.current, queued: queuedRefreshRef.current });
+    if (!completion.accept) {
       inFlightRef.current = false;
+      if (completion.runQueued) {
+        queuedRefreshRef.current = false;
+        window.setTimeout(() => void load(true), 0);
+      }
       return;
     }
 
@@ -238,6 +246,9 @@ export function DriverWalletView({
       userId={userId}
       balanceEtb={commission.balanceEtb}
       pendingEtb={commission.pendingEtb}
+      adminDepositEtb={financial?.adminDepositEtb ?? 0}
+      depositConsumedEtb={financial ? driverDepositConsumedEtb(financial) : 0}
+      availableDepositEtb={financial?.availableDepositEtb ?? 0}
       payments={payments}
       sourceError={errors.payments}
       onRetry={() => void load(true)}

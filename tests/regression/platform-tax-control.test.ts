@@ -13,12 +13,19 @@ const adminCommission = readFileSync(path.join(process.cwd(), "src", "pages", "A
 const adminNav = readFileSync(path.join(process.cwd(), "src", "components", "admin", "AdminSidebarLeadershipLinks.tsx"), "utf8");
 const commission = readFileSync(path.join(process.cwd(), "src", "utils", "commission.ts"), "utf8");
 const financeService = readFileSync(path.join(process.cwd(), "src", "services", "admin-finance-v3.service.ts"), "utf8");
+const driverFinanceSearch = readFileSync(path.join(process.cwd(), "src", "pages", "AdminDriverFinanceSearch.tsx"), "utf8");
 
 test("government tax control uses only the HALLO 2% platform basis and fixed 15% tax rule", () => {
   assert.match(commission, /HALLO_SMART_COMMISSION_RATE = 0\.02/);
   assert.match(commission, /HALLO_SMART_COMMISSION_PERCENT = 2/);
   assert.match(commission, /HALLO_PLATFORM_TAX_RATE = 0\.15/);
   assert.doesNotMatch(commission, /gross \* 0\.15/);
+});
+
+test("commission control links directly to the driver deposit form with unambiguous labels", () => {
+  assert.match(adminCommission, /to="\/admin\/driver-finance-search"/);
+  assert.match(adminCommission, /Fund driver deposit/);
+  assert.match(driverFinanceSearch, /Add deposit \/ view trips/);
 });
 
 test("tax ledger creates immutable period, remittance and audit tables", () => {

@@ -7,6 +7,7 @@ import {
   deliveryPhotoExtension,
   validateDriverDeliveryProofDraft,
 } from "../.test-dist-delivery/driver-delivery-proof.model.js";
+import * as deliveryProofModel from "../.test-dist-delivery/driver-delivery-proof.model.js";
 
 const serviceSource = readFileSync(new URL("../src/driver/driver-delivery-proof.service.ts", import.meta.url), "utf8");
 const panelSource = readFileSync(new URL("../src/driver/DriverDeliveryProofPanel.tsx", import.meta.url), "utf8");
@@ -123,6 +124,23 @@ test("photo extensions are derived from MIME type", () => {
   assert.equal(deliveryPhotoExtension(photo(10, "image/jpeg")), "jpg");
 });
 
+test("complete trip stays locked until all four proof steps are ready", () => {
+  assert.equal(typeof deliveryProofModel.canSubmitDriverDeliveryProof, "function");
+  const canSubmitDriverDeliveryProof = deliveryProofModel.canSubmitDriverDeliveryProof;
+  assert.equal(canSubmitDriverDeliveryProof({
+    receiverReady: true,
+    photoReady: false,
+    signatureReady: true,
+    paymentReady: true,
+  }), false);
+  assert.equal(canSubmitDriverDeliveryProof({
+    receiverReady: true,
+    photoReady: true,
+    signatureReady: true,
+    paymentReady: true,
+  }), true);
+});
+
 test("service preserves assignment, storage and atomic RPC boundaries", () => {
   assert.match(serviceSource, /\.eq\("driver_id", userId\)/);
   assert.match(serviceSource, /\.in\("status", \["accepted", "in_transit"\]\)/);
@@ -140,7 +158,15 @@ test("panel supports camera, gallery, signature and locked submission", () => {
   assert.match(panelSource, /submittingRef\.current/);
   assert.match(panelSource, /submitDriverDeliveryProof/);
   assert.match(panelSource, /payment_not_received/);
-  assert.match(panelSource, /disabled=\{saving\}/);
+  assert.match(panelSource, /canSubmitDriverDeliveryProof/);
+  assert.match(panelSource, /disabled=\{saving \|\| !completionReady\}/);
+});
+
+test("delivery proof bottom sheet keeps its header visible while the complete-trip form scrolls", () => {
+  assert.match(panelSource, /data-driver-delivery-proof-sheet[^>]*className="[^"]*flex[^"]*flex-col[^"]*overflow-hidden/);
+  assert.match(panelSource, /data-driver-delivery-proof-header[^>]*className="[^"]*shrink-0/);
+  assert.doesNotMatch(panelSource, /data-driver-delivery-proof-header[^>]*className="[^"]*sticky/);
+  assert.match(panelSource, /data-driver-delivery-proof-scroll-region[^>]*className="[^"]*min-h-0[^"]*flex-1[^"]*overflow-y-auto[^"]*overscroll-contain/);
 });
 
 test("active trip integrates completion only for in-transit orders", () => {

@@ -75,13 +75,14 @@ test("Active Trip order browser smoke covers retries, stale removal and mobile s
   assert.match(packageJson, /driver-active-trip-order-e2e-smoke\.mjs/);
 });
 
-test("Driver Mobile V4 removes Customer-cancelled jobs without requiring manual refresh", () => {
-  assert.match(driverMobileJobsService, /client\.rpc\("get_available_jobs"\)/);
+test("Driver Mobile V4 removes cancelled jobs and refreshes calendar marketplace without manual reload", () => {
+  assert.match(driverMobileJobsService, /client\.rpc\("get_available_jobs_v2"\)/);
   assert.doesNotMatch(driverMobileJobsService, /\.eq\(["']status["'],\s*["']placed["']\)\.is\(["']driver_id["'],\s*null\)/);
   assert.match(driverMobileJobs, /const MARKET_REFRESH_MS = 20_000/);
   assert.match(driverMobileJobs, /window\.setInterval\(\(\) => void refreshRef\.current\(\), MARKET_REFRESH_MS\)/);
   assert.match(driverMobileJobs, /subscribeToMyDriverOrders\(userId, \(\) => void refreshRef\.current\(\)\)/);
   assert.match(driverMobileJobs, /const requestId = \+\+requestIdRef\.current/);
   assert.match(driverMobileJobs, /requestId !== requestIdRef\.current/);
-  assert.match(driverMobileJobsService, /void client\.removeChannel\(activeChannel\)/);
+  assert.match(driverMobileJobsService, /status=eq\.placed/);
+  assert.match(driverMobileJobsService, /for \(const channel of channels\) void client\.removeChannel\(channel\)/);
 });

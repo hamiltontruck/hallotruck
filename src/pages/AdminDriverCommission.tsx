@@ -108,7 +108,10 @@ export function AdminDriverCommission() {
           <h1 className="mt-2 font-display text-3xl font-bold">Commission control</h1>
           <p className="mt-2 max-w-2xl text-sm text-steel">HALLO platform commission accrues when the assigned driver confirms an Admin-verified customer payment. Cash paid directly to a driver remains in the separate driver settlement flow.</p>
         </div>
-        <Link to="/admin" className="self-start border border-asphalt px-4 py-3 text-sm font-semibold">← Back to Control Center</Link>
+        <div className="flex flex-wrap gap-2 self-start">
+          <Link to="/admin/driver-finance-search" className="bg-asphalt px-4 py-3 text-sm font-semibold text-white">Fund driver deposit</Link>
+          <Link to="/admin" className="border border-asphalt px-4 py-3 text-sm font-semibold">← Back to Control Center</Link>
+        </div>
       </div>
 
       {error && <p className="mb-5 border border-route/30 bg-route/10 p-3 text-sm text-route">{error}</p>}

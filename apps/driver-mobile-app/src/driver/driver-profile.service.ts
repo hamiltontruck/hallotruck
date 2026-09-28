@@ -1,4 +1,4 @@
-import type { RealtimeChannel, Session, SupabaseClient, User } from "@supabase/supabase-js";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { mobileSupabase } from "../auth/mobile-supabase";
 import {
   normalizeDriverProfile,
@@ -8,6 +8,7 @@ import {
   type DriverTruckRecord,
   type DriverVerificationRecord,
 } from "./driver-profile.model";
+import { requireExpectedDriverSession } from "./driver-session";
 
 const DRIVER_PREVIEW_SECONDS = 120;
 const previewMimeTypes = new Set([
@@ -35,26 +36,8 @@ function requiredText(value: unknown): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
-async function requireExpectedDriver(expectedUserId: string): Promise<{
-  client: SupabaseClient;
-  user: User;
-  session: Session;
-}> {
-  const client = requireClient();
-  const [userResult, sessionResult] = await Promise.all([
-    client.auth.getUser(),
-    client.auth.getSession(),
-  ]);
-  const user = userResult.data.user;
-  const session = sessionResult.data.session;
-  if (userResult.error || sessionResult.error || !user || !session) {
-    throw new Error("Driver session xumurameera. Deebi'ii seeni.");
-  }
-  if (user.id !== expectedUserId || session.user.id !== expectedUserId) {
-    throw new Error("Mobile session jijjiirameera. Page kana irra deebi'ii bani.");
-  }
-  return { client, user, session };
-}
+const requireExpectedDriver = (expectedUserId: string) =>
+  requireExpectedDriverSession(requireClient(), expectedUserId, "Profile");
 
 export async function fetchDriverProfile(expectedUserId: string): Promise<DriverProfileRecord> {
   const { client, user } = await requireExpectedDriver(expectedUserId);

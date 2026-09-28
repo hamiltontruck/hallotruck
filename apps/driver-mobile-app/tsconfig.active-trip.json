@@ -7,5 +7,10 @@
     "declaration": false,
     "isolatedModules": false
   },
-  "include": ["src/driver/driver-active-trip.model.ts"]
+  "include": [
+    "src/driver/driver-active-trip.model.ts",
+    "src/driver/driver-active-trip-map-runtime.ts",
+    "src/driver/driver-runtime-resilience.ts"
+    ,"src/driver/driver-session.ts"
+  ]
 }

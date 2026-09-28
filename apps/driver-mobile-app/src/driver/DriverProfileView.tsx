@@ -27,8 +27,10 @@ import {
   type DriverRatingSummary,
 } from "./driver-profile.service";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
+import { driverRefreshCompletion, settleDriverSourcesWithin } from "./driver-runtime-resilience";
 
 const PROFILE_REFRESH_MS = 30_000;
+const SOURCE_TIMEOUT_MS = 12_000;
 
 const healthClass: Record<DocumentHealth, string> = {
   missing: "bg-slate-100 text-slate-600",
@@ -224,15 +226,20 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
     const requestId = ++requestIdRef.current;
     if (!profileConfirmed && !trucksConfirmed && !documentsConfirmed) setLoading(true);
 
-    const [profileResult, trucksResult, documentsResult, ratingResult] = await Promise.allSettled([
+    const [profileResult, trucksResult, documentsResult, ratingResult] = await settleDriverSourcesWithin([
       fetchDriverProfile(userId),
       fetchDriverTrucks(userId),
       fetchDriverVerificationFiles(userId),
       fetchDriverRatingSummary(userId),
-    ]);
+    ] as const, SOURCE_TIMEOUT_MS);
 
-    if (!mountedRef.current || requestId !== requestIdRef.current) {
+    const completion = driverRefreshCompletion({ mounted: mountedRef.current, requestId, currentRequestId: requestIdRef.current, queued: queuedRefreshRef.current });
+    if (!completion.accept) {
       refreshInFlightRef.current = false;
+      if (completion.runQueued) {
+        queuedRefreshRef.current = false;
+        window.setTimeout(() => void refresh(), 0);
+      }
       return;
     }
 
