@@ -34,9 +34,10 @@ function draft(overrides = {}) {
   };
 }
 
-test("payment options remain constrained by the customer method", () => {
-  assert.deepEqual(allowedDriverPaymentResults("cash"), ["cash_received"]);
-  assert.deepEqual(allowedDriverPaymentResults("bank_telebirr"), ["bank_telebirr"]);
+test("payment options allow cash or bank wallet at delivery", () => {
+  const expected = ["cash_received", "bank_telebirr"];
+  assert.deepEqual(allowedDriverPaymentResults("cash"), expected);
+  assert.deepEqual(allowedDriverPaymentResults("bank_telebirr"), expected);
 });
 
 test("cash completion requires the exact trip amount", () => {
@@ -56,17 +57,17 @@ test("cash completion requires the exact trip amount", () => {
   assert.equal(mismatch.ok, false);
 });
 
-test("bank and not-received results do not invent cash collection", () => {
+test("bank wallet requires the exact trip amount and not-received stays unavailable", () => {
   const bank = validateDriverDeliveryProofDraft(draft({
     paymentResult: "bank_telebirr",
-    amountCollected: "",
+    amountCollected: "12000",
   }), {
     orderStatus: "in_transit",
     selectedPaymentMethod: "bank_telebirr",
     tripAmountEtb: 12000,
   });
   assert.equal(bank.ok, true);
-  if (bank.ok) assert.equal(bank.amountCollected, null);
+  if (bank.ok) assert.equal(bank.amountCollected, 12000);
 
   const outstanding = validateDriverDeliveryProofDraft(draft({
     paymentResult: "payment_not_received",
@@ -86,13 +87,12 @@ test("delivery proof rejects wrong lifecycle, method, files and receiver", () =>
     tripAmountEtb: 12000,
   });
   assert.equal(accepted.ok, false);
-
-  const wrongMethod = validateDriverDeliveryProofDraft(draft({ paymentResult: "bank_telebirr" }), {
+  const alternatePayment = validateDriverDeliveryProofDraft(draft({ paymentResult: "bank_telebirr" }), {
     orderStatus: "in_transit",
     selectedPaymentMethod: "cash",
     tripAmountEtb: 12000,
   });
-  assert.equal(wrongMethod.ok, false);
+  assert.equal(alternatePayment.ok, true);
 
   const tooLarge = validateDriverDeliveryProofDraft(draft({ photo: photo(MAX_DELIVERY_PHOTO_BYTES + 1) }), {
     orderStatus: "in_transit",

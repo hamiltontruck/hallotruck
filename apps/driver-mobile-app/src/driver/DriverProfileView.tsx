@@ -180,7 +180,7 @@ function TruckCard({ truck, selected, onSelect, language }: {
   </button>;
 }
 
-export function DriverProfileView({ userId, fallbackName, language = "om" }: { userId: string; fallbackName: string; language?: DriverLanguage }) {
+export function DriverProfileView({ userId, fallbackName, language = "om", onSignOut }: { userId: string; fallbackName: string; language?: DriverLanguage; onSignOut: () => void }) {
   const mountedRef = useRef(false);
   const refreshInFlightRef = useRef(false);
   const queuedRefreshRef = useRef(false);
@@ -416,6 +416,7 @@ export function DriverProfileView({ userId, fallbackName, language = "om" }: { u
 })}</section>
 
     <div className="rounded-2xl bg-halo-gold-soft p-4 text-xs leading-5 text-halo-gold-dark"><strong>{c.uploadNote}</strong> {c.uploadHelp}</div>
+    <button type="button" data-driver-profile-sign-out onClick={onSignOut} className="min-h-12 w-full rounded-2xl border border-red-200 bg-white px-4 text-sm font-black text-red-700 shadow-halo-card active:scale-[0.99]">{t.shell.signOut}</button>
     {previewTarget && <DriverDocumentPreviewSheet expectedUserId={userId} record={previewTarget.record} documentLabel={localizedDocumentLabels[previewTarget.documentKey]} onClose={() => setPreviewTarget(null)} language={language} />}
     {uploadTarget && <DriverDocumentUploadSheet userId={userId} documentKey={uploadTarget.documentKey} documentLabel={localizedDocumentLabels[uploadTarget.documentKey]} truckId={uploadTarget.truckId} currentRecord={uploadTarget.record} onClose={() => setUploadTarget(null)} onUploaded={async (message) => { setUploadNotice(message); setUploadTarget(null); await refresh(); }} language={language} />}
   </div>;
