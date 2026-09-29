@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { CustomerAuthBoundary } from "./auth/CustomerAuthBoundaryV2";
+import { initializeAnalytics } from "./services/analytics";
 import "./styles.css";
 import "./auth-brand.css";
 import "./auth-language-compact.css";
@@ -20,6 +21,7 @@ function syncAndroidViewport() {
   document.documentElement.style.setProperty("--customer-app-height", `${height}px`);
 }
 
+initializeAnalytics();
 syncAndroidViewport();
 window.addEventListener("resize", syncAndroidViewport, { passive: true });
 window.addEventListener("orientationchange", syncAndroidViewport, { passive: true });
