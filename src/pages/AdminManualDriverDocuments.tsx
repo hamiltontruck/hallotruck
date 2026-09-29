@@ -16,6 +16,7 @@ interface TruckRow {
   status: string;
   driver_id: string | null;
   created_by: string | null;
+  partner_id: string | null;
 }
 
 interface DocumentRow {
@@ -92,7 +93,7 @@ export function AdminManualDriverDocuments() {
         .order("full_name"),
       supabase
         .from("trucks")
-        .select("id,plate_number,vehicle_type,status,driver_id,created_by")
+        .select("id,plate_number,vehicle_type,status,driver_id,created_by,partner_id")
         .order("plate_number"),
       supabase
         .from("driver_verification_files")
@@ -120,11 +121,12 @@ export function AdminManualDriverDocuments() {
   useEffect(() => { void load(); }, []);
 
   const selectedDriver = drivers.find((driver) => driver.id === driverId);
-  const linkedTrucks = useMemo(
-    () => trucks.filter((truck) => truck.driver_id === driverId || truck.created_by === driverId),
+  const onboardingTruckCandidates = useMemo(
+    () => trucks.filter((truck) => truck.driver_id === driverId || (truck.driver_id === null && truck.partner_id === null && ["available", "inactive"].includes(truck.status))),
     [driverId, trucks],
   );
   const needsTruck = vehicleDocumentKeys.has(documentKey);
+  const selectedTruck = trucks.find((truck) => truck.id === truckId);
   const selectedDocuments = documents.filter((document) => document.driver_id === driverId);
 
   useEffect(() => {
@@ -132,8 +134,8 @@ export function AdminManualDriverDocuments() {
       setTruckId("");
       return;
     }
-    setTruckId((current) => linkedTrucks.some((truck) => truck.id === current) ? current : linkedTrucks[0]?.id || "");
-  }, [driverId, linkedTrucks, needsTruck]);
+    setTruckId((current) => onboardingTruckCandidates.some((truck) => truck.id === current) ? current : onboardingTruckCandidates[0]?.id || "");
+  }, [driverId, onboardingTruckCandidates, needsTruck]);
 
   async function openFile(path: string) {
     setError("");
@@ -160,6 +162,19 @@ export function AdminManualDriverDocuments() {
     if (file.size > 10 * 1024 * 1024) return setError("Document must be 10 MB or smaller.");
 
     setSaving(true);
+
+    if (needsTruck && selectedTruck?.driver_id !== driverId) {
+      const { error: linkError } = await supabase.rpc("admin_link_driver_onboarding_truck", {
+        p_driver_id: driverId,
+        p_truck_id: truckId,
+      });
+      if (linkError) {
+        setError(linkError.message);
+        setSaving(false);
+        return;
+      }
+    }
+
     const fallbackExtension = file.type === "application/pdf" ? "pdf" : "jpg";
     const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || fallbackExtension;
     const path = `${driverId}/admin/${documentKey}/${crypto.randomUUID()}.${extension}`;
@@ -242,9 +257,10 @@ export function AdminManualDriverDocuments() {
             {needsTruck && <label className="mt-4 block text-sm font-semibold">Driver truck
               <select value={truckId} onChange={(event) => setTruckId(event.target.value)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3 font-normal" required>
                 <option value="" disabled>Select linked truck</option>
-                {linkedTrucks.map((truck) => <option key={truck.id} value={truck.id}>{truck.plate_number} · {truck.vehicle_type} · {truck.status}</option>)}
+                {onboardingTruckCandidates.map((truck) => <option key={truck.id} value={truck.id}>{truck.plate_number} · {truck.vehicle_type} · {truck.driver_id === driverId ? "linked" : "available — link for onboarding"}</option>)}
               </select>
-              {!linkedTrucks.length && <span className="mt-2 block text-xs font-normal text-route">This driver has no registered or assigned truck. Add the vehicle first.</span>}
+              {!onboardingTruckCandidates.length && <span className="mt-2 block text-xs font-normal text-route">No safe company truck is available. Add a company vehicle first.</span>}
+              {needsTruck && selectedTruck && selectedTruck.driver_id !== driverId && <span className="mt-2 block text-xs font-normal text-amber-dim">This available company truck will be linked to the pending driver for onboarding and kept inactive until approval.</span>}
             </label>}
 
             <label className="mt-4 block text-sm font-semibold">Document file

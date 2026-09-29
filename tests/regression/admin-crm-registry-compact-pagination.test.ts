@@ -22,6 +22,8 @@ test("Driver document counts clearly distinguish approved from submitted", () =>
 });
 
 test("mobile registry cards use compact vertical spacing", () => {
-  assert.match(page, /className="p-3 sm:p-4"/);
-  assert.match(page, /gap-2[^\"]*xl:gap-3/);
+  assert.match(page, /CRM smart row/);
+  assert.match(page, /grid gap-3 p-3 lg:grid-cols-2 sm:p-4/);
+  assert.match(page, /sm:grid-cols-4/);
+  assert.match(page, /sm:grid-cols-3/);
 });
