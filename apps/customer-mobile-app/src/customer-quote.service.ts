@@ -51,16 +51,13 @@ const HALLO_OPERATING_BOUNDS: readonly OperatingBounds[] = [
   { west: 40.8, south: -1.9, east: 51.7, north: 12.3 },
 ];
 
-const NON_ROUTABLE_PLACE_TYPES = new Set(["continental_marine", "country", "major_landform", "region", "subregion", "county"]);
+const NON_ROUTABLE_PLACE_TYPES = new Set(["continental_marine", "country", "major_landform"]);
+const ROUTABLE_LOCALITY_PLACE_TYPES = new Set(["municipality", "locality", "place", "region", "subregion", "county"]);
 const ROUTE_CACHE_TTL_MS = 2 * 60 * 1000;
 const routeCache = new Map<string, { route: CustomerRoutePreview; storedAt: number }>();
 
 function routeCacheKey(pickup: CustomerPlaceOption, dropoff: CustomerPlaceOption, vehicleType: string) {
-  return [
-    pickup.coordinates.join(","),
-    dropoff.coordinates.join(","),
-    vehicleType.trim().toLowerCase(),
-  ].join("|");
+  return [pickup.coordinates.join(","), dropoff.coordinates.join(","), vehicleType.trim().toLowerCase()].join("|");
 }
 
 function cacheRoute(route: CustomerRoutePreview, pickup: CustomerPlaceOption, dropoff: CustomerPlaceOption, vehicleType: string) {
@@ -80,9 +77,7 @@ function finitePositive(value: unknown, label: string) {
 }
 
 function isCoordinate(value: unknown): value is [number, number] {
-  return Array.isArray(value)
-    && value.length === 2
-    && value.every((part) => Number.isFinite(Number(part)));
+  return Array.isArray(value) && value.length === 2 && value.every((part) => Number.isFinite(Number(part)));
 }
 
 function isRouteCoordinates(value: unknown): value is [number, number][] {
@@ -91,29 +86,32 @@ function isRouteCoordinates(value: unknown): value is [number, number][] {
 
 export function isHalloOperatingCoordinate(coordinates: [number, number]) {
   const [longitude, latitude] = coordinates;
-  return HALLO_OPERATING_BOUNDS.some(({ west, south, east, north }) => (
-    longitude >= west
-    && longitude <= east
-    && latitude >= south
-    && latitude <= north
-  ));
+  return HALLO_OPERATING_BOUNDS.some(({ west, south, east, north }) => longitude >= west && longitude <= east && latitude >= south && latitude <= north);
 }
 
 function normalizePlaceSearchText(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
-    .toLocaleLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+  return value.normalize("NFKD").replace(/\p{M}/gu, "").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
 function placeMatchesSearchQuery(query: string, label: string) {
   const normalizedQuery = normalizePlaceSearchText(query);
   const normalizedLabel = normalizePlaceSearchText(label);
   if (!normalizedQuery || !normalizedLabel) return false;
-  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
-  return queryTokens.every((token) => normalizedLabel.includes(token));
+  return normalizedQuery.split(/\s+/).filter(Boolean).every((token) => normalizedLabel.includes(token));
+}
+
+function rankGeocodeFeature(query: string, feature: GeocodeFeature) {
+  const label = (feature.place_name ?? feature.text ?? "").trim();
+  if (!placeMatchesSearchQuery(query, label)) return -1;
+  const normalizedQuery = normalizePlaceSearchText(query);
+  const normalizedText = normalizePlaceSearchText(feature.text ?? "");
+  const types = feature.place_type ?? [];
+  let score = 0;
+  if (normalizedText === normalizedQuery) score += 100;
+  else if (normalizedText.startsWith(normalizedQuery)) score += 60;
+  if (types.some((type) => ROUTABLE_LOCALITY_PLACE_TYPES.has(type))) score += 40;
+  if (types.includes("poi")) score -= 20;
+  return score;
 }
 
 function validSelectedPlace(place: CustomerPlaceOption | null | undefined) {
@@ -153,7 +151,7 @@ export async function searchCustomerPlaces(query: string, language: CustomerLang
   const clean = query.trim();
   const features = await fetchGeocodeFeatures(clean, true, language, signal);
   const unique = new Map<string, CustomerPlaceOption>();
-  for (const feature of features) {
+  for (const feature of [...features].sort((left, right) => rankGeocodeFeature(clean, right) - rankGeocodeFeature(clean, left))) {
     const place = featureToPlace(feature);
     if (place && placeMatchesSearchQuery(clean, place.label) && !unique.has(place.label)) unique.set(place.label, place);
   }
@@ -161,12 +159,8 @@ export async function searchCustomerPlaces(query: string, language: CustomerLang
 }
 
 export async function reverseCustomerPlace(coordinates: [number, number], language: CustomerLanguage = "en", signal?: AbortSignal): Promise<CustomerPlaceOption> {
-  if (!isHalloOperatingCoordinate(coordinates)) {
-    throw new Error("The selected place is outside the HALLO Ethiopia–Djibouti–Somalia operating corridor.");
-  }
-  if (!mapTilerKey) {
-    return { label: `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`, coordinates };
-  }
+  if (!isHalloOperatingCoordinate(coordinates)) throw new Error("The selected place is outside the HALLO Ethiopia–Djibouti–Somalia operating corridor.");
+  if (!mapTilerKey) return { label: `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`, coordinates };
 
   const url = new URL(`https://api.maptiler.com/geocoding/${coordinates[0]},${coordinates[1]}.json`);
   url.searchParams.set("key", mapTilerKey);
@@ -175,19 +169,15 @@ export async function reverseCustomerPlace(coordinates: [number, number], langua
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error("This map position could not be resolved to a place name.");
   const payload = await response.json() as { features?: GeocodeFeature[] };
-  const label = payload.features?.[0]?.place_name ?? payload.features?.[0]?.text
-    ?? `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`;
+  const label = payload.features?.[0]?.place_name ?? payload.features?.[0]?.text ?? `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`;
   return { label, coordinates };
 }
 
 async function requireCustomerSession(userId: string) {
   const client = customerSupabase;
   if (!client) throw new Error("Customer Supabase is not configured.");
-
   const { data, error } = await client.auth.getSession();
-  if (error || !data.session || data.session.user.id !== userId) {
-    throw new Error("Customer session expired.");
-  }
+  if (error || !data.session || data.session.user.id !== userId) throw new Error("Customer session expired.");
   return { client, session: data.session };
 }
 
@@ -195,120 +185,53 @@ async function geocodePlace(query: string, language: CustomerLanguage = "en"): P
   const clean = query.trim();
   if (clean.length < 2) throw new Error("Choose both pickup and drop-off places.");
   const features = await fetchGeocodeFeatures(clean, false, language);
-  const place = features.map(featureToPlace).find((item): item is CustomerPlaceOption => item !== null && placeMatchesSearchQuery(clean, item.label));
-  if (!place) {
-    throw new Error(`"${clean}" was not found inside the HALLO Ethiopia–Djibouti–Somalia operating corridor.`);
-  }
+  const place = [...features]
+    .sort((left, right) => rankGeocodeFeature(clean, right) - rankGeocodeFeature(clean, left))
+    .map(featureToPlace)
+    .find((item): item is CustomerPlaceOption => item !== null && placeMatchesSearchQuery(clean, item.label));
+  if (!place) throw new Error(`"${clean}" was not found inside the HALLO Ethiopia–Djibouti–Somalia operating corridor.`);
   return place;
 }
 
-async function requestHgvRoute(session: Session, input: {
-  pickup: CustomerPlaceOption;
-  dropoff: CustomerPlaceOption;
-  vehicleType: string;
-  signal?: AbortSignal;
-}): Promise<CustomerRoutePreview> {
+async function requestHgvRoute(session: Session, input: { pickup: CustomerPlaceOption; dropoff: CustomerPlaceOption; vehicleType: string; signal?: AbortSignal; }): Promise<CustomerRoutePreview> {
   if (!functionsUrl || !supabaseAnonKey) throw new Error("Customer routing backend is not configured.");
-  if (!validSelectedPlace(input.pickup) || !validSelectedPlace(input.dropoff)) {
-    throw new Error("Pickup and drop-off must be valid HALLO operating-corridor places.");
-  }
+  if (!validSelectedPlace(input.pickup) || !validSelectedPlace(input.dropoff)) throw new Error("Pickup and drop-off must be valid HALLO operating-corridor places.");
 
   const response = await fetch(`${functionsUrl}/quote-route`, {
-    method: "POST",
-    signal: input.signal,
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      apikey: supabaseAnonKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      pickup: input.pickup.coordinates,
-      dropoff: input.dropoff.coordinates,
-      vehicleType: input.vehicleType,
-    }),
+    method: "POST", signal: input.signal,
+    headers: { Authorization: `Bearer ${session.access_token}`, apikey: supabaseAnonKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ pickup: input.pickup.coordinates, dropoff: input.dropoff.coordinates, vehicleType: input.vehicleType }),
   });
   const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
-  if (!response.ok) {
-    throw new Error(typeof payload?.error === "string" ? payload.error : "Truck route could not be calculated.");
-  }
+  if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : "Truck route could not be calculated.");
 
   const distanceKm = finitePositive(payload?.distanceKm, "Route distance");
   const durationMinutes = finitePositive(payload?.durationMinutes, "Route duration");
   const coordinates = payload?.coordinates;
-  if (
-    payload?.provider !== "openrouteservice"
-    || payload?.profile !== "driving-hgv"
-    || !isRouteCoordinates(coordinates)
-  ) {
-    throw new Error("Truck routing returned an invalid HGV route.");
-  }
+  if (payload?.provider !== "openrouteservice" || payload?.profile !== "driving-hgv" || !isRouteCoordinates(coordinates)) throw new Error("Truck routing returned an invalid HGV route.");
 
-  const route = {
-    pickup_label: input.pickup.label,
-    dropoff_label: input.dropoff.label,
-    pickup: input.pickup.coordinates,
-    dropoff: input.dropoff.coordinates,
-    vehicle_type: String(payload.requestedVehicleType ?? input.vehicleType),
-    distance_km: distanceKm,
-    duration_minutes: durationMinutes,
-    route_coordinates: coordinates,
-  } satisfies CustomerRoutePreview;
+  const route = { pickup_label: input.pickup.label, dropoff_label: input.dropoff.label, pickup: input.pickup.coordinates, dropoff: input.dropoff.coordinates, vehicle_type: String(payload.requestedVehicleType ?? input.vehicleType), distance_km: distanceKm, duration_minutes: durationMinutes, route_coordinates: coordinates } satisfies CustomerRoutePreview;
   cacheRoute(route, input.pickup, input.dropoff, input.vehicleType);
   return route;
 }
 
-export async function loadCustomerRoutePreview(userId: string, input: {
-  pickup: CustomerPlaceOption;
-  dropoff: CustomerPlaceOption;
-  vehicleType: string;
-  signal?: AbortSignal;
-}): Promise<CustomerRoutePreview> {
+export async function loadCustomerRoutePreview(userId: string, input: { pickup: CustomerPlaceOption; dropoff: CustomerPlaceOption; vehicleType: string; signal?: AbortSignal; }): Promise<CustomerRoutePreview> {
   const { session } = await requireCustomerSession(userId);
   const cached = readCachedRoute(input.pickup, input.dropoff, input.vehicleType);
   return cached ?? requestHgvRoute(session, input);
 }
 
-export async function loadCustomerQuotePreview(userId: string, input: {
-  pickupQuery: string;
-  dropoffQuery: string;
-  pickupPlace?: CustomerPlaceOption | null;
-  dropoffPlace?: CustomerPlaceOption | null;
-  vehicleType: string;
-  cargoTons: number;
-  language?: CustomerLanguage;
-}): Promise<CustomerQuotePreview> {
+export async function loadCustomerQuotePreview(userId: string, input: { pickupQuery: string; dropoffQuery: string; pickupPlace?: CustomerPlaceOption | null; dropoffPlace?: CustomerPlaceOption | null; vehicleType: string; cargoTons: number; language?: CustomerLanguage; }): Promise<CustomerQuotePreview> {
   const cargoTons = finitePositive(input.cargoTons, "Cargo weight");
   const { client, session } = await requireCustomerSession(userId);
-
-  const pickup = validSelectedPlace(input.pickupPlace)
-    ? input.pickupPlace as CustomerPlaceOption
-    : await geocodePlace(input.pickupQuery, input.language);
-  const dropoff = validSelectedPlace(input.dropoffPlace)
-    ? input.dropoffPlace as CustomerPlaceOption
-    : await geocodePlace(input.dropoffQuery, input.language);
-
+  const pickup = validSelectedPlace(input.pickupPlace) ? input.pickupPlace as CustomerPlaceOption : await geocodePlace(input.pickupQuery, input.language);
+  const dropoff = validSelectedPlace(input.dropoffPlace) ? input.dropoffPlace as CustomerPlaceOption : await geocodePlace(input.dropoffQuery, input.language);
   const cachedRoute = readCachedRoute(pickup, dropoff, input.vehicleType);
-  const route = cachedRoute ?? await requestHgvRoute(session, {
-    pickup,
-    dropoff,
-    vehicleType: input.vehicleType,
-  });
+  const route = cachedRoute ?? await requestHgvRoute(session, { pickup, dropoff, vehicleType: input.vehicleType });
 
-  const { data, error } = await client.rpc("calculate_transport_quote_v2", {
-    p_distance_km: route.distance_km,
-    p_vehicle_type: input.vehicleType,
-    p_cargo_tons: cargoTons,
-  });
+  const { data, error } = await client.rpc("calculate_transport_quote_v2", { p_distance_km: route.distance_km, p_vehicle_type: input.vehicleType, p_cargo_tons: cargoTons });
   if (error) throw new Error(error.message);
   const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
   if (!row) throw new Error("Quote calculation returned no result.");
-
-  return {
-    ...route,
-    vehicle_type: String(row.vehicle_type ?? route.vehicle_type),
-    cargo_tons: finitePositive(row.cargo_tons ?? cargoTons, "Quoted cargo weight"),
-    distance_km: finitePositive(row.distance_km ?? route.distance_km, "Quoted distance"),
-    total_quote_etb: finitePositive(row.total_quote_etb, "Quote total"),
-    pricing_formula: row.pricing_formula === "ton_km" ? "ton_km" : "legacy",
-  };
+  return { ...route, vehicle_type: String(row.vehicle_type ?? route.vehicle_type), cargo_tons: finitePositive(row.cargo_tons ?? cargoTons, "Quoted cargo weight"), distance_km: finitePositive(row.distance_km ?? route.distance_km, "Quoted distance"), total_quote_etb: finitePositive(row.total_quote_etb, "Quote total"), pricing_formula: row.pricing_formula === "ton_km" ? "ton_km" : "legacy" };
 }
