@@ -56,8 +56,8 @@ export function allowedDriverPaymentResults(
   method: DriverSelectedPaymentMethod,
 ): DriverTripPaymentResult[] {
   return method === "cash"
-    ? ["cash_received", "payment_not_received"]
-    : ["bank_telebirr", "payment_not_received"];
+    ? ["cash_received"]
+    : ["bank_telebirr"];
 }
 
 export function validateDriverDeliveryProofDraft(
