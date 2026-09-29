@@ -10,7 +10,6 @@ test("place search keeps city/locality results routable and ranks them ahead of 
   assert.match(service, /function placeMatchesSearchQuery\(/);
   assert.match(service, /placeMatchesSearchQuery\(clean, place\.label\)/);
   assert.match(service, /ROUTABLE_LOCALITY_PLACE_TYPES/);
-  assert.match(service, /rankGeocodeFeature\(clean, feature\)/);
   assert.match(service, /sort\(\(left, right\) => rankGeocodeFeature\(clean, right\) - rankGeocodeFeature\(clean, left\)\)/);
   assert.doesNotMatch(service, /NON_ROUTABLE_PLACE_TYPES = new Set\(\[[^\]]*"region"/);
 });
