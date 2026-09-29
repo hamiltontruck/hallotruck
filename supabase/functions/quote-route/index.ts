@@ -23,6 +23,12 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const service = createClient(supabaseUrl, serviceRoleKey);
 const orsDirectionsUrl = "https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson";
 const expandedSnapRadiusMeters = 5_000;
+const DJIBOUTI_ADAMA_GUARD = {
+  pickup: { west: 42.5, south: 10.8, east: 43.6, north: 12.9 },
+  dropoff: { west: 38.8, south: 8.0, east: 39.7, north: 9.2 },
+} as const;
+const DJIBOUTI_ADAMA_MAX_ROUTE_KM = 850;
+const DJIBOUTI_ADAMA_MAX_WEST_OVERSHOOT_DEGREES = 0.2;
 
 function bearerToken(req: Request) {
   const header = req.headers.get("Authorization") ?? "";
@@ -39,6 +45,23 @@ function isCoordinate(value: unknown): value is Coordinate {
 function sameCoordinate(first: Coordinate, second: Coordinate) {
   return first[0] === second[0] && first[1] === second[1];
 }
+function insideBounds([lng, lat]: Coordinate, bounds: { west: number; south: number; east: number; north: number }) {
+  return lng >= bounds.west && lng <= bounds.east && lat >= bounds.south && lat <= bounds.north;
+}
+
+function routeNeedsDjiboutiAdamaGuard(pickup: Coordinate, dropoff: Coordinate) {
+  return insideBounds(pickup, DJIBOUTI_ADAMA_GUARD.pickup) && insideBounds(dropoff, DJIBOUTI_ADAMA_GUARD.dropoff);
+}
+
+function routeHasWesternDetour(coordinates: Coordinate[], dropoff: Coordinate) {
+  const westernLimit = dropoff[0] - DJIBOUTI_ADAMA_MAX_WEST_OVERSHOOT_DEGREES;
+  return coordinates.slice(0, -1).some(([lng]) => lng < westernLimit);
+}
+
+function routeHasDestinationOvershoot(distanceMeters: number) {
+  return distanceMeters / 1000 > DJIBOUTI_ADAMA_MAX_ROUTE_KM;
+}
+
 
 Deno.serve(async (req) => {
   const opt = handleOptions(req);
@@ -76,28 +99,26 @@ Deno.serve(async (req) => {
     return json({ error: "Truck routing is temporarily unavailable" }, 503);
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
   let response: Response;
+  const requestRoute = (preference: "recommended" | "shortest", radiuses?: [number, number]) => fetch(orsDirectionsUrl, {
+    method: "POST",
+    signal: AbortSignal.timeout(15_000),
+    headers: {
+      Authorization: orsApiKey,
+      Accept: "application/geo+json, application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      coordinates: [body.pickup, body.dropoff],
+      preference,
+      instructions: false,
+      radiuses,
+      options: { vehicle_type: "hgv" },
+    }),
+  });
   try {
-    const requestRoute = (radiuses?: [number, number]) => fetch(orsDirectionsUrl, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        Authorization: orsApiKey,
-        Accept: "application/geo+json, application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        coordinates: [body.pickup, body.dropoff],
-        preference: "recommended",
-        instructions: false,
-        radiuses,
-        options: { vehicle_type: "hgv" },
-      }),
-    });
 
-    response = await requestRoute();
+    response = await requestRoute("recommended");
     const retryWithExpandedSnapping = !response.ok && ![401, 403, 429].includes(response.status);
     if (retryWithExpandedSnapping) {
       const providerMessage = (await response.text()).slice(0, 600);
@@ -106,13 +127,11 @@ Deno.serve(async (req) => {
         response.status,
         providerMessage,
       );
-      response = await requestRoute([expandedSnapRadiusMeters, expandedSnapRadiusMeters]);
+      response = await requestRoute("recommended", [expandedSnapRadiusMeters, expandedSnapRadiusMeters]);
     }
   } catch (error) {
     console.error("OpenRouteService request failed", error);
     return json({ error: "Truck routing service is temporarily unavailable" }, 502);
-  } finally {
-    clearTimeout(timeout);
   }
 
   if (!response.ok) {
@@ -129,10 +148,30 @@ Deno.serve(async (req) => {
     return json({ error: "Truck routing service returned an invalid response" }, 502);
   }
 
-  const feature = payload.features?.[0];
-  const coordinates = feature?.geometry?.coordinates;
-  const distanceMeters = Number(feature?.properties?.summary?.distance);
-  const durationSeconds = Number(feature?.properties?.summary?.duration);
+  let feature = payload.features?.[0];
+  let coordinates = feature?.geometry?.coordinates;
+  let distanceMeters = Number(feature?.properties?.summary?.distance);
+  let durationSeconds = Number(feature?.properties?.summary?.duration);
+  const guardedRoute = routeNeedsDjiboutiAdamaGuard(body.pickup, body.dropoff);
+  const isRouteAcceptable = () => Array.isArray(coordinates)
+    && coordinates.every(isCoordinate)
+    && (!guardedRoute || (!routeHasWesternDetour(coordinates, body.dropoff) && !routeHasDestinationOvershoot(distanceMeters)));
+
+  if (guardedRoute && !isRouteAcceptable()) {
+    console.warn("Djibouti-Adama recommended HGV route detoured west; retrying shortest HGV route");
+    try {
+      const fallbackResponse = await requestRoute("shortest");
+      if (fallbackResponse.ok) {
+        const fallbackPayload = await fallbackResponse.json() as OrsGeoJsonResponse;
+        feature = fallbackPayload.features?.[0];
+        coordinates = feature?.geometry?.coordinates;
+        distanceMeters = Number(feature?.properties?.summary?.distance);
+        durationSeconds = Number(feature?.properties?.summary?.duration);
+      }
+    } catch (error) {
+      console.warn("Djibouti-Adama shortest HGV fallback failed", error);
+    }
+  }
   if (
     feature?.geometry?.type !== "LineString" ||
     !Array.isArray(coordinates) ||
@@ -141,7 +180,8 @@ Deno.serve(async (req) => {
     !Number.isFinite(distanceMeters) ||
     distanceMeters <= 0 ||
     !Number.isFinite(durationSeconds) ||
-    durationSeconds <= 0
+    durationSeconds <= 0 ||
+    !isRouteAcceptable()
   ) {
     return json({ error: "No truck route was found between those places" }, 404);
   }
