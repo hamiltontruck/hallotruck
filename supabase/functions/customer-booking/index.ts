@@ -40,6 +40,12 @@ const service = createClient(supabaseUrl, serviceRoleKey, {
 });
 const orsDirectionsUrl = "https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson";
 const expandedSnapRadiusMeters = 5_000;
+const DJIBOUTI_ADAMA_GUARD = {
+  pickup: { west: 42.5, south: 10.8, east: 43.6, north: 12.9 },
+  dropoff: { west: 38.8, south: 8.0, east: 39.7, north: 9.2 },
+} as const;
+const DJIBOUTI_ADAMA_MAX_ROUTE_KM = 850;
+const DJIBOUTI_ADAMA_MAX_WEST_OVERSHOOT_DEGREES = 0.2;
 
 const cargoCategories = new Set([
   "food",
@@ -112,6 +118,23 @@ function asTrimmedString(value: unknown, maxLength: number) {
 function sameCoordinate(first: Coordinate, second: Coordinate) {
   return first[0] === second[0] && first[1] === second[1];
 }
+function insideBounds([lng, lat]: Coordinate, bounds: { west: number; south: number; east: number; north: number }) {
+  return lng >= bounds.west && lng <= bounds.east && lat >= bounds.south && lat <= bounds.north;
+}
+
+function routeNeedsDjiboutiAdamaGuard(pickup: Coordinate, dropoff: Coordinate) {
+  return insideBounds(pickup, DJIBOUTI_ADAMA_GUARD.pickup) && insideBounds(dropoff, DJIBOUTI_ADAMA_GUARD.dropoff);
+}
+
+function routeHasWesternDetour(coordinates: Coordinate[], dropoff: Coordinate) {
+  const westernLimit = dropoff[0] - DJIBOUTI_ADAMA_MAX_WEST_OVERSHOOT_DEGREES;
+  return coordinates.slice(0, -1).some(([lng]) => lng < westernLimit);
+}
+
+function routeHasDestinationOvershoot(distanceMeters: number) {
+  return distanceMeters / 1000 > DJIBOUTI_ADAMA_MAX_ROUTE_KM;
+}
+
 
 function parseBody(value: unknown): BookingBody | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -186,13 +209,10 @@ async function calculateTruckRoute(pickup: Coordinate, dropoff: Coordinate): Pro
   const orsApiKey = Deno.env.get("ORS_API_KEY");
   if (!orsApiKey) throw new Error("routing_unavailable");
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
   let response: Response;
-  try {
-    const requestRoute = (radiuses?: [number, number]) => fetch(orsDirectionsUrl, {
+  const requestRoute = (preference: "recommended" | "shortest", radiuses?: [number, number]) => fetch(orsDirectionsUrl, {
       method: "POST",
-      signal: controller.signal,
+      signal: AbortSignal.timeout(15_000),
       headers: {
         Authorization: orsApiKey,
         Accept: "application/geo+json, application/json",
@@ -200,24 +220,23 @@ async function calculateTruckRoute(pickup: Coordinate, dropoff: Coordinate): Pro
       },
       body: JSON.stringify({
         coordinates: [pickup, dropoff],
-        preference: "recommended",
+        preference,
         instructions: false,
         radiuses,
         options: { vehicle_type: "hgv" },
       }),
     });
 
-    response = await requestRoute();
+  try {
+    response = await requestRoute("recommended");
     if (!response.ok && ![401, 403, 429].includes(response.status)) {
       const providerMessage = (await response.text()).slice(0, 600);
       console.warn("Customer booking HGV route retry", response.status, providerMessage);
-      response = await requestRoute([expandedSnapRadiusMeters, expandedSnapRadiusMeters]);
+      response = await requestRoute("recommended", [expandedSnapRadiusMeters, expandedSnapRadiusMeters]);
     }
   } catch (error) {
     console.error("Customer booking route request failed", error);
     throw new Error("routing_unavailable");
-  } finally {
-    clearTimeout(timeout);
   }
 
   if (!response.ok) {
@@ -234,10 +253,30 @@ async function calculateTruckRoute(pickup: Coordinate, dropoff: Coordinate): Pro
     throw new Error("routing_unavailable");
   }
 
-  const feature = payload.features?.[0];
-  const coordinates = feature?.geometry?.coordinates;
-  const distanceMeters = Number(feature?.properties?.summary?.distance);
-  const durationSeconds = Number(feature?.properties?.summary?.duration);
+  let feature = payload.features?.[0];
+  let coordinates = feature?.geometry?.coordinates;
+  let distanceMeters = Number(feature?.properties?.summary?.distance);
+  let durationSeconds = Number(feature?.properties?.summary?.duration);
+  const guardedRoute = routeNeedsDjiboutiAdamaGuard(pickup, dropoff);
+  const isRouteAcceptable = () => Array.isArray(coordinates)
+    && coordinates.every(isCoordinate)
+    && (!guardedRoute || (!routeHasWesternDetour(coordinates, dropoff) && !routeHasDestinationOvershoot(distanceMeters)));
+
+  if (guardedRoute && !isRouteAcceptable()) {
+    console.warn("Djibouti-Adama recommended HGV route detoured west; retrying shortest HGV route");
+    try {
+      const fallbackResponse = await requestRoute("shortest");
+      if (fallbackResponse.ok) {
+        const fallbackPayload = await fallbackResponse.json() as OrsGeoJsonResponse;
+        feature = fallbackPayload.features?.[0];
+        coordinates = feature?.geometry?.coordinates;
+        distanceMeters = Number(feature?.properties?.summary?.distance);
+        durationSeconds = Number(feature?.properties?.summary?.duration);
+      }
+    } catch (error) {
+      console.warn("Djibouti-Adama shortest HGV fallback failed", error);
+    }
+  }
   if (
     feature?.geometry?.type !== "LineString"
     || !Array.isArray(coordinates)
@@ -247,6 +286,7 @@ async function calculateTruckRoute(pickup: Coordinate, dropoff: Coordinate): Pro
     || distanceMeters <= 0
     || !Number.isFinite(durationSeconds)
     || durationSeconds <= 0
+    || !isRouteAcceptable()
   ) {
     throw new Error("route_not_found");
   }
