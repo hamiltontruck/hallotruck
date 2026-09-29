@@ -13,6 +13,7 @@ for (const [name, source] of [["quote-route", quoteRoute], ["customer-booking", 
   test(`${name} rejects a Djibouti to Adama western HGV detour`, () => {
     assert.match(source, /DJIBOUTI_ADAMA_GUARD/);
     assert.match(source, /routeNeedsDjiboutiAdamaGuard/);
+    assert.match(source, /routeNeedsDjiboutiAdamaGuard\([^)]*dropoff[^)]*pickup\)/);
     assert.match(source, /routeHasWesternDetour/);
     assert.match(source, /routeHasDestinationOvershoot/);
     assert.match(source, /DJIBOUTI_ADAMA_MAX_ROUTE_KM/);

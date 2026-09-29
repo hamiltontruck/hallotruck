@@ -257,10 +257,12 @@ async function calculateTruckRoute(pickup: Coordinate, dropoff: Coordinate): Pro
   let coordinates = feature?.geometry?.coordinates;
   let distanceMeters = Number(feature?.properties?.summary?.distance);
   let durationSeconds = Number(feature?.properties?.summary?.duration);
-  const guardedRoute = routeNeedsDjiboutiAdamaGuard(pickup, dropoff);
+  const directDjiboutiAdama = routeNeedsDjiboutiAdamaGuard(pickup, dropoff);
+  const guardedRoute = directDjiboutiAdama || routeNeedsDjiboutiAdamaGuard(dropoff, pickup);
+  const adamaEndpoint = directDjiboutiAdama ? dropoff : pickup;
   const isRouteAcceptable = () => Array.isArray(coordinates)
     && coordinates.every(isCoordinate)
-    && (!guardedRoute || (!routeHasWesternDetour(coordinates, dropoff) && !routeHasDestinationOvershoot(distanceMeters)));
+    && (!guardedRoute || (!routeHasWesternDetour(coordinates, adamaEndpoint) && !routeHasDestinationOvershoot(distanceMeters)));
 
   if (guardedRoute && !isRouteAcceptable()) {
     console.warn("Djibouti-Adama recommended HGV route detoured west; retrying shortest HGV route");

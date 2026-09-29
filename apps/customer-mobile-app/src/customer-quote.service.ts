@@ -52,7 +52,8 @@ const HALLO_OPERATING_BOUNDS: readonly OperatingBounds[] = [
 ];
 
 const NON_ROUTABLE_PLACE_TYPES = new Set(["continental_marine", "country", "major_landform"]);
-const ROUTABLE_LOCALITY_PLACE_TYPES = new Set(["municipality", "locality", "place", "region", "subregion", "county"]);
+const LOCALITY_GEOCODE_TYPES = ["municipality", "locality", "place", "region", "subregion", "county"] as const;
+const ROUTABLE_LOCALITY_PLACE_TYPES = new Set<string>(LOCALITY_GEOCODE_TYPES);
 const ROUTE_CACHE_TTL_MS = 2 * 60 * 1000;
 const routeCache = new Map<string, { route: CustomerRoutePreview; storedAt: number }>();
 
@@ -127,6 +128,25 @@ function featureToPlace(feature: GeocodeFeature): CustomerPlaceOption | null {
   return label ? { label, coordinates } : null;
 }
 
+async function fetchLocalityGeocodeFeatures(query: string, autocomplete: boolean, language: CustomerLanguage = "en", signal?: AbortSignal) {
+  const clean = query.trim();
+  if (clean.length < 2) return [] as GeocodeFeature[];
+  if (!mapTilerKey) throw new Error("Map search is not configured.");
+
+  const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
+  url.searchParams.set("key", mapTilerKey);
+  url.searchParams.set("limit", "6");
+  url.searchParams.set("language", language);
+  url.searchParams.set("autocomplete", autocomplete ? "true" : "false");
+  url.searchParams.set("country", "et,dj,so");
+  url.searchParams.set("types", LOCALITY_GEOCODE_TYPES.join(","));
+
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error("Place search is temporarily unavailable.");
+  const payload = await response.json() as { features?: GeocodeFeature[] };
+  return payload.features ?? [];
+}
+
 async function fetchGeocodeFeatures(query: string, autocomplete: boolean, language: CustomerLanguage = "en", signal?: AbortSignal) {
   const clean = query.trim();
   if (clean.length < 2) return [] as GeocodeFeature[];
@@ -149,7 +169,8 @@ async function fetchGeocodeFeatures(query: string, autocomplete: boolean, langua
 
 export async function searchCustomerPlaces(query: string, language: CustomerLanguage = "en", signal?: AbortSignal): Promise<CustomerPlaceOption[]> {
   const clean = query.trim();
-  const features = await fetchGeocodeFeatures(clean, true, language, signal);
+  const [localityFeatures, generalFeatures] = await Promise.all([fetchLocalityGeocodeFeatures(clean, true, language, signal), fetchGeocodeFeatures(clean, true, language, signal)]);
+  const features = [...localityFeatures, ...generalFeatures];
   const unique = new Map<string, CustomerPlaceOption>();
   for (const feature of [...features].sort((left, right) => rankGeocodeFeature(clean, right) - rankGeocodeFeature(clean, left))) {
     const place = featureToPlace(feature);
@@ -184,8 +205,8 @@ async function requireCustomerSession(userId: string) {
 async function geocodePlace(query: string, language: CustomerLanguage = "en"): Promise<CustomerPlaceOption> {
   const clean = query.trim();
   if (clean.length < 2) throw new Error("Choose both pickup and drop-off places.");
-  const features = await fetchGeocodeFeatures(clean, false, language);
-  const place = [...features]
+  const [localityFeatures, generalFeatures] = await Promise.all([fetchLocalityGeocodeFeatures(clean, false, language), fetchGeocodeFeatures(clean, false, language)]);
+  const place = [...localityFeatures, ...generalFeatures]
     .sort((left, right) => rankGeocodeFeature(clean, right) - rankGeocodeFeature(clean, left))
     .map(featureToPlace)
     .find((item): item is CustomerPlaceOption => item !== null && placeMatchesSearchQuery(clean, item.label));
