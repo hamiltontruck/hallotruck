@@ -236,49 +236,53 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 
 function CustomerRegistry({ rows, onLevel }: { rows: AdminCustomerRegistryRow[]; onLevel: (customer: AdminCustomerRegistryRow) => void }) {
   if (!rows.length) return <Empty>No Customers match this filter.</Empty>;
-  return <div>
-    <div className="hidden grid-cols-[130px_minmax(180px,1.4fr)_110px_90px_120px_130px_120px] gap-3 border-b border-asphalt/10 bg-[#fbfaf6] px-5 py-3 text-[10px] font-semibold uppercase tracking-[.08em] text-steel xl:grid">
-      <span>Customer ID</span><span>Customer</span><span>Level</span><span>Orders</span><span>Lifetime</span><span>Largest order</span><span>Last order</span>
-    </div>
-    <div className="divide-y divide-asphalt/10">{rows.map((customer) => <article key={customer.id} className="p-3 sm:p-4">
-      <div className="grid min-w-0 gap-2 xl:grid-cols-[130px_minmax(180px,1.4fr)_110px_90px_120px_130px_120px] xl:items-center xl:gap-3">
-        <div><p className="xl:hidden text-[9px] uppercase tracking-wider text-steel">Customer ID</p><p className="break-all font-mono text-xs font-bold">{customer.customerCode}</p></div>
-        <div className="min-w-0"><p className="break-words text-sm font-semibold">{customer.fullName}</p><p className="mt-1 break-words text-xs text-steel">{customer.phone}{customer.email ? ` · ${customer.email}` : ""}</p>{customer.companyName && <p className="mt-1 text-[11px] text-steel">{customer.companyName}</p>}</div>
-        <button type="button" onClick={() => onLevel(customer)} className={`min-h-10 w-fit border px-3 font-mono text-[10px] font-bold uppercase ${levelClass(customer.level)}`}>{customer.level} ✎</button>
-        <Data label="Orders" value={String(customer.orderCount)} detail={`${customer.deliveredCount} delivered`} />
-        <Data label="Lifetime" value={money(customer.lifetimeOrderEtb)} />
-        <Data label="Largest order" value={money(customer.largestOrderEtb)} />
-        <Data label="Last order" value={when(customer.lastOrderAt)} />
+  return <div className="grid gap-3 p-3 lg:grid-cols-2 sm:p-4">{rows.map((customer) => <article key={customer.id} className="CRM smart row min-w-0 border border-asphalt/10 bg-[#fbfaf6] p-4 shadow-sm">
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="font-mono text-[10px] font-bold tracking-[.08em] text-steel">{customer.customerCode}</p>
+        <p className="mt-1 break-words text-sm font-bold text-asphalt">{customer.fullName}</p>
+        <p className="mt-1 break-words text-[11px] text-steel">{customer.phone}{customer.email ? ` · ${customer.email}` : ""}</p>
+        {customer.companyName && <p className="mt-1 break-words text-[11px] text-steel">{customer.companyName}</p>}
       </div>
-    </article>)}</div>
-  </div>;
+      <button type="button" onClick={() => onLevel(customer)} className={`min-h-9 shrink-0 border px-2.5 font-mono text-[9px] font-bold uppercase ${levelClass(customer.level)}`}>{customer.level} ✎</button>
+    </div>
+    <div className="mt-4 grid grid-cols-2 gap-2 border-t border-asphalt/10 pt-3 sm:grid-cols-4">
+      <Data label="Orders" value={String(customer.orderCount)} detail={`${customer.deliveredCount} delivered`} />
+      <Data label="Lifetime" value={money(customer.lifetimeOrderEtb)} />
+      <Data label="Largest" value={money(customer.largestOrderEtb)} />
+      <Data label="Last order" value={when(customer.lastOrderAt)} />
+    </div>
+  </article>)}</div>;
 }
 
 function DriverRegistry({ rows }: { rows: AdminDriverRegistryReport["drivers"] }) {
   if (!rows.length) return <Empty>No Drivers match this filter.</Empty>;
-  return <div>
-    <div className="hidden grid-cols-[130px_minmax(170px,1.3fr)_110px_150px_100px_100px_110px] gap-3 border-b border-asphalt/10 bg-[#fbfaf6] px-5 py-3 text-[10px] font-semibold uppercase tracking-[.08em] text-steel xl:grid">
-      <span>Driver ID</span><span>Driver</span><span>Status</span><span>Vehicle / plate</span><span>Docs</span><span>Orders</span><span>Last order</span>
-    </div>
-    <div className="divide-y divide-asphalt/10">{rows.map((driver) => {
-      const ready = driver.requiredDocumentsVerified >= 8 && Boolean(driver.plateNumber);
-      return <article key={driver.id} className="p-3 sm:p-4">
-        <div className="grid min-w-0 gap-2 xl:grid-cols-[130px_minmax(170px,1.3fr)_110px_150px_100px_100px_110px] xl:items-center xl:gap-3">
-          <div><p className="xl:hidden text-[9px] uppercase tracking-wider text-steel">Driver ID</p><p className="break-all font-mono text-xs font-bold">{driver.driverCode ?? "ID pending"}</p></div>
-          <div className="min-w-0"><p className="break-words text-sm font-semibold">{driver.fullName || "Driver"}</p><p className="mt-1 break-words text-xs text-steel">{driver.phone || "No phone"}{driver.email ? ` · ${driver.email}` : ""}</p></div>
-          <span className={`w-fit px-2.5 py-1 font-mono text-[9px] font-bold uppercase ${driver.status === "approved" ? "bg-emerald-100 text-emerald-800" : driver.status === "suspended" ? "bg-route/10 text-route" : "bg-amber/15 text-amber-dim"}`}>{driver.status || "pending"}</span>
-          <div><p className="text-sm font-semibold">{driver.plateNumber || "Plate required"}</p><p className="mt-1 text-[11px] text-steel">{[driver.vehicleType, driver.model].filter(Boolean).join(" · ") || "Vehicle details pending"}</p></div>
-          <div><p className={`font-mono text-sm font-bold ${ready ? "text-emerald-800" : "text-amber-dim"}`}>{driver.requiredDocumentsVerified}/8 approved</p><p className="mt-1 text-[10px] text-steel">{driver.requiredDocumentsSubmitted}/8 submitted</p></div>
-          <Data label="Orders" value={String(driver.orderCount)} />
-          <Data label="Last order" value={when(driver.lastOrderAt)} />
+  return <div className="grid gap-3 p-3 lg:grid-cols-2 sm:p-4">{rows.map((driver) => {
+    const ready = driver.requiredDocumentsVerified >= 8 && Boolean(driver.plateNumber);
+    return <article key={driver.id} className="CRM smart row min-w-0 border border-asphalt/10 bg-[#fbfaf6] p-4 shadow-sm">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] font-bold tracking-[.08em] text-steel">{driver.driverCode ?? "ID pending"}</p>
+          <p className="mt-1 break-words text-sm font-bold text-asphalt">{driver.fullName || "Driver"}</p>
+          <p className="mt-1 break-words text-[11px] text-steel">{driver.phone || "No phone"}{driver.email ? ` · ${driver.email}` : ""}</p>
         </div>
-      </article>;
-    })}</div>
-  </div>;
+        <span className={`shrink-0 px-2.5 py-1 font-mono text-[9px] font-bold uppercase ${driver.status === "approved" ? "bg-emerald-100 text-emerald-800" : driver.status === "suspended" ? "bg-route/10 text-route" : "bg-amber/15 text-amber-dim"}`}>{driver.status || "pending"}</span>
+      </div>
+      <div className="mt-3 rounded-sm border border-asphalt/10 bg-white p-3">
+        <p className="text-xs font-semibold">{driver.plateNumber || "Plate required"}</p>
+        <p className="mt-1 break-words text-[11px] text-steel">{[driver.vehicleType, driver.model].filter(Boolean).join(" · ") || "Vehicle details pending"}</p>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="min-w-0"><p className="text-[9px] uppercase tracking-wider text-steel">Documents</p><p className={`mt-1 font-mono text-xs font-bold ${ready ? "text-emerald-800" : "text-amber-dim"}`}>{driver.requiredDocumentsVerified}/8 approved</p><p className="mt-1 text-[10px] text-steel">{driver.requiredDocumentsSubmitted}/8 submitted</p></div>
+        <Data label="Orders" value={String(driver.orderCount)} />
+        <Data label="Last order" value={when(driver.lastOrderAt)} />
+      </div>
+    </article>;
+  })}</div>;
 }
 
 function Data({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return <div className="min-w-0"><p className="xl:hidden text-[9px] uppercase tracking-wider text-steel">{label}</p><p className="break-words text-xs font-semibold">{value}</p>{detail && <p className="mt-1 text-[10px] text-steel">{detail}</p>}</div>;
+  return <div className="min-w-0"><p className="text-[9px] uppercase tracking-wider text-steel">{label}</p><p className="mt-1 break-words text-xs font-semibold">{value}</p>{detail && <p className="mt-1 text-[10px] text-steel">{detail}</p>}</div>;
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
