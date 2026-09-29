@@ -242,15 +242,8 @@ export function DriverDeliveryProofPanel({
     }
   }
 
-  const positivePaymentTitle = trip.selectedPaymentMethod === "cash"
-    ? t.deliveryProof.cashReceivedTitle
-    : t.deliveryProof.bankConfirmedTitle;
-  const positivePaymentHelp = trip.selectedPaymentMethod === "cash"
-    ? `${t.deliveryProof.cashReceivedHelp} ${formatEtb(trip.priceEtb)}`
-    : `${t.deliveryProof.bankConfirmedHelp} ${formatEtb(trip.priceEtb)}`;
-  const positivePaymentValue: DriverTripPaymentResult = trip.selectedPaymentMethod === "cash"
-    ? "cash_received"
-    : "bank_telebirr";
+  const cashPaymentHelp = `${t.deliveryProof.cashReceivedHelp} ${formatEtb(trip.priceEtb)}`;
+  const bankPaymentHelp = `${t.deliveryProof.bankConfirmedHelp} ${formatEtb(trip.priceEtb)}`;
 
   return <>
     <button
@@ -303,9 +296,10 @@ export function DriverDeliveryProofPanel({
             <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">{t.deliveryProof.paymentStep}</h3><span className={`text-[10px] font-black ${paymentReady ? "text-emerald-700" : "text-halo-muted"}`}>{paymentReady ? t.deliveryProof.selected : t.deliveryProof.required}</span></div>
             <div className="mt-3 rounded-2xl bg-halo-soft p-3"><p className="text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.customerChoice}</p><div className="mt-1 flex items-center justify-between gap-3"><strong className="text-sm text-halo-navy">{trip.selectedPaymentMethod === "cash" ? "Cash" : "Bank / Telebirr"}</strong><strong className="text-sm text-halo-blue">{formatEtb(trip.priceEtb)}</strong></div></div>
             <div role="radiogroup" aria-label={t.deliveryProof.paymentStep} className="mt-3 grid gap-3">
-              {allowedResults.includes(positivePaymentValue) && <PaymentChoice selected={paymentResult === positivePaymentValue} value={positivePaymentValue} title={positivePaymentTitle} help={positivePaymentHelp} onSelect={(value) => { setPaymentResult(value); setError(""); }} disabled={saving} />}
+              {allowedResults.includes("cash_received") && <div data-driver-payment-choice="cash"><PaymentChoice selected={paymentResult === "cash_received"} value="cash_received" title={t.deliveryProof.cashReceivedTitle} help={cashPaymentHelp} onSelect={(value) => { setPaymentResult(value); setAmountCollected(""); setError(""); }} disabled={saving} /></div>}
+              {allowedResults.includes("bank_telebirr") && <div data-driver-payment-choice="bank-wallet"><PaymentChoice selected={paymentResult === "bank_telebirr"} value="bank_telebirr" title={t.deliveryProof.bankConfirmedTitle} help={bankPaymentHelp} onSelect={(value) => { setPaymentResult(value); setAmountCollected(""); setError(""); }} disabled={saving} /></div>}
             </div>
-            {paymentResult === "cash_received" && <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.exactCash}<input value={amountCollected} onChange={(event) => setAmountCollected(event.target.value)} inputMode="decimal" disabled={saving} className="mt-2 min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-black normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={trip.priceEtb === null ? "ETB" : String(trip.priceEtb)} /></label>}
+            {(paymentResult === "cash_received" || paymentResult === "bank_telebirr") && <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.exactCash}<input value={amountCollected} onChange={(event) => setAmountCollected(event.target.value)} inputMode="decimal" disabled={saving} className="mt-2 min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-black normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={trip.priceEtb === null ? "ETB" : String(trip.priceEtb)} /></label>}
             <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.paymentNote}<textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} maxLength={500} disabled={saving} rows={2} className="mt-2 w-full rounded-2xl border border-halo-line bg-white p-4 text-sm font-medium normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={t.deliveryProof.paymentNotePlaceholder} /></label>
           </section>
 
