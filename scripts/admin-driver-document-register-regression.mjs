@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 const page = fs.readFileSync("src/pages/AdminDriverCompliance.tsx", "utf8");
 const component = fs.readFileSync("src/components/admin/AdminDriverDocumentRegister.tsx", "utf8");
 const service = fs.readFileSync("src/services/admin-driver-document-register.service.ts", "utf8");
-const migration = fs.readFileSync("supabase/migrations/20261001003000_admin_driver_document_register_page.sql", "utf8");
+const migration = fs.readFileSync("supabase/migrations/20260930233421_admin_driver_document_register_page.sql", "utf8");
 const browserSmoke = fs.readFileSync("scripts/admin-driver-compliance-e2e-smoke.mjs", "utf8");
 
 for (const token of [
