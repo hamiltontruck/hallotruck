@@ -28,10 +28,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/pickup_place">
-                    <AutoCompleteTextView
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/flowPickup"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:minHeight="56dp"
                         android:imeOptions="actionNext"
                         android:inputType="textPostalAddress"
                         android:maxLines="1" />
@@ -43,18 +44,19 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/dropoff_place">
-                    <AutoCompleteTextView
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/flowDropoff"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:minHeight="56dp"
                         android:imeOptions="actionDone"
                         android:inputType="textPostalAddress"
                         android:maxLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
-                    <com.google.android.material.button.MaterialButton android:id="@+id/flowUseLocation" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:text="@string/my_location" android:textSize="11sp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/flowSwapRoute" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="@string/swap_route" android:textSize="11sp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/flowUseLocation" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:maxLines="1" android:text="@string/my_location" android:textSize="11sp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/flowSwapRoute" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="8dp" android:layout_weight="1" android:maxLines="1" android:text="@string/swap_route" android:textSize="11sp" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -79,6 +81,7 @@
             android:layout_width="match_parent"
             android:layout_height="54dp"
             android:layout_marginTop="14dp"
+            android:maxLines="1"
             android:text="@string/flow_next_cargo" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
