@@ -2,9 +2,11 @@ import "../styles/admin-driver-review.css";
 import { useEffect, useMemo, useState } from "react";
 import { DriverDocumentGroups } from "../components/admin/DriverDocumentGroups";
 import { DriverReviewFields } from "../components/admin/DriverReviewFields";
+import { AdminDriverDocumentRegister } from "../components/admin/AdminDriverDocumentRegister";
 import { isCurrentVerifiedDocument } from "../domain/driver-document-review";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
+import { getControlCenterData, type ControlCenterServerSummary } from "../services/admin-control-center.service";
 import type { DriverVerificationFile } from "../services/driver.service";
 import { formatEtb } from "../utils/currency";
 import { HALLO_SMART_COMMISSION_PERCENT, splitHalloCommission } from "../utils/commission";
@@ -139,48 +141,93 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [expandedDriverId, setExpandedDriverId] = useState<string | null>(null);
   const [busy, setBusy] = useState("");
-  const [loading, setLoading] = useState(!fixture);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [serverSummary, setServerSummary] = useState<ControlCenterServerSummary | null>(null);
+  const [completedTripCount, setCompletedTripCount] = useState(fixture?.orders?.filter((order) => order.status === "delivered").length ?? 0);
+  const [workspaceOpen, setWorkspaceOpen] = useState(Boolean(fixture));
+  const [auditLoadingDriverId, setAuditLoadingDriverId] = useState<string | null>(null);
+  const [loadedAuditDriverIds, setLoadedAuditDriverIds] = useState<Set<string>>(() => new Set(fixture?.drivers.map((driver) => driver.id) ?? []));
 
   async function load() {
     setLoading(true);
-    const [driverResult, truckResult, documentResult, orderResult, paymentResult] = await Promise.all([
+    const [driverResult, truckResult, documentResult] = await Promise.all([
       supabase.from("profiles").select("id,full_name,phone,email,home_address,driver_status").eq("role", "driver").order("full_name"),
       supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,driver_id,model").order("updated_at", { ascending: false }),
       supabase.from("driver_verification_files").select("id,driver_id,truck_id,document_key,file_path,original_name,mime_type,expiry_date,status,rejection_reason,reviewed_at,created_at,updated_at").order("updated_at", { ascending: false }),
-      supabase.from("orders").select("id,tracking_id,driver_id,truck_id,pickup_address,dropoff_address,vehicle_type,price_etb,status,payment_status,accepted_at,delivered_at,created_at").not("driver_id", "is", null).order("created_at", { ascending: false }).limit(1000),
-      supabase.from("payments").select("order_id,provider,amount_etb,event").order("created_at", { ascending: false }).limit(2000),
     ]);
-
-    const queryError = driverResult.error || truckResult.error || documentResult.error || orderResult.error || paymentResult.error;
+    const queryError = driverResult.error || truckResult.error || documentResult.error;
     if (queryError) {
       setError(queryError.message);
       setLoading(false);
       return;
     }
-
     setDrivers((driverResult.data ?? []) as DriverRow[]);
     setTrucks((truckResult.data ?? []) as TruckRow[]);
     setDocuments((documentResult.data ?? []) as DriverVerificationFile[]);
-    setOrders((orderResult.data ?? []) as DriverOrderRow[]);
-    setPayments((paymentResult.data ?? []) as PaymentRow[]);
     setError("");
+    setLoading(false);
+  }
 
+  async function loadSummary() {
+    try {
+      const [control, completedResult] = await Promise.all([
+        getControlCenterData(),
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "delivered"),
+      ]);
+      if (completedResult.error) throw new Error(completedResult.error.message);
+      setServerSummary(control.serverSummary ?? null);
+      setCompletedTripCount(completedResult.count ?? 0);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Driver compliance summary failed to load.");
+    }
+  }
+
+  async function loadDriverAudit(driverId: string) {
+    setAuditLoadingDriverId(driverId);
+    const orderResult = await supabase
+      .from("orders")
+      .select("id,tracking_id,driver_id,truck_id,pickup_address,dropoff_address,vehicle_type,price_etb,status,payment_status,accepted_at,delivered_at,created_at")
+      .eq("driver_id", driverId)
+      .order("created_at", { ascending: false });
+    if (orderResult.error) {
+      setError(orderResult.error.message);
+      setAuditLoadingDriverId(null);
+      return;
+    }
+    const nextOrders = (orderResult.data ?? []) as DriverOrderRow[];
+    const orderIds = nextOrders.map((order) => order.id);
+    let nextPayments: PaymentRow[] = [];
+    if (orderIds.length) {
+      const paymentResult = await supabase
+        .from("payments")
+        .select("order_id,provider,amount_etb,event")
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: false });
+      if (paymentResult.error) {
+        setError(paymentResult.error.message);
+        setAuditLoadingDriverId(null);
+        return;
+      }
+      nextPayments = (paymentResult.data ?? []) as PaymentRow[];
+    }
     const historyResult = await supabase
       .from("driver_verification_history")
       .select("id,source_document_id,driver_id,truck_id,document_key,file_path,original_name,mime_type,expiry_date,status,rejection_reason,reviewed_at,source_created_at,source_updated_at,archive_reason,archived_at")
-      .order("archived_at", { ascending: false })
-      .limit(2000);
-
+      .eq("driver_id", driverId)
+      .order("archived_at", { ascending: false });
+    const priorOrderIds = new Set(orders.filter((order) => order.driver_id === driverId).map((order) => order.id));
+    const nextOrderIds = new Set(orderIds);
+    setOrders((current) => [...current.filter((order) => order.driver_id !== driverId), ...nextOrders]);
+    setPayments((current) => [...current.filter((payment) => !priorOrderIds.has(payment.order_id) && !nextOrderIds.has(payment.order_id)), ...nextPayments]);
     if (historyResult.error) {
-      setHistory([]);
       setHistoryAvailable(false);
     } else {
-      setHistory((historyResult.data ?? []) as DriverVerificationHistoryRow[]);
+      setHistory((current) => [...current.filter((item) => item.driver_id !== driverId), ...((historyResult.data ?? []) as DriverVerificationHistoryRow[])]);
       setHistoryAvailable(true);
     }
-
-    setLoading(false);
+    setLoadedAuditDriverIds((current) => new Set(current).add(driverId));
+    setAuditLoadingDriverId(null);
   }
 
   useEffect(() => {
@@ -192,11 +239,16 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
       setOrders(fixture.orders ?? []);
       setPayments(fixture.payments ?? []);
       setHistoryAvailable(fixture.historyAvailable ?? true);
+      setCompletedTripCount(fixture.orders?.filter((order) => order.status === "delivered").length ?? 0);
+      setWorkspaceOpen(true);
+      setLoadedAuditDriverIds(new Set(fixture.drivers.map((driver) => driver.id)));
       setLoading(false);
       setError("");
       return;
     }
-    void load();
+    setWorkspaceOpen(false);
+    setLoading(false);
+    void loadSummary();
   }, [fixture]);
 
   const pendingDocumentDriverIds = useMemo(
@@ -217,16 +269,21 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
     [drivers, pendingDocumentDriverIds],
   );
 
-  const globalReleased = useMemo(
+  const fixtureReleased = useMemo(
     () => orders.reduce((sum, order) => sum + releasedForOrder(order, payments), 0),
     [orders, payments],
   );
+  const globalReleased = fixture ? fixtureReleased : (serverSummary?.releasedAmount ?? 0);
   const globalCommission = splitHalloCommission(globalReleased);
 
   async function openFile(path: string) {
     const { data, error } = await supabase.storage.from("driver-verification").createSignedUrl(path, 300);
     if (error) { setError(error.message); return; }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function refreshWorkspaceAndSummary() {
+    await Promise.all([load(), loadSummary()]);
   }
 
   async function review(doc: DriverVerificationFile, status: "verified" | "rejected") {
@@ -240,28 +297,37 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
       p_rejection_reason: status === "rejected" ? reason?.trim() || "Document rejected by reviewer." : null,
     });
     if (error) setError(error.message);
-    else await load();
+    else if (!fixture) {
+      if (workspaceOpen) await load();
+      await loadSummary();
+    }
     setBusy("");
   }
 
   async function approveDriver(driver: DriverRow) {
     setBusy(driver.id); setError("");
     const { error } = await supabase.rpc("admin_approve_driver_onboarding", { p_driver_id: driver.id });
-    if (error) setError(error.message); else await load();
+    if (error) setError(error.message); else if (!fixture) await refreshWorkspaceAndSummary();
     setBusy("");
   }
 
   async function removeDriver(driver: DriverRow) {
-    const activeTrip = orders.find((order) => order.driver_id === driver.id && ["accepted", "in_transit"].includes(order.status));
-    if (activeTrip) {
-      setError(`Cannot remove ${driver.full_name} while ${activeTrip.tracking_id} is ${activeTrip.status.replace("_", " ")}.`);
+    let activeTracking: { tracking_id: string; status: string } | undefined = orders.find((order) => order.driver_id === driver.id && ["accepted", "in_transit"].includes(order.status));
+    if (!fixture) {
+      const activeResult = await supabase.from("orders").select("tracking_id,status").eq("driver_id", driver.id).in("status", ["accepted", "in_transit"]).limit(1);
+      if (activeResult.error) { setError(activeResult.error.message); return; }
+      const active = activeResult.data?.[0];
+      if (active) activeTracking = { tracking_id: active.tracking_id, status: active.status };
+    }
+    if (activeTracking) {
+      setError(`Cannot remove ${driver.full_name} while ${activeTracking.tracking_id} is ${activeTracking.status.replace("_", " ")}.`);
       return;
     }
     const confirmed = window.confirm(`Remove ${driver.full_name} from the active driver roster?\n\nThe account will be suspended, idle truck assignment released, and all trip/payment/document history preserved.`);
     if (!confirmed) return;
     setBusy(driver.id); setError("");
     const { error } = await supabase.rpc("admin_suspend_driver", { p_driver_id: driver.id });
-    if (error) setError(error.message); else await load();
+    if (error) setError(error.message); else if (!fixture) await refreshWorkspaceAndSummary();
     setBusy("");
   }
 
@@ -270,8 +336,17 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
     if (!confirmed) return;
     setBusy(driver.id); setError("");
     const { error } = await supabase.rpc("admin_restore_driver", { p_driver_id: driver.id });
-    if (error) setError(error.message); else await load();
+    if (error) setError(error.message); else if (!fixture) await refreshWorkspaceAndSummary();
     setBusy("");
+  }
+
+  async function toggleDriverHistory(driverId: string) {
+    if (expandedDriverId === driverId) {
+      setExpandedDriverId(null);
+      return;
+    }
+    setExpandedDriverId(driverId);
+    if (!fixture && !loadedAuditDriverIds.has(driverId)) await loadDriverAudit(driverId);
   }
 
   return <main className="admin-driver-review min-h-screen bg-[#f5f3ed] p-4 text-asphalt sm:p-7 lg:p-10">
@@ -288,24 +363,31 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
       </section>
 
       <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Summary label="Active drivers" value={String(drivers.filter((driver) => driver.driver_status !== "suspended").length)} />
-        <Summary label="Completed trips" value={String(orders.filter((order) => order.status === "delivered").length)} />
+        <Summary label="Active drivers" value={String(fixture ? drivers.filter((driver) => driver.driver_status !== "suspended").length : (serverSummary?.activeDrivers ?? 0))} />
+        <Summary label="Completed trips" value={String(fixture ? orders.filter((order) => order.status === "delivered").length : completedTripCount)} />
         <Summary label="Released customer payment" value={formatEtb(globalReleased)} />
         <Summary label={`HALLO Smart ${HALLO_SMART_COMMISSION_PERCENT}%`} value={formatEtb(globalCommission.commissionEtb)} accent />
       </section>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+      {!fixture && <AdminDriverDocumentRegister busy={busy} onOpen={openFile} onReview={review} />}
+
+      {!fixture && <section className="mt-5 flex flex-wrap items-center justify-between gap-4 border border-asphalt/10 bg-white p-5 shadow-sm">
+        <div><p className="font-mono text-[10px] tracking-[.14em] text-amber-dim">DRIVER LIFECYCLE</p><h2 className="mt-1 font-display text-xl font-semibold">Driver lifecycle workspace</h2><p className="mt-1 text-xs text-steel">Profiles and current documents load on demand. Trip, payment and document history load only for the driver you expand.</p></div>
+        <button type="button" onClick={() => { setWorkspaceOpen(true); void load(); }} className="min-h-11 border border-asphalt bg-asphalt px-4 text-xs font-semibold text-white">{workspaceOpen ? "Refresh driver workspace" : "Open driver workspace"}</button>
+      </section>}
+
+      {workspaceOpen && <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
           <button onClick={() => setFilter("pending")} className={`px-4 py-2 text-xs font-semibold ${filter === "pending" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>Pending review</button>
           <button onClick={() => setFilter("all")} className={`px-4 py-2 text-xs font-semibold ${filter === "all" ? "bg-asphalt text-white" : "border border-asphalt/15 bg-white"}`}>All drivers</button>
         </div>
         <span className="font-mono text-xs text-steel">{pendingDriverCount} drivers awaiting · {documents.filter((doc) => doc.status === "pending" && [...identityRequired, ...vehicleRequired].some((key) => key === doc.document_key)).length} files pending</span>
-      </div>
+      </div>}
 
-      {!historyAvailable && <p className="mt-4 border border-amber/30 bg-amber/10 p-3 text-xs text-amber-dim">Document version history is waiting for the new Supabase audit migration. Current verification files still work normally.</p>}
+      {workspaceOpen && !historyAvailable && <p className="mt-4 border border-amber/30 bg-amber/10 p-3 text-xs text-amber-dim">Document version history is waiting for the new Supabase audit migration. Current verification files still work normally.</p>}
       {error && <p className="mt-5 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
 
-      {loading ? <p className="py-16 text-center font-mono text-sm text-steel">Loading driver operations…</p> : visibleDrivers.length === 0 ? <div className="mt-5 border border-asphalt/10 bg-white p-10 text-center"><p className="font-display text-xl font-semibold">No drivers in this view</p><p className="mt-2 text-sm text-steel">New driver registrations and pending verification work will appear here.</p></div> : <div className="mt-5 grid gap-5">
+      {workspaceOpen && (loading ? <p className="py-16 text-center font-mono text-sm text-steel">Loading driver operations…</p> : visibleDrivers.length === 0 ? <div className="mt-5 border border-asphalt/10 bg-white p-10 text-center"><p className="font-display text-xl font-semibold">No drivers in this view</p><p className="mt-2 text-sm text-steel">New driver registrations and pending verification work will appear here.</p></div> : <div className="mt-5 grid gap-5">
         {visibleDrivers.map((driver) => {
           const driverDocs = documents.filter((doc) => doc.driver_id === driver.id);
           const identityDocs = driverDocs.filter((doc) => !doc.truck_id);
@@ -374,7 +456,7 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
             </div>
 
             <div className="border-t border-asphalt/10 px-5 py-4 sm:px-6">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{submittedIdentity + submittedVehicle} / {identityRequired.length + vehicleRequired.length} required files · 5 groups</p></div><button onClick={() => setExpandedDriverId(expanded ? null : driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{expanded ? "Hide full history" : "View full driver history"}</button></div>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{submittedIdentity + submittedVehicle} / {identityRequired.length + vehicleRequired.length} required files · 5 groups</p></div><button onClick={() => void toggleDriverHistory(driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{auditLoadingDriverId === driver.id ? "Loading history…" : expanded ? "Hide full history" : "View full driver history"}</button></div>
             </div>
 
             <DriverReviewFields key={`${driver.id}:${driver.full_name}:${assignedTruck?.id}:${assignedTruck?.vehicle_type}:${assignedTruck?.model}`} driver={driver} truck={assignedTruck} onSaved={load} />
@@ -427,7 +509,7 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
             </div>}
           </article>;
         })}
-      </div>}
+      </div>)}
     </div>
   </main>;
 }
