@@ -20,10 +20,19 @@ for (const [name, source] of [["quote-route", quoteRoute], ["customer-booking", 
     assert.match(source, /preference/);
     assert.match(source, /requestRoute/);
     assert.match(source, /"recommended"/);
-    assert.match(source, /"shortest"/);
     assert.match(source, /isRouteAcceptable/);
-    assert.match(source, /guardedRoute && !isRouteAcceptable\(\)/);
+    assert.match(source, /!isRouteAcceptable\(\)/);
     assert.match(source, /distanceKm/);
     assert.match(source, /durationMinutes/);
   });
 }
+
+test("Djibouti Adama keeps the authoritative recommended HGV route instead of replacing it with shortest", () => {
+  for (const [name, source] of [["quote-route", quoteRoute], ["customer-booking", bookingRoute]]) {
+    assert.doesNotMatch(
+      source,
+      /guardedRoute\s*&&\s*!isRouteAcceptable\(\)[\s\S]*?requestRoute\("shortest"\)/,
+      `${name} must not replace a valid recommended driving-hgv route with a shortest fallback`,
+    );
+  }
+});

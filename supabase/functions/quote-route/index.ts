@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
   }
 
   let response: Response;
-  const requestRoute = (preference: "recommended" | "shortest", radiuses?: [number, number]) => fetch(orsDirectionsUrl, {
+  const requestRoute = (preference: "recommended", radiuses?: [number, number]) => fetch(orsDirectionsUrl, {
     method: "POST",
     signal: AbortSignal.timeout(15_000),
     headers: {
@@ -159,21 +159,6 @@ Deno.serve(async (req) => {
     && coordinates.every(isCoordinate)
     && (!guardedRoute || (!routeHasWesternDetour(coordinates, adamaEndpoint) && !routeHasDestinationOvershoot(distanceMeters)));
 
-  if (guardedRoute && !isRouteAcceptable()) {
-    console.warn("Djibouti-Adama recommended HGV route detoured west; retrying shortest HGV route");
-    try {
-      const fallbackResponse = await requestRoute("shortest");
-      if (fallbackResponse.ok) {
-        const fallbackPayload = await fallbackResponse.json() as OrsGeoJsonResponse;
-        feature = fallbackPayload.features?.[0];
-        coordinates = feature?.geometry?.coordinates;
-        distanceMeters = Number(feature?.properties?.summary?.distance);
-        durationSeconds = Number(feature?.properties?.summary?.duration);
-      }
-    } catch (error) {
-      console.warn("Djibouti-Adama shortest HGV fallback failed", error);
-    }
-  }
   if (
     feature?.geometry?.type !== "LineString" ||
     !Array.isArray(coordinates) ||
