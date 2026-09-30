@@ -187,7 +187,12 @@ async function fetchGeocodeFeatures(query: string, autocomplete: boolean, langua
 
 export async function searchCustomerPlaces(query: string, language: CustomerLanguage = "en", signal?: AbortSignal): Promise<CustomerPlaceOption[]> {
   const clean = query.trim();
-  const [localityFeatures, generalFeatures] = await Promise.all([fetchLocalityGeocodeFeatures(clean, true, language, signal), fetchGeocodeFeatures(clean, true, language, signal)]);
+  const [autocompleteLocalityFeatures, exactLocalityFeatures, generalFeatures] = await Promise.all([
+    fetchLocalityGeocodeFeatures(clean, true, language, signal),
+    fetchLocalityGeocodeFeatures(clean, false, language, signal),
+    fetchGeocodeFeatures(clean, true, language, signal),
+  ]);
+  const localityFeatures = [...exactLocalityFeatures, ...autocompleteLocalityFeatures];
   const features = selectGeocodeCandidates(clean, localityFeatures, generalFeatures);
   const unique = new Map<string, CustomerPlaceOption>();
   for (const feature of [...features].sort((left, right) => rankGeocodeFeature(clean, right) - rankGeocodeFeature(clean, left))) {

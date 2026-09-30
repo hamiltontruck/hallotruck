@@ -24,6 +24,7 @@ test("city search recognizes multilingual locality labels and suppresses unrelat
   assert.match(service, /function isPreferredRoutableLocalityMatch\(/);
   assert.match(service, /const preferredLocalities = localityFeatures\.filter\(\(feature\) => isPreferredRoutableLocalityMatch\(query, feature\)\)/);
   assert.match(service, /return preferredLocalities\.length > 0 \? preferredLocalities : \[\.\.\.localityFeatures, \.\.\.generalFeatures\]/);
+  assert.match(service, /fetchLocalityGeocodeFeatures\(clean, false, language, signal\)/);
   assert.match(service, /const features = selectGeocodeCandidates\(clean, localityFeatures, generalFeatures\)/);
   assert.match(service, /const place = selectGeocodeCandidates\(clean, localityFeatures, generalFeatures\)/);
 });
