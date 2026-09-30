@@ -27,12 +27,18 @@ const DOCUMENT_LABELS: Record<string, string> = {
   truck_front: "Truck photo · front",
   truck_side: "Truck photo · side",
 };
+function dateOnlyEpochDay(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+}
+function addisAbabaToday() {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Africa/Addis_Ababa", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
 function expiryMeta(value: string | null) {
   if (!value) return { label: "—", tone: "text-steel", title: "No expiry date" };
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const expiry = new Date(`${value}T00:00:00`);
-  const days = Math.ceil((expiry.getTime() - today.getTime()) / 86_400_000);
+  const days = dateOnlyEpochDay(value) - dateOnlyEpochDay(addisAbabaToday());
   if (days < 0) return { label: `Expired · ${value}`, tone: "text-route font-semibold", title: "Expired" };
   if (days <= 7) return { label: `${days}d · 7 days`, tone: "text-route font-semibold", title: `Expires ${value}` };
   if (days <= 14) return { label: `${days}d · 14 days`, tone: "text-amber-dim font-semibold", title: `Expires ${value}` };
@@ -84,6 +90,10 @@ export function AdminDriverDocumentRegister({ busy, onOpen, onReview }: Props) {
     void getAdminDriverDocumentPage({ page, pageSize, search, status: filter })
       .then((result) => {
         if (sequence !== requestSequence.current) return;
+        if (result.rows.length === 0 && page > 1) {
+          setPage((value) => Math.max(1, value - 1));
+          return;
+        }
         setRows(result.rows);
         setTotal(result.total);
       })

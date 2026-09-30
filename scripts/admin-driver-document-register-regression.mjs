@@ -5,6 +5,7 @@ const page = fs.readFileSync("src/pages/AdminDriverCompliance.tsx", "utf8");
 const component = fs.readFileSync("src/components/admin/AdminDriverDocumentRegister.tsx", "utf8");
 const service = fs.readFileSync("src/services/admin-driver-document-register.service.ts", "utf8");
 const migration = fs.readFileSync("supabase/migrations/20261001003000_admin_driver_document_register_page.sql", "utf8");
+const browserSmoke = fs.readFileSync("scripts/admin-driver-compliance-e2e-smoke.mjs", "utf8");
 
 for (const token of [
   "AdminDriverDocumentRegister",
@@ -43,5 +44,9 @@ assert.doesNotMatch(service, /\.from\("driver_verification_files"\)/, "browser m
 assert.doesNotMatch(page, /\.limit\(1000\)|\.limit\(2000\)/, "Admin compliance must not bulk-preload 1000/2000 audit rows.");
 assert.ok(page.includes("loadDriverAudit"), "Driver trip/payment/history audit must lazy-load per driver.");
 assert.ok(page.includes("getControlCenterData"), "Top compliance KPIs must use DB-side summary reporting.");
+assert.ok(component.includes('timeZone: "Africa/Addis_Ababa"'), "Expiry badges must use Addis Ababa business date.");
+assert.ok(component.includes("result.rows.length === 0 && page > 1"), "Pagination must recover from an emptied last page.");
+assert.ok(browserSmoke.includes("admin_driver_document_register_page"), "Browser smoke must exercise the smart document register RPC.");
+assert.ok(browserSmoke.includes("Page 2 of 2"), "Browser smoke must exercise document register pagination.");
 
 console.log("Admin driver document register regression checks passed.");
