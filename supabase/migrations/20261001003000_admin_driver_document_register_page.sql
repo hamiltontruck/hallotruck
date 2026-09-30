@@ -111,8 +111,30 @@ filtered as (
   )
 ),
 counted as (
-  select f.*, count(*) over () as total_count
+  select f.*,
+    count(*) over () as total_count,
+    row_number() over (
+      order by
+        case when f.expiry_date < (now() at time zone 'Africa/Addis_Ababa')::date then 0
+             when f.expiry_date <= (now() at time zone 'Africa/Addis_Ababa')::date + 7 then 1
+             when f.expiry_date <= (now() at time zone 'Africa/Addis_Ababa')::date + 14 then 2
+             when f.expiry_date <= (now() at time zone 'Africa/Addis_Ababa')::date + 30 then 3
+             when f.status = 'pending' then 4
+             when f.status = 'rejected' then 5
+             when f.status = 'missing' then 6
+             else 7 end,
+        f.updated_at desc nulls last,
+        f.driver_name,
+        f.document_key
+    ) as page_row
   from filtered f
+),
+paged as (
+  select c.*
+  from counted c
+  cross join params p
+  where c.page_row > (p.v_page - 1) * p.v_page_size
+    and c.page_row <= p.v_page * p.v_page_size
 )
 select
   c.row_id, c.document_id, c.driver_id, c.driver_name, c.phone,
@@ -120,22 +142,8 @@ select
   c.expiry_date, c.status, c.updated_at, c.reviewer_name,
   c.file_path, c.original_name, c.mime_type, c.rejection_reason,
   c.reviewed_at, c.created_at, c.total_count
-from counted c
-cross join params p
-order by
-  case when c.expiry_date < (now() at time zone 'Africa/Addis_Ababa')::date then 0
-       when c.expiry_date <= (now() at time zone 'Africa/Addis_Ababa')::date + 7 then 1
-       when c.expiry_date <= (now() at time zone 'Africa/Addis_Ababa')::date + 14 then 2
-       when c.expiry_date <= (now() at time zone 'Africa/Addis_Ababa')::date + 30 then 3
-       when c.status = 'pending' then 4
-       when c.status = 'rejected' then 5
-       when c.status = 'missing' then 6
-       else 7 end,
-  c.updated_at desc nulls last,
-  c.driver_name,
-  c.document_key
-limit p.v_page_size
-offset (p.v_page - 1) * p.v_page_size;
+from paged c
+order by c.page_row;
 $$;
 
 revoke all on function public.admin_driver_document_register_page(integer, integer, text, text) from public, anon;

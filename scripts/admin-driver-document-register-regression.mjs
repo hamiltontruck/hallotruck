@@ -28,8 +28,9 @@ assert.ok(service.includes("p_status_filter"));
 for (const token of [
   "security invoker",
   "private.is_admin_or_ceo()",
-  "limit p.v_page_size",
-  "offset (p.v_page - 1) * p.v_page_size",
+  "row_number() over",
+  "c.page_row > (p.v_page - 1) * p.v_page_size",
+  "c.page_row <= p.v_page * p.v_page_size",
   "reviewer_name",
   "plate_number",
   "missing",
