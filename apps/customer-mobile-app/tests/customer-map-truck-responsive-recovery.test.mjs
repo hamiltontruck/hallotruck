@@ -17,6 +17,15 @@ test("place search keeps city/locality results routable and ranks them ahead of 
   assert.doesNotMatch(service, /NON_ROUTABLE_PLACE_TYPES = new Set\(\[[^\]]*"region"/);
 });
 
+test("single-name city search suppresses same-name POIs when an exact routable locality exists", () => {
+  assert.match(service, /function isExactRoutableLocalityMatch\(/);
+  assert.match(service, /function selectGeocodeCandidates\(/);
+  assert.match(service, /const exactLocalities = localityFeatures\.filter\(\(feature\) => isExactRoutableLocalityMatch\(query, feature\)\)/);
+  assert.match(service, /return exactLocalities\.length > 0 \? exactLocalities : \[\.\.\.localityFeatures, \.\.\.generalFeatures\]/);
+  assert.match(service, /const features = selectGeocodeCandidates\(clean, localityFeatures, generalFeatures\)/);
+  assert.match(service, /const place = selectGeocodeCandidates\(clean, localityFeatures, generalFeatures\)/);
+});
+
 test("booking map resizes and refits the real route when its viewport changes", () => {
   assert.match(map, /function fitBookingMapToPoints\(/);
   assert.match(map, /map\.resize\(\)/);
