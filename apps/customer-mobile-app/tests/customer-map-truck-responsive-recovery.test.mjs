@@ -17,11 +17,13 @@ test("place search keeps city/locality results routable and ranks them ahead of 
   assert.doesNotMatch(service, /NON_ROUTABLE_PLACE_TYPES = new Set\(\[[^\]]*"region"/);
 });
 
-test("single-name city search suppresses same-name POIs when an exact routable locality exists", () => {
-  assert.match(service, /function isExactRoutableLocalityMatch\(/);
-  assert.match(service, /function selectGeocodeCandidates\(/);
-  assert.match(service, /const exactLocalities = localityFeatures\.filter\(\(feature\) => isExactRoutableLocalityMatch\(query, feature\)\)/);
-  assert.match(service, /return exactLocalities\.length > 0 \? exactLocalities : \[\.\.\.localityFeatures, \.\.\.generalFeatures\]/);
+test("city search recognizes multilingual locality labels and suppresses unrelated same-name POIs", () => {
+  assert.match(service, /function localityIdentityText\(/);
+  assert.match(service, /feature\.place_name \?\? feature\.text/);
+  assert.match(service, /\.split\(",", 1\)\[0\]/);
+  assert.match(service, /function isPreferredRoutableLocalityMatch\(/);
+  assert.match(service, /const preferredLocalities = localityFeatures\.filter\(\(feature\) => isPreferredRoutableLocalityMatch\(query, feature\)\)/);
+  assert.match(service, /return preferredLocalities\.length > 0 \? preferredLocalities : \[\.\.\.localityFeatures, \.\.\.generalFeatures\]/);
   assert.match(service, /const features = selectGeocodeCandidates\(clean, localityFeatures, generalFeatures\)/);
   assert.match(service, /const place = selectGeocodeCandidates\(clean, localityFeatures, generalFeatures\)/);
 });
