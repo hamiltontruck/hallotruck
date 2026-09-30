@@ -115,18 +115,22 @@ function rankGeocodeFeature(query: string, feature: GeocodeFeature) {
   return score;
 }
 
-function isExactRoutableLocalityMatch(query: string, feature: GeocodeFeature) {
+function localityIdentityText(feature: GeocodeFeature) {
+  return (feature.place_name ?? feature.text ?? "").split(",", 1)[0].trim();
+}
+
+function isPreferredRoutableLocalityMatch(query: string, feature: GeocodeFeature) {
   const normalizedQuery = normalizePlaceSearchText(query);
-  const normalizedText = normalizePlaceSearchText(feature.text ?? "");
-  if (!normalizedQuery || !normalizedText) return false;
+  const normalizedIdentity = normalizePlaceSearchText(localityIdentityText(feature));
+  if (!normalizedQuery || !normalizedIdentity) return false;
   const types = feature.place_type ?? [];
-  const localityIdentityMatches = normalizedText === normalizedQuery || normalizedText.startsWith(`${normalizedQuery} `);
+  const localityIdentityMatches = normalizedIdentity === normalizedQuery || normalizedIdentity.startsWith(`${normalizedQuery} `);
   return localityIdentityMatches && types.some((type) => ROUTABLE_LOCALITY_PLACE_TYPES.has(type));
 }
 
 function selectGeocodeCandidates(query: string, localityFeatures: GeocodeFeature[], generalFeatures: GeocodeFeature[]) {
-  const exactLocalities = localityFeatures.filter((feature) => isExactRoutableLocalityMatch(query, feature));
-  return exactLocalities.length > 0 ? exactLocalities : [...localityFeatures, ...generalFeatures];
+  const preferredLocalities = localityFeatures.filter((feature) => isPreferredRoutableLocalityMatch(query, feature));
+  return preferredLocalities.length > 0 ? preferredLocalities : [...localityFeatures, ...generalFeatures];
 }
 
 function validSelectedPlace(place: CustomerPlaceOption | null | undefined) {
