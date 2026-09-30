@@ -306,15 +306,7 @@ export function AdminDriverFinanceSearch() {
                   <button onClick={() => setExpandedDriver(expanded ? null : driver.id)} className="self-start border border-asphalt px-4 py-3 text-xs font-semibold">{expanded ? "Hide deposit form & trips" : "Add deposit / view trips"}</button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-px bg-asphalt/10 lg:grid-cols-4 xl:grid-cols-7">
-                  <Metric label="Completed trips" value={String(numberOf(summary?.completed_trips))} />
-                  <Metric label="Gross released" value={formatEtb(numberOf(summary?.gross_released_etb))} />
-                  <Metric label="Commission charged" value={formatEtb(numberOf(summary?.commission_charged_etb))} />
-                  <Metric label="Commission paid" value={formatEtb(numberOf(summary?.commission_paid_etb))} />
-                  <Metric label="Admin deposit" value={formatEtb(numberOf(summary?.admin_deposit_etb))} />
-                  <Metric label="Available deposit" value={formatEtb(numberOf(summary?.available_deposit_etb))} strong />
-                  <Metric label="Commission due" value={formatEtb(numberOf(summary?.commission_due_etb))} danger={numberOf(summary?.commission_due_etb) > 0} />
-                </div>
+                <DriverFinanceSummary summary={summary} />
 
                 {expanded && <div className="grid gap-5 bg-[#faf9f5] p-5 sm:p-6 xl:grid-cols-[.7fr_1.3fr]">
                   <div className="space-y-5">
@@ -353,6 +345,25 @@ export function AdminDriverFinanceSearch() {
   );
 }
 
+function DriverFinanceSummary({ summary }: { summary?: DriverFinancialSummary }) {
+  const due = numberOf(summary?.commission_due_etb);
+  const rows = [
+    { label: "Completed trips", value: String(numberOf(summary?.completed_trips)) },
+    { label: "Gross released", value: formatEtb(numberOf(summary?.gross_released_etb)) },
+    { label: "Commission charged", value: formatEtb(numberOf(summary?.commission_charged_etb)) },
+    { label: "Commission paid", value: formatEtb(numberOf(summary?.commission_paid_etb)) },
+    { label: "Admin deposit", value: formatEtb(numberOf(summary?.admin_deposit_etb)) },
+    { label: "Available deposit", value: formatEtb(numberOf(summary?.available_deposit_etb)), strong: true },
+    { label: "Commission due", value: formatEtb(due), strong: due > 0, danger: due > 0 },
+  ];
+
+  return <dl aria-label="Driver finance summary" className="grid grid-cols-1 border-t border-asphalt/10 bg-white sm:grid-cols-2 xl:grid-cols-4">
+    {rows.map((row) => <div key={row.label} className={`flex min-h-11 items-center justify-between gap-3 border-b border-asphalt/10 px-4 py-2.5 sm:border-r ${row.danger ? "bg-route/5" : ""}`}>
+      <dt className="font-mono text-[9px] uppercase tracking-wide text-steel">{row.label}</dt>
+      <dd className={`shrink-0 text-right font-display text-sm ${row.strong ? "font-bold" : "font-semibold"} ${row.danger ? "text-route" : "text-asphalt"}`}>{row.value}</dd>
+    </div>)}
+  </dl>;
+}
 function Metric({ label, value, strong = false, danger = false }: { label: string; value: string; strong?: boolean; danger?: boolean }) {
   return <div className={`min-h-28 bg-white p-4 ${danger ? "text-route" : ""}`}><p className="font-mono text-[9px] uppercase tracking-wide text-steel">{label}</p><p className={`mt-3 break-words font-display text-lg ${strong || danger ? "font-bold" : "font-semibold"}`}>{value}</p></div>;
 }

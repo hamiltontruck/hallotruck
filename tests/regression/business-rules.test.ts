@@ -589,3 +589,13 @@ test("Admin intelligence report reconciles finance, assignment and route signals
   assert.equal(report.fleetUtilization, 100);
   assert.equal(report.topRoutes[0].route, "Addis Ababa → Adama");
 });
+
+
+test("admin driver finance renders a compact responsive summary table", () => {
+  const source = readFileSync(path.join(process.cwd(), "src/pages/AdminDriverFinanceSearch.tsx"), "utf8");
+  assert.match(source, /aria-label="Driver finance summary"/);
+  assert.match(source, /function DriverFinanceSummary/);
+  assert.match(source, /min-h-11 items-center justify-between/);
+  assert.match(source, /sm:grid-cols-2 xl:grid-cols-4/);
+  assert.doesNotMatch(source, /xl:grid-cols-7/);
+});
