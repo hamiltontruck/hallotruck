@@ -121,14 +121,15 @@ try {
         const register = page.locator('#register-root');
         await register.getByPlaceholder('Driver / phone / plate').fill('AA-2214');
         await page.waitForTimeout(350);
-        await register.getByText('AA-2214', { exact:true }).waitFor();
+        const table = register.getByRole('table');
+        await table.getByText('AA-2214', { exact:true }).waitFor();
         await register.getByRole('button', { name:'Expired', exact:true }).click();
-        await register.getByText('Expired · 2026-09-01', { exact:true }).waitFor();
+        await table.getByText('Expired · 2026-09-01', { exact:true }).waitFor();
         await register.getByRole('button', { name:'All', exact:true }).click();
         await register.getByText('Page 1 of 2', { exact:false }).waitFor();
         await register.getByRole('button', { name:'Next', exact:true }).click();
         await register.getByText('Page 2 of 2', { exact:false }).waitFor();
-        await register.getByRole('button', { name:'Verify', exact:true }).click();
+        await table.getByRole('button', { name:'Verify', exact:true }).click();
         await page.waitForFunction(() => document.documentElement.dataset.registerReview === 'true');
       }
     } catch (error) {
