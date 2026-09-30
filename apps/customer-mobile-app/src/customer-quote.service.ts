@@ -115,6 +115,20 @@ function rankGeocodeFeature(query: string, feature: GeocodeFeature) {
   return score;
 }
 
+function isExactRoutableLocalityMatch(query: string, feature: GeocodeFeature) {
+  const normalizedQuery = normalizePlaceSearchText(query);
+  const normalizedText = normalizePlaceSearchText(feature.text ?? "");
+  if (!normalizedQuery || !normalizedText) return false;
+  const types = feature.place_type ?? [];
+  const localityIdentityMatches = normalizedText === normalizedQuery || normalizedText.startsWith(`${normalizedQuery} `);
+  return localityIdentityMatches && types.some((type) => ROUTABLE_LOCALITY_PLACE_TYPES.has(type));
+}
+
+function selectGeocodeCandidates(query: string, localityFeatures: GeocodeFeature[], generalFeatures: GeocodeFeature[]) {
+  const exactLocalities = localityFeatures.filter((feature) => isExactRoutableLocalityMatch(query, feature));
+  return exactLocalities.length > 0 ? exactLocalities : [...localityFeatures, ...generalFeatures];
+}
+
 function validSelectedPlace(place: CustomerPlaceOption | null | undefined) {
   return Boolean(place?.label.trim() && isCoordinate(place.coordinates) && isHalloOperatingCoordinate(place.coordinates));
 }
@@ -170,7 +184,7 @@ async function fetchGeocodeFeatures(query: string, autocomplete: boolean, langua
 export async function searchCustomerPlaces(query: string, language: CustomerLanguage = "en", signal?: AbortSignal): Promise<CustomerPlaceOption[]> {
   const clean = query.trim();
   const [localityFeatures, generalFeatures] = await Promise.all([fetchLocalityGeocodeFeatures(clean, true, language, signal), fetchGeocodeFeatures(clean, true, language, signal)]);
-  const features = [...localityFeatures, ...generalFeatures];
+  const features = selectGeocodeCandidates(clean, localityFeatures, generalFeatures);
   const unique = new Map<string, CustomerPlaceOption>();
   for (const feature of [...features].sort((left, right) => rankGeocodeFeature(clean, right) - rankGeocodeFeature(clean, left))) {
     const place = featureToPlace(feature);
@@ -206,7 +220,7 @@ async function geocodePlace(query: string, language: CustomerLanguage = "en"): P
   const clean = query.trim();
   if (clean.length < 2) throw new Error("Choose both pickup and drop-off places.");
   const [localityFeatures, generalFeatures] = await Promise.all([fetchLocalityGeocodeFeatures(clean, false, language), fetchGeocodeFeatures(clean, false, language)]);
-  const place = [...localityFeatures, ...generalFeatures]
+  const place = selectGeocodeCandidates(clean, localityFeatures, generalFeatures)
     .sort((left, right) => rankGeocodeFeature(clean, right) - rankGeocodeFeature(clean, left))
     .map(featureToPlace)
     .find((item): item is CustomerPlaceOption => item !== null && placeMatchesSearchQuery(clean, item.label));
