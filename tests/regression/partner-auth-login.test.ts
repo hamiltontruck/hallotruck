@@ -32,3 +32,14 @@ test("Partner forgot-password uses the existing real recovery service and does n
 test("Partner login does not invent remember-me persistence outside Supabase session behavior", () => {
   assert.doesNotMatch(gate, /localStorage|sessionStorage|persistSession|rememberMe/);
 });
+
+// MagicPath revision 456182083283464192 visual parity contract.
+test("Partner login matches approved MagicPath visual hierarchy", () => {
+  assert.match(gate, /Grow your logistics business with HALLO\./);
+  assert.match(gate, /Secure access for approved HALLO partner organizations\./);
+  assert.match(gate, /Welcome, HALLO Partner/);
+  assert.match(gate, /Secure Partner Access/);
+  assert.match(gate, /lg:grid-cols-2/);
+  assert.match(gate, /bg-\[#1A237E\]/);
+  assert.match(gate, /max-w-\[520px\]/);
+});
