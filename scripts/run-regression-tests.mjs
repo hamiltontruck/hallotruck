@@ -53,6 +53,7 @@ try{
   ["tests/regression/customer-quote-restoration.test.ts",path.join(outputDirectory,"customer-quote-restoration.test.mjs")],
   ["tests/regression/customer-cancel-unpaid-commission.test.ts",path.join(outputDirectory,"customer-cancel-unpaid-commission.test.mjs")],
   ["tests/regression/admin-order-assignment-evidence.test.ts",path.join(outputDirectory,"admin-order-assignment-evidence.test.mjs")],
+  ["tests/regression/admin-cancel-reassign-audit.test.ts",path.join(outputDirectory,"admin-cancel-reassign-audit.test.mjs")],
   ["tests/regression/suspended-leadership-authorization.test.ts",path.join(outputDirectory,"suspended-leadership-authorization.test.mjs")],
   ["tests/regression/tracking-database-authorization.test.ts",path.join(outputDirectory,"tracking-database-authorization.test.mjs")],
   ["tests/regression/dispatch-readiness-execute-boundary.test.ts",path.join(outputDirectory,"dispatch-readiness-execute-boundary.test.mjs")],
