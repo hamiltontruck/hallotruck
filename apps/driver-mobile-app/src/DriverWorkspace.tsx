@@ -127,7 +127,7 @@ export function DriverWorkspace({ userId }: { userId: string }) {
   } else if (tab === "alerts") {
     content = <DriverNotificationsView userId={userId} language={language} />;
   } else {
-    content = <DriverProfileView userId={userId} fallbackName={driverName} language={language} />;
+    content = <DriverProfileView userId={userId} fallbackName={driverName} language={language} onSignOut={() => void supabase.auth.signOut()} />;
   }
 
   return <div

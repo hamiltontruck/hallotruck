@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type PointerEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import type { DriverActiveTripOrder } from "./driver-active-trip.model";
 import {
   MAX_DELIVERY_PHOTO_BYTES,
@@ -241,15 +242,8 @@ export function DriverDeliveryProofPanel({
     }
   }
 
-  const positivePaymentTitle = trip.selectedPaymentMethod === "cash"
-    ? t.deliveryProof.cashReceivedTitle
-    : t.deliveryProof.bankConfirmedTitle;
-  const positivePaymentHelp = trip.selectedPaymentMethod === "cash"
-    ? `${t.deliveryProof.cashReceivedHelp} ${formatEtb(trip.priceEtb)}`
-    : `${t.deliveryProof.bankConfirmedHelp} ${formatEtb(trip.priceEtb)}`;
-  const positivePaymentValue: DriverTripPaymentResult = trip.selectedPaymentMethod === "cash"
-    ? "cash_received"
-    : "bank_telebirr";
+  const cashPaymentHelp = `${t.deliveryProof.cashReceivedHelp} ${formatEtb(trip.priceEtb)}`;
+  const bankPaymentHelp = `${t.deliveryProof.bankConfirmedHelp} ${formatEtb(trip.priceEtb)}`;
 
   return <>
     <button
@@ -261,7 +255,7 @@ export function DriverDeliveryProofPanel({
       {t.deliveryProof.action}
     </button>
 
-    {open && <div className="fixed inset-0 z-[100] bg-halo-navy/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="mobile-delivery-proof-title">
+    {open && createPortal(<div className="fixed inset-0 z-[100] bg-halo-navy/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="mobile-delivery-proof-title">
       <div data-driver-delivery-proof-sheet className="absolute inset-x-0 bottom-0 top-[max(12px,env(safe-area-inset-top))] flex flex-col overflow-hidden rounded-t-[30px] bg-halo-canvas shadow-[0_-20px_60px_rgba(0,0,0,0.3)]">
         <header data-driver-delivery-proof-header className="z-10 shrink-0 border-b border-halo-line bg-white/95 px-4 pb-4 pt-4 backdrop-blur-xl sm:px-6">
           <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-halo-line" />
@@ -302,10 +296,10 @@ export function DriverDeliveryProofPanel({
             <div className="flex items-center justify-between"><h3 className="text-sm font-black text-halo-navy">{t.deliveryProof.paymentStep}</h3><span className={`text-[10px] font-black ${paymentReady ? "text-emerald-700" : "text-halo-muted"}`}>{paymentReady ? t.deliveryProof.selected : t.deliveryProof.required}</span></div>
             <div className="mt-3 rounded-2xl bg-halo-soft p-3"><p className="text-[10px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.customerChoice}</p><div className="mt-1 flex items-center justify-between gap-3"><strong className="text-sm text-halo-navy">{trip.selectedPaymentMethod === "cash" ? "Cash" : "Bank / Telebirr"}</strong><strong className="text-sm text-halo-blue">{formatEtb(trip.priceEtb)}</strong></div></div>
             <div role="radiogroup" aria-label={t.deliveryProof.paymentStep} className="mt-3 grid gap-3">
-              {allowedResults.includes(positivePaymentValue) && <PaymentChoice selected={paymentResult === positivePaymentValue} value={positivePaymentValue} title={positivePaymentTitle} help={positivePaymentHelp} onSelect={(value) => { setPaymentResult(value); setError(""); }} disabled={saving} />}
-              <PaymentChoice selected={paymentResult === "payment_not_received"} value="payment_not_received" title={t.deliveryProof.paymentNotReceived} help={t.deliveryProof.paymentNotReceivedHelp} onSelect={(value) => { setPaymentResult(value); setError(""); }} disabled={saving} />
+              {allowedResults.includes("cash_received") && <div data-driver-payment-choice="cash"><PaymentChoice selected={paymentResult === "cash_received"} value="cash_received" title={t.deliveryProof.cashReceivedTitle} help={cashPaymentHelp} onSelect={(value) => { setPaymentResult(value); setAmountCollected(""); setError(""); }} disabled={saving} /></div>}
+              {allowedResults.includes("bank_telebirr") && <div data-driver-payment-choice="bank-wallet"><PaymentChoice selected={paymentResult === "bank_telebirr"} value="bank_telebirr" title={t.deliveryProof.bankConfirmedTitle} help={bankPaymentHelp} onSelect={(value) => { setPaymentResult(value); setAmountCollected(""); setError(""); }} disabled={saving} /></div>}
             </div>
-            {paymentResult === "cash_received" && <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.exactCash}<input value={amountCollected} onChange={(event) => setAmountCollected(event.target.value)} inputMode="decimal" disabled={saving} className="mt-2 min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-black normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={trip.priceEtb === null ? "ETB" : String(trip.priceEtb)} /></label>}
+            {(paymentResult === "cash_received" || paymentResult === "bank_telebirr") && <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.exactCash}<input value={amountCollected} onChange={(event) => setAmountCollected(event.target.value)} inputMode="decimal" disabled={saving} className="mt-2 min-h-13 w-full rounded-2xl border border-halo-line bg-white px-4 text-sm font-black normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={trip.priceEtb === null ? "ETB" : String(trip.priceEtb)} /></label>}
             <label className="mt-3 block text-[11px] font-black uppercase tracking-[0.12em] text-halo-muted">{t.deliveryProof.paymentNote}<textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} maxLength={500} disabled={saving} rows={2} className="mt-2 w-full rounded-2xl border border-halo-line bg-white p-4 text-sm font-medium normal-case tracking-normal text-halo-navy outline-none focus:border-halo-blue disabled:opacity-60" placeholder={t.deliveryProof.paymentNotePlaceholder} /></label>
           </section>
 
@@ -313,6 +307,6 @@ export function DriverDeliveryProofPanel({
           <button type="submit" disabled={saving || !completionReady} className="min-h-14 w-full rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-halo-button disabled:cursor-not-allowed disabled:opacity-60">{saving ? t.deliveryProof.completingTrip : t.deliveryProof.completeTrip}</button>
         </form>
       </div>
-    </div>}
+    </div>, document.body)}
   </>;
 }

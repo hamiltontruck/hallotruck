@@ -430,7 +430,6 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
       </section>
       <DriverTripCustomerPaymentPanel userId={userId} trip={trip} language={language} />
       {trip.status === "in_transit" && <DriverDeliveryProofPanel trip={trip} userId={userId} onDelivered={handleDelivered} language={language} />}
-      <div className="mt-4 flex items-center gap-3 rounded-2xl bg-halo-soft p-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-halo-blue text-sm font-black text-white">{fullName.trim().slice(0, 1).toUpperCase() || "D"}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-black text-halo-navy">{fullName}</p><p className="mt-0.5 text-[10px] text-halo-muted">{t.trip.assignedDriver}</p></div></div>
       </div>
     </section>
   </div>;

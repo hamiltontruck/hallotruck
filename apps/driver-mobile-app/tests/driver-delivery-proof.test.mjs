@@ -34,9 +34,10 @@ function draft(overrides = {}) {
   };
 }
 
-test("payment options remain constrained by the customer method", () => {
-  assert.deepEqual(allowedDriverPaymentResults("cash"), ["cash_received", "payment_not_received"]);
-  assert.deepEqual(allowedDriverPaymentResults("bank_telebirr"), ["bank_telebirr", "payment_not_received"]);
+test("payment options allow cash or bank wallet at delivery", () => {
+  const expected = ["cash_received", "bank_telebirr"];
+  assert.deepEqual(allowedDriverPaymentResults("cash"), expected);
+  assert.deepEqual(allowedDriverPaymentResults("bank_telebirr"), expected);
 });
 
 test("cash completion requires the exact trip amount", () => {
@@ -56,17 +57,17 @@ test("cash completion requires the exact trip amount", () => {
   assert.equal(mismatch.ok, false);
 });
 
-test("bank and not-received results do not invent cash collection", () => {
+test("bank wallet requires the exact trip amount and not-received stays unavailable", () => {
   const bank = validateDriverDeliveryProofDraft(draft({
     paymentResult: "bank_telebirr",
-    amountCollected: "",
+    amountCollected: "12000",
   }), {
     orderStatus: "in_transit",
     selectedPaymentMethod: "bank_telebirr",
     tripAmountEtb: 12000,
   });
   assert.equal(bank.ok, true);
-  if (bank.ok) assert.equal(bank.amountCollected, null);
+  if (bank.ok) assert.equal(bank.amountCollected, 12000);
 
   const outstanding = validateDriverDeliveryProofDraft(draft({
     paymentResult: "payment_not_received",
@@ -76,8 +77,7 @@ test("bank and not-received results do not invent cash collection", () => {
     selectedPaymentMethod: "cash",
     tripAmountEtb: 12000,
   });
-  assert.equal(outstanding.ok, true);
-  if (outstanding.ok) assert.equal(outstanding.amountCollected, null);
+  assert.equal(outstanding.ok, false);
 });
 
 test("delivery proof rejects wrong lifecycle, method, files and receiver", () => {
@@ -87,13 +87,12 @@ test("delivery proof rejects wrong lifecycle, method, files and receiver", () =>
     tripAmountEtb: 12000,
   });
   assert.equal(accepted.ok, false);
-
-  const wrongMethod = validateDriverDeliveryProofDraft(draft({ paymentResult: "bank_telebirr" }), {
+  const alternatePayment = validateDriverDeliveryProofDraft(draft({ paymentResult: "bank_telebirr" }), {
     orderStatus: "in_transit",
     selectedPaymentMethod: "cash",
     tripAmountEtb: 12000,
   });
-  assert.equal(wrongMethod.ok, false);
+  assert.equal(alternatePayment.ok, true);
 
   const tooLarge = validateDriverDeliveryProofDraft(draft({ photo: photo(MAX_DELIVERY_PHOTO_BYTES + 1) }), {
     orderStatus: "in_transit",
@@ -157,7 +156,7 @@ test("panel supports camera, gallery, signature and locked submission", () => {
   assert.match(panelSource, /aria-label=\{t\.deliveryProof\.signatureStep\}/);
   assert.match(panelSource, /submittingRef\.current/);
   assert.match(panelSource, /submitDriverDeliveryProof/);
-  assert.match(panelSource, /payment_not_received/);
+  assert.doesNotMatch(panelSource, /payment_not_received/);
   assert.match(panelSource, /canSubmitDriverDeliveryProof/);
   assert.match(panelSource, /disabled=\{saving \|\| !completionReady\}/);
 });
@@ -174,4 +173,11 @@ test("active trip integrates completion only for in-transit orders", () => {
   assert.match(activeTripSource, /trip\.status === "in_transit"/);
   assert.match(activeTripSource, /clearQueuedDriverPings/);
   assert.match(activeTripSource, /completedTrackingId/);
+  assert.doesNotMatch(activeTripSource, /t\.trip\.assignedDriver/);
+});
+
+test("delivery proof renders above the workspace bottom navigation through a document-body portal", () => {
+  assert.match(panelSource, /createPortal/);
+  assert.match(panelSource, /document\.body/);
+  assert.match(panelSource, /fixed inset-0 z-\[100\]/);
 });

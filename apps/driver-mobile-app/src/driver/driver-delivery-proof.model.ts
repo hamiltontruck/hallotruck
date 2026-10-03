@@ -55,9 +55,8 @@ function normalizedNote(value: string, maxLength: number): string {
 export function allowedDriverPaymentResults(
   method: DriverSelectedPaymentMethod,
 ): DriverTripPaymentResult[] {
-  return method === "cash"
-    ? ["cash_received", "payment_not_received"]
-    : ["bank_telebirr", "payment_not_received"];
+  void method;
+  return ["cash_received", "bank_telebirr"];
 }
 
 export function validateDriverDeliveryProofDraft(
@@ -94,7 +93,7 @@ export function validateDriverDeliveryProofDraft(
   }
 
   let amountCollected: number | null = null;
-  if (draft.paymentResult === "cash_received") {
+  if (draft.paymentResult === "cash_received" || draft.paymentResult === "bank_telebirr") {
     if (context.tripAmountEtb === null || !Number.isFinite(context.tripAmountEtb) || context.tripAmountEtb <= 0) {
       return { ok: false, error: "The required trip amount is unavailable. Refresh the trip before finishing." };
     }
