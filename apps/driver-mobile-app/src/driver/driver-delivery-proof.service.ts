@@ -8,6 +8,8 @@ import {
 } from "./driver-delivery-proof.model";
 
 const DELIVERY_BUCKET = "delivery-proofs";
+const COMPLETION_RECONCILE_ATTEMPTS = 3;
+const COMPLETION_RECONCILE_DELAY_MS = 400;
 
 type ServerTrip = {
   id: string;
@@ -111,6 +113,25 @@ async function fetchExistingProof(
   return data as ExistingProof;
 }
 
+async function reconcileCompletedTrip(
+  client: SupabaseClient,
+  orderId: string,
+): Promise<ExistingProof | null> {
+  for (let attempt = 0; attempt < COMPLETION_RECONCILE_ATTEMPTS; attempt += 1) {
+    try {
+      const proof = await fetchExistingProof(client, orderId);
+      if (proof) return proof;
+    } catch {
+      // A lost RPC response can coincide with a transient follow-up read failure.
+      // Retry before reporting completion as failed; the server transaction is authoritative.
+    }
+    if (attempt + 1 < COMPLETION_RECONCILE_ATTEMPTS) {
+      await new Promise((resolve) => window.setTimeout(resolve, COMPLETION_RECONCILE_DELAY_MS));
+    }
+  }
+  return null;
+}
+
 async function removeUploads(client: SupabaseClient, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   try {
@@ -200,12 +221,7 @@ export async function submitDriverDeliveryProof(
       alreadyCompleted: false,
     };
   } catch (caught) {
-    let proof: ExistingProof | null = null;
-    try {
-      proof = await fetchExistingProof(client, input.orderId);
-    } catch {
-      // Preserve the original submission error when reconciliation cannot run.
-    }
+    const proof = await reconcileCompletedTrip(client, input.orderId);
 
     if (proof) {
       const ownPaths = uploaded.filter((path) => path !== proof?.photo_path && path !== proof?.signature_path);
