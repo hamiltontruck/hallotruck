@@ -6,12 +6,27 @@ const map = fs.readFileSync(new URL("../src/CustomerBookingMap.tsx", import.meta
 const service = fs.readFileSync(new URL("../src/customer-quote.service.ts", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../src/customer-final-ui.css", import.meta.url), "utf8");
 
-test("place search rejects query-mismatched and broad region-centroid endpoints", () => {
+test("place search keeps city/locality results routable and ranks them ahead of POIs", () => {
   assert.match(service, /function placeMatchesSearchQuery\(/);
   assert.match(service, /placeMatchesSearchQuery\(clean, place\.label\)/);
-  assert.match(service, /"region"/);
-  assert.match(service, /"subregion"/);
-  assert.match(service, /"county"/);
+  assert.match(service, /ROUTABLE_LOCALITY_PLACE_TYPES/);
+  assert.match(service, /LOCALITY_GEOCODE_TYPES/);
+  assert.match(service, /fetchLocalityGeocodeFeatures/);
+  assert.match(service, /Promise\.all\(\[fetchLocalityGeocodeFeatures/);
+  assert.match(service, /sort\(\(left, right\) => rankGeocodeFeature\(clean, right\) - rankGeocodeFeature\(clean, left\)\)/);
+  assert.doesNotMatch(service, /NON_ROUTABLE_PLACE_TYPES = new Set\(\[[^\]]*"region"/);
+});
+
+test("city search recognizes multilingual locality labels and suppresses unrelated same-name POIs", () => {
+  assert.match(service, /function localityIdentityText\(/);
+  assert.match(service, /feature\.place_name \?\? feature\.text/);
+  assert.match(service, /\.split\(",", 1\)\[0\]/);
+  assert.match(service, /function isPreferredRoutableLocalityMatch\(/);
+  assert.match(service, /const preferredLocalities = localityFeatures\.filter\(\(feature\) => isPreferredRoutableLocalityMatch\(query, feature\)\)/);
+  assert.match(service, /return preferredLocalities\.length > 0 \? preferredLocalities : \[\.\.\.localityFeatures, \.\.\.generalFeatures\]/);
+  assert.match(service, /fetchLocalityGeocodeFeatures\(clean, false, language, signal\)/);
+  assert.match(service, /const features = selectGeocodeCandidates\(clean, localityFeatures, generalFeatures\)/);
+  assert.match(service, /const place = selectGeocodeCandidates\(clean, localityFeatures, generalFeatures\)/);
 });
 
 test("booking map resizes and refits the real route when its viewport changes", () => {
