@@ -147,6 +147,8 @@ test("service preserves assignment, storage and atomic RPC boundaries", () => {
   assert.match(serviceSource, /client\.rpc\("driver_finish_trip"/);
   assert.match(serviceSource, /p_result_type: validated\.paymentResult/);
   assert.match(serviceSource, /fetchExistingProof\(client, input\.orderId\)/);
+  assert.match(serviceSource, /reconcileCompletedTrip\\(client, input\\.orderId\\)/);
+  assert.match(serviceSource, /COMPLETION_RECONCILE_ATTEMPTS = 3/);
   assert.match(serviceSource, /removeUploads\(client, uploaded\)/);
   assert.doesNotMatch(serviceSource, /service_role|user_metadata|app_metadata/);
 });
