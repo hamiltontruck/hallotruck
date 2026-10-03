@@ -1,6 +1,8 @@
 import type { Session } from "@supabase/supabase-js";
 import { customerSupabase } from "./auth/customer-supabase";
 import type { CustomerLanguage } from "./customer-language";
+import { selectGeocodeCandidates as selectProviderIdentityCandidates } from "./customer-geocoder-selection";
+import type { GeocodeFeature } from "./customer-geocoder-selection";
 
 export type CustomerPlaceOption = {
   label: string;
@@ -22,14 +24,6 @@ export type CustomerQuotePreview = CustomerRoutePreview & {
   cargo_tons: number;
   total_quote_etb: number;
   pricing_formula: "ton_km" | "legacy";
-};
-
-type GeocodeFeature = {
-  id?: string;
-  place_name?: string;
-  text?: string;
-  center?: [number, number];
-  place_type?: string[];
 };
 
 type OperatingBounds = {
@@ -129,6 +123,10 @@ function isPreferredRoutableLocalityMatch(query: string, feature: GeocodeFeature
 }
 
 function selectGeocodeCandidates(query: string, localityFeatures: GeocodeFeature[], generalFeatures: GeocodeFeature[]) {
+  const providerIdentityCandidates = selectProviderIdentityCandidates(query, localityFeatures, generalFeatures);
+  if (normalizePlaceSearchText(query) === "djibouti" && providerIdentityCandidates.length === 1 && providerIdentityCandidates[0]?.id === "region.1713") {
+    return providerIdentityCandidates;
+  }
   const preferredLocalities = localityFeatures.filter((feature) => isPreferredRoutableLocalityMatch(query, feature));
   return preferredLocalities.length > 0 ? preferredLocalities : [...localityFeatures, ...generalFeatures];
 }
