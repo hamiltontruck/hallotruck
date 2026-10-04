@@ -50,13 +50,18 @@ npm run build
 
 ## Capacitor Android
 
-Create the native Android project once, then keep the generated `android/`
-directory in version control so Android builds are reproducible:
+Create the native Android project once; the command also installs the HALLO Driver
+launcher icon. Keep the generated `android/` directory in version control so
+Android builds are reproducible:
 
 ```bash
 npm run android:add
 npm run android:sync
 ```
+
+The icon source is `public/driver-app-icon.png`. The sync command installs it as
+the Android adaptive, round, and legacy launcher icons. It also appears as the
+Driver page favicon.
 
 Open the Android project in Android Studio with `npm run android:open`, or build
 a debug APK from the app directory:
@@ -68,10 +73,10 @@ cd android
 
 On macOS/Linux use `./gradlew assembleDebug`. The APK is written to
 `android/app/build/outputs/apk/debug/app-debug.apk`. Re-run
-`npm run android:sync` after changing web code.
+`npm run android:sync` after changing web code or the icon.
 
 The Vite build uses relative asset paths so the same output works under the
 nested GitHub Pages route and Capacitor's local WebView. The build checks that
-all bundled local scripts and styles exist before it is synced to Android.
+all bundled local scripts, styles, and the icon exist before syncing to Android.
 
 The production web route is `/hallotruck/driver-mobile/`.
