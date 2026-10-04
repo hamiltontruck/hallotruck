@@ -49,10 +49,7 @@ jobs:
       - name: Typecheck and Driver workflow tests
         run: npm run typecheck && npm test
 
-      - name: Generate the Capacitor Android project
-        run: npm run android:add
-
-      - name: Build and sync Capacitor Android assets
+      - name: Build and sync the checked-in Android project
         run: npm run android:sync
 
       - name: Android unit tests, lint, and debug APK
