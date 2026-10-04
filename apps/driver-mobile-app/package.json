@@ -10,8 +10,9 @@
     "typecheck": "tsc --noEmit --pretty false",
     "test": "node -e \"for(const path of ['.test-dist','.test-dist-active','.test-dist-delivery','.test-dist-wallet','.test-dist-commission','.test-dist-profile','.test-dist-document-upload'])require('fs').rmSync(path,{recursive:true,force:true})\" && tsc -p tsconfig.driver-jobs.json && tsc -p tsconfig.active-trip.json && tsc -p tsconfig.delivery-proof.json && tsc -p tsconfig.driver-wallet.json && tsc -p tsconfig.driver-commission-payment.json && tsc -p tsconfig.driver-profile.json && tsc -p tsconfig.driver-document-upload.json && node --test tests/driver-*.test.mjs",
     "test:ci": "npm run typecheck && npm test && npm run build",
-    "android:add": "cap add android",
-    "android:sync": "npm run build && cap sync android",
+    "android:add": "cap add android && node scripts/apply-android-icons.mjs",
+    "android:sync": "npm run build && cap sync android && node scripts/apply-android-icons.mjs",
+    "android:icons": "node scripts/apply-android-icons.mjs",
     "android:open": "cap open android"
   },
   "dependencies": {
