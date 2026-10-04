@@ -38,7 +38,7 @@ The workflow reuses existing contracts including `get_available_jobs`,
 `driver_save_vehicle_profile`, `driver_finish_trip`, and the existing financial
 summary/payment contracts. No database schema or production data is changed here.
 
-## Commands
+## Web commands
 
 ```bash
 npm install
@@ -48,4 +48,30 @@ npm test
 npm run build
 ```
 
-The production base route is `/hallotruck/driver-mobile/`.
+## Capacitor Android
+
+Create the native Android project once, then keep the generated `android/`
+directory in version control so Android builds are reproducible:
+
+```bash
+npm run android:add
+npm run android:sync
+```
+
+Open the Android project in Android Studio with `npm run android:open`, or build
+a debug APK from the app directory:
+
+```powershell
+cd android
+.\gradlew.bat assembleDebug
+```
+
+On macOS/Linux use `./gradlew assembleDebug`. The APK is written to
+`android/app/build/outputs/apk/debug/app-debug.apk`. Re-run
+`npm run android:sync` after changing web code.
+
+The Vite build uses relative asset paths so the same output works under the
+nested GitHub Pages route and Capacitor's local WebView. The build checks that
+all bundled local scripts and styles exist before it is synced to Android.
+
+The production web route is `/hallotruck/driver-mobile/`.
