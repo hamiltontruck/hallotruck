@@ -1,0 +1,2 @@
+/** Driver V6 Supabase configuration boundary. Never place a service-role key or database password in this frontend. */
+export const DRIVER_V6_AUTH_STORAGE_KEY='hallo-driver-mobile-v6-auth'; export type SupabasePublicConfig={url:string;publishableKey:string}; export function normalizeSupabasePublicConfig(url:string|undefined,publishableKey:string|undefined):SupabasePublicConfig|null{const normalizedUrl=(url??'').trim();const normalizedKey=(publishableKey??'').trim();if(!normalizedUrl||!normalizedKey)return null;return{url:normalizedUrl,publishableKey:normalizedKey}}
