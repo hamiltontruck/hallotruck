@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/verify-capacitor-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit --pretty false",
     "test": "node -e \"for(const path of ['.test-dist','.test-dist-active','.test-dist-delivery','.test-dist-wallet','.test-dist-commission','.test-dist-profile','.test-dist-document-upload'])require('fs').rmSync(path,{recursive:true,force:true})\" && tsc -p tsconfig.driver-jobs.json && tsc -p tsconfig.active-trip.json && tsc -p tsconfig.delivery-proof.json && tsc -p tsconfig.driver-wallet.json && tsc -p tsconfig.driver-commission-payment.json && tsc -p tsconfig.driver-profile.json && tsc -p tsconfig.driver-document-upload.json && node --test tests/driver-*.test.mjs",
