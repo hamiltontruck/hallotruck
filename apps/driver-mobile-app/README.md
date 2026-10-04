@@ -50,9 +50,10 @@ npm run build
 
 ## Capacitor Android
 
-Create the native Android project once; the command also installs the HALLO Driver
-launcher icon. Keep the generated `android/` directory in version control so
-Android builds are reproducible:
+The native project is generated from Capacitor config and dependencies, then
+customized by the same icon/GPS setup script on every machine. Create it with
+`npm run android:add` for a fresh checkout. This installs the HALLO Driver
+launcher icon and requests coarse/fine location permission for the real GPS flow.
 
 ```bash
 npm run android:add
@@ -61,7 +62,8 @@ npm run android:sync
 
 The icon source is `public/driver-app-icon.png`. The sync command installs it as
 the Android adaptive, round, and legacy launcher icons. It also appears as the
-Driver page favicon.
+Driver page favicon. The sync script preserves the native location permissions
+after Capacitor updates.
 
 Open the Android project in Android Studio with `npm run android:open`, or build
 a debug APK from the app directory:

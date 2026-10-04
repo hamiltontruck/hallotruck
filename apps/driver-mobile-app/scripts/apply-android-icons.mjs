@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -19,11 +19,41 @@ if (!manifest.includes("@mipmap/ic_launcher")) {
   throw new Error("AndroidManifest.xml does not reference the standard Capacitor launcher icon.");
 }
 
+const requiredLocationEntries = [
+  {
+    pattern: /<uses-permission\b[^>]*android:name=["']android\.permission\.ACCESS_COARSE_LOCATION["'][^>]*\/>/,
+    xml: '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+  },
+  {
+    pattern: /<uses-permission\b[^>]*android:name=["']android\.permission\.ACCESS_FINE_LOCATION["'][^>]*\/>/,
+    xml: '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+  },
+  {
+    pattern: /<uses-feature\b[^>]*android:name=["']android\.hardware\.location\.gps["'][^>]*\/>/,
+    xml: '<uses-feature android:name="android.hardware.location.gps" android:required="true" />',
+  },
+];
+const missingLocationEntries = requiredLocationEntries
+  .filter(({ pattern }) => !pattern.test(manifest))
+  .map(({ xml }) => `    ${xml}`);
+
+if (missingLocationEntries.length > 0) {
+  const manifestTag = /<manifest\b[^>]*>/;
+  if (!manifestTag.test(manifest)) {
+    throw new Error("AndroidManifest.xml has no opening manifest element.");
+  }
+  const updatedManifest = manifest.replace(manifestTag, (openingTag) =>
+    `${openingTag}\n${missingLocationEntries.join("\n")}`,
+  );
+  await writeFile(manifestPath, updatedManifest, "utf8");
+}
+
 const resources = join(nativeRoot, "res");
 const legacyDir = join(resources, "mipmap-nodpi");
 const foregroundDir = join(resources, "drawable-nodpi");
 const adaptiveDir = join(resources, "mipmap-anydpi-v26");
 const valuesDir = join(resources, "values");
+const standardDensities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"];
 
 await Promise.all([
   mkdir(legacyDir, { recursive: true }),
@@ -36,6 +66,11 @@ await Promise.all([
   copyFile(iconPath, join(legacyDir, "ic_launcher.png")),
   copyFile(iconPath, join(legacyDir, "ic_launcher_round.png")),
   copyFile(iconPath, join(foregroundDir, "driver_app_icon_foreground.png")),
+  ...standardDensities.flatMap((density) =>
+    ["ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"].map((name) =>
+      rm(join(resources, `mipmap-${density}`, name), { force: true }),
+    ),
+  ),
 ]);
 
 await writeFile(
