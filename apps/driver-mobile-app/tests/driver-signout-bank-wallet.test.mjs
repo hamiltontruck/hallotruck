@@ -9,6 +9,8 @@ import {
 const panelSource = readFileSync(new URL("../src/driver/DriverDeliveryProofPanel.tsx", import.meta.url), "utf8");
 const profileSource = readFileSync(new URL("../src/driver/DriverProfileView.tsx", import.meta.url), "utf8");
 const workspaceSource = readFileSync(new URL("../src/DriverWorkspace.tsx", import.meta.url), "utf8");
+const authSource = readFileSync(new URL("../src/auth.tsx", import.meta.url), "utf8");
+const authStyles = readFileSync(new URL("../src/auth/driver-auth.css", import.meta.url), "utf8");
 
 function photo() {
   return new File([new Uint8Array(1024)], "delivery.jpg", { type: "image/jpeg" });
@@ -31,19 +33,22 @@ function draft(overrides = {}) {
   };
 }
 
-test("delivery payment always offers Cash and Bank / Wallet without payment-not-received", () => {
-  assert.deepEqual(allowedDriverPaymentResults("cash"), ["cash_received", "bank_telebirr"]);
-  assert.deepEqual(allowedDriverPaymentResults("bank_telebirr"), ["cash_received", "bank_telebirr"]);
+test("delivery payment offers only the result authorized by the order", () => {
+  assert.deepEqual(allowedDriverPaymentResults("cash"), ["cash_received"]);
+  assert.deepEqual(allowedDriverPaymentResults("bank_telebirr"), ["bank_telebirr"]);
   assert.match(panelSource, /data-driver-payment-choice="cash"/);
   assert.match(panelSource, /data-driver-payment-choice="bank-wallet"/);
   assert.doesNotMatch(panelSource, /payment_not_received/);
 });
 
-test("Cash and Bank / Wallet both require the exact trip amount", () => {
-  for (const paymentResult of ["cash_received", "bank_telebirr"]) {
+test("Cash and Bank / Wallet both require the exact trip amount on matching orders", () => {
+  for (const [paymentResult, selectedPaymentMethod] of [
+    ["cash_received", "cash"],
+    ["bank_telebirr", "bank_telebirr"],
+  ]) {
     const valid = validateDriverDeliveryProofDraft(draft({ paymentResult }), {
       orderStatus: "in_transit",
-      selectedPaymentMethod: "cash",
+      selectedPaymentMethod,
       tripAmountEtb: 10500,
     });
     assert.equal(valid.ok, true);
@@ -51,7 +56,7 @@ test("Cash and Bank / Wallet both require the exact trip amount", () => {
 
     const mismatch = validateDriverDeliveryProofDraft(draft({ paymentResult, amountCollected: "10499" }), {
       orderStatus: "in_transit",
-      selectedPaymentMethod: "cash",
+      selectedPaymentMethod,
       tripAmountEtb: 10500,
     });
     assert.equal(mismatch.ok, false);
@@ -64,4 +69,12 @@ test("Driver Profile exposes a full-width bottom Sign out action wired to Supaba
   assert.match(profileSource, /data-driver-profile-sign-out/);
   assert.match(profileSource, /min-h-12[^\"]*w-full|w-full[^\"]*min-h-12/);
   assert.match(workspaceSource, /<DriverProfileView[\s\S]*onSignOut=\{\(\) => void supabase\.auth\.signOut\(\)\}/);
+  assert.equal((workspaceSource.match(/supabase\.auth\.signOut\(\)/g) ?? []).length, 1);
+});
+
+test("Driver login language control shows full language names with a full touch target", () => {
+  assert.match(authSource, /<option value="en">English<\/option>/);
+  assert.match(authSource, /<option value="om">Afaan Oromoo<\/option>/);
+  assert.match(authSource, /<option value="am">አማርኛ<\/option>/);
+  assert.match(authStyles, /\.driver-auth-top select\{[^}]*min-width:\s*150px[^}]*min-height:\s*48px/);
 });

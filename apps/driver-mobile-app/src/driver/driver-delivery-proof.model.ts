@@ -55,8 +55,7 @@ function normalizedNote(value: string, maxLength: number): string {
 export function allowedDriverPaymentResults(
   method: DriverSelectedPaymentMethod,
 ): DriverTripPaymentResult[] {
-  void method;
-  return ["cash_received", "bank_telebirr"];
+  return method === "cash" ? ["cash_received"] : ["bank_telebirr"];
 }
 
 export function validateDriverDeliveryProofDraft(

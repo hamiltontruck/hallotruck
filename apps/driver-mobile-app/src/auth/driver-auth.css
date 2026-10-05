@@ -3,7 +3,7 @@
 .driver-auth button,.driver-auth input,.driver-auth select{font:inherit}
 .driver-auth button{font-weight:500}
 .driver-auth-top{display:flex;justify-content:flex-end;padding:calc(18px + env(safe-area-inset-top)) 22px 0;min-height:58px}
-.driver-auth-top select{min-width:70px;min-height:44px;padding:8px;border:0;background:transparent;color:#172330;font-size:13px}
+.driver-auth-top select{min-width:150px;min-height:48px;padding:8px 12px;border:1px solid #d6dddc;border-radius:14px;background:#fff;color:#172330;font-size:13px;font-weight:700;box-shadow:0 4px 14px rgb(16 33 61 / 0.08)}
 .driver-auth-content{width:100%;padding:20px 26px 0}
 .driver-auth-brand{text-align:center;color:#172330}
 .driver-auth-brand img{display:block;width:180px;height:60px;object-fit:contain;margin:0 auto}
