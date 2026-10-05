@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/_api/(.*)",
+      "destination": "/api/driver-v6/$1"
+    }
+  ]
+}
