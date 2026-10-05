@@ -1,0 +1,23 @@
+name: Driver V6 build
+on:
+  push:
+    branches: [feat/driver-v6-floot-sync-login]
+    paths:
+      - 'apps/driver-v6/**'
+      - '.github/workflows/driver-v6-build.yml'
+  pull_request:
+    paths:
+      - 'apps/driver-v6/**'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/driver-v6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
