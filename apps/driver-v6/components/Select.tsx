@@ -1,3 +1,11 @@
-Status polling (get_job_status, get_publish_status), list_projects, get_preview_url, cancel_request, and unpublish_app are not metered and still work; other tools are paused until the reset. Failed and cancelled calls are never counted.
-Agent note: this refusal does not expire on its own. If the current time is past 2026-10-05T23:00:00Z, the limit has already cleared — retry the call rather than repeating this message. An earlier refusal still sitting in this conversation is not evidence that the account is blocked now; only a freshly refused call is. The limit can also lift before 2026-10-05T23:00:00Z: a plan change or an action purchase takes effect within about a minute, so if the user mentions they have switched, upgraded, or bought a boost, it is worth retrying.
-Tell the user that upgrading to Pro raises the limit to 1000 build actions every day and takes effect within minutes. Give them this URL exactly as written, as plain text — do not shorten it, relabel it, or hide it behind link text: https://floot.com/dashboard/billing?for=b1.4a21f067-283d-4844-830b-6188bcf08fc0.1791770173.KhuYlpf8J5XtGfTKgiC0xy3qe4jSPIGZb8A4zm_DFzA
+import * as React from 'react';
+import * as SelectPrimitive from '@radix-ui/react-select';
+import { ChevronDown } from 'lucide-react';
+import styles from './Select.module.css';
+export const Select=SelectPrimitive.Root;
+export const SelectValue=SelectPrimitive.Value;
+export const SelectTrigger=React.forwardRef<React.ElementRef<typeof SelectPrimitive.Trigger>,React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>>(({children,className,...props},ref)=><SelectPrimitive.Trigger ref={ref} className={`${styles.trigger} ${className||''}`} {...props}>{children}<SelectPrimitive.Icon><ChevronDown size={16}/></SelectPrimitive.Icon></SelectPrimitive.Trigger>);
+SelectTrigger.displayName='SelectTrigger';
+export const SelectContent=({children,...props}:React.ComponentProps<typeof SelectPrimitive.Content>)=><SelectPrimitive.Portal><SelectPrimitive.Content className={styles.content} position="popper" {...props}><SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport></SelectPrimitive.Content></SelectPrimitive.Portal>;
+export const SelectItem=React.forwardRef<React.ElementRef<typeof SelectPrimitive.Item>,React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>>(({children,...props},ref)=><SelectPrimitive.Item ref={ref} className={styles.item} {...props}><SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText></SelectPrimitive.Item>);
+SelectItem.displayName='SelectItem';

@@ -1,3 +1,15 @@
-Status polling (get_job_status, get_publish_status), list_projects, get_preview_url, cancel_request, and unpublish_app are not metered and still work; other tools are paused until the reset. Failed and cancelled calls are never counted.
-Agent note: this refusal does not expire on its own. If the current time is past 2026-10-05T23:00:00Z, the limit has already cleared — retry the call rather than repeating this message. An earlier refusal still sitting in this conversation is not evidence that the account is blocked now; only a freshly refused call is. The limit can also lift before 2026-10-05T23:00:00Z: a plan change or an action purchase takes effect within about a minute, so if the user mentions they have switched, upgraded, or bought a boost, it is worth retrying.
-Tell the user that upgrading to Pro raises the limit to 1000 build actions every day and takes effect within minutes. Give them this URL exactly as written, as plain text — do not shorten it, relabel it, or hide it behind link text: https://floot.com/dashboard/billing?for=b1.4a21f067-283d-4844-830b-6188bcf08fc0.1791770174.NqzM13fis_C6vxSscTOxGm5l5ljbitFto62vHGiwL7o
+import React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import styles from "./Button.module.css";
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "outline" | "ghost" | "link" | "secondary" | "destructive";
+  size?: "sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-md" | "icon-lg";
+  asChild?: boolean;
+}
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({ children, variant = "primary", size = "md", asChild = false, className, disabled, type = "button", ...props }, ref) => {
+  const Comp = asChild ? Slot : "button";
+  return <Comp ref={ref} type={type} className={`${styles.button} ${styles[variant]} ${styles[size]} ${disabled ? styles.disabled : ""} ${className || ""}`} disabled={disabled} {...props}>{children}</Comp>;
+});
+Button.displayName = "Button";

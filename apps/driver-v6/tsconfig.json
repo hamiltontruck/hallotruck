@@ -29,5 +29,9 @@
     "endpoints",
     "api",
     "vite.config.ts"
+  ],
+  "exclude": [
+    "**/*.spec.tsx",
+    "helpers/supabaseClient.tsx"
   ]
 }

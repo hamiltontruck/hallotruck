@@ -1,3 +1,105 @@
-Status polling (get_job_status, get_publish_status), list_projects, get_preview_url, cancel_request, and unpublish_app are not metered and still work; other tools are paused until the reset. Failed and cancelled calls are never counted.
-Agent note: this refusal does not expire on its own. If the current time is past 2026-10-05T23:00:00Z, the limit has already cleared — retry the call rather than repeating this message. An earlier refusal still sitting in this conversation is not evidence that the account is blocked now; only a freshly refused call is. The limit can also lift before 2026-10-05T23:00:00Z: a plan change or an action purchase takes effect within about a minute, so if the user mentions they have switched, upgraded, or bought a boost, it is worth retrying.
-Tell the user that upgrading to Pro raises the limit to 1000 build actions every day and takes effect within minutes. Give them this URL exactly as written, as plain text — do not shorten it, relabel it, or hide it behind link text: https://floot.com/dashboard/billing?for=b1.4a21f067-283d-4844-830b-6188bcf08fc0.1791770174.NqzM13fis_C6vxSscTOxGm5l5ljbitFto62vHGiwL7o
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --z-overlay: 400;
+  --z-spotlight: 1000;
+  --z-critical: 2000;
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+}
+
+:root {
+  --background: #f5f7fa;
+  --foreground: #10162f;
+  --surface: #edf1f8;
+  --surface-foreground: #10162f;
+  --sidebar: #e8edf7;
+  --sidebar-foreground: #10162f;
+  --card: #fbfcfe;
+  --card-foreground: #10162f;
+  --popup: #fbfcfe;
+  --popup-foreground: #10162f;
+  --primary: #1a237e;
+  --primary-foreground: #f8f9ff;
+  --secondary: #e4e8f4;
+  --secondary-foreground: #1a237e;
+  --accent: #4caf50;
+  --accent-foreground: #071b08;
+  --muted: #e9edf4;
+  --muted-foreground: #626b7f;
+  --success: #4caf50;
+  --success-foreground: #071b08;
+  --error: #c93645;
+  --error-foreground: #fff8f8;
+  --warning: #ffc107;
+  --warning-foreground: #2b2200;
+  --info: #3454d1;
+  --info-foreground: #f8faff;
+  --info-hover: #2947bd;
+  --info-active: #213a9d;
+  --border: #d5dbea;
+  --font-family-base: 'IBM Plex Sans', sans-serif;
+  --font-family-display: 'Bricolage Grotesque', sans-serif;
+  --font-family-monospace: 'IBM Plex Mono', monospace;
+  --font-family-cursive: cursive;
+  --shadow: 0 2px 10px rgb(25 35 80 / 0.06);
+  --shadow-md: 0 8px 24px rgb(25 35 80 / 0.09);
+  --shadow-lg: 0 18px 48px rgb(25 35 80 / 0.12);
+  --shadow-focus: 0 0 0 3px rgb(76 175 80 / 0.24);
+  --radius-sm: 0.5rem;
+  --radius: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.25rem;
+  --radius-full: 999px;
+  --animation-duration-fast: 120ms;
+  --animation-duration-normal: 200ms;
+  --animation-duration-slow: 360ms;
+  --chart-color-1: #1a237e;
+  --chart-color-2: #4caf50;
+  --chart-color-3: #ffc107;
+  --chart-color-4: #3454d1;
+  --chart-color-5: #7a8398;
+}
+.dark {
+  --background: #0c1020;
+  --foreground: #f2f4fb;
+  --surface: #141a2d;
+  --surface-foreground: #f2f4fb;
+  --sidebar: #11172a;
+  --sidebar-foreground: #f2f4fb;
+  --card: #171e32;
+  --card-foreground: #f2f4fb;
+  --popup: #171e32;
+  --popup-foreground: #f2f4fb;
+  --primary: #8793ff;
+  --primary-foreground: #0b1030;
+  --secondary: #252d44;
+  --secondary-foreground: #e7eaff;
+  --accent: #69c96d;
+  --accent-foreground: #071b08;
+  --muted: #20273a;
+  --muted-foreground: #a7afc1;
+  --success: #69c96d;
+  --success-foreground: #071b08;
+  --error: #ff7884;
+  --error-foreground: #2a080c;
+  --warning: #ffd24a;
+  --warning-foreground: #2b2200;
+  --info: #8ba3ff;
+  --info-foreground: #09122f;
+  --info-hover: #9db1ff;
+  --info-active: #708df8;
+  --border: #303950;
+  --chart-color-1: #8793ff;
+  --chart-color-2: #69c96d;
+  --chart-color-3: #ffd24a;
+  --chart-color-4: #8ba3ff;
+  --chart-color-5: #a7afc1;
+}

@@ -1,3 +1,8 @@
-Status polling (get_job_status, get_publish_status), list_projects, get_preview_url, cancel_request, and unpublish_app are not metered and still work; other tools are paused until the reset. Failed and cancelled calls are never counted.
-Agent note: this refusal does not expire on its own. If the current time is past 2026-10-05T23:00:00Z, the limit has already cleared — retry the call rather than repeating this message. An earlier refusal still sitting in this conversation is not evidence that the account is blocked now; only a freshly refused call is. The limit can also lift before 2026-10-05T23:00:00Z: a plan change or an action purchase takes effect within about a minute, so if the user mentions they have switched, upgraded, or bought a boost, it is worth retrying.
-Tell the user that upgrading to Pro raises the limit to 1000 build actions every day and takes effect within minutes. Give them this URL exactly as written, as plain text — do not shorten it, relabel it, or hide it behind link text: https://floot.com/dashboard/billing?for=b1.4a21f067-283d-4844-830b-6188bcf08fc0.1791770175.zNVl9RMtVLbpNEYbZ2D_PZaz_9R4J5GBDV6H_uqFpkw
+export type DriverAccess = 'signed-out' | 'not-approved' | 'approved';
+export type DriverAuthResult = { access: DriverAccess; user?: { id: string; email?: string | null }; profile?: { id: string; role: string | null; driver_status: string | null; is_active: boolean | null } | null; };
+async function readJson(response: Response) { const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data?.error || `Request failed (${response.status})`); return data; }
+export function createDriverApiAdapter(fetcher: typeof fetch = fetch) { return {
+  async login(email: string, password: string): Promise<DriverAuthResult> { return readJson(await fetcher('/_api/driver-v6/auth/login', { method:'POST', headers:{'content-type':'application/json'}, credentials:'include', body:JSON.stringify({email,password}) })); },
+  async session(): Promise<DriverAuthResult> { return readJson(await fetcher('/_api/driver-v6/auth/session', { method:'GET', credentials:'include' })); },
+  async logout(): Promise<{ok:true}> { return readJson(await fetcher('/_api/driver-v6/auth/logout', { method:'POST', credentials:'include' })); },
+}; }
