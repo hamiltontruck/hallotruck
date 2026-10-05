@@ -179,7 +179,8 @@ export function Login() {
   const reset = mode === "reset";
 
   return <main className="driver-auth">
-    <div className="driver-auth-top">
+    <div className="driver-auth-content">
+      <AuthBrand />
       <div className="driver-auth-language" role="group" aria-label={text.language}>
         {([['en', 'EN'], ['om', 'OR'], ['am', 'አማ']] as const).map(([code, label]) => <button
           key={code}
@@ -191,9 +192,6 @@ export function Login() {
           onClick={() => setLanguage(code)}
         >{label}</button>)}
       </div>
-    </div>
-    <div className="driver-auth-content">
-      <AuthBrand />
       <header className={`driver-auth-title ${!signup && !reset ? "driver-auth-title--login" : ""}`}><h1>{signup ? ui.create : reset ? ui.reset : ui.welcome}</h1><p>{signup ? text.taglineSignup : reset ? text.email : ui.subtitle}</p></header>
       {!online && <p className="driver-auth-error" role="alert" aria-live="assertive">{text.offline}</p>}
       <form onSubmit={submit} className="driver-auth-form" noValidate>

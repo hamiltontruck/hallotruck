@@ -80,3 +80,10 @@ test("Driver login language control uses direct compact EN OR and Amharic button
   assert.match(authSource, /aria-pressed=\{language === code\}/);
   assert.match(authStyles, /\.driver-auth-language\{[^}]*display:grid[^}]*grid-template-columns:repeat\(3,1fr\)/);
 });
+
+test("Driver login keeps the compact language control below the unobstructed brand", () => {
+  assert.match(authSource, /<AuthBrand \/>[\s\S]*<div className="driver-auth-language"/);
+  assert.doesNotMatch(authSource, /<div className="driver-auth-top">[\s\S]*driver-auth-language/);
+  assert.match(authStyles, /\.driver-auth-language\{[^}]*width:144px[^}]*margin:16px auto 0/);
+  assert.match(authStyles, /\.driver-auth-content\{[^}]*env\(safe-area-inset-top\)/);
+});

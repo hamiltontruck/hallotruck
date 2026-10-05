@@ -2,12 +2,11 @@
 .driver-auth{display:flex;flex-direction:column;width:100%;max-width:440px;min-height:100svh;margin:auto;padding:0;background:#f7f9f8;color:#172330;font-size:14px}
 .driver-auth button,.driver-auth input,.driver-auth select{font:inherit}
 .driver-auth button{font-weight:500}
-.driver-auth-top{display:flex;justify-content:flex-end;padding:calc(18px + env(safe-area-inset-top)) 22px 0;min-height:66px}
-.driver-auth-language{display:grid;grid-template-columns:repeat(3,1fr);width:156px;min-height:44px;padding:3px;border:1px solid #d6dddc;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgb(16 33 61 / 0.08)}
+.driver-auth-language{display:grid;grid-template-columns:repeat(3,1fr);width:144px;min-height:44px;margin:16px auto 0;padding:3px;border:1px solid #d6dddc;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgb(16 33 61 / 0.08)}
 .driver-auth-language button{min-width:48px;min-height:40px;padding:0;border:0;border-radius:10px;background:transparent;color:#68737d;font-size:12px;font-weight:800}
 .driver-auth-language button[aria-pressed="true"]{background:#09603f;color:#fff;box-shadow:0 2px 7px rgb(9 96 63 / 0.22)}
 .driver-auth-language button:disabled{opacity:.6}
-.driver-auth-content{width:100%;padding:20px 26px 0}
+.driver-auth-content{width:100%;padding:calc(18px + env(safe-area-inset-top)) 26px 0}
 .driver-auth-brand{text-align:center;color:#172330}
 .driver-auth-brand img{display:block;width:180px;height:60px;object-fit:contain;margin:0 auto}
 .driver-auth-brand p{margin:-7px 0 0;font-size:16px;line-height:1.5}
@@ -47,6 +46,6 @@
 .driver-welcome-bottom small{font-size:11px}
 .driver-welcome-bottom small span{margin:0 8px}
 .driver-welcome-bottom button{min-height:44px;min-width:132px;border:1px solid #ffffff90;border-radius:24px;background:#0b6045;color:#fff;font-size:14px;padding:10px 24px}
-@media(min-height:850px){.driver-auth-content{padding-top:35px}.driver-auth-title{margin-top:30px;margin-bottom:28px}.driver-auth-form{gap:16px}.driver-welcome{padding-top:19svh}}
+@media(min-height:850px){.driver-auth-content{padding-top:calc(28px + env(safe-area-inset-top))}.driver-auth-title{margin-top:30px;margin-bottom:28px}.driver-auth-form{gap:16px}.driver-welcome{padding-top:19svh}}
 @media(max-width:360px){.driver-auth-content{padding-left:22px;padding-right:22px}.driver-auth-title h1{font-size:22px}.driver-welcome{padding-top:100px}.driver-welcome .driver-auth-brand img{width:225px;height:75px}}
 @media(max-height:600px){.driver-auth-content{padding-top:4px}.driver-auth-title{margin:16px 0}.driver-auth-footer{padding-top:12px}.driver-auth-footer>img{max-height:80px}.driver-welcome{min-height:600px}}
