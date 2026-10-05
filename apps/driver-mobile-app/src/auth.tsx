@@ -179,7 +179,19 @@ export function Login() {
   const reset = mode === "reset";
 
   return <main className="driver-auth">
-    <div className="driver-auth-top"><label><span className="driver-sr-only">{text.language}</span><select aria-label={text.language} value={language} onChange={(event) => setLanguage(event.target.value as Language)} disabled={busy}><option value="en">English</option><option value="om">Afaan Oromoo</option><option value="am">አማርኛ</option></select></label></div>
+    <div className="driver-auth-top">
+      <div className="driver-auth-language" role="group" aria-label={text.language}>
+        {([['en', 'EN'], ['om', 'OR'], ['am', 'አማ']] as const).map(([code, label]) => <button
+          key={code}
+          type="button"
+          data-driver-auth-language={code}
+          aria-label={LANGUAGE_LABELS[code]}
+          aria-pressed={language === code}
+          disabled={busy}
+          onClick={() => setLanguage(code)}
+        >{label}</button>)}
+      </div>
+    </div>
     <div className="driver-auth-content">
       <AuthBrand />
       <header className={`driver-auth-title ${!signup && !reset ? "driver-auth-title--login" : ""}`}><h1>{signup ? ui.create : reset ? ui.reset : ui.welcome}</h1><p>{signup ? text.taglineSignup : reset ? text.email : ui.subtitle}</p></header>

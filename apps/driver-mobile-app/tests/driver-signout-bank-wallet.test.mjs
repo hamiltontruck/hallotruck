@@ -72,9 +72,11 @@ test("Driver Profile exposes a full-width bottom Sign out action wired to Supaba
   assert.equal((workspaceSource.match(/supabase\.auth\.signOut\(\)/g) ?? []).length, 1);
 });
 
-test("Driver login language control shows full language names with a full touch target", () => {
-  assert.match(authSource, /<option value="en">English<\/option>/);
-  assert.match(authSource, /<option value="om">Afaan Oromoo<\/option>/);
-  assert.match(authSource, /<option value="am">አማርኛ<\/option>/);
-  assert.match(authStyles, /\.driver-auth-top select\{[^}]*min-width:\s*150px[^}]*min-height:\s*48px/);
+test("Driver login language control uses direct compact EN OR and Amharic buttons", () => {
+  assert.doesNotMatch(authSource, /<select[^>]*aria-label=\{text\.language\}/);
+  assert.match(authSource, /\[\['en', 'EN'\], \['om', 'OR'\], \['am', 'አማ'\]\]/);
+  assert.match(authSource, /data-driver-auth-language=\{code\}/);
+  assert.match(authSource, /onClick=\{\(\) => setLanguage\(code\)\}/);
+  assert.match(authSource, /aria-pressed=\{language === code\}/);
+  assert.match(authStyles, /\.driver-auth-language\{[^}]*display:grid[^}]*grid-template-columns:repeat\(3,1fr\)/);
 });

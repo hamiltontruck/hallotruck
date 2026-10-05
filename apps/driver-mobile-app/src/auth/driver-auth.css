@@ -2,8 +2,11 @@
 .driver-auth{display:flex;flex-direction:column;width:100%;max-width:440px;min-height:100svh;margin:auto;padding:0;background:#f7f9f8;color:#172330;font-size:14px}
 .driver-auth button,.driver-auth input,.driver-auth select{font:inherit}
 .driver-auth button{font-weight:500}
-.driver-auth-top{display:flex;justify-content:flex-end;padding:calc(18px + env(safe-area-inset-top)) 22px 0;min-height:58px}
-.driver-auth-top select{min-width:150px;min-height:48px;padding:8px 12px;border:1px solid #d6dddc;border-radius:14px;background:#fff;color:#172330;font-size:13px;font-weight:700;box-shadow:0 4px 14px rgb(16 33 61 / 0.08)}
+.driver-auth-top{display:flex;justify-content:flex-end;padding:calc(18px + env(safe-area-inset-top)) 22px 0;min-height:66px}
+.driver-auth-language{display:grid;grid-template-columns:repeat(3,1fr);width:156px;min-height:44px;padding:3px;border:1px solid #d6dddc;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgb(16 33 61 / 0.08)}
+.driver-auth-language button{min-width:48px;min-height:40px;padding:0;border:0;border-radius:10px;background:transparent;color:#68737d;font-size:12px;font-weight:800}
+.driver-auth-language button[aria-pressed="true"]{background:#09603f;color:#fff;box-shadow:0 2px 7px rgb(9 96 63 / 0.22)}
+.driver-auth-language button:disabled{opacity:.6}
 .driver-auth-content{width:100%;padding:20px 26px 0}
 .driver-auth-brand{text-align:center;color:#172330}
 .driver-auth-brand img{display:block;width:180px;height:60px;object-fit:contain;margin:0 auto}
