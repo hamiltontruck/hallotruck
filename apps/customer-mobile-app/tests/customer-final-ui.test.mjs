@@ -48,6 +48,13 @@ test("booking is a real Route Truck Cargo Quote Review Success state machine", (
   assert.match(booking, /disabled=\{!truckReady\}/);
 });
 
+test("home booking hero uses the bundled vehicle image instead of an emoji-only placeholder", () => {
+  assert.match(home, /customer-final-book-truck/);
+  assert.match(home, /<img src=\{truckImage\}/);
+  assert.doesNotMatch(home, /<ActionIcon>🚚<\/ActionIcon>/);
+  assert.match(css, /\.customer-final-book-truck img/);
+});
+
 test("home and order details are wired to real Customer-owned data services", () => {
   assert.match(home, /loadCustomerMobileData\(userId\)/);
   assert.match(details, /loadCustomerMobileData\(userId\)/);
