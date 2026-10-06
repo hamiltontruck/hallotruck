@@ -4,8 +4,8 @@ import test from "node:test";
 
 const viteConfig = readFileSync(new URL("../vite.config.ts", import.meta.url), "utf8");
 
-test("Customer Vite build isolates itself from the repository root PostCSS config", () => {
-  assert.match(viteConfig, /fileURLToPath/);
+test("Customer Vite build uses an inline empty PostCSS pipeline instead of the repository root config", () => {
   assert.match(viteConfig, /css\s*:\s*\{/);
-  assert.match(viteConfig, /postcss\s*:\s*fileURLToPath\(new URL\("\.\/", import\.meta\.url\)\)/);
+  assert.match(viteConfig, /postcss\s*:\s*\{\s*plugins\s*:\s*\[\s*\]\s*,?\s*\}/s);
+  assert.doesNotMatch(viteConfig, /postcss\s*:\s*fileURLToPath/);
 });
