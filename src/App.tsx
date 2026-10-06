@@ -32,6 +32,7 @@ import { AdminPartnerOrderReview } from "./pages/AdminPartnerOrderReview";
 import { AdminMore } from "./pages/AdminMore";
 import { PartnerDispatch } from "./pages/PartnerDispatch";
 import { PartnerOperationsHub } from "./pages/PartnerOperationsHub";
+import { PartnerLiveOperations } from "./pages/PartnerLiveOperations";
 import { PartnerWallet } from "./pages/PartnerWallet";
 import { PartnerOrders } from "./pages/PartnerOrders";
 import { PartnerOrderNew } from "./pages/PartnerOrderNew";
@@ -142,6 +143,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/partner/login" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
 <Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
 <Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
+<Route path="/partner/live" element={<PartnerGate><PartnerLiveOperations /></PartnerGate>} />
 <Route path="/partner/wallet" element={<PartnerGate><PartnerWallet /></PartnerGate>} />
 <Route path="/partner/orders" element={<PartnerGate><PartnerOrders /></PartnerGate>} />
 <Route path="/partner/orders/new" element={<PartnerGate><PartnerOrderNew /></PartnerGate>} />
