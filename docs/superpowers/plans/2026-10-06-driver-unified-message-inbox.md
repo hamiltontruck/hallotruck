@@ -8,6 +8,8 @@
 
 **Tech Stack:** React, TypeScript, Vite, Supabase JS, Capacitor Android, Node test runner, Playwright/browser smoke tests, Android device smoke tests.
 
+**Spec:** `docs/superpowers/specs/2026-10-06-hallo-shipper-capacitor-messaging-design.md`
+
 ---
 
 ## Global constraints
