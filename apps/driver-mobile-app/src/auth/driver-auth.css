@@ -2,12 +2,14 @@
 .driver-auth{display:flex;flex-direction:column;width:100%;max-width:440px;min-height:100svh;margin:auto;padding:0;background:#f7f9f8;color:#172330;font-size:14px}
 .driver-auth button,.driver-auth input,.driver-auth select{font:inherit}
 .driver-auth button{font-weight:500}
-.driver-auth-language{display:grid;grid-template-columns:repeat(3,1fr);width:144px;min-height:44px;margin:16px auto 0;padding:3px;border:1px solid #d6dddc;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgb(16 33 61 / 0.08)}
-.driver-auth-language button{min-width:48px;min-height:40px;padding:0;border:0;border-radius:10px;background:transparent;color:#68737d;font-size:12px;font-weight:800}
+.driver-auth-header{position:relative;min-height:118px}
+.driver-auth-language{position:absolute;top:0;right:0;display:grid;grid-template-columns:repeat(3,1fr);width:132px;min-height:40px;margin:0;padding:3px;border:1px solid #d6dddc;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgb(16 33 61 / 0.08)}
+.driver-auth-language button{min-width:42px;min-height:34px;padding:0;border:0;border-radius:10px;background:transparent;color:#68737d;font-size:11px;font-weight:800}
 .driver-auth-language button[aria-pressed="true"]{background:#09603f;color:#fff;box-shadow:0 2px 7px rgb(9 96 63 / 0.22)}
 .driver-auth-language button:disabled{opacity:.6}
 .driver-auth-content{width:100%;padding:calc(18px + env(safe-area-inset-top)) 26px 0}
 .driver-auth-brand{text-align:center;color:#172330}
+.driver-auth-header .driver-auth-brand{padding-top:46px}
 .driver-auth-brand img{display:block;width:180px;height:60px;object-fit:contain;margin:0 auto}
 .driver-auth-brand p{margin:-7px 0 0;font-size:16px;line-height:1.5}
 .driver-auth-title{margin:25px 0 24px;text-align:center}

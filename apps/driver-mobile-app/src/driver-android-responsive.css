@@ -62,16 +62,16 @@ body {
   padding-left: max(0px, env(safe-area-inset-left));
 }
 
-.driver-auth:focus-within .driver-auth-footer {
+.driver-auth:has(input:focus) .driver-auth-footer {
   display: none;
 }
 
-.driver-auth:focus-within .driver-auth-content {
+.driver-auth:has(input:focus) .driver-auth-content {
   padding-top: 4px;
   padding-bottom: max(18px, env(safe-area-inset-bottom));
 }
 
-.driver-auth:focus-within .driver-auth-title {
+.driver-auth:has(input:focus) .driver-auth-title {
   margin-top: 14px;
   margin-bottom: 16px;
 }

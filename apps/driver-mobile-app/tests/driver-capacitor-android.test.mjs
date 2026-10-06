@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +8,11 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+test("Driver launcher uses the approved HALLO Driver artwork", () => {
+  const icon = readFileSync(path.join(appRoot, "public/driver-app-icon.png"));
+  assert.equal(createHash("sha256").update(icon).digest("hex"), "ec48f92190a5d1ed085c8c1462654aa91789e20c23cf99d90b9975d9ff61f08b");
+});
 
 test("Android icon setup declares real foreground/background location access idempotently", () => {
   const tempRoot = mkdtempSync(path.join(os.tmpdir(), "hallo-driver-android-"));

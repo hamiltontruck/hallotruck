@@ -11,6 +11,7 @@ const profileSource = readFileSync(new URL("../src/driver/DriverProfileView.tsx"
 const workspaceSource = readFileSync(new URL("../src/DriverWorkspace.tsx", import.meta.url), "utf8");
 const authSource = readFileSync(new URL("../src/auth.tsx", import.meta.url), "utf8");
 const authStyles = readFileSync(new URL("../src/auth/driver-auth.css", import.meta.url), "utf8");
+const androidResponsiveStyles = readFileSync(new URL("../src/driver-android-responsive.css", import.meta.url), "utf8");
 
 function photo() {
   return new File([new Uint8Array(1024)], "delivery.jpg", { type: "image/jpeg" });
@@ -81,9 +82,12 @@ test("Driver login language control uses direct compact EN OR and Amharic button
   assert.match(authStyles, /\.driver-auth-language\{[^}]*display:grid[^}]*grid-template-columns:repeat\(3,1fr\)/);
 });
 
-test("Driver login keeps the compact language control below the unobstructed brand", () => {
-  assert.match(authSource, /<AuthBrand \/>[\s\S]*<div className="driver-auth-language"/);
-  assert.doesNotMatch(authSource, /<div className="driver-auth-top">[\s\S]*driver-auth-language/);
-  assert.match(authStyles, /\.driver-auth-language\{[^}]*width:144px[^}]*margin:16px auto 0/);
+test("Driver login pins the compact language control above the unobstructed brand", () => {
+  assert.match(authSource, /<div className="driver-auth-header">[\s\S]*<div className="driver-auth-language"[\s\S]*<AuthBrand \/>[\s\S]*<\/div>/);
+  assert.match(authStyles, /\.driver-auth-header\{[^}]*position:relative[^}]*min-height:118px/);
+  assert.match(authStyles, /\.driver-auth-language\{[^}]*position:absolute[^}]*top:0[^}]*right:0[^}]*width:132px/);
+  assert.match(authStyles, /\.driver-auth-header \.driver-auth-brand\{[^}]*padding-top:46px/);
   assert.match(authStyles, /\.driver-auth-content\{[^}]*env\(safe-area-inset-top\)/);
+  assert.doesNotMatch(androidResponsiveStyles, /\.driver-auth:focus-within/);
+  assert.match(androidResponsiveStyles, /\.driver-auth:has\(input:focus\) \.driver-auth-content/);
 });
