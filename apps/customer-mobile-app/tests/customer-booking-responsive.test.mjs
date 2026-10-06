@@ -13,7 +13,23 @@ test("Customer Mobile uses the full shared vehicle catalog and repo-hosted publi
   }
   assert.match(catalog, /vehicleCapacityTons\[label\.toLowerCase\(\)\]/);
   assert.match(catalog, /getVehiclePresentation\(label\)/);
-  assert.match(catalog, /\.\.\/vehicles\/\$\{filename\}/);
+  for (const filename of [
+    "pickup-3-ton.webp",
+    "cargo-van-5-ton.webp",
+    "cab-over-box-truck-5-ton.webp",
+    "dry-cargo-truck-10-ton.webp",
+    "refrigerated-truck-15-ton.webp",
+    "cargo-truck-22-ton.webp",
+    "cargo-truck-25-ton.webp",
+    "cargo-truck-30-ton.webp",
+    "semi-trailer-45-ton.webp",
+  ]) {
+    assert.ok(
+      catalog.includes(`new URL("../../../public/vehicles/${filename}", import.meta.url).href`),
+      `${filename} must be bundled into the standalone Shipper build`,
+    );
+  }
+  assert.doesNotMatch(catalog, /\.\.\/vehicles\/\$\{filename\}/);
   assert.doesNotMatch(catalog, /https?:\/\//);
 });
 
