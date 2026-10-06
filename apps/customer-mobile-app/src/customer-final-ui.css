@@ -42,6 +42,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .customer-final-book-hero small{color:#62718d;font-size:12px}
 .customer-final-book-hero>b{display:grid;width:42px;height:42px;place-items:center;border-radius:12px;background:var(--customer-final-blue);color:#fff;font-size:24px}
 .customer-final-action-icon{display:grid;width:44px;height:44px;place-items:center;border-radius:13px;background:#e7f1ff;color:var(--customer-final-blue);font-size:20px;font-weight:900}
+.customer-final-book-truck{overflow:hidden;padding:4px}
+.customer-final-book-truck img{display:block;width:100%;height:100%;object-fit:contain}
 .customer-final-quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
 .customer-final-quick-grid button{
   min-width:0;min-height:92px;display:grid;place-items:center;align-content:center;gap:7px;border:1px solid #e6edf7;border-radius:17px;background:#f8fbff;
