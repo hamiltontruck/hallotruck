@@ -48,7 +48,12 @@ The existing native Kotlin project under `mobile/customer/android/` is not modif
 - Customer messages are available only for Customer-owned orders assigned to the signed-in Driver.
 - Operations messages may attach an eligible Driver order as context.
 - Customer messages always inherit their thread's order context and cannot be moved to another order.
-- Show unread badges, loading/empty/error/retry states, chronological messages, sent/seen state where the authoritative contract provides it, and an IME-safe composer.
+- Make the two channels unmistakable without relying on color alone:
+  - **Operations** uses the HALLO Operations name, verified shield/headset icon, navy/gold treatment, and its own unread badge.
+  - **Customers** uses the Customer name/avatar fallback, order/truck icon, tracking ID, route/status context, and its own unread badge.
+  - The composer always shows a persistent recipient bar: **To HALLO Operations** or **To {Customer} · {Tracking ID}**.
+  - Switching tabs clears the draft or asks before discarding non-empty text so a message cannot be sent to the wrong recipient.
+- Show loading/empty/error/retry states, chronological messages, sent/seen state where the authoritative contract provides it, and an IME-safe composer.
 - Replace the oversized platform order picker shown in the supplied screenshot with a compact in-app order-context sheet/list.
 - Keep message bodies limited to 4,000 characters and retain server-generated authorization as the source of truth.
 
@@ -110,7 +115,7 @@ Every client action revalidates the authenticated user against the expected Cust
 
 ### Driver application
 
-- `DriverMessageInbox`: shared dialog shell, inbox tabs, unread total, focus management, responsive layout.
+- `DriverMessageInbox`: shared dialog shell, visually distinct Operations/Customers tabs, separate unread badges, explicit recipient bar, focus management, responsive layout.
 - Operations conversation adapter: wraps the existing Operations chat service.
 - Customer conversation adapter: loads assigned order threads and uses the existing Customer ↔ Driver contract.
 - Order-context sheet: compact eligible-order selection for Operations messages.
@@ -161,7 +166,8 @@ The two adapters expose a small common view model to the inbox but retain separa
 ## 7. Accessibility
 
 - Dialogs use a labelled modal structure and restore focus to the launcher on close.
-- Tabs expose selected state.
+- Tabs expose selected state, text labels, icons, and separate unread counts; channel identity never depends on color alone.
+- The active recipient and order are announced before the composer.
 - Message list announces new messages without repeatedly reading the full history.
 - Error text uses alert semantics.
 - Status is never communicated by color alone.
@@ -178,7 +184,7 @@ Implementation follows red-green-refactor TDD.
 - Customer Capacitor configuration and local-asset verification.
 - Customer role/session fail-closed behavior.
 - Customer ↔ Driver order ownership and assignment gates.
-- Driver unified inbox adapter separation.
+- Driver unified inbox adapter separation, channel identity, recipient bar, per-tab unread badges, and wrong-recipient draft protection.
 - Operations order-context eligibility.
 - Message validation, read state, Realtime cleanup, and retry behavior.
 - Localized service-date formatting, including invalid/missing dates.
