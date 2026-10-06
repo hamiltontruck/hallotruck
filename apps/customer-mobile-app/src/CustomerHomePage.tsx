@@ -72,7 +72,7 @@ export function CustomerHomePage({
       </header>
 
       <button className="customer-final-book-hero" type="button" onClick={onBook}>
-        <ActionIcon>🚚</ActionIcon>
+        <span className="customer-final-action-icon customer-final-book-truck" aria-hidden="true"><img src={truckImage} alt="" /></span>
         <span><strong>{c.bookTruck}</strong><small>{c.instantQuote}</small></span>
         <b aria-hidden="true">→</b>
       </button>
