@@ -6,7 +6,7 @@ export type CustomerTruckOption = {
   key: CustomerTruckKey;
   label: string;
   capacityTons: number;
-  image: string | null;
+  image: string;
   imageAlt: string;
 };
 
