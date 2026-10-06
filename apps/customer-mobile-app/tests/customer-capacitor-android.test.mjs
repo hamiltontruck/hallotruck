@@ -8,6 +8,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(appRoot, "../..");
 
 test("HALLO Shipper launcher artwork is the approved 512px RGB safe-zone image", () => {
   const icon = readFileSync(path.join(appRoot, "public/hallo-shipper-icon.png"));
@@ -136,4 +137,18 @@ test("Capacitor verifier rejects missing and placeholder Supabase configuration,
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
+});
+
+test("HALLO Shipper Android CI builds the checked-in project and uploads the debug APK", () => {
+  const workflow = readFileSync(path.join(repoRoot, ".github/workflows/shipper-capacitor-android.yml"), "utf8");
+  assert.match(workflow, /apps\/customer-mobile-app\/\*\*/);
+  assert.match(workflow, /node-version:\s*22/);
+  assert.match(workflow, /java-version:\s*["']21["']/);
+  assert.match(workflow, /run:\s*npm ci/);
+  assert.match(workflow, /run:\s*npm run test:ci/);
+  assert.match(workflow, /run:\s*npm run android:sync/);
+  assert.match(workflow, /\.\/gradlew testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace/);
+  assert.match(workflow, /name:\s*hallo-shipper-capacitor-debug/);
+  assert.match(workflow, /apps\/customer-mobile-app\/android\/app\/build\/outputs\/apk\/debug\/app-debug\.apk/);
+  assert.match(workflow, /retention-days:\s*14/);
 });
