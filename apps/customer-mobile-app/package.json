@@ -5,13 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/verify-capacitor-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit --pretty false",
     "test": "node -e \"require('fs').rmSync('.test-dist',{recursive:true,force:true})\" && tsc -p tsconfig.policy.json && node --test tests/*.test.mjs",
-    "test:ci": "npm run typecheck && npm test && npm run build"
+    "test:ci": "npm run typecheck && npm test && npm run build",
+    "android:add": "cap add android",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor/core": "7.4.3",
     "@supabase/supabase-js": "^2.45.0",
     "lucide-react": "^1.47.0",
     "maplibre-gl": "^4.5.0",
@@ -19,6 +23,8 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@capacitor/android": "7.4.3",
+    "@capacitor/cli": "7.4.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.1.0",
