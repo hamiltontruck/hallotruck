@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-test("Driver launcher uses the approved HALLO Driver artwork", () => {
+test("Driver launcher uses the circular-safe HALLO Driver artwork", () => {
   const icon = readFileSync(path.join(appRoot, "public/driver-app-icon.png"));
-  assert.equal(createHash("sha256").update(icon).digest("hex"), "ec48f92190a5d1ed085c8c1462654aa91789e20c23cf99d90b9975d9ff61f08b");
+  assert.equal(createHash("sha256").update(icon).digest("hex"), "99e053054bd85f88fb5c76a484e0d9c207d02cdce3cc40fce06d33a12daed736");
 });
 
 test("Android icon setup declares real foreground/background location access idempotently", () => {
