@@ -31,8 +31,9 @@ test("HALLO Shipper exposes the exact Capacitor Android contract", () => {
   assert.equal(packageJson.dependencies["@capacitor/core"], "7.4.3");
   assert.equal(packageJson.devDependencies["@capacitor/android"], "7.4.3");
   assert.equal(packageJson.devDependencies["@capacitor/cli"], "7.4.3");
-  assert.equal(packageJson.scripts["android:add"], "cap add android");
-  assert.equal(packageJson.scripts["android:sync"], "npm run build && cap sync android");
+  assert.equal(packageJson.scripts["android:add"], "cap add android && node scripts/apply-android-icons.mjs");
+  assert.equal(packageJson.scripts["android:sync"], "npm run build && cap sync android && node scripts/apply-android-icons.mjs");
+  assert.equal(packageJson.scripts["android:icons"], "node scripts/apply-android-icons.mjs");
   assert.equal(packageJson.scripts["android:open"], "cap open android");
   assert.match(packageJson.scripts.build, /verify-capacitor-build\.mjs/);
 
