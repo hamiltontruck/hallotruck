@@ -41,6 +41,7 @@ test('Android viewport sync and responsive breakpoints protect the Driver app', 
   assert.match(css, /min-width:\s*340px/);
   assert.match(css, /min-width:\s*390px/);
   assert.match(css, /min-width:\s*412px/);
-  assert.match(css, /focus-within\s+\.driver-auth-footer/);
+  assert.match(css, /:has\(input:focus\)\s+\.driver-auth-footer/);
+  assert.doesNotMatch(css, /\.driver-auth:focus-within/);
   assert.match(css, /safe-area-inset-bottom/);
 });

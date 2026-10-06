@@ -165,15 +165,6 @@ export function DriverWorkspace({ userId }: { userId: string }) {
         >
           ◆
         </button>
-        <button
-          type="button"
-          onClick={() => void supabase.auth.signOut()}
-          className="grid h-10 w-10 place-items-center rounded-xl border border-halo-line bg-white text-sm font-black text-halo-navy"
-          aria-label={t.shell.signOut}
-          title={t.shell.signOut}
-        >
-          ↪
-        </button>
       </div>
     </header>
 

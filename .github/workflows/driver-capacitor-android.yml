@@ -1,0 +1,65 @@
+name: Driver V4 Capacitor Android
+
+on:
+  pull_request:
+    paths:
+      - "apps/driver-mobile-app/**"
+      - ".github/workflows/driver-capacitor-android.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/driver-mobile-app/**"
+      - ".github/workflows/driver-capacitor-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  VITE_SUPABASE_URL: https://example.supabase.co
+  VITE_SUPABASE_ANON_KEY: ci-anon-key
+
+jobs:
+  driver-capacitor-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/driver-mobile-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/driver-mobile-app/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck and Driver workflow tests
+        run: npm run typecheck && npm test
+
+      - name: Build and sync the checked-in Android project
+        run: npm run android:sync
+
+      - name: Android unit tests, lint, and debug APK
+        working-directory: apps/driver-mobile-app/android
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace
+
+      - name: Upload Driver debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hallo-driver-v4-capacitor-debug
+          path: apps/driver-mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

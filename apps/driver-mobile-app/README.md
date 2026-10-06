@@ -38,7 +38,7 @@ The workflow reuses existing contracts including `get_available_jobs`,
 `driver_save_vehicle_profile`, `driver_finish_trip`, and the existing financial
 summary/payment contracts. No database schema or production data is changed here.
 
-## Commands
+## Web commands
 
 ```bash
 npm install
@@ -48,4 +48,38 @@ npm test
 npm run build
 ```
 
-The production base route is `/hallotruck/driver-mobile/`.
+## Capacitor Android
+
+The Capacitor Android project is checked in at `android/` so local and CI builds
+use the same native configuration. The sync command installs the HALLO Driver
+launcher icon and preserves coarse/fine location permissions required by GPS.
+
+```bash
+npm run android:sync
+```
+
+If you intentionally regenerate the native project, run `npm run android:add`
+before syncing, then review and commit the generated Android changes.
+
+The icon source is `public/driver-app-icon.png`. The sync command installs it as
+the Android adaptive, round, and legacy launcher icons. It also appears as the
+Driver page favicon. The sync script preserves the native location permissions
+after Capacitor updates.
+
+Open the Android project in Android Studio with `npm run android:open`, or build
+a debug APK from the app directory:
+
+```powershell
+cd android
+.\gradlew.bat assembleDebug
+```
+
+On macOS/Linux use `./gradlew assembleDebug`. The APK is written to
+`android/app/build/outputs/apk/debug/app-debug.apk`. Re-run
+`npm run android:sync` after changing web code or the icon.
+
+The Vite build uses relative asset paths so the same output works under the
+nested GitHub Pages route and Capacitor's local WebView. The build checks that
+all bundled local scripts, styles, and the icon exist before syncing to Android.
+
+The production web route is `/hallotruck/driver-mobile/`.

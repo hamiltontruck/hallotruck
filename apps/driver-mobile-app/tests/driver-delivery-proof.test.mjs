@@ -34,10 +34,9 @@ function draft(overrides = {}) {
   };
 }
 
-test("payment options allow cash or bank wallet at delivery", () => {
-  const expected = ["cash_received", "bank_telebirr"];
-  assert.deepEqual(allowedDriverPaymentResults("cash"), expected);
-  assert.deepEqual(allowedDriverPaymentResults("bank_telebirr"), expected);
+test("payment options follow the customer-selected method", () => {
+  assert.deepEqual(allowedDriverPaymentResults("cash"), ["cash_received"]);
+  assert.deepEqual(allowedDriverPaymentResults("bank_telebirr"), ["bank_telebirr"]);
 });
 
 test("cash completion requires the exact trip amount", () => {
@@ -92,7 +91,7 @@ test("delivery proof rejects wrong lifecycle, method, files and receiver", () =>
     selectedPaymentMethod: "cash",
     tripAmountEtb: 12000,
   });
-  assert.equal(alternatePayment.ok, true);
+  assert.equal(alternatePayment.ok, false);
 
   const tooLarge = validateDriverDeliveryProofDraft(draft({ photo: photo(MAX_DELIVERY_PHOTO_BYTES + 1) }), {
     orderStatus: "in_transit",
