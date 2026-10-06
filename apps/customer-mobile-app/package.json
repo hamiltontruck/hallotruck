@@ -10,8 +10,9 @@
     "typecheck": "tsc --noEmit --pretty false",
     "test": "node -e \"require('fs').rmSync('.test-dist',{recursive:true,force:true})\" && tsc -p tsconfig.policy.json && node --test tests/*.test.mjs",
     "test:ci": "npm run typecheck && npm test && npm run build",
-    "android:add": "cap add android",
-    "android:sync": "npm run build && cap sync android",
+    "android:add": "cap add android && node scripts/apply-android-icons.mjs",
+    "android:sync": "npm run build && cap sync android && node scripts/apply-android-icons.mjs",
+    "android:icons": "node scripts/apply-android-icons.mjs",
     "android:open": "cap open android"
   },
   "dependencies": {
