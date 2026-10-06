@@ -60,14 +60,17 @@ const CUSTOMER_TRUCK_LABELS: Record<CustomerLanguage, Record<CustomerTruckKey, s
   },
 };
 
-function customerMobileVehicleImage(sharedImage: string | undefined) {
-  if (!sharedImage) return null;
-  const filename = sharedImage.split("/").pop();
-  if (!filename) return null;
-  // Customer Mobile is deployed at /customer-mobile/ while the repository's
-  // canonical public vehicle assets remain one level up at /vehicles/.
-  return `${import.meta.env.BASE_URL}../vehicles/${filename}`;
-}
+const CUSTOMER_VEHICLE_IMAGES: Record<CustomerTruckKey, string> = {
+  pickup: new URL("../../../public/vehicles/pickup-3-ton.webp", import.meta.url).href,
+  van: new URL("../../../public/vehicles/cargo-van-5-ton.webp", import.meta.url).href,
+  "isuzu-5-ton": new URL("../../../public/vehicles/cab-over-box-truck-5-ton.webp", import.meta.url).href,
+  "dry-cargo": new URL("../../../public/vehicles/dry-cargo-truck-10-ton.webp", import.meta.url).href,
+  refrigerated: new URL("../../../public/vehicles/refrigerated-truck-15-ton.webp", import.meta.url).href,
+  "truck-22-ton": new URL("../../../public/vehicles/cargo-truck-22-ton.webp", import.meta.url).href,
+  "truck-25-ton": new URL("../../../public/vehicles/cargo-truck-25-ton.webp", import.meta.url).href,
+  "truck-30-ton": new URL("../../../public/vehicles/cargo-truck-30-ton.webp", import.meta.url).href,
+  trailer: new URL("../../../public/vehicles/semi-trailer-45-ton.webp", import.meta.url).href,
+};
 
 export const CUSTOMER_TRUCKS: readonly CustomerTruckOption[] = VEHICLE_LABELS.map(([key, label]) => {
   const capacityTons = vehicleCapacityTons[label.toLowerCase()] ?? 0;
@@ -76,7 +79,7 @@ export const CUSTOMER_TRUCKS: readonly CustomerTruckOption[] = VEHICLE_LABELS.ma
     key,
     label,
     capacityTons,
-    image: customerMobileVehicleImage(presentation?.image),
+    image: CUSTOMER_VEHICLE_IMAGES[key],
     imageAlt: presentation?.alt ?? `${label} cargo vehicle`,
   };
 });
