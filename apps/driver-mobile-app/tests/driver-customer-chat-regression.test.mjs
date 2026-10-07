@@ -21,4 +21,8 @@ test("Driver active trip exposes customer chat with the authoritative order id",
   assert.match(activeTrip, /DriverCustomerChatLauncher/);
   assert.match(activeTrip, /orderId=\{trip\.id\}/);
   assert.match(activeTrip, /trackingId=\{trip\.trackingId\}/);
+  const launcherIndex = activeTrip.indexOf("<DriverCustomerChatLauncher");
+  const hiddenExpandedIndex = activeTrip.indexOf("<div hidden={!sheetExpanded}>");
+  assert.ok(launcherIndex >= 0 && hiddenExpandedIndex >= 0 && launcherIndex < hiddenExpandedIndex,
+    "Customer chat launcher must stay visible while the trip sheet is collapsed.");
 });
