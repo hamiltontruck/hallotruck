@@ -155,6 +155,7 @@ export function DriverWorkspace({ userId }: { userId: string }) {
           open={supportOpen}
           onOpenChange={setSupportOpen}
           language={language}
+          showLauncher={false}
         />
         <button
           type="button"
