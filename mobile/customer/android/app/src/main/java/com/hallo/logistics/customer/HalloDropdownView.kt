@@ -2,22 +2,23 @@ package com.hallo.logistics.customer
 
 import android.content.Context
 import android.util.AttributeSet
-import androidx.appcompat.widget.AppCompatAutoCompleteTextView
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 
 /**
- * Read-only native dropdown that always opens its adapter on tap.
- * Keeps booking option fields predictable on physical Android devices.
+ * Read-only Material exposed dropdown that always opens its adapter on tap.
+ * Keeps TextInputLayout hint/notch geometry correct on physical Android devices.
  */
 class HalloDropdownView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = android.R.attr.autoCompleteTextViewStyle,
-) : AppCompatAutoCompleteTextView(context, attrs, defStyleAttr) {
+    defStyleAttr: Int = com.google.android.material.R.attr.autoCompleteTextViewStyle,
+) : MaterialAutoCompleteTextView(context, attrs, defStyleAttr) {
 
     init {
         threshold = 0
         keyListener = null
         isCursorVisible = false
+        isFocusable = true
         setOnClickListener { openOptions() }
         setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) post(::openOptions)

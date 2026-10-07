@@ -31,7 +31,7 @@ class NativeCustomerBookController(
     private val host = root.findViewById<FrameLayout>(R.id.nativeBookStepHost)
     private val indicators = listOf(
         root.findViewById<TextView>(R.id.nativeBookStepRoute), root.findViewById(R.id.nativeBookStepCargo),
-        root.findViewById(R.id.nativeBookStepTruck), root.findViewById(R.id.nativeBookStepQuote),
+        root.findViewById<TextView>(R.id.nativeBookStepTruck), root.findViewById(R.id.nativeBookStepQuote),
         root.findViewById(R.id.nativeBookStepReview),
     )
     private var step = Step.ROUTE
@@ -155,7 +155,9 @@ class NativeCustomerBookController(
         notes.doAfterTextChanged { notesText = it?.toString().orEmpty() }
         page.findViewById<MaterialButton>(R.id.flowCargoBack).setOnClickListener { show(Step.ROUTE) }
         page.findViewById<MaterialButton>(R.id.flowCargoNext).setOnClickListener {
-            val error = validateCargo(); if (error == null) show(Step.TRUCK) else page.findViewById<TextView>(R.id.flowCargoSummary).apply { text = error; setTextColor(activity.getColor(R.color.hallo_danger)) }
+            val error = validateCargo()
+            if (error == null) show(Step.TRUCK)
+            else page.findViewById<TextView>(R.id.flowCargoSummary).apply { text = error; setTextColor(activity.getColor(R.color.hallo_danger)) }
         }
     }
 

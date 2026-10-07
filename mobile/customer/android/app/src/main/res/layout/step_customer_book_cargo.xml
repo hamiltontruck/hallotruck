@@ -22,21 +22,21 @@
             android:layout_marginTop="14dp">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="14dp">
 
-                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/cargo_category">
-                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowCargoCategory" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Dropdown" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/cargo_category">
+                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowCargoCategory" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                     <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="@string/quantity">
-                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/flowCargoQuantity" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:maxLines="1" />
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/flowCargoQuantity" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp" android:inputType="numberDecimal" android:maxLines="1" />
                     </com.google.android.material.textfield.TextInputLayout>
-                    <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:layout_weight="1" android:hint="@string/unit">
-                        <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowCargoUnit" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                    <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Dropdown" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:layout_weight="1" android:hint="@string/unit">
+                        <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowCargoUnit" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/packaging_type">
-                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowCargoPackaging" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Dropdown" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/packaging_type">
+                    <com.hallo.logistics.customer.HalloDropdownView android:id="@+id/flowCargoPackaging" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Hallo.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/flow_cargo_notes">
@@ -48,8 +48,8 @@
         </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowCargoBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:text="@string/flow_back_route" />
-            <com.google.android.material.button.MaterialButton android:id="@+id/flowCargoNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:text="@string/flow_next_truck" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowCargoBack" style="@style/Widget.Hallo.Secondary" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:maxLines="1" android:text="@string/flow_back_route" android:textSize="13sp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/flowCargoNext" style="@style/Widget.Hallo.AuthPrimary" android:layout_width="0dp" android:layout_height="54dp" android:layout_marginStart="8dp" android:layout_weight="1" android:maxLines="1" android:text="@string/flow_next_truck" android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
