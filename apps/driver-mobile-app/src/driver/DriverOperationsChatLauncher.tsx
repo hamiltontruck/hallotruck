@@ -37,11 +37,13 @@ export function DriverOperationsChatLauncher({
   open,
   onOpenChange,
   language = "om",
+  showLauncher = true,
 }: {
   userId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   language?: DriverLanguage;
+  showLauncher?: boolean;
 }) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [thread, setThread] = useState<DriverChatThread | null>(null);
@@ -161,7 +163,7 @@ export function DriverOperationsChatLauncher({
   }
 
   return <>
-    <button
+    {showLauncher && <button
       type="button"
       onClick={() => onOpenChange(true)}
       className="relative grid h-10 w-10 place-items-center rounded-xl border border-halo-line bg-white text-base text-halo-navy"
@@ -171,7 +173,7 @@ export function DriverOperationsChatLauncher({
     >
       <span aria-hidden="true">💬</span>
       {unread > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1 py-1 text-[8px] font-black text-white">{unread > 99 ? "99+" : unread}</span>}
-    </button>
+    </button>}
 
     {open && <div className="fixed inset-0 z-[90] bg-halo-navy/55 backdrop-blur-sm" role="presentation">
       <button type="button" aria-label={t.chat.close} onClick={() => onOpenChange(false)} className="absolute inset-0 h-full w-full cursor-default" />
