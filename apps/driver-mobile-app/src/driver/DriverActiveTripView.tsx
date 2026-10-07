@@ -27,7 +27,7 @@ import {
 } from "./driver-gps-queue";
 import { DriverActiveTripMap } from "./DriverActiveTripMap";
 import { resolveDriverMapViewportPadding, resolveDriverTripSheetGesture } from "./driver-active-trip-map-runtime";
-import { DriverDeliveryProofPanel } from "./DriverDeliveryProofPanel";
+import { DriverDeliveryProofPanel } from "./DriverDeliveryProofPanel";\nimport { DriverCustomerChatLauncher } from "./DriverCustomerChatLauncher";
 import { DriverTripCustomerPaymentPanel } from "./DriverTripCustomerPaymentPanel";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 import { driverGpsBlockReason } from "./driver-runtime-resilience";
@@ -428,7 +428,7 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
       <section className="mt-3 rounded-[22px] border border-halo-line bg-white p-4 shadow-halo-card" data-driver-live-location>
         <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.trip.locationTitle}</p>{driverPosition ? <p className="mt-2 break-all text-xs font-bold text-halo-navy">{driverPosition[1].toFixed(6)}, {driverPosition[0].toFixed(6)}</p> : <p className="mt-2 text-xs leading-5 text-halo-muted">{t.trip.locationUnavailable}</p>}</div><span className={`shrink-0 rounded-xl px-3 py-2 text-[10px] font-black ${gpsState === "live" ? "bg-emerald-100 text-emerald-800" : "bg-halo-soft text-halo-muted"}`}>{gpsState === "live" ? t.trip.liveTitle : t.trip.shareLocation}</span></div>
       </section>
-      <DriverTripCustomerPaymentPanel userId={userId} trip={trip} language={language} />
+      <div className="mt-3"><DriverCustomerChatLauncher userId={userId} orderId={trip.id} trackingId={trip.trackingId} language={language} /></div>\n      <DriverTripCustomerPaymentPanel userId={userId} trip={trip} language={language} />
       {trip.status === "in_transit" && <DriverDeliveryProofPanel trip={trip} userId={userId} onDelivered={handleDelivered} language={language} />}
       </div>
     </section>
