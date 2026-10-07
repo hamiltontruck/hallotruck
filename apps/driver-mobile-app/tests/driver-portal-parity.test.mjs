@@ -24,6 +24,8 @@ test("Driver V4 keeps five portal primary destinations and header utilities", ()
     assert.match(workspace, new RegExp(`id: "${tab}"`));
   }
   assert.match(workspace, /DriverOperationsChatLauncher/);
+  assert.match(workspace, /showLauncher=\{false\}/);
+  assert.match(workspace, /onOpenSupport=\{\(\) => setSupportOpen\(true\)\}/);
   assert.match(workspace, /setTab\("alerts"\)/);
 });
 
