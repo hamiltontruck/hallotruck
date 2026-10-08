@@ -150,3 +150,68 @@ export function watchDriverOperationsChat(
 export async function stopDriverOperationsChatWatch(channel: RealtimeChannel | null) {
   if (channel) await requireClient().removeChannel(channel);
 }
+
+
+export type DriverCustomerChatMessage = {
+  id: string;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  client_message_id: string;
+  created_at: string;
+};
+
+export async function openDriverCustomerChat(expectedUserId: string, orderId: string): Promise<string> {
+  const client = await requireExpectedDriver(expectedUserId);
+  const { data, error } = await client.rpc("open_customer_driver_order_chat", { p_order_id: orderId });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Customer chat thread id was not returned.");
+  return String(data);
+}
+
+export async function fetchDriverCustomerChatMessages(expectedUserId: string, threadId: string): Promise<DriverCustomerChatMessage[]> {
+  const client = await requireExpectedDriver(expectedUserId);
+  const { data, error } = await client
+    .from("customer_driver_chat_messages")
+    .select("id,thread_id,sender_id,body,client_message_id,created_at")
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(300);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as DriverCustomerChatMessage[];
+}
+
+export async function sendDriverCustomerChatMessage(expectedUserId: string, threadId: string, body: string) {
+  const clean = body.trim();
+  if (!clean) throw new Error("Write a message before sending.");
+  if (clean.length > 4000) throw new Error("Message must be 4000 characters or fewer.");
+  if (!globalThis.crypto?.randomUUID) throw new Error("This browser cannot create a secure message id.");
+  const client = await requireExpectedDriver(expectedUserId);
+  const { data, error } = await client.rpc("send_customer_driver_chat_message", {
+    p_thread_id: threadId,
+    p_body: clean,
+    p_client_message_id: globalThis.crypto.randomUUID(),
+  });
+  if (error) throw new Error(error.message);
+  return String(data);
+}
+
+export async function markDriverCustomerChatRead(expectedUserId: string, threadId: string) {
+  const client = await requireExpectedDriver(expectedUserId);
+  const { error } = await client.rpc("mark_customer_driver_chat_read", { p_thread_id: threadId });
+  if (error) throw new Error(error.message);
+}
+
+export function watchDriverCustomerChat(threadId: string, onChange: () => void): RealtimeChannel {
+  const client = requireClient();
+  return client
+    .channel(`mobile-driver-customer-chat-${threadId}`)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "customer_driver_chat_messages", filter: `thread_id=eq.${threadId}` }, onChange)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "customer_driver_chat_threads", filter: `id=eq.${threadId}` }, onChange)
+    .subscribe();
+}
+
+export async function stopDriverCustomerChatWatch(channel: RealtimeChannel | null) {
+  if (channel) await requireClient().removeChannel(channel);
+}

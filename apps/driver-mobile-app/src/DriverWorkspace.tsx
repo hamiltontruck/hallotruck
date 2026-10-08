@@ -150,12 +150,6 @@ export function DriverWorkspace({ userId }: { userId: string }) {
           <option value="om">OR</option>
           <option value="am">አማ</option>
         </select>
-        <DriverOperationsChatLauncher
-          userId={userId}
-          open={supportOpen}
-          onOpenChange={setSupportOpen}
-          language={language}
-        />
         <button
           type="button"
           onClick={() => setTab("alerts")}
@@ -167,6 +161,14 @@ export function DriverWorkspace({ userId }: { userId: string }) {
         </button>
       </div>
     </header>
+
+    <DriverOperationsChatLauncher
+      userId={userId}
+      open={supportOpen}
+      onOpenChange={setSupportOpen}
+      language={language}
+      showLauncher={false}
+    />
 
     <DriverWorkspaceErrorBoundary
       key={tab}
