@@ -181,7 +181,7 @@ export function DriverWorkspace({ userId }: { userId: string }) {
     </DriverWorkspaceErrorBoundary>
 
     <nav
-      className="sticky bottom-0 z-40 grid grid-cols-6 border-t border-halo-line bg-white/95 pb-[calc(6px+env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl"
+      className="sticky bottom-0 z-40 grid grid-cols-5 border-t border-halo-line bg-white/95 pb-[calc(6px+env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl"
       aria-label={t.shell.nav.home + " / " + t.shell.nav.jobs + " / " + t.shell.nav.trip}
     >
       {tabs.map((item) => <button
@@ -194,16 +194,6 @@ export function DriverWorkspace({ userId }: { userId: string }) {
         <b className="text-lg leading-none">{item.icon}</b>
         <span className="max-w-full truncate">{t.shell.nav[item.id]}</span>
       </button>)}
-      <button
-        type="button"
-        onClick={() => setSupportOpen(true)}
-        className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 px-1 text-[9px] font-bold text-halo-blue"
-        aria-label="Open Operations Chat"
-        title="Driver ↔ Admin / Operations"
-      >
-        <b className="text-lg leading-none" aria-hidden="true">✉</b>
-        <span className="max-w-full truncate">{language === "om" ? "Deeggarsa" : language === "am" ? "ድጋፍ" : "Support"}</span>
-      </button>
     </nav>
   </div>;
 }
