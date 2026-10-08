@@ -18,8 +18,8 @@ const chatService = source("src/driver/driver-chat.service.ts");
 const css = source("src/driver-v4.css");
 const i18n = source("src/driver/driver-v4-i18n.ts");
 
-test("Driver V4 keeps five portal primary destinations and header utilities", () => {
-  assert.match(workspace, /grid-cols-5/);
+test("Driver V4 keeps five primary destinations plus Operations Support and header utilities", () => {
+  assert.match(workspace, /grid-cols-6/);
   for (const tab of ["home", "jobs", "trip", "wallet", "profile"]) {
     assert.match(workspace, new RegExp(`id: "${tab}"`));
   }
