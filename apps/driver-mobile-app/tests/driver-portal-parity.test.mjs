@@ -26,6 +26,10 @@ test("Driver V4 keeps five portal primary destinations and header utilities", ()
   assert.match(workspace, /DriverOperationsChatLauncher/);
   assert.match(workspace, /showLauncher=\{false\}/);
   assert.match(workspace, /onOpenSupport=\{\(\) => setSupportOpen\(true\)\}/);
+  const headerClose = workspace.indexOf("</header>");
+  const operationsChat = workspace.indexOf("<DriverOperationsChatLauncher");
+  assert.ok(headerClose >= 0 && operationsChat > headerClose,
+    "Operations chat must render outside the sticky header so its fixed dialog can cover the viewport.");
   assert.match(workspace, /setTab\("alerts"\)/);
 });
 
