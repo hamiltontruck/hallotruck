@@ -175,9 +175,9 @@ export function DriverOperationsChatLauncher({
       {unread > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1 py-1 text-[8px] font-black text-white">{unread > 99 ? "99+" : unread}</span>}
     </button>}
 
-    {open && <div className="fixed inset-0 z-[90] bg-[#eef3f8]" role="presentation">
-      <section className="mx-auto flex min-h-[100dvh] w-full max-w-[560px] flex-col bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label={t.chat.dialog} data-driver-operations-chat>
-        <header className="flex items-start justify-between gap-3 border-b border-white/10 bg-halo-navy px-4 pb-4 pt-[calc(14px+env(safe-area-inset-top))] text-white">
+    {open && <div className="fixed inset-0 z-[90] overflow-hidden bg-[#eef3f8]" role="presentation">
+      <section className="mx-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-[560px] flex-col overflow-hidden bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label={t.chat.dialog} data-driver-operations-chat>
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 bg-halo-navy px-4 pb-3 pt-[calc(10px+env(safe-area-inset-top))] text-white">
           <div className="min-w-0">
             <p className="text-[9px] font-black uppercase tracking-[0.18em] text-halo-gold">HALLO OPERATIONS</p>
             <h2 className="mt-1 text-xl font-black">{t.chat.title}</h2>
@@ -186,7 +186,7 @@ export function DriverOperationsChatLauncher({
           <button type="button" onClick={() => onOpenChange(false)} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/15 bg-white/5 text-xl" aria-label={t.chat.close}>×</button>
         </header>
 
-        {orders.length > 0 && <div className="border-b border-halo-line bg-white px-4 py-3">
+        {orders.length > 0 && <div className="shrink-0 border-b border-halo-line bg-white px-4 py-2">
           <label className="block text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">Order context</label>
           <select value={orderId} onChange={(event) => setOrderId(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-halo-line bg-halo-canvas px-3 text-xs font-bold text-halo-navy">
             <option value="">{t.chat.noOrder}</option>
@@ -194,7 +194,7 @@ export function DriverOperationsChatLauncher({
           </select>
         </div>}
 
-        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto bg-halo-canvas px-3 py-4">
+        <div ref={scrollRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto bg-halo-canvas px-3 py-3">
           {loading && <p className="py-10 text-center text-xs font-bold text-halo-muted">{t.chat.loading}</p>}
           {!loading && messages.length === 0 && !error && <div className="mx-auto mt-8 max-w-sm rounded-[24px] border border-dashed border-halo-line bg-white p-6 text-center">
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-halo-soft text-xl">🛡</div>
@@ -216,7 +216,7 @@ export function DriverOperationsChatLauncher({
           </ol>
         </div>
 
-        <div className="border-t border-halo-line bg-white px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-3">
+        <div className="shrink-0 border-t border-halo-line bg-white px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2">
           {error && <p role="alert" className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-[11px] font-bold text-red-700">{error}</p>}
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1">{t.chat.quickReplies.map((reply) => <button key={reply} type="button" disabled={sending} onClick={() => setBody(reply)} className="shrink-0 rounded-full border border-halo-line bg-white px-3 py-2 text-[10px] font-bold text-halo-navy disabled:opacity-40">{reply}</button>)}</div>
           <form onSubmit={submit} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
