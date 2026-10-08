@@ -17,6 +17,7 @@ export function PartnerLiveOperations() {
   const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
   const [partnerId, setPartnerId] = useState("");
   const [trips, setTrips] = useState<PartnerLiveTrip[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -28,7 +29,14 @@ export function PartnerLiveOperations() {
       const candidate = requested || partnerId || params.get("organization") || "";
       const nextPartnerId = nextMemberships.some((item) => item.partner_id === candidate) ? candidate : nextMemberships[0]?.partner_id || "";
       setPartnerId(nextPartnerId);
-      setTrips(nextPartnerId ? await loadPartnerLiveOperations(nextPartnerId) : []);
+      if (!nextPartnerId) {
+        setTrips([]);
+        setWarnings([]);
+      } else {
+        const result = await loadPartnerLiveOperations(nextPartnerId);
+        setTrips(result.trips);
+        setWarnings(result.warnings);
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Partner live operations could not be loaded.");
     } finally { setLoading(false); }
@@ -61,6 +69,7 @@ export function PartnerLiveOperations() {
 
     <section className="mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-7">
       {error && <p role="alert" className="border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
+      {warnings.map((warning) => <p key={warning} role="alert" className="border border-amber/45 bg-amber/10 p-4 text-sm text-amber-dim"><strong>Live trip hidden:</strong> {warning}</p>)}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Metric label="Active trips" value={trips.length} /><Metric label="LIVE" value={counts.live} /><Metric label="STALE" value={counts.stale} /><Metric label="OFFLINE" value={counts.offline} />
       </div>

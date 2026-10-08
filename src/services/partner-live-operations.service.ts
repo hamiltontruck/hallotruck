@@ -26,7 +26,14 @@ interface LiveTripRpcRow {
   recorded_at: string | null;
 }
 
-export async function loadPartnerLiveOperations(partnerId: string): Promise<PartnerLiveTrip[]> {
+export interface PartnerLiveOperationsResult {
+  trips: PartnerLiveTrip[];
+  warnings: string[];
+}
+
+const assignmentMismatchMessage = "Partner live assignment mismatch";
+
+export async function loadPartnerLiveOperations(partnerId: string): Promise<PartnerLiveOperationsResult> {
   const fleet = await getFleetEnterpriseData(partnerId);
   const active = fleet.vehicles.filter((vehicle) => Boolean(vehicle.active_trip_id));
   const rows = await Promise.all(active.map(async (vehicle) => {
@@ -34,10 +41,16 @@ export async function loadPartnerLiveOperations(partnerId: string): Promise<Part
       p_partner_id: partnerId,
       p_order_id: vehicle.active_trip_id,
     });
+    if (error?.message.includes(assignmentMismatchMessage)) {
+      return {
+        trip: null,
+        warning: `${vehicle.plate_number}: the assigned fleet driver does not match the confirmed order driver.`,
+      };
+    }
     if (error) throw new Error(error.message);
     const trip = (data?.[0] ?? null) as LiveTripRpcRow | null;
-    if (!trip) return null;
-    return {
+    if (!trip) return { trip: null, warning: null };
+    return { trip: {
       order_id: trip.order_id,
       reference: vehicle.active_trip_reference ?? trip.order_id,
       status: trip.status,
@@ -49,7 +62,10 @@ export async function loadPartnerLiveOperations(partnerId: string): Promise<Part
       speed_kmh: trip.speed_kmh == null ? null : Number(trip.speed_kmh),
       recorded_at: trip.recorded_at,
       freshness: classifyTrackingFreshness(trip.recorded_at),
-    } satisfies PartnerLiveTrip;
+    } satisfies PartnerLiveTrip, warning: null };
   }));
-  return rows.filter((row): row is PartnerLiveTrip => row !== null);
+  return {
+    trips: rows.map((row) => row.trip).filter((trip): trip is PartnerLiveTrip => trip !== null),
+    warnings: rows.map((row) => row.warning).filter((warning): warning is string => warning !== null),
+  };
 }
