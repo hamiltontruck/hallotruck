@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   fetchDriverChatMessages,
-  fetchDriverChatOrders,
   fetchDriverChatThread,
   fetchDriverOperationsUnreadCount,
   markDriverOperationsChatRead,
@@ -10,7 +9,6 @@ import {
   stopDriverOperationsChatWatch,
   watchDriverOperationsChat,
   type DriverChatMessage,
-  type DriverChatOrder,
   type DriverChatThread,
 } from "./driver-chat.service";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
@@ -48,31 +46,26 @@ export function DriverOperationsChatLauncher({
   const [threadId, setThreadId] = useState<string | null>(null);
   const [thread, setThread] = useState<DriverChatThread | null>(null);
   const [messages, setMessages] = useState<DriverChatMessage[]>([]);
-  const [orders, setOrders] = useState<DriverChatOrder[]>([]);
   const [unread, setUnread] = useState(0);
   const [body, setBody] = useState("");
-  const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const t = getDriverV4Copy(language);
 
-  const orderById = useMemo(() => new Map(orders.map((order) => [order.id, order])), [orders]);
 
   const refreshUnread = useCallback(async () => {
     setUnread(await fetchDriverOperationsUnreadCount(userId));
   }, [userId]);
 
   const refreshConversation = useCallback(async (nextThreadId: string) => {
-    const [nextThread, nextMessages, nextOrders] = await Promise.all([
+    const [nextThread, nextMessages] = await Promise.all([
       fetchDriverChatThread(userId, nextThreadId),
       fetchDriverChatMessages(userId, nextThreadId),
-      fetchDriverChatOrders(userId),
     ]);
     setThread(nextThread);
     setMessages(nextMessages);
-    setOrders(nextOrders);
   }, [userId]);
 
   useEffect(() => {
@@ -143,11 +136,10 @@ export function DriverOperationsChatLauncher({
       await sendDriverOperationsMessage(userId, {
         threadId,
         body: clean,
-        orderId: orderId || null,
-        kind: quick ? "quick_reply" : orderId ? "order_context" : "text",
+        orderId: null,
+        kind: quick ? "quick_reply" : "text",
       });
       setBody("");
-      setOrderId("");
       await refreshConversation(threadId);
       await refreshUnread();
     } catch {
@@ -186,14 +178,6 @@ export function DriverOperationsChatLauncher({
           <button type="button" onClick={() => onOpenChange(false)} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/15 bg-white/5 text-xl" aria-label={t.chat.close}>×</button>
         </header>
 
-        {orders.length > 0 && <div className="shrink-0 border-b border-halo-line bg-white px-4 py-2">
-          <label className="block text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">Order context</label>
-          <select value={orderId} onChange={(event) => setOrderId(event.target.value)} className="mt-1.5 min-h-10 w-full rounded-xl border border-halo-line bg-halo-canvas px-3 text-xs font-bold text-halo-navy">
-            <option value="">{t.chat.noOrder}</option>
-            {orders.map((order) => <option key={order.id} value={order.id}>{order.tracking_id} · {orderStatusLabel(order.status, language)}</option>)}
-          </select>
-        </div>}
-
         <div ref={scrollRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto bg-halo-canvas px-3 pb-4 pt-5">
           {loading && <p className="py-10 text-center text-xs font-bold text-halo-muted">{t.chat.loading}</p>}
           {!loading && messages.length === 0 && !error && <div className="mx-auto mt-8 max-w-sm rounded-[24px] border border-dashed border-halo-line bg-white p-6 text-center">
@@ -204,10 +188,8 @@ export function DriverOperationsChatLauncher({
           <ol className="space-y-3">
             {messages.map((message) => {
               const mine = message.sender_id === userId;
-              const order = message.order_id ? orderById.get(message.order_id) : null;
               return <li key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[84%] rounded-2xl px-3.5 py-3 shadow-sm ${mine ? "rounded-br-md bg-halo-blue text-white" : "rounded-bl-md border border-halo-line bg-white text-halo-navy"}`}>
-                  {order && <div className={`mb-2 rounded-xl px-3 py-2 text-[9px] font-bold ${mine ? "bg-white/10 text-white/80" : "bg-halo-gold-soft text-halo-gold-dark"}`}>{order.tracking_id} · {orderStatusLabel(order.status, language)}</div>}
                   <p className="whitespace-pre-wrap break-words text-sm leading-5">{message.body}</p>
                   <div className={`mt-2 flex justify-end gap-2 text-[9px] ${mine ? "text-white/55" : "text-halo-muted"}`}><span>{time(message.created_at, language)}</span>{mine && message.id === lastOwn?.id && <span>{lastOwnSeen ? t.chat.seen : t.chat.sent}</span>}</div>
                 </div>
