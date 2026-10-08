@@ -106,8 +106,8 @@ test("final Driver card is concise and profile includes customer trust rating", 
   assert.match(profile, /ratingSummary|ratingAvg/);
 });
 
-test("authenticated shell remains scrollable with sticky five-tab navigation at target widths", () => {
-  assert.match(workspace, /grid-cols-5/);
+test("authenticated shell remains scrollable with sticky six-action navigation at target widths", () => {
+  assert.match(workspace, /grid-cols-6/);
   assert.match(androidCss, /\[data-driver-v4-workspace\]\.driver-app[\s\S]*overflow-y:\s*auto/);
   assert.match(androidCss, /\[data-driver-v4-workspace\] > nav[\s\S]*position:\s*fixed[\s\S]*bottom:\s*0/);
   assert.match(androidCss, /padding-bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/);
