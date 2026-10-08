@@ -188,13 +188,13 @@ export function DriverOperationsChatLauncher({
 
         {orders.length > 0 && <div className="shrink-0 border-b border-halo-line bg-white px-4 py-2">
           <label className="block text-[9px] font-black uppercase tracking-[0.14em] text-halo-muted">Order context</label>
-          <select value={orderId} onChange={(event) => setOrderId(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-halo-line bg-halo-canvas px-3 text-xs font-bold text-halo-navy">
+          <select value={orderId} onChange={(event) => setOrderId(event.target.value)} className="mt-1.5 min-h-10 w-full rounded-xl border border-halo-line bg-halo-canvas px-3 text-xs font-bold text-halo-navy">
             <option value="">{t.chat.noOrder}</option>
             {orders.map((order) => <option key={order.id} value={order.id}>{order.tracking_id} · {orderStatusLabel(order.status, language)}</option>)}
           </select>
         </div>}
 
-        <div ref={scrollRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto bg-halo-canvas px-3 py-3">
+        <div ref={scrollRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto bg-halo-canvas px-3 pb-4 pt-5">
           {loading && <p className="py-10 text-center text-xs font-bold text-halo-muted">{t.chat.loading}</p>}
           {!loading && messages.length === 0 && !error && <div className="mx-auto mt-8 max-w-sm rounded-[24px] border border-dashed border-halo-line bg-white p-6 text-center">
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-halo-soft text-xl">🛡</div>
@@ -216,7 +216,7 @@ export function DriverOperationsChatLauncher({
           </ol>
         </div>
 
-        <div className="shrink-0 border-t border-halo-line bg-white px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2">
+        <div className="shrink-0 border-t border-halo-line bg-white px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3 shadow-[0_-6px_20px_rgba(15,23,42,0.05)]">
           {error && <p role="alert" className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-[11px] font-bold text-red-700">{error}</p>}
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1">{t.chat.quickReplies.map((reply) => <button key={reply} type="button" disabled={sending} onClick={() => setBody(reply)} className="shrink-0 rounded-full border border-halo-line bg-white px-3 py-2 text-[10px] font-bold text-halo-navy disabled:opacity-40">{reply}</button>)}</div>
           <form onSubmit={submit} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
