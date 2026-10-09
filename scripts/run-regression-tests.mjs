@@ -18,6 +18,7 @@ try{
   ["tests/regression/partner-onboarding.test.ts",path.join(outputDirectory,"partner-onboarding.test.mjs")],
   ["tests/regression/partner-dispatch.test.ts",path.join(outputDirectory,"partner-dispatch.test.mjs")],
   ["tests/regression/partner-order-foundation.test.ts",path.join(outputDirectory,"partner-order-foundation.test.mjs")],
+  ["tests/regression/partner-live-operations.test.ts",path.join(outputDirectory,"partner-live-operations.test.mjs")],
   ["tests/regression/finance-dashboard-v3.test.ts",path.join(outputDirectory,"finance-dashboard-v3.test.mjs")],
   ["tests/regression/platform-tax-control.test.ts",path.join(outputDirectory,"platform-tax-control.test.mjs")],
   ["tests/regression/admin-ai-assistant.test.ts",path.join(outputDirectory,"admin-ai-assistant.test.mjs")],
