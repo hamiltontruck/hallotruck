@@ -1,1 +1,12 @@
-:root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f6f8ff;background:#101e36;font-synthesis:none}*{box-sizing:border-box}body{margin:0}a{color:inherit;text-decoration:none}.topbar{display:flex;align-items:center;justify-content:space-between;padding:26px clamp(20px,6vw,90px);border-bottom:1px solid #ffffff22}.brand{font-size:24px;font-weight:900;letter-spacing:.06em}.brand span{margin-left:9px;color:#e7ba5c;font-size:12px;letter-spacing:.15em}.preview{font-size:11px;letter-spacing:.15em;color:#b9c8dd}.hero{max-width:1050px;margin:0 auto;padding:clamp(80px,11vw,145px) 24px 100px}.eyebrow{color:#e7ba5c;font-size:12px;font-weight:700;letter-spacing:.22em}h1{max-width:900px;font-size:clamp(44px,7vw,86px);line-height:1.08;letter-spacing:-.055em;margin:22px 0}h1 em{font-style:normal;color:#e7ba5c}.hero p{max-width:650px;color:#c3cfdf;line-height:1.8;font-size:17px}.actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:32px}.actions a{padding:14px 22px;border-radius:9px;font-weight:700}.primary{background:#e7ba5c;color:#101e36}.secondary{border:1px solid #8192a9}.features{max-width:1100px;margin:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:0 24px 90px}.features article{padding:30px;border:1px solid #ffffff22;border-radius:16px;background:#ffffff09}.features article span{color:#e7ba5c;font-size:12px}.features h2{font-size:22px}.features p{line-height:1.7;color:#b9c8dd}footer{text-align:center;border-top:1px solid #ffffff22;padding:26px;color:#a8b8ce;font-size:12px}@media(max-width:700px){.features{grid-template-columns:1fr}.preview{font-size:9px}.hero{padding-top:85px}.hero p{font-size:15px}}
+/* V2-only preview shell. MagicPath components own their visual styles. */
+:root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+body { margin: 0; }
+.v2-preview-banner {
+  position: relative; z-index: 10000; display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  padding: 9px 18px; background: #17253b; color: #f7d184;
+  font: 700 11px/1.5 Inter, system-ui, sans-serif; letter-spacing: .04em;
+}
+.v2-preview-banner nav { display: flex; gap: 16px; flex-wrap: wrap; }
+.v2-preview-banner a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.v2-preview-banner a:focus-visible { outline: 2px solid #f7d184; outline-offset: 3px; }
