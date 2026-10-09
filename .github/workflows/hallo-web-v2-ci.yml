@@ -1,0 +1,39 @@
+name: HALLO Web V2 — Isolated CI
+
+on:
+  push:
+    branches:
+      - feat/hallo-web-v2-foundation
+    paths:
+      - "apps/hallo-web-v2/**"
+      - ".github/workflows/hallo-web-v2-ci.yml"
+  pull_request:
+    paths:
+      - "apps/hallo-web-v2/**"
+      - ".github/workflows/hallo-web-v2-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  v2-build:
+    name: V2 typecheck and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/hallo-web-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install V2 dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Production build (V2 only)
+        run: npm run build
+      - name: Confirm V2 output
+        run: test -f dist/index.html
