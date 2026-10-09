@@ -9,6 +9,10 @@ const port = 4193;
 const baseUrl = `http://${host}:${port}/hallotruck/`;
 const vite = path.join(root, "node_modules/.bin", process.platform === "win32" ? "vite.cmd" : "vite");
 const esbuild = path.join(root, "node_modules/.bin", process.platform === "win32" ? "esbuild.cmd" : "esbuild");
+const viteCommand = process.platform === "win32" ? process.execPath : vite;
+const vitePrefix = process.platform === "win32" ? [path.join(root, "node_modules/vite/bin/vite.js")] : [];
+const esbuildCommand = process.platform === "win32" ? process.execPath : esbuild;
+const esbuildPrefix = process.platform === "win32" ? [path.join(root, "node_modules/esbuild/bin/esbuild")] : [];
 const temp = path.join(root, ".admin-driver-compliance-e2e");
 const entry = path.join(temp, "entry.mjs");
 const bundle = path.join(root, "dist/admin-driver-compliance-e2e.js");
@@ -41,6 +45,7 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { HashRouter } from "react-router-dom";
 import { AdminDriverCompliance } from ${JSON.stringify(path.join(root, "src/pages/AdminDriverCompliance.tsx"))};
+import { AdminDriverDocumentRegister } from ${JSON.stringify(path.join(root, "src/components/admin/AdminDriverDocumentRegister.tsx"))};
 const fixture = {
   drivers: [{ id:"driver-1", full_name:"Abiyu Nagash Enterprise Driver", phone:"+251911000000", email:"driver@example.com", home_address:"Adama", driver_status:"pending" }, { id:"driver-approved", full_name:"Approved Replacement Driver", phone:"+251922000000", email:"approved@example.com", home_address:"Addis Ababa", driver_status:"approved" }],
   trucks: [{id:"truck-approved",driver_id:"driver-approved",plate_number:"AA-2214",vehicle_type:"Isuzu 5 Ton",model:"FSR",capacity_tons:5,status:"available"}],
@@ -51,7 +56,7 @@ const fixture = {
   historyAvailable: true
 };
 function App(){return React.createElement(HashRouter,null,React.createElement(AdminDriverCompliance,{fixture,resolveDocumentPreview:async()=>"data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120"><rect width="240" height="120" fill="#e8eef8"/><text x="20" y="65" fill="#123262">Test document preview</text></svg>')}));}
-flushSync(()=>createRoot(document.getElementById("root")).render(React.createElement(App)));
+flushSync(()=>{createRoot(document.getElementById("root")).render(React.createElement(App));createRoot(document.getElementById("register-root")).render(React.createElement(AdminDriverDocumentRegister,{busy:"",onOpen:async()=>{},onReview:async()=>{document.documentElement.dataset.registerReview="true";}}));});
 await new Promise((resolve)=>setTimeout(resolve,300));
 const rootNode=document.documentElement;
 const groups=[...document.querySelectorAll('.driver-document-grid')];
@@ -84,19 +89,26 @@ rootNode.dataset.overflow=String(rootNode.scrollWidth>rootNode.clientWidth||docu
 document.documentElement.dataset.ready="true";
 `;
 await writeFile(entry, fixtureSource, "utf8");
-const built = spawnSync(esbuild, [entry, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120", `--outfile=${bundle}`, "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"", "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\""], { cwd: root, encoding: "utf8" });
+const built = spawnSync(esbuildCommand, [...esbuildPrefix, entry, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120", `--outfile=${bundle}`, "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"", "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\""], { cwd: root, encoding: "utf8" });
 if (built.status !== 0) throw new Error(built.stderr || "Admin Driver Compliance fixture bundle failed.");
-await writeFile(html, `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="./assets/${css}"></head><body><div id="root"></div><script type="module" src="./admin-driver-compliance-e2e.js"></script></body></html>`, "utf8");
+await writeFile(html, `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="./assets/${css}"></head><body><div id="root"></div><div id="register-root"></div><script type="module" src="./admin-driver-compliance-e2e.js"></script></body></html>`, "utf8");
 
 let browser;
-const preview = spawn(vite, ["preview", "--host", host, "--port", String(port), "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+const preview = spawn(viteCommand, [...vitePrefix, "preview", "--host", host, "--port", String(port), "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
 try {
   await waitForServer();
   browser = await chromium.launch({ executablePath: chromeBinary(), headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"], timeout: 30_000 });
-  for (const width of [320, 360, 390, 412, 430, 768]) {
+  for (const width of [320, 360, 390, 412, 430, 768, 1280]) {
     const page = await browser.newPage({ viewport: { width, height: 1200 } });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.stack || error.message));
+    await page.route("**/rest/v1/rpc/admin_driver_document_register_page", async (route) => {
+      const body = route.request().postDataJSON?.() ?? {};
+      const expired = body.p_status_filter === "expired";
+      const pageNumber = Number(body.p_page ?? 1);
+      const row = { row_id: expired ? "doc-expired" : `doc-${pageNumber}`, document_id: expired ? "doc-expired" : `doc-${pageNumber}`, driver_id:"driver-approved", driver_name:"Approved Replacement Driver", phone:"+251922000000", truck_id:"truck-approved", plate_number:"AA-2214", vehicle_type:"Isuzu 5 Ton", document_key:"vehicle_registration", expiry_date: expired ? "2026-09-01" : "2027-12-31", status: expired ? "verified" : "pending", updated_at:"2026-10-01T00:00:00Z", reviewer_name:"HALLO Admin", file_path:"driver-approved/vehicle/registration.pdf", original_name:"registration.pdf", mime_type:"application/pdf", rejection_reason:null, reviewed_at:null, created_at:"2026-10-01T00:00:00Z", total_count: expired ? 1 : 30 };
+      await route.fulfill({ status:200, contentType:"application/json", body:JSON.stringify([row]) });
+    });
     try {
       await page.goto(`${baseUrl}admin-driver-compliance-e2e.html`, { waitUntil: "load", timeout: 30_000 });
       await page.waitForFunction(() => document.documentElement.dataset.ready === "true", { }, { timeout: 15_000 });
@@ -104,6 +116,21 @@ try {
       const dom = await page.content();
       for (const expected of ['data-ready="true"', 'data-overflow="false"', "Driver operations &amp; verification", "Cannot approve yet: Waiting for driver documents.", "Cannot remove while active trip HT-2026-ACTIVE-001 is accepted.", "Approved Replacement Driver", 'data-groups="true"', 'data-compact="true"', 'data-metadata-hidden="true"', 'data-details="true"', 'data-modal-overflow="false"', 'data-back="true"', 'data-closed="true"', 'data-id-expiry="true"', 'data-id-back="true"']) {
         if (!dom.includes(expected)) throw new Error(`Admin Driver Compliance ${width}px smoke missing: ${expected}`);
+      }
+      if (width === 1280) {
+        const register = page.locator('#register-root');
+        await register.getByPlaceholder('Driver / phone / plate').fill('AA-2214');
+        await page.waitForTimeout(350);
+        const table = register.getByRole('table');
+        await table.getByText('AA-2214', { exact:true }).waitFor();
+        await register.getByRole('button', { name:'Expired', exact:true }).click();
+        await table.getByText('Expired · 2026-09-01', { exact:true }).waitFor();
+        await register.getByRole('button', { name:'All', exact:true }).click();
+        await register.getByText('Page 1 of 2', { exact:false }).waitFor();
+        await register.getByRole('button', { name:'Next', exact:true }).click();
+        await register.getByText('Page 2 of 2', { exact:false }).waitFor();
+        await table.getByRole('button', { name:'Verify', exact:true }).click();
+        await page.waitForFunction(() => document.documentElement.dataset.registerReview === 'true');
       }
     } catch (error) {
       const evidence = path.join(root, "qa-evidence/admin-documents");
@@ -114,7 +141,7 @@ try {
       throw error;
     } finally { await page.close(); }
   }
-  console.log("Admin Driver Compliance browser smoke passed at 320px, 360px, 390px, 412px, 430px and 768px with visible disabled-action guidance.");
+  console.log("Admin Driver Compliance browser smoke passed at 320px, 360px, 390px, 412px, 430px, 768px and 1280px with visible disabled-action guidance.");
 } finally {
   await browser?.close();
   preview.kill("SIGTERM");
