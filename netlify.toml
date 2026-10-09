@@ -1,0 +1,5 @@
+[build]
+  publish = "dist"
+
+[context.deploy-preview]
+  command = "npm ci && npm run build && npm --prefix apps/customer-mobile-app install --no-audit --no-fund && npm --prefix apps/customer-mobile-app run build && rm -rf dist/customer-mobile && mkdir -p dist/customer-mobile && cp -R apps/customer-mobile-app/dist/. dist/customer-mobile/ && npm --prefix apps/driver-mobile-app install --no-audit --no-fund && npm --prefix apps/driver-mobile-app run build && rm -rf dist/driver-mobile && mkdir -p dist/driver-mobile && cp -R apps/driver-mobile-app/dist/. dist/driver-mobile/"

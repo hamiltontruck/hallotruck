@@ -28,6 +28,7 @@ import {
 import { DriverActiveTripMap } from "./DriverActiveTripMap";
 import { resolveDriverMapViewportPadding, resolveDriverTripSheetGesture } from "./driver-active-trip-map-runtime";
 import { DriverDeliveryProofPanel } from "./DriverDeliveryProofPanel";
+import { DriverCustomerChatLauncher } from "./DriverCustomerChatLauncher";
 import { DriverTripCustomerPaymentPanel } from "./DriverTripCustomerPaymentPanel";
 import { getDriverV4Copy, type DriverLanguage } from "./driver-v4-i18n";
 import { driverGpsBlockReason } from "./driver-runtime-resilience";
@@ -413,6 +414,7 @@ export function DriverActiveTripView({ userId, fullName, onOpenWallet = () => un
         <div className="flex items-start gap-3"><span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${gpsState === "live" ? "animate-pulse bg-emerald-600" : gpsState === "queued" || gpsState === "syncing" ? "bg-amber-500" : "bg-halo-muted"}`}/><div className="min-w-0"><p className="text-sm font-black text-halo-navy">{gps.title}</p><p role="status" aria-live="polite" className="mt-1 text-[11px] leading-5 text-halo-muted">{gps.help}</p>{lastPingAt && <p className="mt-2 text-[10px] font-bold text-emerald-700">{t.trip.lastServerUpdate}: {lastPingAt}{speedKmh !== null ? ` · ${speedKmh.toFixed(1)} km/h` : ""}</p>}</div></div>
       </div>
 
+      <div className="mt-3"><DriverCustomerChatLauncher userId={userId} orderId={trip.id} trackingId={trip.trackingId} language={language} /></div>
       <div hidden={!sheetExpanded}>
       {currentStep && <div className="mt-3 rounded-2xl border border-halo-line bg-white p-3" data-driver-navigation-step>
         <div className="flex items-center justify-between gap-3"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-halo-gold-dark">{t.trip.next}</p><span className="text-[10px] font-black text-halo-blue">{routeProgressPct}%</span></div>
