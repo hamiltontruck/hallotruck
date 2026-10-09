@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import { featureToPlaceForSelection, selectGeocodeCandidates } from "../src/customer-geocoder-selection.ts";
 
 const quoteService = fs.readFileSync(new URL("../src/customer-quote.service.ts", import.meta.url), "utf8");
-const geocoderSelection = fs.readFileSync(new URL("../src/customer-geocoder-selection.ts", import.meta.url), "utf8");
 
 test("Customer Djibouti locality selection keeps city identity and provider coordinates", () => {
-  assert.match(geocoderSelection, /region\.1713/);
-  assert.match(geocoderSelection, /feature\.center/);
-  assert.match(quoteService, /normalizePlaceSearchText\(query\) === "djibouti"/);
-  assert.match(quoteService, /LOCALITY_GEOCODE_TYPES/);
+  const city = { id: "region.1713", text: "Djibouti", place_name: "Djibouti, Djibouti", place_type: ["region"], center: [43.14727216959, 11.59369036353], context: [{ id: "country.dj", text: "Djibouti" }] };
+  const aliSabieh = { id: "region.ali", text: "Djibouti", place_name: "Djibouti, Ali Sabieh, Djibouti", place_type: ["region"], center: [42.71, 11.15] };
+  const selected = selectGeocodeCandidates("Djibouti", [aliSabieh, city], []);
+  assert.equal(selected[0]?.id, "region.1713");
+  assert.deepEqual(featureToPlaceForSelection(selected[0]).coordinates, city.center);
 });
 
 test("Customer HGV request preserves pickup then destination coordinate order", () => {
