@@ -3,6 +3,7 @@ import { customerSupabase } from "./auth/customer-supabase";
 import type { CustomerLanguage } from "./customer-language";
 import { selectGeocodeCandidates as selectProviderIdentityCandidates } from "./customer-geocoder-selection";
 import type { GeocodeFeature } from "./customer-geocoder-selection";
+import { isCoordinate, isRouteCoordinates } from "../../../shared/geocoder-routing";
 
 export type CustomerPlaceOption = {
   label: string;
@@ -71,13 +72,6 @@ function finitePositive(value: unknown, label: string) {
   return number;
 }
 
-function isCoordinate(value: unknown): value is [number, number] {
-  return Array.isArray(value) && value.length === 2 && value.every((part) => Number.isFinite(Number(part)));
-}
-
-function isRouteCoordinates(value: unknown): value is [number, number][] {
-  return Array.isArray(value) && value.length >= 2 && value.every(isCoordinate);
-}
 
 export function isHalloOperatingCoordinate(coordinates: [number, number]) {
   const [longitude, latitude] = coordinates;
