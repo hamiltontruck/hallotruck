@@ -3,6 +3,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { getCurrentPartnerMemberships } from "../services/partner.service";
 import { searchPartnerRoutePlaces, type PartnerRoutePlace } from "../services/partner-smart-order-routing.service";
+import { getTruckRoadRoute, type TruckRoadRoute } from "../services/routing.service";
 
 type Endpoint = "pickup" | "dropoff";
 
@@ -14,6 +15,12 @@ export function PartnerSmartOrderV2() {
   const mapNode = useRef<HTMLDivElement | null>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<{ pickup?: maplibregl.Marker; dropoff?: maplibregl.Marker }>({});
+  const routeRequest = useRef<AbortController | null>(null);
+  const routeVersion = useRef(0);
+  const [route, setRoute] = useState<TruckRoadRoute | null>(null);
+  const [routeError, setRouteError] = useState("");
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     void getCurrentPartnerMemberships().then((items) => setAllowed(items.some((item) => ["owner", "admin"].includes(item.member_role)))).catch((reason) => setError(reason instanceof Error ? reason.message : "Partner access could not be verified."));
@@ -56,6 +63,40 @@ export function PartnerSmartOrderV2() {
     if (bounds.length === 2) instance.fitBounds(bounds as [[number, number], [number, number]], { padding: 64, maxZoom: 12 });
   }, [pickup, dropoff]);
 
+  useEffect(() => {
+    routeRequest.current?.abort();
+    const version = ++routeVersion.current;
+    setRoute(null);
+    setRouteError("");
+    setRouteLoading(false);
+    if (!pickup || !dropoff) return;
+    const controller = new AbortController();
+    routeRequest.current = controller;
+    setRouteLoading(true);
+    void getTruckRoadRoute({ pickup: pickup.coordinates, dropoff: dropoff.coordinates, vehicleType: "Heavy Truck", signal: controller.signal })
+      .then((result) => { if (version === routeVersion.current && !controller.signal.aborted) setRoute(result); })
+      .catch((reason) => {
+        if (controller.signal.aborted || version !== routeVersion.current) return;
+        setRouteError(reason instanceof Error ? reason.message : "Truck route could not be calculated.");
+      })
+      .finally(() => { if (version === routeVersion.current) setRouteLoading(false); });
+    return () => controller.abort();
+  }, [pickup, dropoff, retry]);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+    const draw = () => {
+      if (instance.getLayer("partner-smart-route")) instance.removeLayer("partner-smart-route");
+      if (instance.getSource("partner-smart-route")) instance.removeSource("partner-smart-route");
+      if (!route) return;
+      instance.addSource("partner-smart-route", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route.coordinates } } });
+      instance.addLayer({ id: "partner-smart-route", type: "line", source: "partner-smart-route", paint: { "line-color": "#1769c2", "line-width": 5 } });
+    };
+    if (instance.isStyleLoaded()) draw(); else instance.once("load", draw);
+    return () => { instance.off("load", draw); };
+  }, [route]);
+
   return <main className="min-h-screen overflow-x-hidden bg-[#f5f3ed] px-4 py-6 text-asphalt sm:px-7">
     <section className="mx-auto max-w-3xl">
       <p className="font-mono text-[10px] tracking-[.22em] text-amber">PARTNER SMART ORDER V2 · ROUTE</p>
@@ -67,6 +108,8 @@ export function PartnerSmartOrderV2() {
           <PlaceSearch endpoint="pickup" label="Pickup" value={pickup} onChange={(place) => { setPickup(place); setError(""); }} onError={setError} />
           <PlaceSearch endpoint="dropoff" label="Destination" value={dropoff} onChange={(place) => { setDropoff(place); setError(""); }} onError={setError} />
           <div ref={mapNode} aria-label="Pickup and destination map" className="h-[52vh] min-h-72 w-full overflow-hidden border border-asphalt/10 bg-white" />
+          {routeLoading && <p role="status" className="bg-white p-3 text-sm">Calculating authoritative HGV route…</p>}
+          {routeError && <div role="alert" className="flex items-center justify-between gap-3 border border-route/30 bg-route/5 p-3 text-sm text-route"><span>{routeError}</span><button type="button" className="min-h-11 border border-route px-4 font-semibold" onClick={() => setRetry((value) => value + 1)}>Retry</button></div>}
         </div>}
     </section>
   </main>;
