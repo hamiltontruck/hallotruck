@@ -58,3 +58,28 @@ html { min-width: 0; }
   .ceo-v2 .ceo-content { padding-inline: 12px; }
   .ceo-v2 .ceo-title-actions > * { min-width: 0; }
 }
+
+/* Mobile operations cards preserve every column's information without sideways scrolling. */
+.ceo-mobile-trips { display: none; }
+@media (max-width: 760px) {
+  .ceo-v2 .ceo-table-scroll { display: none; }
+  .ceo-v2 .ceo-mobile-trips { display: grid; gap: 12px; padding: 4px 14px 18px; }
+  .ceo-v2 .ceo-mobile-trip { border: 1px solid #e4eae6; background: #fff; border-radius: 9px; padding: 15px; min-width: 0; }
+  .ceo-v2 .ceo-mobile-trip-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 9px; }
+  .ceo-v2 .ceo-mobile-trip-head strong { font-size: 13px; color: #263f4a; overflow-wrap: anywhere; }
+  .ceo-v2 .ceo-mobile-trip-route { font-size: 13px; font-weight: 700; color: #415a65; margin: 14px 0; overflow-wrap: anywhere; }
+  .ceo-v2 .ceo-mobile-trip dl { display: grid; gap: 9px; margin: 0 0 12px; }
+  .ceo-v2 .ceo-mobile-trip dl > div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+  .ceo-v2 .ceo-mobile-trip dt { color: #819198; }
+  .ceo-v2 .ceo-mobile-trip dd { margin: 0; font-weight: 700; color: #334d59; text-align: right; overflow-wrap: anywhere; }
+  .ceo-v2 .ceo-mobile-trip > small { display: block; font-size: 10px; color: #8b999e; border-top: 1px solid #edf0ed; padding-top: 10px; }
+  .ceo-v2 .ceo-title-actions { display: flex; gap: 8px; }
+  .ceo-v2 .ceo-title-actions select, .ceo-v2 .ceo-title-actions button { min-width: 0; max-width: 100%; }
+}
+@media (max-width: 350px) {
+  .ceo-v2 .ceo-title-actions { flex-direction: column; }
+  .ceo-v2 .ceo-title-actions select, .ceo-v2 .ceo-title-actions button { width: 100%; }
+  .ceo-v2 .ceo-metric { padding: 11px; }
+  .ceo-v2 .ceo-metric-value { font-size: 18px; overflow-wrap: anywhere; }
+  .ceo-v2 .ceo-metric-foot { flex-wrap: wrap; }
+}
