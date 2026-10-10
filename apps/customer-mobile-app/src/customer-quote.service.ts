@@ -3,7 +3,7 @@ import { customerSupabase } from "./auth/customer-supabase";
 import type { CustomerLanguage } from "./customer-language";
 import { selectGeocodeCandidates as selectProviderIdentityCandidates } from "./customer-geocoder-selection";
 import type { GeocodeFeature } from "./customer-geocoder-selection";
-import { isCoordinate, isRouteCoordinates } from "../../../shared/geocoder-routing";
+import { isCoordinate, isRouteCoordinates } from "../../../shared/geocoder-routing.js";
 
 export type CustomerPlaceOption = {
   label: string;

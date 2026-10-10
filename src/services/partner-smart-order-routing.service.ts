@@ -1,4 +1,4 @@
-import { selectGeocodeCandidates, type GeocodeFeature } from "../../shared/geocoder-routing";
+import { selectGeocodeCandidates, type GeocodeFeature } from "../../shared/geocoder-routing.js";
 
 export type PartnerRoutePlace = { label: string; coordinates: [number, number] };
 const mapTilerKey = (import.meta.env.VITE_MAPTILER_KEY as string | undefined)?.trim() ?? "";

@@ -1,5 +1,5 @@
 import { isHalloOperatingCoordinate } from "../customer-operating-region";
-import { isCoordinate } from "../../shared/geocoder-routing";
+import { isCoordinate } from "../../shared/geocoder-routing.js";
 import { supabase } from "./supabase.client";
 
 export interface TruckRoadRoute {
