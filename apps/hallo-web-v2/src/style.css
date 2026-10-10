@@ -10,3 +10,51 @@ body { margin: 0; }
 .v2-preview-banner nav { display: flex; gap: 16px; flex-wrap: wrap; }
 .v2-preview-banner a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .v2-preview-banner a:focus-visible { outline: 2px solid #f7d184; outline-offset: 3px; }
+
+
+/* V2 mobile QA: non-invasive overrides; generated MagicPath components stay intact. */
+html { min-width: 0; }
+.v2-preview-banner { min-width: 0; }
+.v2-preview-banner nav { min-width: 0; }
+.v2-preview-banner a { overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .v2-preview-banner { padding: 10px 16px; gap: 8px; }
+  .v2-preview-banner nav { width: 100%; gap: 12px 20px; }
+  .v2-preview-banner a { display: inline-block; padding: 4px 0; }
+
+  /* Keep page-level layout inside the viewport, without clipping controls. */
+  .hallo-v2, .ceo-v2, .ceo-main { width: 100%; max-width: 100%; min-width: 0; }
+  .hallo-v2 .hallo-header-inner { min-width: 0; }
+  .hallo-v2 .hallo-brand { min-width: 0; }
+  .hallo-v2 .hallo-brand-name { min-width: 0; }
+  .hallo-v2 .hallo-hero h1,
+  .hallo-v2 .hallo-section-heading h2,
+  .hallo-v2 .hallo-process h2,
+  .hallo-v2 .hallo-network h2,
+  .hallo-v2 .hallo-contact h2 { overflow-wrap: break-word; }
+  .hallo-v2 .hallo-role-tabs button { min-width: 0; justify-content: center; }
+  .hallo-v2 .hallo-role-tabs button svg { flex-shrink: 0; }
+  .hallo-v2 .hallo-role-detail { min-width: 0; }
+
+  /* The trips table is intentionally horizontally scrollable; never crop its data. */
+  .ceo-v2 .ceo-trips { min-width: 0; max-width: 100%; }
+  .ceo-v2 .ceo-table-scroll { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+  .ceo-v2 .ceo-table-scroll:focus-visible { outline: 3px solid #d6a04a; outline-offset: -3px; }
+  .ceo-v2 .ceo-table-controls { min-width: 0; flex-wrap: wrap; }
+  .ceo-v2 .ceo-search { min-width: 0; flex: 1 1 160px; }
+  .ceo-v2 .ceo-filter { min-width: 0; flex: 1 1 120px; }
+  .ceo-v2 .ceo-filter select { width: 100%; min-width: 0; }
+  .ceo-v2 .ceo-title-actions { min-width: 0; }
+  .ceo-v2 .ceo-dark-button { min-width: 0; }
+}
+@media (max-width: 390px) {
+  .hallo-v2 .hallo-header-inner { gap: 8px; }
+  .hallo-v2 .hallo-brand { gap: 8px; }
+  .hallo-v2 .hallo-mark { flex-shrink: 0; }
+  .hallo-v2 .hallo-actions { flex-shrink: 0; }
+  .hallo-v2 .hallo-role-tabs button { font-size: 12px; padding-inline: 3px; }
+  .ceo-v2 .ceo-header { padding-inline: 10px; }
+  .ceo-v2 .ceo-content { padding-inline: 12px; }
+  .ceo-v2 .ceo-title-actions > * { min-width: 0; }
+}
