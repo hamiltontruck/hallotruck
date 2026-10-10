@@ -5,6 +5,7 @@ import test from "node:test";
 const page = fs.readFileSync("src/pages/PartnerOrderNew.tsx", "utf8");
 const smart = fs.readFileSync("src/pages/PartnerSmartOrderV2.tsx", "utf8");
 const service = fs.readFileSync("src/services/partner-smart-order-routing.service.ts", "utf8");
+const routing = fs.readFileSync("src/services/routing.service.ts", "utf8");
 
 test("Partner Smart Order V2 is opt-in and legacy remains the default", () => {
   assert.match(page, /VITE_PARTNER_SMART_ORDER_V2 === "true"/);
@@ -28,4 +29,13 @@ test("Step 2 exposes a real MapLibre map with user-draggable endpoint pins", () 
   assert.match(smart, /new maplibregl\.Marker/);
   assert.match(smart, /draggable: true/);
   assert.match(smart, /on\("dragend"/);
+});
+
+test("Step 3 draws only validated OpenRouteService HGV geometry", () => {
+  assert.match(smart, /getTruckRoadRoute/);
+  assert.match(smart, /addSource/);
+  assert.match(smart, /LineString/);
+  assert.match(routing, /provider !== "openrouteservice"/);
+  assert.match(routing, /profile !== "driving-hgv"/);
+  assert.doesNotMatch(smart, /haversine|straight.?line|fallback route|fake route/i);
 });
