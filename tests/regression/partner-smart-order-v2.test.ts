@@ -21,3 +21,11 @@ test("Step 1 uses real shared geocoder autocomplete with endpoint order intact",
   assert.match(smart, /dropoff/);
   assert.ok(smart.indexOf("pickup") < smart.indexOf("dropoff"));
 });
+
+test("Step 2 exposes a real MapLibre map with user-draggable endpoint pins", () => {
+  assert.match(smart, /maplibre-gl/);
+  assert.match(smart, /new maplibregl\.Map/);
+  assert.match(smart, /new maplibregl\.Marker/);
+  assert.match(smart, /draggable: true/);
+  assert.match(smart, /on\("dragend"/);
+});
