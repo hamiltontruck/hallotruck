@@ -42,4 +42,3 @@ revoke all on function public.partner_get_live_trip(uuid, uuid) from public, ano
 grant execute on function public.partner_get_live_trip(uuid, uuid) to authenticated;
 
 commit;
-
