@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/hallo-web-v2-foundation
+      - fix/hallo-web-v2-mobile-qa
     paths:
       - "apps/hallo-web-v2/**"
       - ".github/workflows/hallo-web-v2-ci.yml"
@@ -20,7 +21,7 @@ jobs:
   v2-build:
     name: V2 typecheck and build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: apps/hallo-web-v2
@@ -37,3 +38,25 @@ jobs:
         run: npm run build
       - name: Confirm V2 output
         run: test -f dist/index.html
+      - name: Install browser smoke tooling
+        run: npm install --no-save --no-audit --no-fund playwright
+      - name: Install Chromium for mobile QA
+        run: npx playwright install --with-deps chromium
+      - name: Start V2 preview server
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/hallo-v2-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/hallo-v2-preview.log
+          exit 1
+      - name: Mobile 320 360 390 412 browser smoke
+        run: node scripts/mobile-smoke.mjs
+      - name: Upload V2 QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hallo-v2-mobile-screenshots
+          path: apps/hallo-web-v2/qa-screenshots/
+          if-no-files-found: ignore
