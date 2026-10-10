@@ -2,11 +2,16 @@ import { FormEvent, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getCurrentPartnerMemberships } from "../services/partner.service";
 import { savePartnerOrderDraft, type PartnerOrderPayload } from "../services/partner-order.service";
+import { PartnerSmartOrderV2 } from "./PartnerSmartOrderV2";
 
 const field = (form: FormData, name: string) => String(form.get(name)??"").trim();
 function Input({name,label,type="text",required=true}: {name:string;label:string;type?:string;required?:boolean}) { return <label className="min-w-0 text-xs font-semibold">{label}<input name={name} type={type} required={required} className="mt-2 min-h-12 w-full min-w-0 border border-asphalt/15 px-3 text-base font-normal outline-none focus:border-amber" /></label>; }
 
 export function PartnerOrderNew() {
+  return import.meta.env.VITE_PARTNER_SMART_ORDER_V2 === "true" ? <PartnerSmartOrderV2 /> : <PartnerOrderLegacy />;
+}
+
+function PartnerOrderLegacy() {
   const [params] = useSearchParams(); const navigate=useNavigate();
   const [partnerId,setPartnerId]=useState(""); const [allowed,setAllowed]=useState(false); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
   useEffect(()=>{void (async()=>{const memberships=await getCurrentPartnerMemberships();const requested=params.get("organization");const membership=memberships.find((item)=>item.partner_id===requested)??memberships[0];setPartnerId(membership?.partner_id??"");setAllowed(["owner","admin"].includes(membership?.member_role??""));})().catch((reason)=>setError(reason instanceof Error?reason.message:"Partner access could not be verified."));},[]); // eslint-disable-line react-hooks/exhaustive-deps

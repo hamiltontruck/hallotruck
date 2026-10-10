@@ -1,4 +1,5 @@
 import { isHalloOperatingCoordinate } from "../customer-operating-region";
+import { isCoordinate } from "../../shared/geocoder-routing.js";
 import { supabase } from "./supabase.client";
 
 export interface TruckRoadRoute {
@@ -15,11 +16,6 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const functionsUrl = (import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string | undefined)
   ?? `${supabaseUrl}/functions/v1`;
 
-function isCoordinate(value: unknown): value is [number, number] {
-  return Array.isArray(value)
-    && value.length === 2
-    && value.every((part) => Number.isFinite(Number(part)));
-}
 
 export async function getTruckRoadRoute(input: {
   pickup: [number, number];
