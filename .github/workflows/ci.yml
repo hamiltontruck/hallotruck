@@ -48,7 +48,7 @@ jobs:
           VITE_PARTNER_SMART_ORDER_V2: "true"
 
       - name: Partner Smart Order V2 smoke
-        run: node scripts/partner-order-e2e-smoke.mjs
+        run: node scripts/partner-smart-order-v2-e2e-smoke.mjs
         env:
           VITE_PARTNER_SMART_ORDER_V2: "true"
 
