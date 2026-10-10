@@ -183,6 +183,7 @@ await assert.rejects(
 
 const saved = await save(payload(route(650, 780)), request(6));
 const orderId = saved.rows[0].id;
+await db.exec("reset role");
 const verified = (await db.query(
   "select route_distance_km::text, route_duration_minutes::text, route_provider, route_profile, route_verified_at is not null as verified from public.partner_orders where id=$1",
   [orderId],
@@ -197,11 +198,13 @@ assert.deepEqual(verified, {
 
 await db.query("update public.partner_orders set status='under_review' where id=$1", [orderId]);
 await db.query("select set_config('test.actor', $1, false)", [adminActor]);
+await db.exec("set role authenticated");
 const quoted = (await db.query(
   "select (public.admin_quote_partner_order_v2($1::uuid, now() + interval '1 day', $2::text, $3::uuid)).quote_amount_etb::text as amount",
   [orderId, "Server-authoritative quote", request(7)],
 )).rows[0];
 assert.equal(quoted.amount, "65100.00");
+await db.exec("reset role");
 assert.equal(
   (await db.query("select pricing->>'quoted_amount_etb' as amount from public.partner_orders where id=$1", [orderId])).rows[0].amount,
   "65100.00",
