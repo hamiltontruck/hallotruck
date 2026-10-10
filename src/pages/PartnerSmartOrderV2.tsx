@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../styles/partner-smart-order-v2.css";
 import { getCurrentPartnerMemberships } from "../services/partner.service";
 import { searchPartnerRoutePlaces, type PartnerRoutePlace } from "../services/partner-smart-order-routing.service";
 import { getTruckRoadRoute, type TruckRoadRoute } from "../services/routing.service";
@@ -108,6 +109,7 @@ export function PartnerSmartOrderV2() {
           <PlaceSearch endpoint="pickup" label="Pickup" value={pickup} onChange={(place) => { setPickup(place); setError(""); }} onError={setError} />
           <PlaceSearch endpoint="dropoff" label="Destination" value={dropoff} onChange={(place) => { setDropoff(place); setError(""); }} onError={setError} />
           <div ref={mapNode} aria-label="Pickup and destination map" className="h-[52vh] min-h-72 w-full overflow-hidden border border-asphalt/10 bg-white" />
+          {route && <dl className="partner-smart-metrics grid grid-cols-2 gap-3 bg-white p-4 text-center"><div><dt className="text-xs font-semibold uppercase tracking-wider text-asphalt/55">Distance</dt><dd className="mt-1 font-display text-2xl font-bold">{route.distanceKm.toFixed(1)} km</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wider text-asphalt/55">ETA</dt><dd className="mt-1 font-display text-2xl font-bold">{Math.ceil(route.durationMinutes)} min</dd></div></dl>}
           {routeLoading && <p role="status" className="bg-white p-3 text-sm">Calculating authoritative HGV route…</p>}
           {routeError && <div role="alert" className="flex items-center justify-between gap-3 border border-route/30 bg-route/5 p-3 text-sm text-route"><span>{routeError}</span><button type="button" className="min-h-11 border border-route px-4 font-semibold" onClick={() => setRetry((value) => value + 1)}>Retry</button></div>}
         </div>}
