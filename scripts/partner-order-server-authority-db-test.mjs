@@ -189,8 +189,8 @@ const verified = (await db.query(
   [orderId],
 )).rows[0];
 assert.deepEqual(verified, {
-  route_distance_km: "650",
-  route_duration_minutes: "780",
+  route_distance_km: "650.000",
+  route_duration_minutes: "780.000",
   route_provider: "openrouteservice",
   route_profile: "driving-hgv",
   verified: true,
