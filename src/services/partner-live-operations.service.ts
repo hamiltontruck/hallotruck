@@ -47,6 +47,9 @@ export async function loadPartnerLiveOperations(partnerId: string): Promise<Part
         warning: `${vehicle.plate_number}: the assigned fleet driver does not match the confirmed order driver.`,
       };
     }
+    if (error?.code === "42501" && error.message === "Active Partner trip not found") {
+      return { trip: null, warning: null };
+    }
     if (error) throw new Error(error.message);
     const trip = (data?.[0] ?? null) as LiveTripRpcRow | null;
     if (!trip) return { trip: null, warning: null };
