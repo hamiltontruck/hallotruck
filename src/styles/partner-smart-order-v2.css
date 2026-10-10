@@ -1,0 +1,5 @@
+.partner-smart-metrics { min-width: 0; }
+@media (max-width: 320px) { .partner-smart-metrics { gap: .5rem; padding: .75rem; } }
+@media (min-width: 321px) and (max-width: 360px) { .partner-smart-metrics { gap: .75rem; } }
+@media (min-width: 361px) and (max-width: 390px) { .partner-smart-metrics { gap: .875rem; } }
+@media (min-width: 391px) and (max-width: 412px) { .partner-smart-metrics { gap: 1rem; } }
