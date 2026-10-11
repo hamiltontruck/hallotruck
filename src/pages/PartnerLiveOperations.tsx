@@ -19,6 +19,7 @@ export function PartnerLiveOperations() {
   const [trips, setTrips] = useState<PartnerLiveTrip[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async (requested?: string) => {
@@ -39,7 +40,7 @@ export function PartnerLiveOperations() {
       }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Partner live operations could not be loaded.");
-    } finally { setLoading(false); }
+    } finally { setLoading(false); setInitialized(true); }
   }, [params, partnerId]);
 
   useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -73,7 +74,7 @@ export function PartnerLiveOperations() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Metric label="Active trips" value={trips.length} /><Metric label="LIVE" value={counts.live} /><Metric label="STALE" value={counts.stale} /><Metric label="OFFLINE" value={counts.offline} />
       </div>
-      {loading && trips.length === 0 ? <p className="border border-asphalt/10 bg-white p-10 text-center text-sm text-steel">Loading real fleet telemetry…</p> : <>
+      {loading && !initialized ? <p className="border border-asphalt/10 bg-white p-10 text-center text-sm text-steel">Loading real fleet telemetry…</p> : <>
         <PartnerLiveOperationsMap trips={trips} />
         {trips.length === 0 ? <p className="border border-asphalt/10 bg-white p-8 text-center text-sm text-steel">No active Partner trips right now.</p> :
           <div className="grid gap-3 lg:grid-cols-2">{trips.map((trip) => <article key={trip.order_id} className="border border-asphalt/10 bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="break-all font-mono text-[10px] text-steel">TRIP {trip.reference}</p><h2 className="mt-1 font-display text-xl font-bold">{trip.plate_number}</h2><p className="mt-1 text-xs text-steel">{trip.driver_name} · {trip.status.replaceAll("_", " ")}</p></div><span className="border border-asphalt/10 px-3 py-2 text-[10px] font-bold">{trip.freshness}</span></div><div className="mt-4 grid grid-cols-3 gap-2 text-xs"><Value label="Speed" value={trip.speed_kmh == null ? "—" : `${Math.round(trip.speed_kmh)} km/h`} /><Value label="Heading" value={trip.heading == null ? "—" : `${Math.round(trip.heading)}°`} /><Value label="Last GPS" value={age(trip.recorded_at)} /></div></article>)}</div>}
