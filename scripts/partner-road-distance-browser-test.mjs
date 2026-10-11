@@ -23,7 +23,7 @@ const bundle = await build({
 const directory = await mkdtemp(join(tmpdir(), "partner-distance-"));
 const fixture = join(directory, "index.html");
 await writeFile(fixture, `<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script>window.routeRequests=[];</script><script>${bundle.outputFiles[0].text}</script></body></html>`);
-const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || "/usr/bin/chromium", args: ["--no-sandbox"] });
+const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || (process.env.CI ? "/usr/bin/google-chrome" : "/usr/bin/chromium"), args: ["--no-sandbox"] });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.goto(pathToFileURL(fixture).href);

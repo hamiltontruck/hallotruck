@@ -52,6 +52,14 @@ jobs:
         env:
           VITE_PARTNER_SMART_ORDER_V2: "true"
 
+      - name: Partner road-distance form smoke
+        run: npm run test:partner-distance
+
+      - name: Partner/Admin scoped production build
+        run: npm run build:partner-platform
+        env:
+          VITE_PARTNER_SMART_ORDER_V2: "false"
+
       - name: Restore legacy build for full browser smoke
         run: npm run build
         env:
