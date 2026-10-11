@@ -62,11 +62,13 @@ try {
     }
     await page.getByText("Loading real fleet telemetry…", { exact: true }).waitFor({ state: "hidden", timeout: 30000 });
     if (mode === "positive") {
-      await page.locator("article").filter({ hasText: "LIVE" }).first().waitFor();
+      await page.locator("article").getByText("LIVE", { exact: true }).first().waitFor();
+      await page.locator(".maplibregl-marker").first().waitFor();
       assert.equal(await page.getByText("Live trip hidden:", { exact: true }).count(), 0);
     } else {
       await page.getByText("Live trip hidden:", { exact: true }).waitFor();
       assert.equal(await page.locator("article").count(), 0);
+      assert.equal(await page.locator(".maplibregl-marker").count(), 0);
     }
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Overflow at ${width}`);
     await page.screenshot({ path: `${output}/${mode}-${width}.png`, fullPage: true });

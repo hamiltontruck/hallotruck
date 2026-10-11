@@ -36,7 +36,7 @@ begin
   select *
   from public.customer_get_live_trip_unchecked_188(p_order_id);
 end;
-$function$
+$function$;
 
 revoke all on function public.partner_get_live_trip(uuid, uuid) from public, anon, authenticated, service_role;
 grant execute on function public.partner_get_live_trip(uuid, uuid) to authenticated;
