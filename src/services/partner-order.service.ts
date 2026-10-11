@@ -22,10 +22,13 @@ export type PartnerOrderPayload = {
     placed_at?: string;
   };
   payment: { method: string; status: "unpaid" };
+  route?: { provider: "openrouteservice"; profile: "driving-hgv"; distance_km: number; duration_minutes: number };
   partner_notes?: string;
 };
 
 export type PartnerOrder = PartnerOrderPayload & {
+  route_distance_km?: number | null;
+  route_duration_minutes?: number | null;
   id: string;
   partner_id: string;
   canonical_order_id: string | null;
