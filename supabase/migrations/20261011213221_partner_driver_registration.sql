@@ -155,7 +155,7 @@ grant execute on function public.link_partner_driver_onboarding_vehicle(uuid,uui
 
 create function public.review_partner_driver_registration(p_registration_id uuid,p_decision text,p_reason text)
 returns void language plpgsql security definer set search_path='' as $$
-declare v_row public.partner_driver_registrations;
+declare v_row public.partner_driver_registrations; v_onboarding_truck uuid;
 begin
  if auth.uid() is null or not (select private.is_admin_or_ceo()) then raise exception 'Admin or CEO access required'; end if;
  perform private.require_active_leadership('review_partner_driver_registration');
@@ -166,6 +166,16 @@ begin
  perform private.require_partner_driver_manager(v_row.partner_id);
  if p_decision='approved' and (v_row.driver_id is null or v_row.status<>'registered') then
   raise exception 'Driver signup must finish before approval';
+ end if;
+ if p_decision='approved' then
+  perform 1 from public.profiles where id=v_row.driver_id for update;
+  perform 1 from public.trucks where driver_id=v_row.driver_id for update;
+  select id into v_onboarding_truck from public.trucks where driver_id=v_row.driver_id order by updated_at desc limit 1;
+  perform 1 from public.partner_fleet_vehicles where truck_id=v_onboarding_truck for update;
+  if not exists(select 1 from public.trucks t join public.partner_fleet_vehicles f on f.truck_id=t.id
+   where t.id=v_onboarding_truck and t.partner_id=v_row.partner_id and f.partner_id=v_row.partner_id and f.assigned_driver_id=v_row.driver_id) then
+   raise exception 'Link this Partner canonical truck for document onboarding before approval';
+  end if;
  end if;
  update public.partner_driver_registrations set status=p_decision,reviewed_by=auth.uid(),reviewed_at=now(),review_note=btrim(p_reason) where id=v_row.id;
  if p_decision='approved' then
@@ -179,3 +189,4 @@ end $$;
 revoke all on function public.create_partner_driver_registration(uuid,text,text,text),public.claim_partner_driver_registration(uuid),public.list_partner_driver_registrations(uuid),public.review_partner_driver_registration(uuid,text,text) from public,anon;
 grant execute on function public.create_partner_driver_registration(uuid,text,text,text),public.claim_partner_driver_registration(uuid),public.list_partner_driver_registrations(uuid),public.review_partner_driver_registration(uuid,text,text) to authenticated;
 commit;
+notify pgrst, 'reload schema';
