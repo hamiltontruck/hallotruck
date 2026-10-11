@@ -292,7 +292,7 @@ export function AdminPartnerControl({ fixture = null }: { fixture?: AdminPartner
           <p className="font-mono text-[10px] tracking-[.22em] text-amber">PARTNER ONBOARDING CONTROL</p>
           <div className="mt-3 flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0"><h1 className="break-words font-display text-3xl font-bold sm:text-4xl">HALLO Logistics Partner network</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/55">Create verified organizations, promote existing accounts safely, protect ownership and make every Partner login decision auditable.</p></div>
-            <Link to="/partner/login" target="_blank" rel="noreferrer" className="w-fit border border-amber/60 px-4 py-3 text-xs font-semibold text-amber">Open Partner Login ↗</Link>
+            <div className="flex flex-wrap gap-2"><Link to="/admin/partner-drivers" className="w-fit border border-white/30 px-4 py-3 text-xs font-semibold">Partner driver review</Link><Link to="/partner/login" target="_blank" rel="noreferrer" className="w-fit border border-amber/60 px-4 py-3 text-xs font-semibold text-amber">Open Partner Login ↗</Link></div>
           </div>
         </header>
 

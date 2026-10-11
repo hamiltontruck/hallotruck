@@ -36,6 +36,8 @@ import { PartnerLiveOperations } from "./pages/PartnerLiveOperations";
 import { PartnerWallet } from "./pages/PartnerWallet";
 import { PartnerOrders } from "./pages/PartnerOrders";
 import { PartnerOrderNew } from "./pages/PartnerOrderNew";
+import { PartnerDriverJoin } from "./pages/PartnerDriverJoin";
+import { AdminPartnerDrivers } from "./pages/AdminPartnerDrivers";
 import { PartnerOrderDetails } from "./pages/PartnerOrderDetails";
 import { JobBoard } from "./pages/JobBoard";
 import { ActiveTrip } from "./pages/ActiveTrip";
@@ -141,6 +143,8 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin/manual-driver-documents" element={<AdminGate><AdminToolShell><AdminManualDriverDocuments /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partners" element={<AdminGate><AdminToolShell><AdminPartnerControl /></AdminToolShell></AdminGate>} />
 <Route path="/partner/login" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
+<Route path="/partner/driver-join" element={<PartnerDriverJoin />} />
+<Route path="/admin/partner-drivers" element={<AdminGate><AdminToolShell><AdminPartnerDrivers /></AdminToolShell></AdminGate>} />
 <Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
 <Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
 <Route path="/partner/live" element={<PartnerGate><PartnerLiveOperations /></PartnerGate>} />

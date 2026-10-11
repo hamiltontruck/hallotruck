@@ -60,6 +60,9 @@ jobs:
         env:
           VITE_PARTNER_SMART_ORDER_V2: "false"
 
+      - name: Partner driver registration smoke
+        run: npm run test:partner-drivers
+
       - name: Restore legacy build for full browser smoke
         run: npm run build
         env:

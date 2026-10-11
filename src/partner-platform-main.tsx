@@ -16,6 +16,9 @@ import { AdminPartnerControl } from "./pages/AdminPartnerControl";
 import { AdminPartnerFinance } from "./pages/AdminPartnerFinance";
 import { AdminPartnerDispatch } from "./pages/AdminPartnerDispatch";
 import { AdminPartnerOrderReview } from "./pages/AdminPartnerOrderReview";
+import { PartnerDriverJoin } from "./pages/PartnerDriverJoin";
+import { AdminPartnerDrivers } from "./pages/AdminPartnerDrivers";
+import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
 import "./index.css";
 import "./styles/partner-onboarding.css";
 
@@ -24,6 +27,7 @@ function AdminPartnerWorkspace({ children }: { children: React.ReactNode }) {
     <nav aria-label="Admin Partner controls" className="flex flex-wrap gap-3 bg-asphalt p-4 text-sm text-white">
       <Link to="/admin/partners">Partners</Link>
       <Link to="/admin/partner-orders">Order review</Link>
+      <Link to="/admin/partner-drivers">Partner drivers</Link>
       <Link to="/admin/partner-dispatch">Dispatch</Link>
       <Link to="/admin/partner-finance">Commission & settlements</Link>
     </nav>
@@ -36,6 +40,7 @@ function AdminPartnerWorkspace({ children }: { children: React.ReactNode }) {
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode><LanguageProvider><PasswordRecoveryGate><HashRouter><Routes>
     <Route path="/partner/login" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
+    <Route path="/partner/driver-join" element={<PartnerDriverJoin />} />
     <Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
     <Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
     <Route path="/partner/live" element={<PartnerGate><PartnerLiveOperations /></PartnerGate>} />
@@ -48,6 +53,8 @@ createRoot(document.getElementById("root")!).render(
     <Route path="/admin/partner-finance" element={<AdminPartnerWorkspace><AdminPartnerFinance /></AdminPartnerWorkspace>} />
     <Route path="/admin/partner-dispatch" element={<AdminPartnerWorkspace><AdminPartnerDispatch /></AdminPartnerWorkspace>} />
     <Route path="/admin/partner-orders" element={<AdminPartnerWorkspace><AdminPartnerOrderReview /></AdminPartnerWorkspace>} />
+    <Route path="/admin/partner-drivers" element={<AdminPartnerWorkspace><AdminPartnerDrivers /></AdminPartnerWorkspace>} />
+    <Route path="/admin/driver-compliance" element={<AdminPartnerWorkspace><AdminDriverCompliance /></AdminPartnerWorkspace>} />
     <Route path="*" element={<Navigate to="/partner" replace />} />
   </Routes></HashRouter></PasswordRecoveryGate></LanguageProvider></React.StrictMode>,
 );
