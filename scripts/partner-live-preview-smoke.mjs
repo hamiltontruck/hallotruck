@@ -9,19 +9,30 @@ const config = JSON.parse(await readFile(process.env.PARTNER_TEST_CONFIG, "utf8"
 const session = JSON.parse(await readFile(process.env.PARTNER_TEST_SESSION, "utf8"));
 assert.equal(config.testOnly, true, "An explicitly isolated test backend is required");
 const preview = new URL(process.env.PARTNER_PREVIEW_URL);
+assert.equal(preview.hash, "#/partner/live", "Use the deployed app's hash route");
 const mode = process.env.PARTNER_SMOKE_MODE ?? "positive";
 const output = process.env.PARTNER_SMOKE_OUTPUT ?? "/tmp/partner-live-preview-smoke";
 await mkdir(output, { recursive: true });
-const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN ?? "/usr/bin/chromium", args: ["--no-sandbox"] });
+const proxy = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
+const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN ?? "/usr/bin/chromium", args: ["--no-sandbox"], ...(proxy ? { proxy: { server: proxy } } : {}) });
 try {
   for (const width of [320, 360, 390, 412]) {
-    const page = await browser.newPage({ viewport: { width, height: 915 } });
+    const page = await browser.newPage({ viewport: { width, height: 915 }, ignoreHTTPSErrors: process.env.PARTNER_SMOKE_IGNORE_PROXY_CERT === "true" });
     await page.addInitScript((authSession) => {
       const original = Storage.prototype.getItem;
       Storage.prototype.getItem = function (key) {
         return /^sb-.*-auth-token$/.test(key) ? JSON.stringify(authSession) : original.call(this, key);
       };
     }, session);
+    await page.route("**/*", async (route) => {
+      const request = route.request();
+      const target = new URL(request.url());
+      if (target.origin === preview.origin || (request.method() === "GET" && target.hostname === "api.maptiler.com")) {
+        await route.continue();
+      } else {
+        await route.abort();
+      }
+    });
     await page.route(/https:\/\/[^/]+\.supabase\.co\/.*/, async (route) => {
       const request = route.request();
       const original = new URL(request.url());
@@ -30,11 +41,25 @@ try {
       if (request.method() !== "GET" && !(request.method() === "POST" && allowedRpc.some((name) => original.pathname.endsWith("/rpc/" + name)))) {
         await route.abort(); return;
       }
-      const response = await route.fetch({ url: target.toString(), headers: { ...request.headers(), apikey: config.key, authorization: `Bearer ${session.access_token}` } });
-      await route.fulfill({ response });
+      try {
+        const response = await route.fetch({ url: target.toString(), headers: { ...request.headers(), apikey: config.key, authorization: `Bearer ${session.access_token}` } });
+        await route.fulfill({ response });
+      } catch {
+        // Playwright's raw transport errors can include authorization headers.
+        // Never log those errors, request headers, credentials or response bodies.
+        console.error("Isolated backend transport failed; request aborted");
+        await route.abort();
+      }
     });
     await page.goto(preview.toString(), { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "Real GPS fleet map" }).waitFor({ timeout: 30000 });
+    try {
+      await page.getByRole("heading", { name: "Real GPS fleet map" }).waitFor({ timeout: 30000 });
+    } catch (error) {
+      await page.screenshot({ path: `${output}/failed-${width}.png`, fullPage: true });
+      const text = await page.locator("body").innerText();
+      console.error(text.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "[redacted]").slice(0, 600));
+      throw error;
+    }
     await page.getByText("Loading real fleet telemetry…", { exact: true }).waitFor({ state: "hidden", timeout: 30000 });
     if (mode === "positive") {
       await page.locator("article").filter({ hasText: "LIVE" }).first().waitFor();
