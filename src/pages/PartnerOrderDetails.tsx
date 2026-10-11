@@ -99,6 +99,7 @@ export function PartnerOrderDetails() {
               <p className="my-3 text-amber-dim">↓</p>
               <p>{order.dropoff_location.city}, {order.dropoff_location.country}</p>
               <p className="text-steel">{order.dropoff_location.address}</p>
+              {Number(order.route_distance_km) > 0 && <p className="mt-4 text-sm font-semibold">Truck road distance: {Number(order.route_distance_km).toFixed(1)} km{Number(order.route_duration_minutes) > 0 ? ` · estimated ${Math.ceil(Number(order.route_duration_minutes))} min` : ""}</p>}
             </Card>
             <Card title="Cargo & vehicle">
               <p className="font-semibold">{order.cargo.description}</p>
@@ -159,6 +160,7 @@ export function PartnerOrderDetails() {
                   <p className="mt-2 break-all font-mono text-xs text-asphalt">{order.pricing.canonical_tracking_id ?? "Tracking pending refresh"}</p>
                   <p className="mt-1 break-all text-xs text-steel">{order.canonical_order_id}</p>
                   <p className="mt-3 text-sm text-steel">Dispatch, truck selection, and driver confirmation continue through the existing controlled workflow.</p>
+                  <Link to={`/partner/live?organization=${encodeURIComponent(order.partner_id)}`} className="mt-3 inline-block min-h-11 border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800">Open live fleet & trips</Link>
                 </div>
               )}
               {order.status === "rejected" && <p className="mt-5 border-t border-route/20 pt-4 text-sm font-semibold text-route">Quote rejected. The decision is preserved in lifecycle history.</p>}
