@@ -83,3 +83,20 @@ html { min-width: 0; }
   .ceo-v2 .ceo-metric-value { font-size: 18px; overflow-wrap: anywhere; }
   .ceo-v2 .ceo-metric-foot { flex-wrap: wrap; }
 }
+
+/* V2 mobile QA: balanced hero CTAs; isolated from V1 and dashboard. */
+@media (max-width: 760px) {
+  .hallo-v2 .hallo-hero-buttons { gap: 12px; margin-top: 26px; }
+  .hallo-v2 .hallo-hero-buttons .hallo-primary {
+    padding: 12px 16px;
+    min-height: 48px;
+    gap: 12px;
+    line-height: 1.35;
+    font-size: 13px;
+  }
+  .hallo-v2 .hallo-hero-buttons .hallo-ghost {
+    padding: 10px 12px;
+    min-height: 44px;
+    gap: 10px;
+  }
+}
