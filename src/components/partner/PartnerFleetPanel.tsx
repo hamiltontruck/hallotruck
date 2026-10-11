@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { filterFleetVehicles } from "../../domain/fleet-management";
+import { PartnerDriversPanel } from "./PartnerDriversPanel";
 import {
   createFleetBranch,
   createFleetVehicle,
@@ -73,6 +74,7 @@ export function PartnerFleetPanel({ partnerId, canManage, fixture, executeAction
       <FleetMetric label="Expiry alerts" value={data.summary.expiry_alerts} detail="Within 30 days" danger={data.summary.expiry_alerts > 0} />
     </div>
 
+    {canManage && <PartnerDriversPanel partnerId={partnerId} />}
     {canManage && <div className="grid gap-4 lg:grid-cols-2">
       <details className="rounded-2xl border border-asphalt/10 bg-white p-4 sm:p-5"><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Register Partner vehicle</summary><form onSubmit={submitVehicle} aria-busy={activeAction?.key === "register_vehicle"} className="mt-4 grid gap-3 sm:grid-cols-2"><Input name="plate" label="Plate number" required /><Input name="vehicleType" label="Truck type" required /><Input name="capacity" label="Capacity (tons)" type="number" step="0.01" /><Select name="ownership" label="Ownership" values={["partner", "leased", "owner_operator"]} /><Select name="fuel" label="Fuel" values={fuels} /><label className="text-xs font-semibold">Branch<select name="branch" className="mt-2 min-h-12 w-full rounded-xl border border-asphalt/15 bg-white px-3 font-normal"><option value="">No branch</option>{data.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label><button disabled={saving} aria-describedby={saving ? "partner-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Register Partner vehicle"} className="min-h-12 bg-asphalt px-4 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{activeAction?.key === "register_vehicle" ? "Registering vehicle…" : "Register vehicle"}</button></form></details>
       <details className="rounded-2xl border border-asphalt/10 bg-white p-4 sm:p-5"><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Create fleet branch</summary><form onSubmit={submitBranch} aria-busy={activeAction?.key === "create_branch"} className="mt-4 grid gap-3 sm:grid-cols-2"><Input name="name" label="Branch name" required /><Input name="code" label="Branch code" required pattern="[A-Za-z0-9_-]{2,30}" /><Input name="address" label="Address" span /><button disabled={saving} aria-describedby={saving ? "partner-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Create Partner fleet branch"} className="min-h-12 bg-asphalt px-4 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{activeAction?.key === "create_branch" ? "Creating branch…" : "Create branch"}</button></form></details>

@@ -2,6 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { build } from "esbuild";
 
 const root = process.cwd();
 const host = "127.0.0.1";
@@ -96,8 +97,13 @@ document.documentElement.dataset.overflow=String(document.documentElement.scroll
 document.documentElement.dataset.ready="true";
 `;
 await writeFile(entry, fixtureSource, "utf8");
-const built = spawnSync(esbuild, [entry, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120", `--outfile=${bundle}`, "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"", "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\""], { cwd: root, encoding: "utf8" });
-if (built.status !== 0) throw new Error(built.stderr || "Fleet fixture bundle failed.");
+await build({ entryPoints:[entry],bundle:true,platform:"browser",format:"esm",target:"chrome120",outfile:bundle,
+  define:{"import.meta.env.VITE_SUPABASE_URL":'"https://example.supabase.co"',"import.meta.env.VITE_SUPABASE_ANON_KEY":'"ci-anon-key"'},
+  plugins:[{name:"driver-registration-boundary",setup(builder){
+    builder.onResolve({filter:/partner-driver\.service/},()=>({path:"driver-service",namespace:"fixture"}));
+    builder.onLoad({filter:/.*/,namespace:"fixture"},()=>({loader:"js",contents:'export const listPartnerDrivers=async()=>[];export const addPartnerDriver=async()=>({});export const partnerDriverJoinUrl=token=>"#/partner/driver-join?token="+token;'}));
+  }}],
+});
 await writeFile(html, `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="./assets/${css}"></head><body><div id="root"></div><script type="module" src="./fleet-enterprise-e2e.js"></script></body></html>`, "utf8");
 
 const preview = spawn(vite, ["preview", "--host", host, "--port", String(port), "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
