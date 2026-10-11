@@ -14,7 +14,9 @@ This change is scoped to Partner-origin platform fees, the legacy Partner order 
 
 The new executable database test covers 0.25% calculation, unchanged legacy 2%, cross-organization denial, non-Admin denial, suspended organization denial, refunds, duplicate accrual, rounding, missing rules and no released payment. The production function was inspected read-only; the original authorization, payment and audit behavior matches the baseline preserved by this migration.
 
-TypeScript and the Partner/Admin build were run locally. The regression suite log completed through its final Customer booking guard. The real-form browser test is included, but Chromium launch was blocked by sandbox socket permissions; it has **not passed**. Run `npm run test:partner-distance` in a browser-enabled environment before marking this PR ready.
+Local Chromium launch was blocked by sandbox socket permissions. GitHub Actions subsequently passed the real-form road-distance test, the Partner/Admin scoped build, lint, regression tests and both legacy/V2 builds on the CI fix commit. The road-distance test renders the real legacy form and save service with external routing/auth/RPC boundaries mocked; it verifies coordinate selection, automatic distance, stale-response rejection, failure/retry, save gating and the outgoing RPC payload. Authenticated production/device smoke remains a separate rollout gate.
+
+The original CI failure was a V2 static responsive fixture dumped before its two animation-frame callbacks set readiness. The fixture now runs through Playwright and explicitly waits for readiness and font loading before checking layout. It still checks all four mobile widths and horizontal overflow; application V2 code is unchanged. The full browser suite must also pass on the final PR revision before merging.
 
 Local builds used placeholder browser configuration, not a production deployment. No production migration, payment, account creation or GPS write was performed for this change.
 
