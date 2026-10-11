@@ -11,7 +11,8 @@ async function geocode(query: string, types: string, excludeTypes: boolean, sign
   url.searchParams.set("limit", "6");
   url.searchParams.set("country", "et,dj,so");
   url.searchParams.set("autocomplete", "true");
-  url.searchParams.set(excludeTypes ? "excludeTypes" : "types", types);
+  url.searchParams.set("types", types);
+  if (excludeTypes) url.searchParams.set("excludeTypes", "true");
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error("Place search is temporarily unavailable.");
   return ((await response.json()) as { features?: GeocodeFeature[] }).features ?? [];
