@@ -44,5 +44,26 @@ export function parseVerifiedQuote(value: unknown): VerifiedQuote {
  */
 export async function requestVerifiedQuote(request: QuoteRequest): Promise<VerifiedQuote> {
  validateQuoteRequest(request);
- throw new QuoteUnavailableError('Trusted live quote endpoint is not configured');
+ const endpoint = import.meta.env.VITE_HALLO_PUBLIC_QUOTE_ENDPOINT as string | undefined;
+ if (!endpoint || !endpoint.startsWith('https://')) {
+  throw new QuoteUnavailableError('Trusted live quote endpoint is not configured');
+ }
+ const controller = new AbortController();
+ const timeout = setTimeout(() => controller.abort(), 15000);
+ try {
+  const response = await fetch(endpoint, {
+   method: 'POST',
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify(request),
+   signal: controller.signal,
+   credentials: 'omit',
+  });
+  if (!response.ok) throw new QuoteUnavailableError('Verified quote is temporarily unavailable');
+  return parseVerifiedQuote(await response.json());
+ } catch (error) {
+  if (error instanceof QuoteUnavailableError) throw error;
+  throw new QuoteUnavailableError('Verified quote is temporarily unavailable');
+ } finally {
+  clearTimeout(timeout);
+ }
 }
