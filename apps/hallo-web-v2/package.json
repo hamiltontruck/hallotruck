@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test:quote": "node --experimental-strip-types --test tests/verifiedQuote.test.mjs"
+    "test:quote": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
