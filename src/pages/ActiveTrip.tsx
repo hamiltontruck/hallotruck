@@ -114,7 +114,8 @@ function ActiveTripContent({ order, onOrderChange }: ActiveTripContentProps) {
 
       {tripStarted ? (
         <DriverDeliveryProofForm orderId={order.id} tripAmountEtb={grossFare} onDelivered={() => {
-          navigate(partnerDriver ? "/partner/driver" : "/driver/earnings");
+          if (partnerDriver) navigate("/partner/driver");
+          else navigate("/driver/earnings");
         }} />
       ) : (
         <div className="border border-line bg-white px-5 py-4 text-center">

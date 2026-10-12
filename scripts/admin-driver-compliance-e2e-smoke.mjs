@@ -102,7 +102,7 @@ try {
       await page.waitForFunction(() => document.documentElement.dataset.ready === "true", { }, { timeout: 15_000 });
       if (errors.length) throw new Error(errors.join("\n"));
       const dom = await page.content();
-      for (const expected of ['data-ready="true"', 'data-overflow="false"', "Driver operations &amp; verification", "Cannot approve yet: Waiting for driver documents.", "Cannot remove while active trip HT-2026-ACTIVE-001 is accepted.", "Approved Replacement Driver", 'data-groups="true"', 'data-compact="true"', 'data-metadata-hidden="true"', 'data-details="true"', 'data-modal-overflow="false"', 'data-back="true"', 'data-closed="true"', 'data-id-expiry="true"', 'data-id-back="true"']) {
+      for (const expected of ['data-ready="true"', 'data-overflow="false"', "HALLO driver operations &amp; verification", "Cannot approve yet: Waiting for driver documents.", "Cannot remove while active trip HT-2026-ACTIVE-001 is accepted.", "Approved Replacement Driver", 'data-groups="true"', 'data-compact="true"', 'data-metadata-hidden="true"', 'data-details="true"', 'data-modal-overflow="false"', 'data-back="true"', 'data-closed="true"', 'data-id-expiry="true"', 'data-id-back="true"']) {
         if (!dom.includes(expected)) throw new Error(`Admin Driver Compliance ${width}px smoke missing: ${expected}`);
       }
     } catch (error) {

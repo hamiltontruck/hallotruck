@@ -17,10 +17,11 @@ export function DriverGate({ children }: { children: ReactNode }) {
   const isDriverOnboardingPath = normalizedPath === "/driver/profile" || normalizedPath === "/driver/documents";
 
   useEffect(() => {
-    let active = true;
+    let active = true; let checkVersion = 0;
 
     async function check(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
       if (!active) return;
+      const requestVersion = ++checkVersion;
 
       setSignedIn(Boolean(session));
       setWorkspace(null); setWorkspaceError("");
@@ -38,16 +39,16 @@ export function DriverGate({ children }: { children: ReactNode }) {
         .eq("id", session.user.id)
         .maybeSingle();
 
-      if (!active) return;
+      if (!active || requestVersion !== checkVersion) return;
       if (!error && profile) {
         setRole(profile.role ?? null);
         setDriverStatus(profile.driver_status ?? null);
         if (profile.role === "driver") {
-          try { const context = await getMyDriverWorkspace(); if (active) setWorkspace(context); }
-          catch (reason) { if (active) setWorkspaceError(reason instanceof Error ? reason.message : "Driver ownership could not be verified."); }
+          try { const context = await getMyDriverWorkspace(); if (active && requestVersion === checkVersion) setWorkspace(context); }
+          catch (reason) { if (active && requestVersion === checkVersion) setWorkspaceError(reason instanceof Error ? reason.message : "Driver ownership could not be verified."); }
         }
       }
-      setLoading(false);
+      if (active && requestVersion === checkVersion) setLoading(false);
     }
 
     supabase.auth.getSession().then(({ data }) => void check(data.session));

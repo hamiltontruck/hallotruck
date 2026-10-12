@@ -63,6 +63,9 @@ jobs:
       - name: Partner driver registration smoke
         run: npm run test:partner-drivers
 
+      - name: Partner Driver workspace and Admin roster isolation
+        run: npm run test:partner-driver-workspace
+
       - name: Restore legacy build for full browser smoke
         run: npm run build
         env:

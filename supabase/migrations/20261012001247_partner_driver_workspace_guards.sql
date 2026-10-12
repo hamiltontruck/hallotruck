@@ -134,6 +134,18 @@ revoke all on function public.get_partner_driver_active_trip() from public,anon;
 grant execute on function public.get_partner_driver_active_trip() to authenticated;
 
 -- Keep existing claim/profile implementations and ACLs; prepend a fail-closed
+alter function public.driver_can_view_available_order(uuid,text,numeric) set schema private;
+alter function private.driver_can_view_available_order(uuid,text,numeric) rename to hallo_available_order_core;
+revoke all on function private.hallo_available_order_core(uuid,text,numeric) from public,anon,authenticated;
+create function public.driver_can_view_available_order(p_order_id uuid,p_vehicle_type text,p_cargo_weight_tons numeric)
+returns boolean language sql stable security definer set search_path='' as $$
+ select case when exists(select 1 from public.partner_driver_ownership where driver_id=auth.uid()) then false
+ else private.hallo_available_order_core(p_order_id,p_vehicle_type,p_cargo_weight_tons) end;
+$$;
+revoke all on function public.driver_can_view_available_order(uuid,text,numeric) from public,anon;
+grant execute on function public.driver_can_view_available_order(uuid,text,numeric) to authenticated;
+
+-- Keep existing claim/profile implementations and ACLs; prepend a fail-closed
 -- ownership guard to every extant public overload, including legacy variants.
 do $$ declare f record; v_def text; v_guarded text; begin
  for f in select p.oid,p.proname,l.lanname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
@@ -180,7 +192,13 @@ grant execute on function public.admin_approve_driver_onboarding(uuid) to authen
 do $$ declare v_def text; begin
  v_def:=pg_get_functiondef('public.review_partner_driver_registration(uuid,text,text)'::regprocedure);
  if position('public.admin_approve_driver_onboarding(v_row.driver_id)' in v_def)=0 then raise exception 'Partner approval definition needs review before migration'; end if;
- execute replace(v_def,'public.admin_approve_driver_onboarding(v_row.driver_id)','private.approve_driver_onboarding_core(v_row.driver_id)');
+ v_def:=replace(v_def,'public.admin_approve_driver_onboarding(v_row.driver_id)','private.approve_driver_onboarding_core(v_row.driver_id)');
+ -- Restoring a suspended Partner driver to pending must use this same verified
+ -- Partner approval path, rather than the now HALLO-only generic entry.
+ v_def:=replace(v_def,'if not found or v_row.status not in (''invited'',''registered'') then',
+  'if not found or (v_row.status not in (''invited'',''registered'') and not (v_row.status=''approved'' and exists(select 1 from public.profiles where id=v_row.driver_id and driver_status::text=''pending''))) then');
+ v_def:=replace(v_def,'v_row.status<>''registered''','v_row.status not in (''registered'',''approved'')');
+ execute v_def;
 end $$;
 commit;
 notify pgrst,'reload schema';

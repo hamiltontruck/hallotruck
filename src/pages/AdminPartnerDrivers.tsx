@@ -14,14 +14,14 @@ export function AdminPartnerDrivers() {
   }
   return <main className="min-h-screen space-y-5 bg-bone p-5 text-asphalt"><h1 className="font-display text-3xl font-bold">Partner driver review</h1>
     <p>Link the Partner truck, then verify driver and vehicle documents. Partner approval checks every required document and approves onboarding in one transaction. Pending drivers cannot work.</p>
-    <Link to="/admin/driver-compliance" className="inline-block border p-3 font-semibold">Driver document review</Link>
+    <Link to="/admin/partner-driver-compliance" className="inline-block border p-3 font-semibold">Driver document review</Link>
     {error&&<p role="alert" className="text-route">{error}</p>}
     {rows.map(row=><article key={row.id} className="space-y-3 border bg-white p-5"><h2 className="text-xl font-bold">{row.full_name} · {row.partner_name}</h2>
       <p className="break-all">{row.email} · {row.phone}</p><p>Registration: {row.status} · Driver: {row.driver_status??"Signup pending"}</p>
       {row.review_note&&<p>Review: {row.review_note}</p>}
       {row.driver_id&&["registered","approved"].includes(row.status)&&<OnboardingVehicle row={row} onSaved={load} />}
-      {["registered","invited"].includes(row.status)&&<form onSubmit={event=>void review(event,row)} className="flex flex-wrap gap-3">
-        <select name="decision" className="min-h-12 border p-2"><option value="rejected">Reject registration</option>{row.status==="registered"&&<option value="approved">Approve verified Partner driver</option>}</select>
+      {(["registered","invited"].includes(row.status)||(row.status==="approved"&&row.driver_status==="pending"))&&<form onSubmit={event=>void review(event,row)} className="flex flex-wrap gap-3">
+        <select name="decision" className="min-h-12 border p-2"><option value="rejected">Reject registration</option>{(row.status==="registered"||(row.status==="approved"&&row.driver_status==="pending"))&&<option value="approved">Approve verified Partner driver</option>}</select>
         <input name="reason" aria-label="Review reason" required minLength={3} placeholder="Review reason" className="min-h-12 min-w-0 flex-1 border p-2" />
         <button disabled={busy} className="min-h-12 bg-asphalt px-4 text-white disabled:opacity-40">Save review</button>
       </form>}

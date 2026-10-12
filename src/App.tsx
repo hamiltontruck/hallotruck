@@ -138,6 +138,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin/partner-dispatch" element={<AdminGate><AdminToolShell><AdminPartnerDispatch /></AdminToolShell></AdminGate>} />
 <Route path="/admin/partner-orders" element={<AdminGate><AdminToolShell><AdminPartnerOrderReview /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance /></AdminToolShell></AdminGate>} />
+<Route path="/admin/partner-driver-compliance" element={<AdminGate><AdminToolShell><AdminDriverCompliance scope="partner" /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-finance-search" element={<AdminGate><AdminToolShell><AdminDriverFinanceSearch /></AdminToolShell></AdminGate>} />
 <Route path="/admin/driver-commission" element={<AdminGate><AdminToolShell><AdminDriverCommission /></AdminToolShell></AdminGate>} />
 <Route path="/admin/fleet-maintenance" element={<AdminGate><AdminToolShell><div className="fleet-maintenance-mobile"><AdminFleetMaintenance /></div></AdminToolShell></AdminGate>} />

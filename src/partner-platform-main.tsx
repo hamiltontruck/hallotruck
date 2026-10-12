@@ -67,6 +67,7 @@ createRoot(document.getElementById("root")!).render(
     <Route path="/admin/partner-orders" element={<AdminPartnerWorkspace><AdminPartnerOrderReview /></AdminPartnerWorkspace>} />
     <Route path="/admin/partner-drivers" element={<AdminPartnerWorkspace><AdminPartnerDrivers /></AdminPartnerWorkspace>} />
     <Route path="/admin/driver-compliance" element={<AdminPartnerWorkspace><AdminDriverCompliance /></AdminPartnerWorkspace>} />
+<Route path="/admin/partner-driver-compliance" element={<AdminPartnerWorkspace><AdminDriverCompliance scope="partner" /></AdminPartnerWorkspace>} />
     <Route path="/driver/*" element={<main className="p-6"><h1>HALLO Driver workspace</h1><a href="https://hamiltontruck.github.io/hallotruck/#/driver/login">Open HALLO Driver login</a></main>} />
     <Route path="*" element={<Navigate to="/partner" replace />} />
   </Routes></HashRouter></PasswordRecoveryGate></LanguageProvider></React.StrictMode>,
