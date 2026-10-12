@@ -39,7 +39,7 @@ await db.exec(await readFile(`supabase/migrations/${file}`,'utf8'));
 
 await db.exec(`alter table profiles add column email text, add column home_address text;
 alter table trucks add column model text, add column plate_number text, add column vehicle_type text, add column capacity_tons numeric;
-alter table orders add column id uuid default gen_random_uuid(), add column tracking_id text, add column pickup_address text, add column dropoff_address text, add column price_etb numeric, add column payment_terms text, add column cancellation_reason text, add column cancelled_at timestamptz, add column cancelled_by uuid, add column cancellation_source text, add column updated_at timestamptz, add column delivered_at timestamptz, add column created_at timestamptz default now();`);
+alter table orders add column id uuid default gen_random_uuid(), add column customer_id uuid, add column vehicle_type text, add column cargo_weight_tons numeric, add column tracking_id text, add column pickup_address text, add column dropoff_address text, add column price_etb numeric, add column payment_terms text, add column cancellation_reason text, add column cancelled_at timestamptz, add column cancelled_by uuid, add column cancellation_source text, add column updated_at timestamptz, add column delivered_at timestamptz, add column created_at timestamptz default now();`);
 const actor = async who => db.query("select set_config('test.actor',$1,false)",[who??'']);
 const migration = (await readdir('supabase/migrations')).find(n=>n.endsWith('_partner_driver_workspace_separation.sql'));
 assert.ok(migration,'Server-managed Partner ownership migration is required');
@@ -51,11 +51,16 @@ await db.exec('create table partner_job_requests(order_id uuid,partner_id uuid,s
 await db.exec("create type order_status as enum('placed','accepted','in_transit','delivered','cancelled'); alter table orders alter column status type order_status using status::order_status");
 await db.exec(await readFile('scripts/fixtures/partner-driver-hallo-rpcs.sql','utf8'));
 // Isolate the wrapper boundary; existing dispatch tests cover the HALLO core.
-await db.exec("create function public.driver_can_view_available_order(uuid,text,numeric) returns boolean language sql as $$select true$$");
+await db.exec("create function public.driver_can_view_available_order(uuid,text,numeric) returns boolean language sql security definer set search_path='' as $$select true$$");
 await db.exec(await readFile('scripts/fixtures/partner-driver-delivery-core.sql','utf8'));
 await db.exec(await readFile('scripts/fixtures/partner-driver-cancel-core.sql','utf8'));
-await db.exec("create function admin_assign_order(uuid,uuid,p_driver_id uuid) returns void language plpgsql as $$begin return; end$$; create function driver_can_view_available_order_v2(uuid,text,numeric) returns boolean language sql as $$select true$$; create function admin_order_assignment_candidates(uuid) returns table(driver_id uuid) language sql as $$select id from public.profiles where role='driver'$$;");
+await db.exec("create function admin_assign_order(uuid,uuid,p_driver_id uuid) returns void language plpgsql as $$begin return; end$$; create function driver_can_view_available_order_v2(uuid,text,numeric) returns boolean language sql security definer set search_path='' as $$select true$$; create function admin_order_assignment_candidates(uuid) returns table(driver_id uuid) language sql as $$select id from public.profiles where role='driver'$$;");
+// Real pre-existing policy binds function OIDs; renaming must not strand its ACL.
+await db.exec("create policy existing_order_visibility on orders for select to authenticated using(driver_id=auth.uid() or (status='placed' and public.driver_can_view_available_order(id,vehicle_type,cargo_weight_tons)))");
 await db.exec(await readFile(`supabase/migrations/${migration}`,'utf8'));
+const repair=(await readdir('supabase/migrations')).find(n=>n.endsWith('_rebind_driver_visibility_policies.sql'));
+if(repair) await db.exec(await readFile(`supabase/migrations/${repair}`,'utf8'));
+
 await actor(owner);
 const invitation=(await db.query("select create_partner_driver_registration($1,'TEST Driver','driver@example.test','0944444444') as value",[partner])).rows[0].value;
 await db.query("insert into auth.users(id,email,created_at,email_confirmed_at) values($1,'driver@example.test',clock_timestamp(),now())",[driver]);
@@ -156,7 +161,11 @@ assert.equal((await db.query('select get_partner_driver_vehicle() as value')).ro
 
 await actor(admin);
 await db.query("insert into orders(id,status) values($1,'placed')",[id(44)]);
-await db.exec("alter table orders enable row level security; create policy fixture_authorized_orders on orders for select to authenticated using(true); grant select on orders to authenticated");
+await db.exec("alter table orders enable row level security; grant select on orders to authenticated");
+await db.exec('grant usage on schema auth to authenticated');
+await actor(hallo); await db.exec('set role authenticated');
+assert.ok((await db.query('select id from orders')).rows.some(row=>row.id===id(44)),'HALLO available-order policy remains executable');
+await db.exec('reset role');
 await actor(driver); await db.exec('set role authenticated');
 const visible=(await db.query('select id from orders order by id')).rows.map(row=>row.id);
 assert.ok(visible.includes(id(43)),'cancelled own Partner order stays visible through real RLS');
