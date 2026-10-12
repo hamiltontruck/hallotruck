@@ -19,6 +19,7 @@ create table partner_activity_log(partner_id uuid,actor_id uuid,action text,enti
 create table trucks(id uuid primary key,partner_id uuid,driver_id uuid,status text,updated_at timestamptz);
 create table orders(truck_id uuid,driver_id uuid,status text);
 create table partner_fleet_vehicles(id uuid primary key,partner_id uuid,truck_id uuid,assigned_driver_id uuid,status text);
+create table tracking_pings(order_id uuid,driver_id uuid);
 create table driver_verification_files(driver_id uuid,truck_id uuid,document_key text,status text,expiry_date date);
 insert into partner_organizations values('${partner}','TEST Partner','active'),('${other}','OTHER Partner','active');
 insert into profiles values('${owner}','partner','OWNER','0911111111',null),('${admin}','admin','ADMIN','0922222222',null),('${outsider}','partner','OTHER','0933333333',null);
@@ -31,12 +32,17 @@ assert.ok(file, "Partner driver registration migration must exist");
 await db.exec(await readFile(`supabase/migrations/${file}`,'utf8'));
 
 await db.exec(`alter table profiles add column email text, add column home_address text;
-alter table trucks add column plate_number text, add column vehicle_type text, add column capacity_tons numeric;
+alter table trucks add column model text, add column plate_number text, add column vehicle_type text, add column capacity_tons numeric;
 alter table orders add column id uuid default gen_random_uuid(), add column tracking_id text, add column pickup_address text, add column dropoff_address text, add column price_etb numeric, add column payment_terms text, add column cancellation_reason text, add column cancelled_at timestamptz, add column created_at timestamptz default now();`);
 const actor = async who => db.query("select set_config('test.actor',$1,false)",[who??'']);
 const migration = (await readdir('supabase/migrations')).find(n=>n.endsWith('_partner_driver_workspace_ownership.sql'));
 assert.ok(migration,'Server-managed Partner ownership migration is required');
 await db.exec(await readFile(`supabase/migrations/${migration}`,'utf8'));
+await db.exec('create table partner_job_requests(order_id uuid,partner_id uuid,selected_truck_id uuid,status text)');
+await db.exec("create type order_status as enum('placed','accepted','in_transit','delivered','cancelled')");
+await db.exec(await readFile('scripts/fixtures/partner-driver-hallo-rpcs.sql','utf8'));
+const operational=(await readdir('supabase/migrations')).find(n=>n.endsWith('_partner_driver_workspace_guards.sql'));
+if(operational) await db.exec(await readFile(`supabase/migrations/${operational}`,'utf8'));
 await actor(owner);
 const invitation=(await db.query("select create_partner_driver_registration($1,'TEST Driver','driver@example.test','0944444444') as value",[partner])).rows[0].value;
 await db.query("insert into auth.users(id,email,created_at,email_confirmed_at) values($1,'driver@example.test',clock_timestamp(),now())",[driver]);
@@ -67,5 +73,39 @@ assert.equal((await db.query("select has_function_privilege('anon','public.get_m
 await actor(driver);
 await db.query("update partner_organizations set status='suspended' where id=$1",[partner]);
 assert.equal((await db.query('select get_my_driver_workspace() as value')).rows[0].value.organization_active,false);
+await db.query("update partner_organizations set status='active' where id=$1",[partner]);
+await db.query("update partner_driver_registrations set status='approved' where driver_id=$1",[driver]);
+await db.query("update profiles set driver_status='approved' where id=$1",[driver]);
+await assert.rejects(db.query("select private.require_hallo_driver()"),/Partner/);
+for(const rpc of ['claim_order','claim_order_with_truck','claim_order_with_truck_v2','driver_available_trucks_for_order','driver_available_trucks_for_order_v2']) {
+ const args=rpc.includes('with_truck')?'$1,$2':'$1';
+ await assert.rejects(db.query(`select * from ${rpc}(${args})`,args==='$1'?[id(40)]:[id(40),id(30)]),/Partner/);
+}
+await assert.rejects(db.query("select * from driver_save_vehicle_profile('TEST-NEW','Truck 22 Ton',22,'TEST model')"),/Partner/);
+await actor(admin);
+await db.query("insert into trucks(id,partner_id,driver_id,status) values($1,$2,$3,'assigned')",[id(30),partner,driver]);
+await db.query("insert into partner_fleet_vehicles(id,partner_id,truck_id,assigned_driver_id,status) values($1,$2,$3,$4,'assigned')",[id(31),partner,id(30),driver]);
+await db.query("insert into orders(id,truck_id,driver_id,status) values($1,$2,$3,'accepted')",[id(40),id(30),driver]);
+await actor(driver);
+await assert.rejects(db.query('select private.require_driver_workspace_access($1,$2)',[id(40),id(30)]),/Partner dispatch/);
+await db.query("insert into partner_job_requests(order_id,partner_id,selected_truck_id,status) values($1,$2,$3,'confirmed')",[id(40),partner,id(30)]);
+await db.query('select private.require_driver_workspace_access($1,$2)',[id(40),id(30)]);
+await assert.rejects(db.query('select private.require_driver_workspace_access($1,$2)',[id(41),id(30)]),/assigned|Partner dispatch/);
+await db.query("update partner_organizations set status='suspended' where id=$1",[partner]);
+await assert.rejects(db.query('select private.require_driver_workspace_access($1,$2)',[id(40),id(30)]),/active/i);
+await actor(driver);
+await assert.rejects(db.query("insert into tracking_pings(order_id,driver_id) values($1,$2)",[id(40),driver]),/active/i);
+await db.query("update partner_organizations set status='active' where id=$1",[partner]);
+await assert.rejects(db.query("update orders set driver_id=null where id=$1",[id(40)]),/assignment/i);
+await assert.rejects(db.query("insert into trucks(id,driver_id) values($1,$2)",[id(60),driver]),/Partner/);
+await assert.rejects(db.query("update trucks set partner_id=$1 where id=$2",[other,id(30)]),/Admin/);
+await db.query("update orders set status='in_transit' where id=$1",[id(40)]);
+await db.query("update trucks set status='on_trip' where id=$1",[id(30)]);
+await actor(null); // verified service-role tracking write has no driver auth.uid
+await db.query("insert into tracking_pings(order_id,driver_id) values($1,$2)",[id(40),driver]);
+await assert.rejects(db.query("insert into tracking_pings(order_id,driver_id) values($1,$2)",[id(41),driver]),/assigned/);
+await actor(admin);
+await assert.rejects(db.query('select admin_approve_driver_onboarding($1)',[driver]),/Partner/);
+await actor(hallo); await db.query('select private.require_hallo_driver()');
 await db.close();
 console.log('Partner ownership: disjoint rosters, atomic claim, rejected ownership, HALLO legacy fleet, ACL and inactive organization PASS');
