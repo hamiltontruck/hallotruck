@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {handlePublicQuote} from '../backend/publicQuoteGateway.ts';
+const valid={origin:{latitude:8.54,longitude:39.27},destination:{latitude:9.03,longitude:38.74},cargoWeightTonnes:10,truckTypeId:'truck_22'};
+const req=(body=valid)=>new Request('https://example.test/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+const route={provider:'openrouteservice',profile:'driving-hgv',distanceKm:100,durationMinutes:120,coordinates:[[39.27,8.54],[38.74,9.03]]};
+const deps=()=>({authorizeRequest:async()=>true,consumeRateLimit:async()=>true,resolveVehicleType:async()=>({canonicalVehicleType:'truck 22 ton',capacityTonnes:22}),calculateHgvRoute:async()=>route,calculateCanonicalPrice:async()=>({currency:'ETB',amount:2000,verifiedVehicleCapacityTonnes:22})});
+test('rejects missing bot verification',async()=>{const d=deps();d.authorizeRequest=async()=>false;assert.equal((await handlePublicQuote(req(),d)).status,403)});
+test('rejects rate limited clients',async()=>{const d=deps();d.consumeRateLimit=async()=>false;assert.equal((await handlePublicQuote(req(),d)).status,429)});
+test('fails closed when rate limiter fails',async()=>{const d=deps();d.consumeRateLimit=async()=>{throw Error('down')};assert.equal((await handlePublicQuote(req(),d)).status,503)});
+test('rejects invalid cargo',async()=>assert.equal((await handlePublicQuote(req({...valid,cargoWeightTonnes:0}),deps())).status,400));
+test('rejects cargo above truck capacity',async()=>assert.equal((await handlePublicQuote(req({...valid,cargoWeightTonnes:30}),deps())).status,422));
+test('rejects non-HGV or fake route',async()=>{const d=deps();d.calculateHgvRoute=async()=>({...route,profile:'driving-car'});assert.equal((await handlePublicQuote(req(),d)).status,502)});
+test('rejects pricing failure',async()=>{const d=deps();d.calculateCanonicalPrice=async()=>{throw Error('unavailable')};assert.equal((await handlePublicQuote(req(),d)).status,503)});
+test('returns only verified quote and never writes an order',async()=>{const result=await handlePublicQuote(req(),deps());assert.equal(result.status,200);const body=await result.json();assert.equal(body.amount,2000);assert.equal(body.source,'verified-routing-and-pricing');assert.equal(body.routeGeometry.type,'LineString')});
