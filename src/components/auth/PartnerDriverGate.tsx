@@ -29,10 +29,22 @@ export function PartnerDriverGate({ children }: { children: ReactNode }) {
       } finally { if (active && current === version) setLoading(false); }
     }
     void check();
-    const { data } = supabase.auth.onAuthStateChange(() => queueMicrotask(() => { if (active) void check(); }));
+    const { data } = supabase.auth.onAuthStateChange(event => queueMicrotask(() => {
+      if (!active) return;
+      if (event === "TOKEN_REFRESHED") {
+        const current = version;
+        void getMyDriverWorkspace().then(context => {
+          if (active && current === version) setWorkspace(previous => JSON.stringify(previous) === JSON.stringify(context) ? previous : context);
+        }).catch(reason => { if (active && current === version) setError(reason instanceof Error ? reason.message : "Driver workspace could not be verified."); });
+      } else void check();
+    }));
     return () => { active = false; data.subscription.unsubscribe(); };
   }, [retry]);
-  async function signOut() { await supabase.auth.signOut(); setWorkspace(null); setSignedIn(false); }
+  async function signOut() {
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) { setError(signOutError.message); return; }
+    setWorkspace(null); setSignedIn(false);
+  }
   if (loading) return <main className="p-6" role="status">Checking Partner Driver workspace…</main>;
   if (error) return <main className="space-y-4 p-6"><p role="alert">{error}</p><button onClick={() => setRetry(value => value + 1)} className="border p-3">Retry</button><button onClick={() => void signOut()} className="border p-3">Sign out</button></main>;
   if (!signedIn) return <Navigate to="/partner/driver/login" replace />;
