@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './HALLOPublicShowcase.css';
+import { HALLOSmartQuotePanel } from './HALLOSmartQuotePanel';
 
 type Language = 'EN' | 'OR' | 'AM';
 const copy = {
@@ -28,6 +29,7 @@ export function HALLOPublicShowcase() {
     {step===2&&<div className="hallo-public-fields"><label>{t.truck}<select value={data.truck} onChange={e=>update('truck',e.target.value)}>{fleetNames.map(x=><option key={x}>{x}</option>)}</select></label><p>{t.example}: truck eligibility is not checked in this demonstration.</p></div>}
     {step===3&&<div className="hallo-public-review"><p><b>{t.origin}:</b> {data.origin||'—'}</p><p><b>{t.destination}:</b> {data.destination||'—'}</p><p><b>{t.cargo}:</b> {data.cargo||'—'}</p><p><b>{t.weight}:</b> {data.weight||'—'}</p><p><b>{t.truck}:</b> {data.truck}</p></div>}
     <div className="hallo-public-demo-actions"><button type="button" disabled={step===0} onClick={()=>setStep(x=>Math.max(0,x-1))}>{t.back}</button><button type="button" disabled={step===3} onClick={()=>setStep(x=>Math.min(3,x+1))}>{t.next}</button></div>
+    <HALLOSmartQuotePanel origin={null} destination={null} cargoWeightTonnes={Number(data.weight)} truckTypeId={data.truck} />
     <aside className="hallo-public-quote" role="status"><h4>{t.quote}</h4><p>{t.quoteNote}</p><strong>{t.quoteUnavailable}</strong></aside>
    </section>
   </div>
