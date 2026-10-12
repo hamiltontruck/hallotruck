@@ -1,3 +1,7 @@
+import { PartnerDriverGate } from "./components/auth/PartnerDriverGate";
+import { PartnerDriverLogin } from "./pages/PartnerDriverLogin";
+import { PartnerDriverHome } from "./pages/PartnerDriverHome";
+import { PartnerDrivers } from "./pages/PartnerDrivers";
 import { HashRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
@@ -144,6 +148,11 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
 <Route path="/admin/partners" element={<AdminGate><AdminToolShell><AdminPartnerControl /></AdminToolShell></AdminGate>} />
 <Route path="/partner/login" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
 <Route path="/partner/driver-join" element={<PartnerDriverJoin />} />
+    <Route path="/partner/drivers" element={<PartnerGate><PartnerDrivers /></PartnerGate>} />
+    <Route path="/partner/driver/login" element={<PartnerDriverLogin />} />
+    <Route path="/partner/driver" element={<PartnerDriverGate><PartnerDriverHome /></PartnerDriverGate>} />
+    <Route path="/partner/driver/documents" element={<PartnerDriverGate><Documents /></PartnerDriverGate>} />
+    <Route path="/partner/driver/trip" element={<PartnerDriverGate><ActiveTrip /></PartnerDriverGate>} />
 <Route path="/admin/partner-drivers" element={<AdminGate><AdminToolShell><AdminPartnerDrivers /></AdminToolShell></AdminGate>} />
 <Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
 <Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />

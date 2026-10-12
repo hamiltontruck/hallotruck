@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getMyActiveOrders,
+  getPartnerDriverActiveOrders,
   getMyAssignedOrder,
   getMyLatestCancelledOrder,
   type MyOrder,
@@ -19,6 +20,7 @@ import { DriverActiveTripRoute } from "../components/driver/DriverActiveTripRout
 import { DriverActiveTripOrderBoundary } from "../components/driver/DriverActiveTripOrderBoundary";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { getDriverTripDocumentsCopy } from "../i18n/driverTripDocumentsCopy";
+import { useDriverWorkspace } from "../components/driver/DriverWorkspaceContext";
 
 const tripFinanceCopy = {
   en: {
@@ -47,6 +49,8 @@ interface ActiveTripContentProps {
 }
 
 function ActiveTripContent({ order, onOrderChange }: ActiveTripContentProps) {
+  const workspace = useDriverWorkspace();
+  const partnerDriver = workspace?.kind === "partner";
   const navigate = useNavigate();
   const { language } = useLanguage();
   const c = getDriverTripDocumentsCopy(language).trip;
@@ -72,7 +76,7 @@ function ActiveTripContent({ order, onOrderChange }: ActiveTripContentProps) {
           <div><span className="text-steel">{c.dropoff}</span><div className="break-words text-asphalt">{order.dropoff_address}</div></div>
         </div>
 
-        <div className="mt-5 grid gap-2 border-t border-line pt-5">
+        {!partnerDriver && <div className="mt-5 grid gap-2 border-t border-line pt-5">
           <div className="flex items-center justify-between gap-4">
             <span className="text-steel">{finance.grossFare}</span>
             <strong className="font-display text-asphalt">{formatEtb(grossFare)}</strong>
@@ -86,11 +90,11 @@ function ActiveTripContent({ order, onOrderChange }: ActiveTripContentProps) {
             <CargoPlate>{formatEtb(driverNet)}</CargoPlate>
           </div>
           <p className="text-[11px] leading-5 text-steel">{finance.netHelp}</p>
-        </div>
+        </div>}
       </div>
 
       <DriverCustomerContact orderId={order.id} />
-      <DriverPaymentConfirmation orderId={order.id} />
+      {!partnerDriver && <DriverPaymentConfirmation orderId={order.id} />}
 
       <DriverActiveTripGpsControl
         order={order}
@@ -110,7 +114,7 @@ function ActiveTripContent({ order, onOrderChange }: ActiveTripContentProps) {
 
       {tripStarted ? (
         <DriverDeliveryProofForm orderId={order.id} tripAmountEtb={grossFare} onDelivered={() => {
-          navigate("/driver/earnings");
+          navigate(partnerDriver ? "/partner/driver" : "/driver/earnings");
         }} />
       ) : (
         <div className="border border-line bg-white px-5 py-4 text-center">
@@ -123,6 +127,8 @@ function ActiveTripContent({ order, onOrderChange }: ActiveTripContentProps) {
 }
 
 export function ActiveTrip() {
+  const workspace = useDriverWorkspace();
+  const partnerDriver = workspace?.kind === "partner";
   const navigate = useNavigate();
   const { language } = useLanguage();
   const c = getDriverTripDocumentsCopy(language).trip;
@@ -132,7 +138,7 @@ export function ActiveTrip() {
 
   return (
     <DriverActiveTripOrderBoundary
-      loadActiveOrders={getMyActiveOrders}
+      loadActiveOrders={partnerDriver ? getPartnerDriverActiveOrders : getMyActiveOrders}
       loadLatestCancellation={getMyLatestCancelledOrder}
       loadAssignedOrder={getMyAssignedOrder}
       isCancellationDismissed={isCancellationDismissed}
@@ -140,14 +146,14 @@ export function ActiveTrip() {
         <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-16">
           <DriverOrderCancellationNotice order={cancelledOrder} onBrowseJobs={() => {
             window.localStorage.setItem(`hallotruck-dismissed-cancellation-${cancelledOrder.id}`, "1");
-            navigate("/driver/jobs");
+            navigate(partnerDriver ? "/partner/driver" : "/driver/jobs");
           }} />
         </div>
       )}
       renderEmpty={() => (
         <div className="text-center">
           <p className="mb-4 font-body text-steel">{c.noTrip}</p>
-          <Button onClick={() => navigate("/driver/jobs")}>{c.browseJobs}</Button>
+          <Button onClick={() => navigate(partnerDriver ? "/partner/driver" : "/driver/jobs")}>{partnerDriver ? "Return to Partner Driver home" : c.browseJobs}</Button>
         </div>
       )}
     >

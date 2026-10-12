@@ -1,3 +1,9 @@
+import { Documents } from "./pages/Documents";
+import { ActiveTrip } from "./pages/ActiveTrip";
+import { PartnerDriverGate } from "./components/auth/PartnerDriverGate";
+import { PartnerDriverLogin } from "./pages/PartnerDriverLogin";
+import { PartnerDriverHome } from "./pages/PartnerDriverHome";
+import { PartnerDrivers } from "./pages/PartnerDrivers";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Link, Navigate, Route, Routes } from "react-router-dom";
@@ -21,6 +27,7 @@ import { AdminPartnerDrivers } from "./pages/AdminPartnerDrivers";
 import { AdminDriverCompliance } from "./pages/AdminDriverCompliance";
 import "./index.css";
 import "./styles/partner-onboarding.css";
+import "./styles/driver-mobile-flow.css";
 
 function AdminPartnerWorkspace({ children }: { children: React.ReactNode }) {
   return <AdminGate>
@@ -41,6 +48,11 @@ createRoot(document.getElementById("root")!).render(
   <React.StrictMode><LanguageProvider><PasswordRecoveryGate><HashRouter><Routes>
     <Route path="/partner/login" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
     <Route path="/partner/driver-join" element={<PartnerDriverJoin />} />
+    <Route path="/partner/drivers" element={<PartnerGate><PartnerDrivers /></PartnerGate>} />
+    <Route path="/partner/driver/login" element={<PartnerDriverLogin />} />
+    <Route path="/partner/driver" element={<PartnerDriverGate><PartnerDriverHome /></PartnerDriverGate>} />
+    <Route path="/partner/driver/documents" element={<PartnerDriverGate><Documents /></PartnerDriverGate>} />
+    <Route path="/partner/driver/trip" element={<PartnerDriverGate><ActiveTrip /></PartnerDriverGate>} />
     <Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
     <Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
     <Route path="/partner/live" element={<PartnerGate><PartnerLiveOperations /></PartnerGate>} />
@@ -55,6 +67,7 @@ createRoot(document.getElementById("root")!).render(
     <Route path="/admin/partner-orders" element={<AdminPartnerWorkspace><AdminPartnerOrderReview /></AdminPartnerWorkspace>} />
     <Route path="/admin/partner-drivers" element={<AdminPartnerWorkspace><AdminPartnerDrivers /></AdminPartnerWorkspace>} />
     <Route path="/admin/driver-compliance" element={<AdminPartnerWorkspace><AdminDriverCompliance /></AdminPartnerWorkspace>} />
+    <Route path="/driver/*" element={<main className="p-6"><h1>HALLO Driver workspace</h1><a href="https://hamiltontruck.github.io/hallotruck/#/driver/login">Open HALLO Driver login</a></main>} />
     <Route path="*" element={<Navigate to="/partner" replace />} />
   </Routes></HashRouter></PasswordRecoveryGate></LanguageProvider></React.StrictMode>,
 );

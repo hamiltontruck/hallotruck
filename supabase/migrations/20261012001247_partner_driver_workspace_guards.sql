@@ -103,6 +103,21 @@ create trigger tracking_partner_driver_scope before insert or update on public.t
  for each row execute function private.guard_partner_tracking_mutation();
 revoke all on function private.guard_partner_driver_order_mutation(),private.guard_partner_driver_vehicle_mutation(),private.guard_partner_driver_document_mutation(),private.guard_partner_tracking_mutation() from public,anon,authenticated;
 
+create function public.get_partner_driver_vehicle() returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare v_context jsonb; v_vehicle jsonb;
+begin
+ v_context:=public.get_my_driver_workspace();
+ if v_context->>'kind'<>'partner' or not (v_context->>'organization_active')::boolean or v_context->>'driver_status'='suspended' or v_context->>'registration_status'='rejected' then raise exception 'Active Partner driver required'; end if;
+ select jsonb_build_object('id',t.id,'plate_number',t.plate_number,'vehicle_type',t.vehicle_type,'capacity_tons',t.capacity_tons,'status',t.status::text) into v_vehicle
+ from public.trucks t join public.partner_fleet_vehicles f on f.truck_id=t.id
+ where t.driver_id=auth.uid() and t.partner_id=(v_context->>'partner_id')::uuid and f.partner_id=t.partner_id and f.assigned_driver_id=auth.uid()
+ order by t.updated_at desc limit 1;
+ return v_vehicle;
+end $$;
+revoke all on function public.get_partner_driver_vehicle() from public,anon;
+grant execute on function public.get_partner_driver_vehicle() to authenticated;
+
 create function public.get_partner_driver_active_trip() returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare v_context jsonb; v_order public.orders;
@@ -130,6 +145,21 @@ do $$ declare f record; v_def text; v_guarded text; begin
   v_def:=pg_get_functiondef(f.oid);
   v_guarded:=regexp_replace(v_def,E'\n(begin)\\M',E'\nbegin\n perform private.require_hallo_driver('||case when f.proname='admin_link_driver_onboarding_truck' then 'p_driver_id' else '' end||E');','i');
   if v_guarded=v_def then raise exception 'Driver function body requires review: %',f.proname; end if;
+  execute v_guarded;
+ end loop;
+end $$;
+
+-- All existing driver trip RPCs retain their original checks and add the same
+-- organization boundary. Tracking verifies the Edge-authenticated driver ID.
+do $$ declare f record; v_def text; v_guarded text; begin
+ for f in select p.oid,p.proname,l.lanname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+ join pg_language l on l.oid=p.prolang where n.nspname='public' and
+ (p.proname in ('driver_finish_trip','driver_record_trip_payment_result','driver_submit_collected_payment','driver_order_contact','driver_payment_status','driver_collected_payment_status','driver_create_trip_dispute','record_driver_tracking_ping')
+ or p.proname like 'submit_delivery_proof%') loop
+  if f.lanname<>'plpgsql' then raise exception 'Unexpected driver trip function language: %',f.proname; end if;
+  v_def:=pg_get_functiondef(f.oid);
+  v_guarded:=regexp_replace(v_def,E'\n(begin)\\M',E'\nbegin\n perform private.require_driver_workspace_access(p_order_id,null,'||case when f.proname='record_driver_tracking_ping' then 'p_driver_id' else 'auth.uid()' end||E');','i');
+  if v_guarded=v_def then raise exception 'Trip function body requires review: %',f.proname; end if;
   execute v_guarded;
  end loop;
 end $$;

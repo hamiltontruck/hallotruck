@@ -1,3 +1,4 @@
+import { getMyDriverWorkspace } from "../services/partner-driver.service";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
@@ -46,7 +47,8 @@ export function Login({
       throw new Error(t("driver.error.access"));
     }
 
-    navigate(data.driver_status === "approved" ? "/driver/jobs" : "/driver/documents", { replace: true });
+    const workspace = await getMyDriverWorkspace();
+    navigate(workspace.kind === "partner" ? "/partner/driver" : data.driver_status === "approved" ? "/driver/jobs" : "/driver/documents", { replace: true });
   }
 
   useEffect(() => {
