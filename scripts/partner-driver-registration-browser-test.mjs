@@ -44,6 +44,7 @@ try {
    await route.fulfill({status:200,headers,json:{id:token,token,expires_at:'2099-01-01'}});return;
   }
   if(path.endsWith('/claim_partner_driver_registration')){await route.fulfill({status:200,headers,json:token});return;}
+  if(path.endsWith('/reopen_partner_driver_registration')){rows[0].status='registered';rows[0].driver_status='pending';await route.fulfill({status:200,headers,json:null});return;}
   if(path.endsWith('/review_partner_driver_registration')){
    if(body.p_decision==='approved'&&!documentsReady){await route.fulfill({status:400,headers,json:{message:'Verify documents before approval',code:'23514'}});return;}
    rows[0].status=body.p_decision;rows[0].driver_status='approved';await route.fulfill({status:200,headers,json:null});return;
@@ -86,6 +87,7 @@ try {
  await page.getByRole('button',{name:'Link onboarding vehicle'}).click();
  await page.getByText('Vehicle linked for document onboarding.',{exact:false}).waitFor();
  assert.equal(requests.find(r=>r.path.endsWith('/link_partner_driver_onboarding_vehicle')).body.p_truck_id,truck);
+ assert.equal(await page.locator('select[name="decision"]').inputValue(),'','Admin must explicitly choose a review decision');
  await page.locator('select[name="decision"]').selectOption('approved');
  await page.getByRole('textbox',{name:'Review reason'}).fill('TEST documents verified');
  await page.getByRole('button',{name:'Save review'}).click();
@@ -95,5 +97,6 @@ try {
  await page.getByRole('button',{name:'Save review'}).click();
  await page.getByText('Registration: approved',{exact:false}).waitFor();
  assert.equal(requests.find(r=>r.path.endsWith('/review_partner_driver_registration')).body.p_registration_id,token);
+ rows[0].status='rejected';rows[0].driver_status='pending';await page.reload();await page.getByLabel('Reopen reason',{exact:true}).fill('TEST accidental review choice');await page.getByRole('button',{name:'Reopen for document review'}).click();await page.getByText('Registration: registered',{exact:false}).waitFor();assert.equal(requests.find(r=>r.path.endsWith('/reopen_partner_driver_registration')).body.p_registration_id,token);assert.equal(rows[0].driver_status,'pending');
  console.log('Partner driver UI: create registration, isolated real SDK signup, private link claim, Admin approval gating PASS');
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));await rm(directory,{recursive:true,force:true});}

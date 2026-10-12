@@ -60,6 +60,9 @@ await db.exec("create policy existing_order_visibility on orders for select to a
 await db.exec(await readFile(`supabase/migrations/${migration}`,'utf8'));
 const repair=(await readdir('supabase/migrations')).find(n=>n.endsWith('_rebind_driver_visibility_policies.sql'));
 if(repair) await db.exec(await readFile(`supabase/migrations/${repair}`,'utf8'));
+const reopen=(await readdir('supabase/migrations')).find(n=>n.endsWith('_partner_driver_review_reopen.sql'));
+if(reopen) await db.exec(await readFile(`supabase/migrations/${reopen}`,'utf8'));
+
 
 await actor(owner);
 const invitation=(await db.query("select create_partner_driver_registration($1,'TEST Driver','driver@example.test','0944444444') as value",[partner])).rows[0].value;
@@ -72,6 +75,11 @@ await db.query('select claim_partner_driver_registration($1)',[invitation.token]
 assert.equal((await db.query('select count(*)::int as n from partner_driver_ownership')).rows[0].n,2,'backfill and new claim both have explicit ownership');
 await db.query("update partner_driver_registrations set status='rejected' where id=$1",[invitation.id]);
 assert.equal((await db.query('select get_my_driver_workspace() as value')).rows[0].value.kind,'partner','rejection retains ownership');
+await actor(owner); await assert.rejects(db.query("select reopen_partner_driver_registration($1,'TEST mistaken decision')",[invitation.id]),/Admin or CEO/);
+await actor(admin);await db.query("select reopen_partner_driver_registration($1,'TEST mistaken decision')",[invitation.id]);
+assert.equal((await db.query('select status from partner_driver_registrations where id=$1',[invitation.id])).rows[0].status,'registered');
+assert.equal((await db.query('select driver_status from profiles where id=$1',[driver])).rows[0].driver_status,'pending');
+
 const hallo=id(6);
 await db.query("insert into profiles(id,role,full_name,driver_status) values($1,'driver','HALLO Driver','approved')",[hallo]);
 await db.query("insert into partner_fleet_vehicles(id,partner_id,assigned_driver_id,status) values($1,$2,$3,'inactive')",[id(25),partner,hallo]);

@@ -56,9 +56,14 @@ export async function linkPartnerDriverVehicle(registrationId: string, truckId: 
   if (error) throw new Error(error.message);
 }
 export async function reviewPartnerDriver(id: string, decision: "approved" | "rejected", reason: string) {
+  if (!["approved", "rejected"].includes(decision)) throw new Error("Choose a review action before saving.");
   const { error } = await supabase.rpc("review_partner_driver_registration", {
     p_registration_id: id, p_decision: decision, p_reason: reason.trim(),
   });
+  if (error) throw new Error(error.message);
+}
+export async function reopenPartnerDriver(id: string, reason: string) {
+  const { error } = await supabase.rpc("reopen_partner_driver_registration", { p_registration_id: id, p_reason: reason.trim() });
   if (error) throw new Error(error.message);
 }
 

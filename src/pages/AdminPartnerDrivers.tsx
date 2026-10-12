@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { linkPartnerDriverVehicle, listPartnerDrivers, reviewPartnerDriver, type PartnerDriverRegistration } from "../services/partner-driver.service";
+import { linkPartnerDriverVehicle, listPartnerDrivers, reviewPartnerDriver, reopenPartnerDriver, type PartnerDriverRegistration } from "../services/partner-driver.service";
 import { getFleetEnterpriseData, type FleetVehicle } from "../services/fleet-maintenance.service";
 
 export function AdminPartnerDrivers() {
@@ -12,6 +12,12 @@ export function AdminPartnerDrivers() {
     try { await reviewPartnerDriver(row.id,String(form.get("decision")) as "approved"|"rejected",String(form.get("reason"))); await load(); }
     catch(reason){setError(reason instanceof Error?reason.message:"Review failed.");}finally{setBusy(false);}
   }
+  async function reopen(event: FormEvent<HTMLFormElement>, row: PartnerDriverRegistration) {
+    event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); setError("");
+    try { await reopenPartnerDriver(row.id,String(form.get("reason"))); await load(); }
+    catch(reason) { setError(reason instanceof Error ? reason.message : "Reopen failed."); }
+    finally { setBusy(false); }
+  }
   return <main className="min-h-screen space-y-5 bg-bone p-5 text-asphalt"><h1 className="font-display text-3xl font-bold">Partner driver review</h1>
     <p>Link the Partner truck, then verify driver and vehicle documents. Partner approval checks every required document and approves onboarding in one transaction. Pending drivers cannot work.</p>
     <Link to="/admin/partner-driver-compliance" className="inline-block border p-3 font-semibold">Driver document review</Link>
@@ -21,9 +27,14 @@ export function AdminPartnerDrivers() {
       {row.review_note&&<p>Review: {row.review_note}</p>}
       {row.driver_id&&["registered","approved"].includes(row.status)&&<OnboardingVehicle row={row} onSaved={load} />}
       {(["registered","invited"].includes(row.status)||(row.status==="approved"&&row.driver_status==="pending"))&&<form onSubmit={event=>void review(event,row)} className="flex flex-wrap gap-3">
-        <select name="decision" className="min-h-12 border p-2"><option value="rejected">Reject registration</option>{(row.status==="registered"||(row.status==="approved"&&row.driver_status==="pending"))&&<option value="approved">Approve verified Partner driver</option>}</select>
+        <select name="decision" aria-label="Review action" required defaultValue="" className="min-h-12 border p-2"><option value="" disabled>Choose review action</option><option value="rejected">Reject registration</option>{(row.status==="registered"||(row.status==="approved"&&row.driver_status==="pending"))&&<option value="approved">Approve verified Partner driver</option>}</select>
         <input name="reason" aria-label="Review reason" required minLength={3} placeholder="Review reason" className="min-h-12 min-w-0 flex-1 border p-2" />
         <button disabled={busy} className="min-h-12 bg-asphalt px-4 text-white disabled:opacity-40">Save review</button>
+      </form>}
+      {row.status==="rejected"&&row.driver_id&&row.driver_status==="pending"&&<form onSubmit={event=>void reopen(event,row)} className="space-y-3 border p-3">
+        <p>Reopen this registration for document review. The driver stays pending; work requires verified documents and separate approval.</p>
+        <label className="block">Reopen reason<input name="reason" required minLength={3} className="block min-h-12 w-full border p-3" /></label>
+        <button disabled={busy} className="min-h-12 bg-asphalt p-3 text-white">Reopen for document review</button>
       </form>}
     </article>)}{rows.length===0&&<p>No Partner driver registrations yet.</p>}
   </main>;
