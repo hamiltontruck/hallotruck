@@ -1,0 +1,37 @@
+name: HALLO Web V2 isolated CI
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/hallo-web-v2-mobile-qa
+    paths:
+      - 'apps/hallo-web-v2/**'
+      - '.github/workflows/hallo-web-v2-isolated.yml'
+  pull_request:
+    paths:
+      - 'apps/hallo-web-v2/**'
+      - '.github/workflows/hallo-web-v2-isolated.yml'
+permissions:
+  contents: read
+jobs:
+  web-v2-check:
+    name: V2 Typecheck, contract tests and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/hallo-web-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/hallo-web-v2/package-lock.json
+      - name: Install isolated V2 dependencies
+        run: npm ci
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Verify quote integration contract
+        run: npm run test:quote
+      - name: Build isolated V2
+        run: npm run build
