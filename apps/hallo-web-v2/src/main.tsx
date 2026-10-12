@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { HALLOWebV2PremiumLogisticsLanding } from "./components/generated/HALLOWebV2PremiumLogisticsLanding";
 import { HALLOAdminCEOExecutiveControlCenterV2 } from "./components/generated/HALLOAdminCEOExecutiveControlCenterV2";
+import { HALLOPublicShowcase } from "./components/HALLOPublicShowcase";
 import "./style.css";
 
 const path = window.location.pathname.replace(/\/$/, "");
@@ -17,7 +18,7 @@ function App() {
           <a href="/admin-design">Admin/CEO design</a>
         </nav>
       </div>
-      {isAdminDesign ? <HALLOAdminCEOExecutiveControlCenterV2 /> : <HALLOWebV2PremiumLogisticsLanding />}
+      {isAdminDesign ? <HALLOAdminCEOExecutiveControlCenterV2 /> : <><HALLOWebV2PremiumLogisticsLanding /><HALLOPublicShowcase /></>}
     </>
   );
 }
