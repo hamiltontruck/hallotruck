@@ -25,6 +25,13 @@ test('OAuth provider errors propagate without redirecting or fabricating a sessi
   const client = { auth: { signInWithOAuth: async () => ({ data: { url: null }, error }) } };
   await assert.rejects(beginGoogleSignIn(client, 'https://example.test/driver-mobile/'), error);
 });
+
+test('Driver Google login does not block on a separate provider-settings preflight', () => {
+  const auth = readFileSync(new URL('../src/auth.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(auth, /\/auth\/v1\/settings/);
+  assert.match(auth, /beginGoogleSignIn\(supabase,/);
+});
+
 test('OAuth rejects an empty authorization URL', async () => {
   const client = { auth: { signInWithOAuth: async () => ({ data: { url: null }, error: null }) } };
   await assert.rejects(beginGoogleSignIn(client, 'https://example.test/driver-mobile/'), /could not be started/);
