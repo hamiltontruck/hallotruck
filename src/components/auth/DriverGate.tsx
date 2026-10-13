@@ -1,3 +1,4 @@
+import { getMyDriverWorkspace, type DriverWorkspace } from "../../services/partner-driver.service";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase.client";
@@ -8,17 +9,22 @@ export function DriverGate({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
   const [driverStatus, setDriverStatus] = useState<string | null>(null);
+  const [workspace, setWorkspace] = useState<DriverWorkspace | null>(null);
+  const [workspaceError, setWorkspaceError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
   const normalizedPath = location.pathname.replace(/\/+$/, "") || "/";
   const isDriverOnboardingPath = normalizedPath === "/driver/profile" || normalizedPath === "/driver/documents";
 
   useEffect(() => {
-    let active = true;
+    let active = true; let checkVersion = 0;
 
     async function check(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
       if (!active) return;
+      const requestVersion = ++checkVersion;
 
       setSignedIn(Boolean(session));
+      setWorkspace(null); setWorkspaceError("");
       setRole(null);
       setDriverStatus(null);
 
@@ -33,25 +39,29 @@ export function DriverGate({ children }: { children: ReactNode }) {
         .eq("id", session.user.id)
         .maybeSingle();
 
-      if (!active) return;
+      if (!active || requestVersion !== checkVersion) return;
       if (!error && profile) {
         setRole(profile.role ?? null);
         setDriverStatus(profile.driver_status ?? null);
+        if (profile.role === "driver") {
+          try { const context = await getMyDriverWorkspace(); if (active && requestVersion === checkVersion) setWorkspace(context); }
+          catch (reason) { if (active && requestVersion === checkVersion) setWorkspaceError(reason instanceof Error ? reason.message : "Driver ownership could not be verified."); }
+        }
       }
-      setLoading(false);
+      if (active && requestVersion === checkVersion) setLoading(false);
     }
 
     supabase.auth.getSession().then(({ data }) => void check(data.session));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       setLoading(true);
-      void check(session);
+      queueMicrotask(() => { if (active) void check(session); });
     });
 
     return () => {
       active = false;
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [retry]);
 
   async function switchAccount() {
     setLoading(true);
@@ -61,6 +71,9 @@ export function DriverGate({ children }: { children: ReactNode }) {
 
   if (loading) return <div className="min-h-screen bg-bone grid place-items-center text-steel font-mono text-sm">Checking driver session…</div>;
   if (!signedIn) return <Navigate to="/driver/login" replace />;
+
+  if (workspaceError) return <main className="p-6"><p role="alert">{workspaceError}</p><button onClick={() => setRetry(value => value + 1)}>Retry</button><button onClick={switchAccount}>Sign out</button></main>;
+  if (workspace?.kind === "partner") return <Navigate to="/partner/driver" replace />;
 
   if (role === "driver" && driverStatus === "suspended") {
     return <main className="min-h-screen bg-bone grid place-items-center p-5"><section className="bg-white border border-line p-7 max-w-md w-full"><p className="font-mono text-[10px] uppercase tracking-[.18em] text-route">Driver access suspended</p><p className="font-display font-bold text-2xl mt-2">This driver profile is inactive</p><p className="font-body text-sm text-steel mt-3">Hallo Truck Operations removed this driver from the active roster. Existing trip, payment and compliance history is preserved for audit purposes.</p><button onClick={switchAccount} className="w-full bg-asphalt text-white py-4 mt-6 font-semibold">Sign out</button></section></main>;

@@ -41,7 +41,7 @@ test("Active Trip refresh keeps the last confirmed trip on transient failure and
 
 test("Active Trip page delegates lifecycle ownership and remounts order-specific GPS state", () => {
   assert.match(activeTrip, /<DriverActiveTripOrderBoundary/);
-  assert.match(activeTrip, /loadActiveOrders=\{getMyActiveOrders\}/);
+  assert.match(activeTrip, /loadActiveOrders=\{partnerDriver \? getPartnerDriverActiveOrders : getMyActiveOrders\}/);
   assert.match(activeTrip, /loadLatestCancellation=\{getMyLatestCancelledOrder\}/);
   assert.match(activeTrip, /loadAssignedOrder=\{getMyAssignedOrder\}/);
   assert.match(activeTrip, /<ActiveTripContent key=\{order\.id\}/);

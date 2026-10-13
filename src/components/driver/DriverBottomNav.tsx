@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import { useDriverWorkspace } from "./DriverWorkspaceContext";
 
 const copy = {
   en: { home: "Home", jobs: "Jobs", trip: "Trip", wallet: "Wallet", profile: "Profile" },
@@ -16,12 +17,18 @@ const links = [
 ] as const;
 
 export function DriverBottomNav() {
+  const workspace = useDriverWorkspace();
+  const partnerLinks = [
+    { to: "/partner/driver", key: "home" as const, icon: "⌂", end: true },
+    ...(workspace?.driver_status === "approved" ? [{ to: "/partner/driver/trip", key: "trip" as const, icon: "⌁", end: true }] : []),
+    { to: "/partner/driver/documents", key: "profile" as const, icon: "◎", end: true },
+  ];
   const { language } = useLanguage();
   const labels = copy[language];
 
   return (
     <nav className="driver-bottom-nav md:hidden" aria-label="Driver primary navigation">
-      {links.map((link) => (
+      {(workspace?.kind === "partner" ? partnerLinks : links).map((link) => (
         <NavLink
           key={link.to}
           to={link.to}

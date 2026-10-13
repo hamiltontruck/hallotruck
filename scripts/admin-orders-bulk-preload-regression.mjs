@@ -14,7 +14,7 @@ const checks = [
   [service.includes("ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT = 100"), "dashboard reference previews are bounded"],
   [service.includes('.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT)'), "truck reference preview is bounded"],
   [service.includes('.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT)'), "customer reference preview is bounded"],
-  [service.includes('.eq("role", "driver").order("full_name").limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT)'), "driver reference preview is bounded"],
+  [service.includes('.rpc("list_admin_driver_roster", { p_scope: "hallo" }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT)'), "HALLO driver reference preview is server-scoped and bounded"],
   [service.includes('.select("id", { count: "exact", head: true })'), "dashboard metrics use exact database counts"],
   [service.includes("totalOrders: totalOrdersResult.count ?? 0"), "total orders metric is independent of preview rows"],
   [service.includes("activeOrders: activeOrdersResult.count ?? 0"), "active orders metric is independent of preview rows"],

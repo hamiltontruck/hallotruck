@@ -135,7 +135,7 @@ export async function getDashboardData() {
     ordersQuery,
     supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,created_at").order("created_at", { ascending: false }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
     supabase.from("customers").select("id,full_name,phone,email,company_name,is_credit_customer,created_at").order("created_at", { ascending: false }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
-    supabase.from("profiles").select("id,full_name,phone,driver_status").eq("role", "driver").order("full_name").limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
+    supabase.rpc("list_admin_driver_roster", { p_scope: "hallo" }).limit(ADMIN_DASHBOARD_REFERENCE_PREVIEW_LIMIT),
     supabase.from("orders").select("id", { count: "exact", head: true }),
     supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["accepted", "in_transit"]),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "delivered"),

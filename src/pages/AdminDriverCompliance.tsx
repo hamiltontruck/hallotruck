@@ -20,6 +20,7 @@ type DriverRow = {
   email: string | null;
   home_address: string | null;
   driver_status: string | null;
+  partner_name?: string | null;
 };
 
 type TruckRow = {
@@ -128,7 +129,7 @@ function statusBadge(status: string | null | undefined) {
   return "border-amber/30 bg-amber/10 text-amber-dim";
 }
 
-export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fixture?: AdminDriverComplianceFixture; resolveDocumentPreview?: (path: string) => Promise<string> } = {}) {
+export function AdminDriverCompliance({ fixture, resolveDocumentPreview, scope = "hallo" }: { scope?: "hallo" | "partner"; fixture?: AdminDriverComplianceFixture; resolveDocumentPreview?: (path: string) => Promise<string> } = {}) {
   const [drivers, setDrivers] = useState<DriverRow[]>(fixture?.drivers ?? []);
   const [trucks, setTrucks] = useState<TruckRow[]>(fixture?.trucks ?? []);
   const [documents, setDocuments] = useState<DriverVerificationFile[]>(fixture?.documents ?? []);
@@ -144,31 +145,15 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
 
   async function load() {
     setLoading(true);
-    const [driverResult, truckResult, documentResult, orderResult, paymentResult] = await Promise.all([
-      supabase.from("profiles").select("id,full_name,phone,email,home_address,driver_status").eq("role", "driver").order("full_name"),
-      supabase.from("trucks").select("id,plate_number,vehicle_type,capacity_tons,status,driver_id,model").order("updated_at", { ascending: false }),
-      supabase.from("driver_verification_files").select("id,driver_id,truck_id,document_key,file_path,original_name,mime_type,expiry_date,status,rejection_reason,reviewed_at,created_at,updated_at").order("updated_at", { ascending: false }),
-      supabase.from("orders").select("id,tracking_id,driver_id,truck_id,pickup_address,dropoff_address,vehicle_type,price_etb,status,payment_status,accepted_at,delivered_at,created_at").not("driver_id", "is", null).order("created_at", { ascending: false }).limit(1000),
-      supabase.from("payments").select("order_id,provider,amount_etb,event").order("created_at", { ascending: false }).limit(2000),
-    ]);
-
-    const queryError = driverResult.error || truckResult.error || documentResult.error || orderResult.error || paymentResult.error;
-    if (queryError) {
-      setError(queryError.message);
-      setLoading(false);
-      return;
-    }
-
-    setDrivers((driverResult.data ?? []) as DriverRow[]);
-    setTrucks((truckResult.data ?? []) as TruckRow[]);
-    setDocuments((documentResult.data ?? []) as DriverVerificationFile[]);
-    setOrders((orderResult.data ?? []) as DriverOrderRow[]);
-    setPayments((paymentResult.data ?? []) as PaymentRow[]);
-    setError("");
+    const { data, error: queryError } = await supabase.rpc("admin_driver_compliance_workspace", { p_scope: scope });
+    if (queryError || !data) { setError(queryError?.message ?? "Driver review could not be loaded."); setLoading(false); return; }
+    setDrivers(data.drivers ?? []); setTrucks(data.trucks ?? []); setDocuments(data.documents ?? []);
+    setOrders(data.orders ?? []); setPayments(data.payments ?? []); setError("");
 
     const historyResult = await supabase
       .from("driver_verification_history")
       .select("id,source_document_id,driver_id,truck_id,document_key,file_path,original_name,mime_type,expiry_date,status,rejection_reason,reviewed_at,source_created_at,source_updated_at,archive_reason,archived_at")
+      .in("driver_id", data.drivers.map((driver: DriverRow) => driver.id))
       .order("archived_at", { ascending: false })
       .limit(2000);
 
@@ -280,8 +265,8 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
         <p className="font-mono text-[10px] tracking-[.2em] text-amber">COMPLIANCE CONTROL</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold sm:text-4xl">Driver operations & verification</h1>
-            <p className="mt-2 max-w-2xl text-sm text-white/55">Review private documents, full trip history, driver lifecycle and HALLO Smart commission from one audit-safe workspace.</p>
+            <h1 className="font-display text-3xl font-bold sm:text-4xl">{scope === "partner" ? "Partner driver documents & verification" : "HALLO driver operations & verification"}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-white/55">{scope === "partner" ? "Review Partner driver documents and assigned-trip history. Approval and vehicle linking stay in Partner driver review." : "Review private documents, full trip history, driver lifecycle and HALLO Smart commission from one audit-safe workspace."}</p>
           </div>
           <Link to="/admin" className="border border-white/20 px-4 py-3 text-sm font-semibold">← Operations</Link>
         </div>
@@ -291,7 +276,7 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
         <Summary label="Active drivers" value={String(drivers.filter((driver) => driver.driver_status !== "suspended").length)} />
         <Summary label="Completed trips" value={String(orders.filter((order) => order.status === "delivered").length)} />
         <Summary label="Released customer payment" value={formatEtb(globalReleased)} />
-        <Summary label={`HALLO Smart ${HALLO_SMART_COMMISSION_PERCENT}%`} value={formatEtb(globalCommission.commissionEtb)} accent />
+        {scope === "hallo" ? <Summary label={`HALLO Smart ${HALLO_SMART_COMMISSION_PERCENT}%`} value={formatEtb(globalCommission.commissionEtb)} accent /> : <Link to="/admin/partner-finance" className="border bg-white p-4">Partner commission & settlements →</Link>}
       </section>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -340,7 +325,7 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
           const split = splitHalloCommission(releasedGross);
           const expanded = expandedDriverId === driver.id;
           const activeTrip = driverOrders.find((order) => ["accepted", "in_transit"].includes(order.status));
-          const approvalVisible = driver.driver_status !== "approved" && driver.driver_status !== "suspended";
+          const approvalVisible = scope === "hallo" && driver.driver_status !== "approved" && driver.driver_status !== "suspended";
           const actionBusy = busy === driver.id;
           const activeTripLabel = activeTrip ? `${activeTrip.tracking_id} is ${activeTrip.status.replace("_", " ")}` : "";
           const approvalDisabledReason = approvalVisible
@@ -365,7 +350,7 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
           return <article key={driver.id} className="driver-review-profile border border-asphalt/10 bg-white">
             <div className="driver-review-header grid gap-5 border-b border-asphalt/10 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
               <div>
-                <div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{driver.full_name}</h2><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(driver.driver_status)}`}>{driver.driver_status ?? "pending"}</span></div>
+                <div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-2xl font-semibold">{driver.full_name}{scope === "partner" && driver.partner_name ? ` · ${driver.partner_name}` : ""}</h2><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(driver.driver_status)}`}>{driver.driver_status ?? "pending"}</span></div>
 
                 {driver.driver_status !== "approved" && driver.driver_status !== "suspended" && <p className="mt-3 text-xs font-semibold text-amber-dim">Onboarding: {onboardingStage} · driver {submittedIdentity}/{identityRequired.length} · vehicle {submittedVehicle}/{vehicleRequired.length}</p>}
                 {activeTrip && <p className="mt-3 text-xs font-semibold text-amber-dim">Active trip: {activeTrip.tracking_id} · {activeTrip.status.replace("_", " ")}</p>}
@@ -377,10 +362,11 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
               <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-[10px] tracking-[.16em] text-amber-dim">CURRENT DOCUMENTS</p><p className="mt-1 text-sm text-steel">{submittedIdentity + submittedVehicle} / {identityRequired.length + vehicleRequired.length} required files · 5 groups</p></div><button onClick={() => setExpandedDriverId(expanded ? null : driver.id)} className="border border-asphalt px-4 py-2 text-xs font-semibold">{expanded ? "Hide full history" : "View full driver history"}</button></div>
             </div>
 
-            <DriverReviewFields key={`${driver.id}:${driver.full_name}:${assignedTruck?.id}:${assignedTruck?.vehicle_type}:${assignedTruck?.model}`} driver={driver} truck={assignedTruck} onSaved={load} />
+            {scope === "hallo" && <DriverReviewFields key={`${driver.id}:${driver.full_name}:${assignedTruck?.id}:${assignedTruck?.vehicle_type}:${assignedTruck?.model}`} driver={driver} truck={assignedTruck} onSaved={load} />}
             <DriverDocumentGroups resolvePreview={resolveDocumentPreview} documents={driverDocs} driverId={driver.id} truckId={assignedTruck?.id ?? null} busy={Boolean(busy)} error={error} onOpen={openFile} onReview={review} />
 
             <div className="driver-lifecycle-actions">
+              {scope === "partner" && <Link to="/admin/partner-drivers">Approve through Partner driver review →</Link>}
               {approvalVisible && <button type="button" disabled={Boolean(approvalDisabledReason)} title={approvalDisabledReason || "Approve verified driver"} aria-describedby={actionGuidanceId} onClick={() => void approveDriver(driver)}>Approve driver</button>}
               {driver.driver_status === "suspended" ? <button type="button" disabled={Boolean(restoreDisabledReason)} title={restoreDisabledReason || "Restore driver to pending review"} aria-describedby={actionGuidanceId} onClick={() => void restoreDriver(driver)}>Restore driver</button> : <button type="button" disabled={Boolean(removalDisabledReason)} title={removalDisabledReason || "Remove driver after confirming no active trip"} aria-describedby={actionGuidanceId} onClick={() => void removeDriver(driver)}>Remove driver</button>}
               <p id={actionGuidanceId}>{actionGuidance}</p>
@@ -413,7 +399,7 @@ export function AdminDriverCompliance({ fixture, resolveDocumentPreview }: { fix
                     const payout = splitHalloCommission(released);
                     return <div key={order.id} className="border border-asphalt/10 bg-white p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-xs font-semibold">{order.tracking_id}</p><p className="mt-2 text-sm">{order.pickup_address} → {order.dropoff_address}</p></div><span className={`border px-2.5 py-1 text-[10px] font-semibold uppercase ${statusBadge(order.status)}`}>{order.status.replace("_", " ")}</span></div>
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4"><AuditValue label="Invoice" value={formatEtb(money(order.price_etb))} /><AuditValue label="Payment" value={order.payment_status.replace("_", " ")} /><AuditValue label="HALLO 2%" value={formatEtb(payout.commissionEtb)} /><AuditValue label="Driver net" value={formatEtb(payout.driverNetEtb)} strong /></div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4"><AuditValue label="Invoice" value={formatEtb(money(order.price_etb))} /><AuditValue label="Payment" value={order.payment_status.replace("_", " ")} />{scope === "hallo" && <><AuditValue label="HALLO 2%" value={formatEtb(payout.commissionEtb)} /><AuditValue label="Driver net" value={formatEtb(payout.driverNetEtb)} strong /></>}</div>
                       <p className="mt-3 text-[11px] text-steel">Accepted: {when(order.accepted_at)} · Delivered: {when(order.delivered_at)}</p>
                     </div>;
                   })}
