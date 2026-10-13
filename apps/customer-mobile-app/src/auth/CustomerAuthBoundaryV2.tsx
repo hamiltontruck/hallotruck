@@ -28,6 +28,7 @@ import {
   sanitizeCustomerFullName,
   sanitizeEthiopianPhoneInput,
 } from "./customer-auth-validation";
+import { beginCustomerGoogleSignIn } from "./google-sign-in";
 
 export type CustomerIdentity = {
   userId: string;
@@ -635,11 +636,8 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
     setState({ kind: "signed-out", error: null, notice: null });
     try {
       const redirectTo = `${window.location.origin}${window.location.pathname}`;
-      const { error } = await client.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo },
-      });
-      if (error) throw error;
+      const url = await beginCustomerGoogleSignIn(client, redirectTo);
+      window.location.assign(url);
     } catch (error) {
       setState({ kind: "signed-out", error: friendlyAuthError(error instanceof Error ? error.message : undefined, language), notice: null });
       setAuthenticating(false);
