@@ -37,10 +37,24 @@
                     android:scaleType="fitStart"
                     android:src="@drawable/hallo_logistics_logo" />
 
+                <com.hallo.logistics.customer.CustomerLanguageDropdownView
+                    android:id="@+id/nativeAuthLanguageMenu"
+                    style="@style/Widget.Hallo.Secondary"
+                    android:layout_width="92dp"
+                    android:layout_height="52dp"
+                    android:gravity="center"
+                    android:text="EN  ▾"
+                    android:textSize="18sp"
+                    app:backgroundTint="@android:color/white"
+                    app:cornerRadius="8dp"
+                    app:strokeColor="@color/hallo_line"
+                    app:strokeWidth="1dp" />
+
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:id="@+id/nativeAuthLanguages"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:visibility="gone"
                     app:selectionRequired="true"
                     app:singleSelection="true">
 
@@ -63,7 +77,7 @@
                         style="@style/Widget.Hallo.CompactToggle"
                         android:layout_width="52dp"
                         android:layout_height="48dp"
-                        android:text="አማ" />
+                        android:text="AM" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
             </LinearLayout>
 
@@ -122,6 +136,7 @@
                                 android:id="@+id/nativeFullName"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
+                                android:minHeight="56dp"
                                 android:autofillHints="personName"
                                 android:imeOptions="actionNext"
                                 android:inputType="textPersonName"
@@ -138,6 +153,7 @@
                                 android:id="@+id/nativePhone"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
+                                android:minHeight="56dp"
                                 android:autofillHints="phone"
                                 android:imeOptions="actionNext"
                                 android:inputType="phone"
@@ -158,6 +174,7 @@
                             android:id="@+id/nativeEmail"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:minHeight="56dp"
                             android:autofillHints="emailAddress"
                             android:imeOptions="actionNext"
                             android:inputType="textEmailAddress"
@@ -178,9 +195,11 @@
                             android:id="@+id/nativePassword"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:minHeight="56dp"
                             android:autofillHints="password"
                             android:imeOptions="actionDone"
-                            android:inputType="textPassword"
+                            android:inputType="numberPassword"
+                            android:maxLength="6"
                             android:saveEnabled="false"
                             android:singleLine="true" />
                     </com.google.android.material.textfield.TextInputLayout>
@@ -199,6 +218,7 @@
                             android:id="@+id/nativeConfirmPin"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:minHeight="56dp"
                             android:autofillHints="newPassword"
                             android:imeOptions="actionDone"
                             android:inputType="numberPassword"
@@ -317,6 +337,20 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:visibility="gone" />
+
+            <com.hallo.logistics.customer.CustomerLanguageDropdownView
+                android:id="@+id/nativeHeaderLanguageMenu"
+                style="@style/Widget.Hallo.Secondary"
+                android:layout_width="72dp"
+                android:layout_height="46dp"
+                android:layout_marginStart="4dp"
+                android:gravity="center"
+                android:text="EN  ▾"
+                android:textSize="13sp"
+                app:backgroundTint="@android:color/white"
+                app:cornerRadius="8dp"
+                app:strokeColor="@color/hallo_line"
+                app:strokeWidth="1dp" />
         </LinearLayout>
 
         <FrameLayout
