@@ -163,12 +163,6 @@ export function Login() {
     submitting.current = true; setBusy(true); resetFeedback();
     try {
       if (!navigator.onLine) throw new Error(text.offline);
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
-        headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY }, signal: AbortSignal.timeout(10000),
-      });
-      if (!response.ok) throw new Error(ui.googleUnavailable);
-      const settings = await response.json();
-      if (settings.external?.google !== true) throw new Error(ui.googleUnavailable);
       const url = await beginGoogleSignIn(supabase, driverAuthRedirect(window.location.origin, import.meta.env.BASE_URL));
       window.location.assign(url);
     } catch (reason) {
