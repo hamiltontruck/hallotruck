@@ -82,7 +82,10 @@ function compactVehicleCopy(language: string, linked: boolean) {
   return linked ? selected[0] : selected[1];
 }
 
+import { useDriverWorkspace } from "../components/driver/DriverWorkspaceContext";
+
 export function Documents() {
+  const workspace = useDriverWorkspace();
   const { language } = useLanguage();
   const copy = getDriverTripDocumentsCopy(language);
   const c = copy.docs;
@@ -97,7 +100,7 @@ export function Documents() {
 
   async function load() {
     try {
-      setData(await getMyVerificationProfile());
+      setData(await getMyVerificationProfile(workspace));
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : c.loadError);
@@ -252,7 +255,7 @@ export function Documents() {
           <button disabled={savingProfile} className="mt-5 inline-flex min-h-12 items-center justify-center bg-asphalt px-6 py-3 text-sm font-semibold text-white transition hover:bg-line disabled:opacity-50">{savingProfile ? c.saving : c.saveProfile}</button>
         </form>
 
-        <form key={data?.truck?.id ?? "new-vehicle"} onSubmit={saveVehicle} className="relative overflow-hidden border border-asphalt/10 bg-white p-5 shadow-sm sm:p-6">
+        {workspace?.kind === "partner" ? <section className="border bg-white p-5"><h2 className="text-xl font-bold">Partner vehicle</h2><p>Partner vehicle details are managed by Admin.</p><p>{data?.truck?.plate_number ?? "Ask HALLO Admin to link your Partner vehicle before uploading vehicle documents."}</p></section> : <form key={data?.truck?.id ?? "new-vehicle"} onSubmit={saveVehicle} className="relative overflow-hidden border border-asphalt/10 bg-white p-5 shadow-sm sm:p-6">
           <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber/10" />
           <SectionTitle eyebrow={c.currentVehicle} title={c.vehicleDetails} badge={data?.truck ? localStatus(data.truck.status, c) : c.inProgress} badgeClass={data?.truck?.status === "available" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber/30 bg-amber/10 text-amber-dim"} />
           <p className="relative mt-3 text-xs leading-5 text-steel">{data?.truck ? compactVehicleCopy(language, true) : c.vehicleDetailsHelp}</p>
@@ -263,7 +266,7 @@ export function Documents() {
           </div>
           <button disabled={savingVehicle} className="relative mt-5 inline-flex min-h-12 w-full items-center justify-center bg-route px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0d7469] disabled:opacity-50">{savingVehicle ? c.saving : data?.truck ? c.updateVehicle : c.registerVehicle}</button>
           {data?.truck && data.truck.status !== "available" && <p className="relative mt-3 border border-amber/25 bg-amber/10 px-3 py-2 text-xs font-semibold text-amber-dim">{c.inactiveReview}</p>}
-        </form>
+        </form>}
       </section>
 
       <p className="mt-6 border border-amber/25 bg-amber/10 p-4 text-sm leading-6 text-amber-dim">{compactVehicleCopy(language, false)}</p>

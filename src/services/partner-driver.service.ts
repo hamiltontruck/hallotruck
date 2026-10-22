@@ -9,6 +9,32 @@ export interface PartnerDriverRegistration {
   driver_id: string | null; driver_status: string | null; expires_at: string;
   review_note: string | null; token: string | null;
 }
+export interface DriverWorkspace {
+  kind: "hallo" | "partner"; driver_id: string; partner_id: string | null;
+  partner_name: string | null; organization_active: boolean;
+  driver_status: string | null; registration_status: string | null;
+}
+export interface DriverRosterRow {
+  id: string; full_name: string; phone: string | null; email: string | null;
+  home_address: string | null; driver_status: string | null; partner_id: string | null;
+  partner_name: string | null; truck_id: string | null; plate_number: string | null;
+}
+export async function getMyDriverWorkspace(): Promise<DriverWorkspace> {
+  const { data, error } = await supabase.rpc("get_my_driver_workspace");
+  if (error) throw new Error(error.message);
+  if (!data || !["hallo", "partner"].includes(data.kind)) throw new Error("Driver workspace could not be verified. Retry before continuing.");
+  return data as DriverWorkspace;
+}
+export async function getAdminDriverRoster(scope: "hallo" | "partner"): Promise<DriverRosterRow[]> {
+  const { data, error } = await supabase.rpc("list_admin_driver_roster", { p_scope: scope });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+export async function getPartnerDriverRoster(partnerId: string): Promise<DriverRosterRow[]> {
+  const { data, error } = await supabase.rpc("list_partner_driver_roster", { p_partner_id: partnerId });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
 export async function listPartnerDrivers(partnerId?: string): Promise<PartnerDriverRegistration[]> {
   const { data, error } = await supabase.rpc("list_partner_driver_registrations", { p_partner_id: partnerId ?? null });
   if (error) throw new Error(error.message);
@@ -30,9 +56,14 @@ export async function linkPartnerDriverVehicle(registrationId: string, truckId: 
   if (error) throw new Error(error.message);
 }
 export async function reviewPartnerDriver(id: string, decision: "approved" | "rejected", reason: string) {
+  if (!["approved", "rejected"].includes(decision)) throw new Error("Choose a review action before saving.");
   const { error } = await supabase.rpc("review_partner_driver_registration", {
     p_registration_id: id, p_decision: decision, p_reason: reason.trim(),
   });
+  if (error) throw new Error(error.message);
+}
+export async function reopenPartnerDriver(id: string, reason: string) {
+  const { error } = await supabase.rpc("reopen_partner_driver_registration", { p_registration_id: id, p_reason: reason.trim() });
   if (error) throw new Error(error.message);
 }
 

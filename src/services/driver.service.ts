@@ -1,5 +1,6 @@
 import { DRIVER_VEHICLE_TYPES } from "../domain/driver-vehicle-types";
 import { supabase } from "./supabase.client";
+import type { DriverWorkspace } from "./partner-driver.service";
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 const VERIFICATION_BUCKET = "driver-verification";
@@ -171,7 +172,7 @@ function validateVerificationFile(documentKey: VerificationDocumentKey, file: Fi
   }
 }
 
-export async function getMyVerificationProfile(): Promise<DriverVerificationProfile> {
+export async function getMyVerificationProfile(workspace?: DriverWorkspace | null): Promise<DriverVerificationProfile> {
   const { data: auth, error: authError } = await supabase.auth.getUser();
   if (authError || !auth.user) throw new Error("Sign in required.");
 
@@ -181,7 +182,7 @@ export async function getMyVerificationProfile(): Promise<DriverVerificationProf
       .select("id,full_name,phone,email,home_address,driver_status")
       .eq("id", auth.user.id)
       .single(),
-    supabase
+    workspace?.kind === "partner" ? supabase.rpc("get_partner_driver_vehicle") : supabase
       .from("trucks")
       .select("id,plate_number,vehicle_type,capacity_tons,status")
       .eq("driver_id", auth.user.id)
@@ -200,7 +201,7 @@ export async function getMyVerificationProfile(): Promise<DriverVerificationProf
   if (documentsResult.error) throw new Error(documentsResult.error.message);
 
   let truck = directTruckResult.data;
-  if (!truck) {
+  if (!truck && workspace?.kind !== "partner") {
     const { data: recentOrder, error: orderError } = await supabase
       .from("orders")
       .select("truck_id")
@@ -373,6 +374,11 @@ export interface MyOrder {
   payment_terms: string;
   cancellation_reason: string | null;
   cancelled_at: string | null;
+}
+export async function getPartnerDriverActiveOrders(): Promise<MyOrder[]> {
+  const { data, error } = await supabase.rpc("get_partner_driver_active_trip");
+  if (error) throw new Error(error.message);
+  return data ? [data as MyOrder] : [];
 }
 
 export async function getMyActiveOrders(): Promise<MyOrder[]> {

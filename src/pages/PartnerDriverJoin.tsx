@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { FormEvent, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { createPartnerDriverSignupClient, validatePartnerDriverSignup } from "../services/partner-driver.service";
@@ -29,7 +30,7 @@ export function PartnerDriverJoin() {
     <h1 className="font-display text-2xl font-bold">Join your Partner as a driver</h1>
     <p>Use the email and phone your Partner registered. Set your own six-digit driver PIN. HALLO document verification and Admin approval are required before work.</p>
     {error && <p role="alert" className="text-route">{error}</p>}{message && <p role="status">{message}</p>}
-    {complete ? <><p role="status">Registration completed. Your Partner can now see your pending driver account. Ask HALLO Admin to link your Partner truck before entering vehicle details, then sign in to upload documents.</p><a href="https://hamiltontruck.github.io/hallotruck/#/driver/login" className="block border p-4 font-semibold">Open Driver login to complete documents</a></> :
+    {complete ? <><p role="status">Registration completed. Your Partner can now see your pending driver account. Ask HALLO Admin to link your Partner truck before entering vehicle details, then sign in to upload documents.</p><Link to="/partner/driver/login" className="block border p-4 font-semibold">Open Partner Driver login to complete documents</Link></> :
       token && /^[0-9a-f-]{36}$/i.test(token) ? <form onSubmit={submit} className="space-y-4">
         {!login && <label className="block">Full name<input name="name" required minLength={2} className="mt-1 min-h-12 w-full border px-3" /></label>}
         <label className="block">Email<input name="email" type="email" autoComplete="email" required className="mt-1 min-h-12 w-full border px-3" /></label>

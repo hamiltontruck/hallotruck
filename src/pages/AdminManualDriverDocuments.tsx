@@ -86,11 +86,7 @@ export function AdminManualDriverDocuments() {
   async function load() {
     setLoading(true);
     const [driverResult, truckResult, documentResult] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id,full_name,phone,driver_status")
-        .eq("role", "driver")
-        .order("full_name"),
+      supabase.rpc("list_admin_driver_roster", { p_scope: "hallo" }),
       supabase
         .from("trucks")
         .select("id,plate_number,vehicle_type,status,driver_id,created_by,partner_id")
