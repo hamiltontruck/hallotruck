@@ -1,10 +1,12 @@
 -- Real Customer <-> Driver chat notifications.
 -- Keeps message storage append-only and routes notifications only to the peer participant.
+-- Preserve existing deposit notification events when extending the allowlist.
 
 alter table public.notifications drop constraint if exists notifications_event_type_check;
 alter table public.notifications add constraint notifications_event_type_check
   check (event_type in (
-    'order_assigned','payment_verified','payment_rejected','document_expiry','delivery_completed','chat_message'
+    'order_assigned','payment_verified','payment_rejected','document_expiry','delivery_completed',
+    'driver_deposit_added','driver_deposit_reversed','chat_message'
   ));
 
 create or replace function public.enqueue_user_notification(
@@ -25,7 +27,8 @@ declare
   v_id uuid;
 begin
   if p_user_id is null then return null; end if;
-  if p_event_type not in ('order_assigned','payment_verified','payment_rejected','document_expiry','delivery_completed','chat_message') then
+  if p_event_type not in ('order_assigned','payment_verified','payment_rejected','document_expiry','delivery_completed',
+    'driver_deposit_added','driver_deposit_reversed','chat_message') then
     raise exception 'Unsupported notification event type: %', p_event_type;
   end if;
 
