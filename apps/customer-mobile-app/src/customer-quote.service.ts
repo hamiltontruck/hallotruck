@@ -200,7 +200,17 @@ export async function searchCustomerPlaces(query: string, language: CustomerLang
     const city = matches.find(feature => feature.id === "region.606" &&
       [feature.text, localized.get(feature.id)?.text].some(name => name &&
         normalizePlaceSearchText(name).startsWith(normalizePlaceSearchText(clean))));
-    const selected = city ? [city] : matches;
+    const matchingIds = new Set(matches.map(feature => feature.id));
+    const canonicalById = new Map(canonical.map(feature => [feature.id, feature]));
+    const canonicalQuery = canonical.find(feature => {
+      const name = localized.get(feature.id)?.text;
+      return name && normalizePlaceSearchText(name) === normalizePlaceSearchText(clean);
+    })?.text ?? clean;
+    const matchingLocalities = [...canonical, ...localityFeatures.map(feature => canonicalById.get(feature.id) ?? feature)]
+      .filter(feature => matchingIds.has(feature.id));
+    const matchingGeneral = generalFeatures.filter(feature => matchingIds.has(feature.id));
+    const selected = city ? [city] : selectGeocodeCandidates(canonicalQuery, matchingLocalities, matchingGeneral)
+      .sort((left, right) => rankGeocodeFeature(canonicalQuery, right) - rankGeocodeFeature(canonicalQuery, left));
     const unique = new Map<string, CustomerPlaceOption>();
     for (const feature of selected) {
       const place = featureToPlace(localized.get(feature.id) ?? feature);
