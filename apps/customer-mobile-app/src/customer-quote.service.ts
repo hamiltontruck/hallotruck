@@ -185,6 +185,39 @@ export async function searchCustomerPlaces(query: string, language: CustomerLang
     fetchGeocodeFeatures(clean, true, language, signal),
   ]);
   const localityFeatures = [...exactLocalityFeatures, ...autocompleteLocalityFeatures];
+  if (language !== "en") {
+    // Translations change names (Addis Ababa → Finfinne / አዲስ አበባ),
+    // never provider identity or coordinates. Match either name, display the
+    // localized result, and retain the canonical city rather than its districts.
+    const canonical = await fetchLocalityGeocodeFeatures(clean, false, "en", signal);
+    const localized = new Map([...localityFeatures, ...generalFeatures].map(feature => [feature.id, feature]));
+    const candidates = [...canonical, ...localityFeatures, ...generalFeatures];
+    const matches = candidates.filter(feature => {
+      const translated = localized.get(feature.id);
+      return [feature.place_name, feature.text, translated?.place_name, translated?.text]
+        .some(label => label && placeMatchesSearchQuery(clean, label));
+    });
+    const city = matches.find(feature => feature.id === "region.606" &&
+      [feature.text, localized.get(feature.id)?.text].some(name => name &&
+        normalizePlaceSearchText(name).startsWith(normalizePlaceSearchText(clean))));
+    const matchingIds = new Set(matches.map(feature => feature.id));
+    const canonicalById = new Map(canonical.map(feature => [feature.id, feature]));
+    const canonicalQuery = canonical.find(feature => {
+      const name = localized.get(feature.id)?.text;
+      return name && normalizePlaceSearchText(name) === normalizePlaceSearchText(clean);
+    })?.text ?? clean;
+    const matchingLocalities = [...canonical, ...localityFeatures.map(feature => canonicalById.get(feature.id) ?? feature)]
+      .filter(feature => matchingIds.has(feature.id));
+    const matchingGeneral = generalFeatures.filter(feature => matchingIds.has(feature.id));
+    const selected = city ? [city] : selectGeocodeCandidates(canonicalQuery, matchingLocalities, matchingGeneral)
+      .sort((left, right) => rankGeocodeFeature(canonicalQuery, right) - rankGeocodeFeature(canonicalQuery, left));
+    const unique = new Map<string, CustomerPlaceOption>();
+    for (const feature of selected) {
+      const place = featureToPlace(localized.get(feature.id) ?? feature);
+      if (place && !unique.has(place.label)) unique.set(place.label, place);
+    }
+    return [...unique.values()];
+  }
   const features = selectGeocodeCandidates(clean, localityFeatures, generalFeatures);
   const unique = new Map<string, CustomerPlaceOption>();
   for (const feature of [...features].sort((left, right) => rankGeocodeFeature(clean, right) - rankGeocodeFeature(clean, left))) {

@@ -52,3 +52,17 @@ test('Android viewport sync and responsive breakpoints protect the Driver app', 
   assert.doesNotMatch(css, /\.driver-auth:focus-within/);
   assert.match(css, /safe-area-inset-bottom/);
 });
+
+// Production Vite base is relative for Capacitor; use the current app path.
+test('relative Vite base preserves nested Driver Pages path and strips auth parameters', () => {
+ assert.equal(driverAuthRedirect('https://hamiltontruck.github.io/hallotruck/driver-mobile/?code=secret#trip', './'), 'https://hamiltontruck.github.io/hallotruck/driver-mobile/');
+ assert.equal(driverAuthRedirect('http://localhost:5173/?next=https://evil.test', './'), 'http://localhost:5173/');
+});
+
+test('Google button builds redirect from the actual browser location with relative build base', () => {
+ const auth = readFileSync(new URL('../src/auth.tsx', import.meta.url), 'utf8');
+ const expression = auth.match(/beginGoogleSignIn\(supabase, (driverAuthRedirect\([^;]+?\))\)/)[1];
+ const invoke = new Function('driverAuthRedirect','window','base',`return ${expression.replace('import.meta.env.BASE_URL','base')}`);
+ const location = {origin:'https://hamiltontruck.github.io',href:'https://hamiltontruck.github.io/hallotruck/driver-mobile/?code=secret#trip'};
+ assert.equal(invoke(driverAuthRedirect,{location},'./'),'https://hamiltontruck.github.io/hallotruck/driver-mobile/');
+});

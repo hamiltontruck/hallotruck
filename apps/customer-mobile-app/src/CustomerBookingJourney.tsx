@@ -106,8 +106,8 @@ export function CustomerBookingJourney({
 
   const truck = customerTruckByKey(selectedTruck);
   const truckDisplayLabel = customerTruckDisplayLabel(truck, language);
-  const rawAmount = truck.capacityTons;
-  const cargoTons = truck.capacityTons;
+  const rawAmount = cargoUnit === "quintal" ? truck.capacityTons * 10 : truck.capacityTons;
+  const cargoTons = cargoToTons(rawAmount, cargoUnit);
   const routeReady = Boolean(pickupPlace && dropoffPlace && routePreview && routePreview.distance_km > 0 && !routeLoading && !routeError);
   const cargoDetailsError = validateCustomerCargoDetails({ packagingType, vehicleType: truck.label });
   const cargoReady = Boolean(cargoCategory && packagingType && cargoTons > 0 && !cargoDetailsError);
@@ -307,7 +307,7 @@ export function CustomerBookingJourney({
           <p className="customer-final-step-help">{c.stepCargoHelp}</p>
           <label className="customer-final-select-row"><span><b>{c.cargoType}</b><small>{cargoCopy.categories[cargoCategory]}</small></span><select value={cargoCategory} onChange={(event) => setCargoCategory(event.target.value as CustomerCargoCategory)}>{CUSTOMER_CARGO_CATEGORIES.map((value) => <option value={value} key={value}>{cargoCopy.categories[value]}</option>)}</select></label>
           <div className="customer-final-weight-row">
-            <label><span>{c.totalWeight}</span><input type="number" value={truck.capacityTons} readOnly aria-readonly="true" /></label>
+            <label><span>{c.totalWeight}</span><input type="number" value={rawAmount} readOnly aria-readonly="true" /></label>
             <label><span>{c.unit}</span><select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{c.ton}</option><option value="quintal">{c.quintal}</option></select></label>
           </div>
           <label className="customer-final-select-row"><span><b>{c.packagingType}</b><small>{cargoCopy.packagingTypes[packagingType]}</small></span><select value={packagingType} onChange={(event) => setPackagingType(event.target.value as CustomerPackagingType)}>{CUSTOMER_PACKAGING_TYPES.map((value) => <option value={value} key={value}>{cargoCopy.packagingTypes[value]}</option>)}</select></label>
@@ -343,7 +343,7 @@ export function CustomerBookingJourney({
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepQuoteHelp}</p>
           {routePreview && <section className="customer-final-route-summary"><span>●</span><div><strong>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong><small>{routePreview.distance_km.toFixed(1)} km · {routeDuration}</small></div></section>}
-          <section className="customer-final-quote-truck"><TruckImage truck={truck} alt={truckDisplayLabel}/><div><strong>{truckDisplayLabel}</strong><small>{cargoCopy.categories[cargoCategory]} · {cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} {c.ton}</small></div></section>
+          <section className="customer-final-quote-truck"><TruckImage truck={truck} alt={truckDisplayLabel}/><div><strong>{truckDisplayLabel}</strong><small>{cargoCopy.categories[cargoCategory]} · {rawAmount.toLocaleString(undefined,{maximumFractionDigits:2})} {cargoUnit === "quintal" ? c.quintal : c.ton}</small></div></section>
           <section className="customer-final-price-card">
             <div><span>{c.authoritativeQuote}</span><strong>{quote ? formatEtb(quote.total_quote_etb) : "—"}</strong></div>
             <div className="total"><span>{c.total}</span><strong>{quote ? formatEtb(quote.total_quote_etb) : "—"}</strong></div>
@@ -361,7 +361,7 @@ export function CustomerBookingJourney({
               <label className="customer-final-service-date"><span>Order Date</span><input type="date" min={todayServiceDate} value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
           <section className="customer-final-review-card">
             <div><span>⌖</span><p><small>{c.route}</small><strong>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong><em>{routePreview.distance_km.toFixed(1)} km · {routeDuration}</em></p></div>
-            <div><span>▣</span><p><small>{c.cargo}</small><strong>{cargoCopy.categories[cargoCategory]} · {cargoTons.toLocaleString(undefined,{maximumFractionDigits:2})} {c.ton}</strong><em>{cargoCopy.packagingTypes[packagingType]}</em></p></div>
+            <div><span>▣</span><p><small>{c.cargo}</small><strong>{cargoCopy.categories[cargoCategory]} · {rawAmount.toLocaleString(undefined,{maximumFractionDigits:2})} {cargoUnit === "quintal" ? c.quintal : c.ton}</strong><em>{cargoCopy.packagingTypes[packagingType]}</em></p></div>
             <div><span>🚚</span><p><small>{c.truck}</small><strong>{truckDisplayLabel}</strong></p></div>
                 <div><span>◷</span><p><small>Order Date</small><strong>{serviceDate}</strong></p></div>
             <div className="total"><p><small>{c.total}</small><strong>{formatEtb(quote.total_quote_etb)}</strong></p></div>

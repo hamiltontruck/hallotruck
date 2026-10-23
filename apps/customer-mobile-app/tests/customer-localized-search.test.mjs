@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {fileURLToPath} from 'node:url';
+const built=await build({entryPoints:[fileURLToPath(new URL('../src/customer-quote.service.ts',import.meta.url))],bundle:true,write:false,platform:'node',format:'esm',define:{'import.meta.env.VITE_MAPTILER_KEY':'"fixture"','import.meta.env.VITE_SUPABASE_URL':'""','import.meta.env.VITE_SUPABASE_ANON_KEY':'""','import.meta.env.VITE_SUPABASE_FUNCTIONS_URL':'""'}});
+const {searchCustomerPlaces}=await import(`data:text/javascript;base64,${Buffer.from(built.outputFiles[0].text).toString('base64')}`);
+const names={en:['Addis Ababa','Ethiopia'],om:['Finfinne','Itoophiyaa'],am:['አዲስ አበባ','ኢትዮጵያ']};
+const original=globalThis.fetch;
+function useProviderFixture(){globalThis.fetch=async input=>{const u=new URL(input),[city,country]=names[u.searchParams.get('language')];return {ok:true,json:async()=>({features:[{id:'region.606',text:city,place_name:`${city}, ${country}`,place_type:['region'],center:[38.75,9.03]},{id:'place.4567631',text:'Addis Ababa',place_name:`Addis Ababa, Kirkos, ${country}`,place_type:['place'],center:[38.76,9.01]}]})};};}
+for(const language of ['om','am'])test(`${language}: Latin city query selects canonical Addis city rather than similarly named district`,async()=>{useProviderFixture();try{const result=await searchCustomerPlaces('Addis ab',language);assert.equal(result.length,1);assert.deepEqual(result[0].coordinates,[38.75,9.03]);assert.equal(result[0].label,`${names[language][0]}, ${names[language][1]}`);}finally{globalThis.fetch=original;}});
+test('English city-search behavior is preserved',async()=>{useProviderFixture();try{const result=await searchCustomerPlaces('Addis Ababa','en');assert.deepEqual(result,[{label:'Addis Ababa, Ethiopia',coordinates:[38.75,9.03]},{label:'Addis Ababa, Kirkos, Ethiopia',coordinates:[38.76,9.01]}]);}finally{globalThis.fetch=original;}});
+test('Amharic city-name input resolves the same provider city identity',async()=>{useProviderFixture();try{const result=await searchCustomerPlaces('አዲስ አበባ','am');assert.deepEqual(result[0]?.coordinates,[38.75,9.03]);}finally{globalThis.fetch=original;}});
+for(const language of ['om','am'])test(`${language}: Djibouti City identity excludes Ali Sabieh and POIs`,async()=>{
+ globalThis.fetch=async input=>({ok:true,json:async()=>({features:[{id:'region.ali-sabieh',text:'Djibouti',place_name:'Djibouti, Ali Sabieh, Djibouti',place_type:['region'],center:[42.71,11.15],context:[{id:'region.ali-sabieh',text:'Ali Sabieh'}]},{id:'region.1713',text:'Djibouti',place_name:'Djibouti, Djibouti',place_type:['region'],center:[43.14727216959,11.59369036353],context:[{id:'country.dj',text:'Djibouti'}]},{id:'poi.airport',text:'Djibouti Airport',place_name:'Djibouti Airport, Djibouti',place_type:['poi'],center:[43.15,11.59]}]})});
+ try{const result=await searchCustomerPlaces('Djibouti',language);assert.deepEqual(result,[{label:'Djibouti, Djibouti',coordinates:[43.14727216959,11.59369036353]}]);}finally{globalThis.fetch=original;}
+});
