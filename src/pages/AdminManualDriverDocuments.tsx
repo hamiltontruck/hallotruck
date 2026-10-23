@@ -227,13 +227,13 @@ export function AdminManualDriverDocuments() {
         {error && <p className="mt-5 border border-route/30 bg-route/5 p-4 text-sm text-route">{error}</p>}
         {notice && <p className="mt-5 border border-emerald-700/25 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">✓ {notice}</p>}
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
-          <form onSubmit={submit} className="border border-asphalt/10 bg-white p-5 sm:p-6">
+        <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)]">
+          <form onSubmit={submit} className="min-w-0 border border-asphalt/10 bg-white p-4 sm:p-6">
             <h2 className="font-display text-xl font-bold">Add or replace document</h2>
             <p className="mt-2 text-xs leading-5 text-steel">Replacing a current document automatically archives the previous version.</p>
 
             <label className="mt-5 block text-sm font-semibold">Driver
-              <select value={driverId} onChange={(event) => { setDriverId(event.target.value); setExpiryDate(""); }} className="mt-2 block w-full border border-asphalt/20 bg-white p-3 font-normal" required>
+              <select value={driverId} onChange={(event) => { setDriverId(event.target.value); setExpiryDate(""); }} className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/20 bg-white p-3 text-base font-normal" required>
                 <option value="" disabled>Select driver</option>
                 {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name ?? "Driver"} · {driver.phone ?? "No phone"} · {driver.driver_status ?? "pending"}</option>)}
               </select>
@@ -253,7 +253,7 @@ export function AdminManualDriverDocuments() {
             {needsTruck && <label className="mt-4 block text-sm font-semibold">Driver truck
               <select value={truckId} onChange={(event) => setTruckId(event.target.value)} className="mt-2 block w-full border border-asphalt/20 bg-white p-3 font-normal" required>
                 <option value="" disabled>Select linked truck</option>
-                {onboardingTruckCandidates.map((truck) => <option key={truck.id} value={truck.id}>{truck.plate_number} · {truck.vehicle_type} · {truck.driver_id === driverId ? "linked" : "available — link for onboarding"}</option>)}
+                {onboardingTruckCandidates.map((truck) => <option key={truck.id} value={truck.id}>{truck.plate_number} · {truck.vehicle_type} · {truck.driver_id === driverId ? "linked" : "available"}</option>)}
               </select>
               {!onboardingTruckCandidates.length && <span className="mt-2 block text-xs font-normal text-route">No safe company truck is available. Add a company vehicle first.</span>}
               {needsTruck && selectedTruck && selectedTruck.driver_id !== driverId && <span className="mt-2 block text-xs font-normal text-amber-dim">This available company truck will be linked to the pending driver for onboarding and kept inactive until approval.</span>}
@@ -265,7 +265,7 @@ export function AdminManualDriverDocuments() {
             </label>
 
             {documentExpiryLabel(documentKey) && <label className="mt-4 block text-sm font-semibold">{documentExpiryLabel(documentKey)} date
-              <input type="date" required value={expiryDate} onChange={(event) => setExpiryDate(event.target.value)} className="mt-2 block w-full border border-asphalt/20 p-3 font-normal" />
+              <input type="date" required value={expiryDate} onChange={(event) => setExpiryDate(event.target.value)} className="mt-2 block w-full min-w-0 max-w-full border border-asphalt/20 p-3 text-base font-normal" />
             </label>}
 
             <label className="mt-4 block text-sm font-semibold">Source note

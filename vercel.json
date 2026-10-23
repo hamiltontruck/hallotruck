@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/hallotruck",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/hallotruck/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/hallotruck/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}
