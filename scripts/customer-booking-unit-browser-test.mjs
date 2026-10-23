@@ -30,6 +30,7 @@ try{
  await unit.selectOption('ton');assert.equal(await weight.inputValue(),'5');await unit.selectOption('quintal');
  await page.getByRole('button',{name:/Next/}).click();
  await page.getByRole('button',{name:/Next/}).click();
+ await page.getByText('General goods · 50 Quintal',{exact:true}).waitFor({timeout:3000});
  await page.locator('input[type="checkbox"]').check();
  await page.getByRole('button',{name:'Confirm Booking',exact:true}).click();
  await page.waitForFunction(()=>Boolean(window.bookingPayload));
