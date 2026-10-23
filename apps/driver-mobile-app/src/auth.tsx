@@ -128,7 +128,7 @@ export function Login() {
       const normalizedEmail = normalizeEmail(email);
       if (mode === "reset") {
         // The existing root portal owns the complete recovery callback and PIN policy.
-        const redirectTo = new URL("../", driverAuthRedirect(window.location.origin, import.meta.env.BASE_URL)).href;
+        const redirectTo = new URL("../", driverAuthRedirect(window.location.href, import.meta.env.BASE_URL)).href;
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
         if (resetError) throw resetError;
         setConfirmation(ui.sent);
@@ -163,7 +163,7 @@ export function Login() {
     submitting.current = true; setBusy(true); resetFeedback();
     try {
       if (!navigator.onLine) throw new Error(text.offline);
-      const url = await beginGoogleSignIn(supabase, driverAuthRedirect(window.location.origin, import.meta.env.BASE_URL));
+      const url = await beginGoogleSignIn(supabase, driverAuthRedirect(window.location.href, import.meta.env.BASE_URL));
       window.location.assign(url);
     } catch (reason) {
       setError(isNetworkFailure(reason) ? text.network : reason instanceof Error ? reason.message : ui.googleFailed);
