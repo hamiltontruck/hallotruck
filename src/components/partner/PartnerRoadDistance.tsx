@@ -27,9 +27,9 @@ export function PartnerRoadDistance({ onChange }: { onChange: (value: PartnerRoa
     return () => controller.abort();
   }, [pickup, dropoff, retry, onChange]);
 
-  return <fieldset className="space-y-4 border border-asphalt/10 bg-white p-4 sm:p-6">
-    <legend className="px-2 font-display text-xl font-bold">Automatic road distance</legend>
-    <p className="text-sm text-steel">Choose the actual pickup and destination. Distance follows the truck road route; HALLO reviews the price separately.</p>
+  return <fieldset className="space-y-3 rounded-xl border border-asphalt/10 bg-white p-3 sm:p-4">
+    <legend className="px-1 font-display text-base font-bold">Automatic road distance</legend>
+    <p className="text-sm text-steel">Choose pickup and destination to calculate the truck road distance.</p>
     <Place label="Pickup map location" value={pickup} onChange={setPickup} />
     <Place label="Destination map location" value={dropoff} onChange={setDropoff} />
     {loading && <p role="status">Calculating truck road distance…</p>}
@@ -53,7 +53,7 @@ function Place({ label, value, onChange }: { label: string; value: PartnerRouteP
     }, 250);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [query, value]);
-  return <div><label className="block text-sm font-semibold">{label}<input value={query} autoComplete="off" onChange={(event) => { onChange(null); setQuery(event.target.value); }} className="mt-2 min-h-12 w-full border px-3 text-base" /></label>
+  return <div><label className="block text-sm font-semibold">{label}<input value={query} autoComplete="off" onChange={(event) => { onChange(null); setQuery(event.target.value); }} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border px-3 text-base" /></label>
     {error && <p role="alert" className="text-sm text-route">{error}</p>}
     {options.length > 0 && <ul aria-label={`${label} suggestions`}>{options.map((place) => <li key={`${place.label}:${place.coordinates.join(",")}`}><button type="button" className="min-h-12 w-full border p-3 text-left" onClick={() => { setQuery(place.label); setOptions([]); onChange(place); }}>{place.label}</button></li>)}</ul>}
   </div>;
