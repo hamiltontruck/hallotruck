@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../services/supabase.client";
 import { PartnerFleetPanel } from "../components/partner/PartnerFleetPanel";
@@ -38,10 +38,13 @@ function money(value: number) {
 }
 
 export function PartnerPortal() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedOrganization = searchParams.get("organization") ?? "";
+  const loadSequence = useRef(0);
   const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
   const [partnerId, setPartnerId] = useState("");
-  const [workspace, setWorkspace] = useState<Workspace>(emptyWorkspace);
+  const [workspaceData, setWorkspace] = useState<Workspace>(emptyWorkspace);
+  const workspace = requestedOrganization && requestedOrganization !== partnerId ? emptyWorkspace : workspaceData;
   const [tab, setTab] = useState<PartnerTab>("overview");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -54,10 +57,13 @@ export function PartnerPortal() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const load = useCallback(async (requestedPartnerId?: string) => {
+    const sequence = ++loadSequence.current;
     setLoading(true);
     setError("");
+    if (requestedPartnerId && requestedPartnerId !== partnerId) setWorkspace(emptyWorkspace);
     try {
       const nextMemberships = await getCurrentPartnerMemberships();
+      if (sequence !== loadSequence.current) return;
       setMemberships(nextMemberships);
       const candidatePartnerId = requestedPartnerId || partnerId;
       const nextPartnerId = nextMemberships.some((membership) => membership.partner_id === candidatePartnerId)
@@ -69,17 +75,19 @@ export function PartnerPortal() {
         return;
       }
       const next = await loadPartnerWorkspace(nextPartnerId);
+      if (sequence !== loadSequence.current) return;
       setWorkspace(next as Workspace);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Partner workspace could not be loaded.");
+      if (sequence === loadSequence.current) { setWorkspace(emptyWorkspace); setError(loadError instanceof Error ? loadError.message : "Partner workspace could not be loaded."); }
     } finally {
-      setLoading(false);
+      if (sequence === loadSequence.current) setLoading(false);
     }
   }, [partnerId]);
 
   useEffect(() => {
-    void load(searchParams.get("organization") ?? undefined);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    void load(requestedOrganization || undefined);
+    return () => { loadSequence.current++; };
+  }, [requestedOrganization]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!partnerId) return;
@@ -103,6 +111,8 @@ export function PartnerPortal() {
   const canManageFleet = ["owner", "admin"].includes(currentMembership?.member_role ?? "");
   const canViewFinance = ["owner", "admin"].includes(currentMembership?.member_role ?? "");
   const visibleTabs = canManageFleet ? tabs : tabs.filter((item) => item !== "fleet");
+  const requestedTab = searchParams.get("tab");
+  useEffect(() => { setTab(requestedTab && tabs.includes(requestedTab as PartnerTab) && (requestedTab !== "fleet" || canManageFleet) ? requestedTab as PartnerTab : "overview"); }, [requestedTab, canManageFleet]);
 
   const projectsById = useMemo(() => new Map(workspace.projects.map((project) => [project.id, project])), [workspace.projects]);
 
@@ -167,7 +177,7 @@ export function PartnerPortal() {
           </div>
           <div className="flex flex-wrap gap-2">
             {memberships.length > 1 && (
-              <select value={partnerId} onChange={(event) => void load(event.target.value)} className="min-w-0 border border-white/15 bg-white/5 px-3 py-2 text-sm text-white">
+              <select value={partnerId} onChange={(event) => setSearchParams(previous => { const next = new URLSearchParams(previous); next.set("organization", event.target.value); return next; })} className="min-w-0 border border-white/15 bg-white/5 px-3 py-2 text-sm text-white">
                 {memberships.map((membership) => <option key={membership.partner_id} value={membership.partner_id} className="text-asphalt">{membership.partner_organizations?.name ?? membership.partner_id}</option>)}
               </select>
             )}

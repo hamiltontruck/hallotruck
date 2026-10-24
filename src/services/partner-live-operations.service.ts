@@ -1,6 +1,7 @@
+import { isLocatedTrip } from "../domain/partner-operations";
 import { supabase } from "./supabase.client";
 import { classifyTrackingFreshness, type TrackingFreshness } from "../domain/tracking-freshness";
-import { getFleetEnterpriseData } from "./fleet-maintenance.service";
+import type { FleetVehicle } from "./fleet-maintenance.service";
 
 export interface PartnerLiveTrip {
   order_id: string;
@@ -34,8 +35,13 @@ export interface PartnerLiveOperationsResult {
 const assignmentMismatchMessage = "Partner live assignment mismatch";
 
 export async function loadPartnerLiveOperations(partnerId: string): Promise<PartnerLiveOperationsResult> {
-  const fleet = await getFleetEnterpriseData(partnerId);
-  const active = fleet.vehicles.filter((vehicle) => Boolean(vehicle.active_trip_id));
+  const { data, error } = await supabase.rpc("fleet_enterprise_vehicles", { p_partner_id: partnerId });
+  if (error) throw new Error(error.message);
+  return loadPartnerLiveTrips(partnerId, data ?? []);
+}
+
+export async function loadPartnerLiveTrips(partnerId: string, vehicles: FleetVehicle[]): Promise<PartnerLiveOperationsResult> {
+  const active = vehicles.filter((vehicle) => Boolean(vehicle.active_trip_id));
   const rows = await Promise.all(active.map(async (vehicle) => {
     const { data, error } = await supabase.rpc("partner_get_live_trip", {
       p_partner_id: partnerId,
@@ -64,7 +70,7 @@ export async function loadPartnerLiveOperations(partnerId: string): Promise<Part
       heading: trip.heading == null ? null : Number(trip.heading),
       speed_kmh: trip.speed_kmh == null ? null : Number(trip.speed_kmh),
       recorded_at: trip.recorded_at,
-      freshness: classifyTrackingFreshness(trip.recorded_at),
+      freshness: isLocatedTrip({ truck_lng: trip.truck_lng == null ? null : Number(trip.truck_lng), truck_lat: trip.truck_lat == null ? null : Number(trip.truck_lat) }) ? classifyTrackingFreshness(trip.recorded_at) : "OFFLINE",
     } satisfies PartnerLiveTrip, warning: null };
   }));
   return {

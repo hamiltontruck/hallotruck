@@ -16,7 +16,7 @@ const tripCompletionSmoke = source("scripts/trip-completion-e2e-smoke.mjs");
 const adminShellSmoke = source("scripts/admin-mobile-shell-e2e-smoke.mjs");
 const navigationCss = source("src/styles/role-navigation.css");
 const partnerCss = source("src/index.css");
-const partnerHub = source("src/pages/PartnerOperationsHub.tsx");
+const partnerHub = source("src/pages/PartnerOperationsDashboard.tsx");
 
 const narrowWidths = [320, 360, 390, 412];
 
