@@ -40,7 +40,7 @@ try{
  await page.getByRole('link',{name:'Drivers',exact:true}).click();
  await page.getByRole('heading',{name:'Your Partner drivers',exact:true}).waitFor();await page.getByRole('searchbox').fill('ET-001');
  await page.getByText('Own Driver',{exact:true}).waitFor();assert.equal(await page.getByText('New Driver',{exact:true}).count(),0);
- await page.getByRole('searchbox').fill('new');await page.getByText('New Driver',{exact:true}).first().waitFor();
+ await page.setViewportSize({width:320,height:844});assert.ok((await page.getByRole('searchbox').boundingBox()).width>=220,'Mobile driver search must remain wide enough for names and plates');await page.setViewportSize({width:390,height:844});await page.getByRole('searchbox').fill('new');await page.getByText('New Driver',{exact:true}).first().waitFor();
  await page.getByRole('link',{name:'Live map',exact:true}).click();
  await page.getByRole('heading',{name:'Real GPS fleet map',exact:true}).waitFor();
  await page.getByRole('button',{name:/Select trip REF-2/}).click();
