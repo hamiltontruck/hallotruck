@@ -88,7 +88,7 @@ test("Partner dispatch routes are protected and discoverable", () => {
   assert.match(app, /path="\/partner\/jobs"[\s\S]*PartnerGate[\s\S]*PartnerDispatch/);
   assert.match(app, /path="\/admin\/partner-dispatch"[\s\S]*AdminGate[\s\S]*AdminPartnerDispatch/);
   assert.match(app, /PartnerOperationsHub/);
-  assert.match(hub, /Jobs & assignments/);
+  assert.match(readFileSync(path.join(root, "src/components/partner/PartnerOperationsNav.tsx"), "utf8"), /Jobs & assignments/);
   assert.match(adminMore, /Partner job dispatch/);
   assert.match(adminMore, /\/admin\/partner-dispatch/);
 });

@@ -1,3 +1,4 @@
+import { PartnerWorkspace } from "./pages/PartnerWorkspace";
 import { Documents } from "./pages/Documents";
 import { ActiveTrip } from "./pages/ActiveTrip";
 import { PartnerDriverGate } from "./components/auth/PartnerDriverGate";
@@ -54,7 +55,8 @@ createRoot(document.getElementById("root")!).render(
     <Route path="/partner/driver/documents" element={<PartnerDriverGate><Documents /></PartnerDriverGate>} />
     <Route path="/partner/driver/trip" element={<PartnerDriverGate><ActiveTrip /></PartnerDriverGate>} />
     <Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
-    <Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
+    <Route path="/partner/workspace" element={<PartnerGate><PartnerWorkspace /></PartnerGate>} />
+<Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
     <Route path="/partner/live" element={<PartnerGate><PartnerLiveOperations /></PartnerGate>} />
     <Route path="/partner/wallet" element={<PartnerGate><PartnerWallet /></PartnerGate>} />
     <Route path="/partner/orders" element={<PartnerGate><PartnerOrders /></PartnerGate>} />

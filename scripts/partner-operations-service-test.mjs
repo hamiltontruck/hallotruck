@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+const calls=[];let fleetFails=false;let rosterFails=false;
+globalThis.__operationsClient={rpc:async(name,args)=>{calls.push([name,args]);if(name==='fleet_enterprise_vehicles')return fleetFails?{error:{message:'fleet denied'}}:{data:[],error:null};if(name==='list_partner_driver_roster')return rosterFails?{error:{message:'roster denied'}}:{data:[{id:'own-driver'}],error:null};if(name==='list_partner_driver_registrations')return {data:[],error:null};throw new Error('Unexpected RPC '+name);},from(table){const query={select(){return query;},eq(key,value){calls.push([table,key,value]);return query;},order(){return query;},limit(){return query;},in(){return query;},then(resolve){return Promise.resolve({data:[],error:null}).then(resolve);}};return query;}};
+const bundle=await build({entryPoints:['src/services/partner-operations.service.ts'],bundle:true,write:false,format:'esm',platform:'node',plugins:[{name:'sdk-boundary',setup(b){b.onResolve({filter:/supabase\.client$/},a=>({path:a.path,namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const supabase=globalThis.__operationsClient',loader:'js'}));}}]});
+const {loadPartnerOperations}=await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+let result=await loadPartnerOperations('org-viewer',false);
+assert.deepEqual(result.fleet.data,[]);assert.deepEqual(result.live.data.trips,[]);assert.equal(result.drivers,null);assert.equal(result.registrations,null);
+assert.equal(calls.some(([name])=>name.startsWith('list_partner_driver')),false,'Viewer must not request restricted driver data');
+assert.ok(calls.some(([table,key,value])=>table==='partner_job_requests'&&key==='partner_id'&&value==='org-viewer'));
+fleetFails=true;rosterFails=true;result=await loadPartnerOperations('org-owner',true);
+assert.equal(result.fleet.data,null);assert.match(result.fleet.error,/fleet denied/);assert.equal(result.live.data,null);assert.deepEqual(result.jobs.data,[]);
+assert.equal(result.drivers.data,null);assert.deepEqual(result.registrations.data,[]);
+assert.equal(calls.some(([name])=>['fleet_enterprise_summary','truck_maintenance_records','fleet_audit_events'].includes(name)),false);
+console.log('Partner operations reads: independent failure states, scoped requests, no viewer driver reads or maintenance downloads PASS');

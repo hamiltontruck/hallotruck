@@ -26,7 +26,7 @@ test("Partner live-trip RPC is authenticated, tenant scoped and read only", () =
 });
 
 test("Partner live operations uses real fleet and tracking contracts", () => {
-  assert.match(service, /getFleetEnterpriseData\(partnerId\)/);
+  assert.match(service, /rpc\("fleet_enterprise_vehicles"/);
   assert.match(service, /partner_get_live_trip/);
   assert.match(service, /classifyTrackingFreshness/);
   assert.match(page, /LIVE/);
@@ -67,7 +67,7 @@ test("Partner telemetry stays behind the guarded RPC rather than direct tracking
 test("assignment mismatches are hidden from the map and surfaced as clear warnings", () => {
   assert.match(service, /Partner live assignment mismatch/);
   assert.match(service, /warnings/);
-  assert.match(page, /setWarnings/);
+  assert.match(page, /resource\.data\?\.warnings/);
   assert.match(page, /Live trip hidden/);
   assert.match(page, /role="alert"/);
 });

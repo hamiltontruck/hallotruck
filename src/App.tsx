@@ -1,3 +1,4 @@
+import { PartnerWorkspace } from "./pages/PartnerWorkspace";
 import { PartnerDriverGate } from "./components/auth/PartnerDriverGate";
 import { PartnerDriverLogin } from "./pages/PartnerDriverLogin";
 import { PartnerDriverHome } from "./pages/PartnerDriverHome";
@@ -156,6 +157,7 @@ export default function App(){return <LanguageProvider><RuntimeLocalization /><P
     <Route path="/partner/driver/trip" element={<PartnerDriverGate><ActiveTrip /></PartnerDriverGate>} />
 <Route path="/admin/partner-drivers" element={<AdminGate><AdminToolShell><AdminPartnerDrivers /></AdminToolShell></AdminGate>} />
 <Route path="/partner" element={<PartnerGate><PartnerOperationsHub /></PartnerGate>} />
+<Route path="/partner/workspace" element={<PartnerGate><PartnerWorkspace /></PartnerGate>} />
 <Route path="/partner/jobs" element={<PartnerGate><PartnerDispatch /></PartnerGate>} />
 <Route path="/partner/live" element={<PartnerGate><PartnerLiveOperations /></PartnerGate>} />
 <Route path="/partner/wallet" element={<PartnerGate><PartnerWallet /></PartnerGate>} />
