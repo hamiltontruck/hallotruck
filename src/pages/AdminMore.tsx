@@ -27,6 +27,7 @@ const groups = [
       ["Executive intelligence", "/admin/intelligence"],
       ["HALLO AI Assistant", "/admin/ai-assistant"],
       ["Partner onboarding", "/admin/partners"],
+      ["Partner orders", "/admin/partner-orders"],
       ["Partner job dispatch", "/admin/partner-dispatch"],
     ],
   },

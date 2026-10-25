@@ -12,6 +12,7 @@ const links = [
   { to: "/admin/finance", label: "Finance Dashboard V3", icon: "FIN" },
   { to: "/admin/partner-finance", label: "Partner finance", icon: "P%" },
   { to: "/admin/partners", label: "Partner onboarding", icon: "LP" },
+  { to: "/admin/partner-orders", label: "Partner orders", icon: "PO" },
   { to: "/admin/operations", label: "Operations", icon: "OPS" },
   { to: "/admin/payment-review", label: "Payment review", icon: "PAY" },
   { to: "/admin/driver-finance-search", label: "Driver finance", icon: "ETB" },
