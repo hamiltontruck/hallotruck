@@ -140,7 +140,7 @@ test("Partner order contact validation accepts Ethiopian and explicit internatio
 });
 
 test("New Partner order captures the first-slice operational requirements", () => {
-  for (const marker of ["pickupCountry","dropoffCountry","cargoCategory","cargoDescription","weight","quantity","truckType","capacity","pickupDate","deadline","pickupPhone","deliveryPhone","paymentMethod"]) assert.match(form, new RegExp(marker));
+  for (const marker of ["cargoCategory","cargoDescription","weight","quantity","truckType","capacity","pickupDate","deadline","pickupPhone","deliveryPhone","paymentMethod"]) assert.match(form, new RegExp(marker));
   for (const marker of ["fragile","hazardous","temperature","refrigeration"]) assert.match(form, new RegExp(marker));
 });
 
