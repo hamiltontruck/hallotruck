@@ -6,6 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const migration = readFileSync(path.join(root, "supabase", "migrations", "20260901233000_partner_job_request_assignment.sql"), "utf8");
 const readGuards = readFileSync(path.join(root, "supabase", "migrations", "20260901233500_partner_job_request_read_and_reservation_guards.sql"), "utf8");
+const driverStatusFix = readFileSync(path.join(root, "supabase", "migrations", "20261008021136_fix_partner_dispatch_driver_status_deadlock.sql"), "utf8");
 const service = readFileSync(path.join(root, "src", "services", "partner-dispatch.service.ts"), "utf8");
 const partnerPage = readFileSync(path.join(root, "src", "pages", "PartnerDispatch.tsx"), "utf8");
 const adminPage = readFileSync(path.join(root, "src", "pages", "AdminPartnerDispatch.tsx"), "utf8");
@@ -63,6 +64,23 @@ test("Partner acceptance is tenant-scoped and cannot claim an arbitrary driver",
   assert.match(sql, /v_truck\.driver_id is distinct from v_partner_vehicle\.assigned_driver_id/);
   assert.match(sql, /role::text <> 'driver'/);
   assert.match(sql, /driver_status::text <> 'approved'/);
+});
+
+test("assigning an approved driver keeps an idle Partner truck dispatchable", () => {
+  const sql = compact(driverStatusFix);
+  assert.match(sql, /create or replace function public\.admin_assign_fleet_driver/);
+  assert.match(sql, /private\.is_admin_or_ceo/);
+  assert.match(sql, /profile\.driver_status::text = 'approved'/);
+  assert.match(sql, /truck\.driver_id = p_driver_id[\s\S]*truck\.status not in \('maintenance', 'suspended', 'inactive'\)/);
+  assert.match(sql, /set driver_id = p_driver_id, status = 'available'/);
+  assert.match(sql, /where id = p_truck_id and status not in \('maintenance', 'suspended', 'inactive'\)/);
+  assert.match(sql, /update public\.trucks truck set status = 'available'/);
+  assert.match(sql, /select pg_catalog\.set_config\('app\.fleet_change_source', 'system', true\)/);
+  assert.match(sql, /truck\.partner_id is not null/);
+  assert.match(sql, /truck\.status = 'assigned'/);
+  assert.match(sql, /not exists \([\s\S]*active_order\.truck_id = truck\.id[\s\S]*active_order\.status in \(\s*'accepted'::public\.order_status,\s*'in_transit'::public\.order_status/);
+  assert.match(sql, /revoke all on function public\.admin_assign_fleet_driver\(uuid,uuid,text\) from public, anon/);
+  assert.match(sql, /grant execute on function public\.admin_assign_fleet_driver\(uuid,uuid,text\) to authenticated/);
 });
 
 test("Partner and Admin UIs expose the complete request lifecycle on mobile", () => {
