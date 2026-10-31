@@ -1,0 +1,24 @@
+name: Hardware GPS QA isolated tests
+on:
+  push:
+    branches:
+      - feat/hallo-hardware-gps-v1-qa
+    paths:
+      - 'tools/hardware-gps-qa/**'
+      - '.github/workflows/hardware-gps-qa.yml'
+  pull_request:
+    paths:
+      - 'tools/hardware-gps-qa/**'
+      - '.github/workflows/hardware-gps-qa.yml'
+permissions:
+  contents: read
+jobs:
+  hardware-gps-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test isolated ST-906L simulator and Traccar adapter
+        run: node --test tools/hardware-gps-qa/adapter.test.mjs
