@@ -1,0 +1,15 @@
+# QA only: official Traccar container; local-only ports by default.
+# Real device access later requires a separately approved firewall/TLS setup.
+services:
+  traccar:
+    image: traccar/traccar:6.16.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8082:8082"
+      - "127.0.0.1:5013:5013/tcp"
+    volumes:
+      - traccar-qa-data:/opt/traccar/data
+      - traccar-qa-logs:/opt/traccar/logs
+volumes:
+  traccar-qa-data:
+  traccar-qa-logs:
