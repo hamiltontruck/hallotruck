@@ -1,0 +1,25 @@
+name: Traccar Docker QA config checks
+on:
+  pull_request:
+    paths:
+      - 'tools/traccar-real-qa/**'
+      - '.github/workflows/traccar-docker-qa.yml'
+  push:
+    branches:
+      - feat/hallo-traccar-real-api-qa-20261101
+permissions:
+  contents: read
+jobs:
+  qa-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate auth smoke syntax
+        run: node --check tools/traccar-real-qa/auth-smoke.mjs
+      - name: Validate Docker Compose configuration
+        run: docker compose -f tools/traccar-real-qa/compose.yaml config --quiet
+      - name: Verify no secrets required for static checks
+        run: test -f tools/traccar-real-qa/DOCKER-QA.md
