@@ -10,7 +10,7 @@ export async function testStagingTransport(execute) {
   const fresh = { ...base, id: 100, fixTime: "2026-11-20T11:59:50.000Z" };
   const replay = { ...base, id: 101, fixTime: "2026-11-20T11:55:00.000Z" };
   const store = openPositionStore(":memory:");
-  const writer = (rows) => execute(`SET ROLE hallo_gps_qa_writer; ${insertBatchSql(rows)} RESET ROLE;`);
+  const writer = (rows) => execute(`SET ROLE hallo_gps_qa_ingest; ${insertBatchSql(rows)} RESET ROLE;`);
   const poll = (history) => syncPositions({
     api: { devices: async () => [{ id: base.deviceId, uniqueId: mapping.uniqueId }], history: async () => history },
     store, mappings: [mapping], now,

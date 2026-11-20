@@ -104,10 +104,12 @@ firmware must be identified during actual acceptance.
 ### Supabase staging preparation
 
 `staging/install.sql` is an opt-in SQL artifact outside the application
-migration path. Apply only to disposable PostgreSQL or a separately identified
-HALLO staging project. Seed the QA mappings through the staging database
-administrator. Give a dedicated staging-only database login membership in
-`hallo_gps_qa_writer` and keep its connection string sealed. The writer can
+migration path. Apply only to disposable PostgreSQL or the confirmed **HALLO GPS QA** project
+`rmnjhdlbhfcmlvzqtblm` after explicit SQL approval. Seed synthetic QA mappings
+through the staging administrator. `staging/prepare-writer.sql` prepares the
+disabled `hallo_gps_qa_ingest` role with membership in `hallo_gps_qa_writer`.
+Both setup scripts are transactional and repeat safely for managed objects.
+They refuse unmanaged schema or role name collisions. The writer can
 read approved mappings and insert telemetry with `ON CONFLICT DO NOTHING`.
 Database constraints enforce the exact mapping and telemetry checks. The
 schema has no public grants, enables RLS, and stays outside the Data API's
@@ -119,16 +121,16 @@ lost response or failed batch can be retried. PostgreSQL ignores duplicates
 and stores the original fix and receipt timestamps. The ledger retains
 seven days of history.
 
-After the project owner confirms the isolated staging project, apply
-`staging/install.sql` there with a staging administrator, seed approved QA
-mappings, and create the `hallo_gps_qa_ingest` login with membership only in
-`hallo_gps_qa_writer`. Use PostgreSQL client 16 or newer and network access to
-the staging project's direct database endpoint. Inject `PGPASSWORD` from
-the approved staging runner's secret store. In the QA runner set
-`HALLO_GPS_ENV=qa`, `HALLO_GPS_STAGING_PROJECT_REF`, `PGHOST` to the matching
-`db.<project-ref>.supabase.co` host, `PGUSER=hallo_gps_qa_ingest`, and the
-existing mapping and ledger paths. The exporter verifies TLS and rejects
-the known production project ref, mismatched hosts, and privileged usernames.
+After the project owner approves the exact SQL and target, apply
+`staging/install.sql`, then `staging/prepare-writer.sql`, then the rollback-only
+`staging/test.sql` while the login is disabled. Provision its password through
+a secure administrator session and enable login only after separate access
+approval. Use PostgreSQL client 16 or newer and network access to the direct
+QA database endpoint. Inject `PGPASSWORD` from the QA runner's secret store.
+Set `HALLO_GPS_ENV=qa`, `HALLO_GPS_STAGING_PROJECT_REF=rmnjhdlbhfcmlvzqtblm`,
+`PGHOST=db.rmnjhdlbhfcmlvzqtblm.supabase.co`, `PGUSER=hallo_gps_qa_ingest`,
+and the existing mapping and ledger paths. The exporter requires TLS
+verification and rejects every other project ref and host.
 
 ```sh
 node tools/hardware-gps-qa/staging/run.mjs

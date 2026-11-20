@@ -1,18 +1,18 @@
 import { spawn } from "node:child_process";
 
-const PRODUCTION_REF = "febgayjolfrooaqenlje";
+const STAGING_REF = "rmnjhdlbhfcmlvzqtblm";
+const STAGING_HOST = "db.rmnjhdlbhfcmlvzqtblm.supabase.co";
 const BATCH_SIZE = 250;
 
 export function stagingConnection(env) {
   const ref = env.HALLO_GPS_STAGING_PROJECT_REF;
-  if (env.HALLO_GPS_ENV !== "qa" || typeof ref !== "string" || !/^[a-z]{20}$/.test(ref) ||
-      ref === PRODUCTION_REF || env.PGHOST !== `db.${ref}.supabase.co` ||
+  if (env.HALLO_GPS_ENV !== "qa" || ref !== STAGING_REF || env.PGHOST !== STAGING_HOST ||
       env.PGUSER !== "hallo_gps_qa_ingest" || !env.PGPASSWORD) {
     throw new Error("Confirmed staging project, matching direct host, and dedicated staging login required");
   }
   return {
     PATH: env.PATH,
-    PGHOST: env.PGHOST,
+    PGHOST: STAGING_HOST,
     PGPORT: "5432",
     PGDATABASE: "postgres",
     PGUSER: env.PGUSER,

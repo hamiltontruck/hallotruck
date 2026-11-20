@@ -45,7 +45,9 @@ jobs:
         env:
           PG_CONTAINER: ${{ job.services.postgres.id }}
         run: |
-          docker exec -i "$PG_CONTAINER" psql -X -U postgres -v ON_ERROR_STOP=1 < tools/hardware-gps-qa/staging/install.sql
+          for script in install install prepare-writer prepare-writer; do
+            docker exec -i "$PG_CONTAINER" psql -X -U postgres -v ON_ERROR_STOP=1 < "tools/hardware-gps-qa/staging/$script.sql"
+          done
           docker exec -i "$PG_CONTAINER" psql -X -U postgres -v ON_ERROR_STOP=1 < tools/hardware-gps-qa/staging/test.sql
           node tools/hardware-gps-qa/staging/postgres-fixtures.mjs
   h02-upstream-fixtures:

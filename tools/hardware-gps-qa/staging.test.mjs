@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { stagingConnection, replicatePositions } from "./staging/replicate.mjs";
 
-const ref = "abcdefghijklmnopqrst";
+const ref = "rmnjhdlbhfcmlvzqtblm";
 const config = {
   HALLO_GPS_ENV: "qa", HALLO_GPS_STAGING_PROJECT_REF: ref,
   PGHOST: `db.${ref}.supabase.co`, PGUSER: "hallo_gps_qa_ingest", PGPASSWORD: "fixture",
@@ -13,6 +13,7 @@ test("staging connection rejects production, a mismatched host, and privileged c
   for (const bad of [
     { HALLO_GPS_ENV: "production" },
     { HALLO_GPS_STAGING_PROJECT_REF: "febgayjolfrooaqenlje", PGHOST: "db.febgayjolfrooaqenlje.supabase.co" },
+    { HALLO_GPS_STAGING_PROJECT_REF: "abcdefghijklmnopqrst", PGHOST: "db.abcdefghijklmnopqrst.supabase.co" },
     { PGHOST: "other.example" }, { PGUSER: "postgres" }, { PGPASSWORD: "" },
   ]) assert.throws(() => stagingConnection({ ...config, ...bad }), /staging/i);
   assert.equal(stagingConnection({ ...config, TRACCAR_TOKEN: "fixture" }).TRACCAR_TOKEN, undefined);
