@@ -23,6 +23,7 @@ import {
 import { CUSTOMER_TRUCKS, customerTruckByKey, customerTruckDisplayLabel, type CustomerTruckOption } from "./customer-vehicle-catalog";
 import { useCustomerLanguage } from "./customer-language";
 import { getCustomerFinalCopy } from "./customer-final-copy";
+import { captureAnalyticsEvent } from "./services/analytics";
 
 type BookingStep = "route" | "truck" | "cargo" | "quote" | "review" | "success";
 const STEPS: Exclude<BookingStep, "success">[] = ["route", "truck", "cargo", "quote", "review"];
@@ -170,6 +171,7 @@ export function CustomerBookingJourney({
         language,
       });
       setQuote(result);
+      captureAnalyticsEvent("quote_created", { outcome: "success", workflow: "customer_booking" });
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Quote could not be calculated.";
@@ -225,6 +227,7 @@ export function CustomerBookingJourney({
         serviceDate,
       });
       setCreatedOrder(order);
+      captureAnalyticsEvent("order_placed", { outcome: "success", workflow: "customer_booking", payment_method: paymentMethod });
       setStep("success");
       onCreated(order);
     } catch (error) {
