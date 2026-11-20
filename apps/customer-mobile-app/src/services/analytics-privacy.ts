@@ -48,18 +48,29 @@ const SAFE_SDK_NUMBERS = new Set([
   "$screen_width", "$screen_height", "$viewport_width", "$viewport_height",
 ]);
 const SAFE_SDK_BOOLEANS = new Set(["$is_identified"]);
-const SAFE_VALUE = /^[a-z][a-z0-9_-]{0,31}$/;
+// Property-name filtering alone is insufficient: arbitrary strings can look like
+// short enum codes while containing personal identifiers. Values must be curated.
+const SAFE_CUSTOM_VALUES: Record<string, ReadonlySet<string>> = {
+  environment: new Set(["production", "development", "preview", "test", "staging", "qa", "unknown", "local"]),
+  role: new Set(["customer", "driver", "partner", "admin", "ceo", "guest", "unknown"]),
+  outcome: new Set(["success", "failed", "error", "denied", "pending", "cancelled", "blocked"]),
+  workflow: new Set(["customer_booking", "customer_orders", "customer_auth", "customer_tracking"]),
+  source: new Set(["email_login", "google_login", "password_reset", "signup", "customer_mobile"]),
+  device_class: new Set(["mobile", "tablet", "desktop", "unknown"]),
+  payment_method: new Set(["cash", "bank_telebirr"]),
+  order_state: new Set(["quoted", "placed", "assigned", "accepted", "in_transit", "delivered", "cancelled", "pending"]),
+  reason_code: new Set(["login_unavailable", "route_preview_unavailable", "network_unavailable", "permission_denied", "quote_unavailable", "unknown_error"]),
+  error_code: new Set(["network_unavailable", "permission_denied", "quote_unavailable", "unknown_error"]),
+  organization_type: new Set(["individual", "business", "partner", "unknown"]),
+};
 const SAFE_RELEASE = /^(?:local|[a-f0-9]{7,64})$/i;
 const SAFE_IDENTIFIER = /^[A-Za-z0-9_-]{16,128}$/;
 const SAFE_SDK_SCALAR = /^[A-Za-z0-9_. -]{1,64}$/;
 
 function safeCustomValue(key: string, value: unknown): string | number | boolean | undefined {
-  if (!SAFE_CUSTOM_KEYS.has(key)) return undefined;
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value !== "string") return undefined;
+  if (!SAFE_CUSTOM_KEYS.has(key) || typeof value !== "string") return undefined;
   if (key === "release") return SAFE_RELEASE.test(value) ? value : undefined;
-  return SAFE_VALUE.test(value) ? value : undefined;
+  return SAFE_CUSTOM_VALUES[key]?.has(value) ? value : undefined;
 }
 
 export function sanitizeCustomerAnalyticsProperties(
