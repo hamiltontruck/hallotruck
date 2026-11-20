@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+export const STAGING_CA_FILE = fileURLToPath(new URL("./supabase-root-2021.crt", import.meta.url));
 
 const STAGING_REF = "rmnjhdlbhfcmlvzqtblm";
 // Pin the project-specific hostname from Dashboard > Connect > Session pooler.
@@ -29,7 +32,7 @@ export function stagingConnection(env) {
     PGUSER: target.PGUSER,
     PGPASSWORD: env.PGPASSWORD,
     PGSSLMODE: "verify-full",
-    PGSSLROOTCERT: "system",
+    PGSSLROOTCERT: STAGING_CA_FILE,
     PGCONNECT_TIMEOUT: "10",
     PGAPPNAME: "hallo-gps-qa",
   };

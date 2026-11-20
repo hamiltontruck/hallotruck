@@ -125,7 +125,9 @@ Use the project-specific **Session Pooler** hostname shown in
 **HALLO GPS QA → Connect → Session pooler**. The exporter pins
 `aws-1-eu-central-1.pooler.supabase.com:5432` along with the QA project ref. The restricted pooler
 username is `hallo_gps_qa_ingest.rmnjhdlbhfcmlvzqtblm`. The connection uses
-`sslmode=verify-full` and the system trust store. Direct hosts, transaction
+`sslmode=verify-full` and the checked-in public Supabase Root 2021 CA.
+The [Supabase CA download](https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt)
+is pinned by SHA-256 fingerprint in the guard tests. Direct hosts, transaction
 pooler ports, other projects and other usernames are rejected.
 
 ### Protected manual connectivity checks

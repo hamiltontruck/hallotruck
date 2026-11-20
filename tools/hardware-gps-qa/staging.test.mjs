@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { stagingConnection, stagingPoolerTarget, replicatePositions } from "./staging/replicate.mjs";
+import { X509Certificate } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { STAGING_CA_FILE, stagingConnection, stagingPoolerTarget, replicatePositions } from "./staging/replicate.mjs";
 
 const ref = "rmnjhdlbhfcmlvzqtblm";
 const host = "aws-1-eu-central-1.pooler.supabase.com";
@@ -37,7 +39,9 @@ test("the connection guard ignores libpq routing overrides and enforces verified
   assert.equal(connection.PGHOST, host);
   assert.equal(connection.PGPORT, "5432");
   assert.equal(connection.PGSSLMODE, "verify-full");
-  assert.equal(connection.PGSSLROOTCERT, "system");
+  assert.equal(connection.PGSSLROOTCERT, STAGING_CA_FILE);
+  assert.equal(new X509Certificate(readFileSync(STAGING_CA_FILE)).fingerprint256,
+    "80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA");
   for (const name of ["PGHOSTADDR", "PGSERVICE", "PGOPTIONS"]) assert.equal(connection[name], undefined);
 });
 

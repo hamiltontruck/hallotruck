@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { stagingConnection, stagingPoolerTarget } from "./replicate.mjs";
+import { STAGING_CA_FILE, stagingConnection, stagingPoolerTarget } from "./replicate.mjs";
 
 try {
   const target = stagingPoolerTarget();
@@ -8,7 +8,8 @@ try {
       const host = target.PGHOST;
       const result = spawnSync("openssl", [
         "s_client", "-4", "-starttls", "postgres", "-connect", `${host}:${target.PGPORT}`,
-        "-servername", host, "-verify_hostname", host, "-verify_return_error", "-brief",
+        "-servername", host, "-verify_hostname", host, "-verify_return_error",
+        "-CAfile", STAGING_CA_FILE, "-no-CApath", "-no-CAstore", "-brief",
       ], { stdio: ["ignore", "ignore", "inherit"], timeout: 15_000 });
       if (result.status !== 0) throw new Error("IPv4 PostgreSQL TLS verification failed");
       console.log("IPv4 reachability and certificate hostname verification passed");
