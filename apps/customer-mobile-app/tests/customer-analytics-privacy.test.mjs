@@ -167,3 +167,30 @@ test("before_send cannot reinstate PII through curated custom metadata propertie
   assert.equal("source" in event.properties, false);
   assert.equal(JSON.stringify(event).includes("secret"), false);
 });
+
+
+test("trusted static SPA pageview routes are retained without accepting raw query, hash or identifiers", () => {
+  const base = "/hallotruck/customer-mobile";
+  const rawUrl = safeCustomerAnalyticsUrl(origin, base);
+  const make = (route) => sanitizeCustomerPostHogEvent({
+    event: "$pageview",
+    properties: {
+      route,
+      $current_url: origin + "/#access_token=" + TOKEN,
+      $pathname: "/private/" + TOKEN,
+    },
+  }, base, rawUrl);
+  const orders = make("/orders");
+  assert.equal(orders.properties.route, "/orders");
+  assert.equal(orders.properties.$pathname, "/orders");
+  assert.equal(orders.properties.$current_url, origin + "/#/orders");
+  for (const raw of [
+    "#access_token=" + TOKEN, "/orders?access_token=" + TOKEN,
+    "/orders/" + TOKEN, "/orders#refresh_token=" + TOKEN,
+    "https://example.test/orders", "/unknown", "/order/55",
+  ]) {
+    const clean = make(raw);
+    assert.equal(clean.properties.route, base);
+    assert.equal(JSON.stringify(clean).includes(TOKEN), false);
+  }
+});
