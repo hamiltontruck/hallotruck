@@ -1,5 +1,12 @@
 BEGIN;
 CREATE ROLE hallo_gps_qa_test_outsider NOLOGIN;
+-- Managed PostgreSQL may grant the executor ADMIN without SET.
+-- Both SET options are temporary and roll back with the fixtures.
+DO $$
+BEGIN
+  EXECUTE format('GRANT hallo_gps_qa_ingest TO %I WITH SET TRUE', current_user);
+  EXECUTE format('GRANT hallo_gps_qa_test_outsider TO %I WITH SET TRUE', current_user);
+END $$;
 INSERT INTO hallo_gps_qa.device_mapping VALUES ('0012345678', 'qa-truck');
 
 SET LOCAL ROLE hallo_gps_qa_ingest;
