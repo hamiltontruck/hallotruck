@@ -89,9 +89,15 @@ export function sanitizeCustomerPostHogEvent(input: unknown, route: string, url:
   if (!input || typeof input !== "object") return null;
   const event = input as { event?: unknown; properties?: unknown; timestamp?: unknown; uuid?: unknown };
   if (typeof event.event !== "string" || !SAFE_EVENT_NAMES.has(event.event)) return null;
-  const safeRoute = routeFromPath(route) ?? "/unknown";
   const raw = event.properties && typeof event.properties === "object" && !Array.isArray(event.properties)
     ? event.properties as Record<string, unknown> : {};
+  // React SPA pageviews intentionally have a static route different from location.hash.
+  // Trust only a route that exactly matches a fixed known path: never accept queries,
+  // fragments, dynamic IDs or OAuth callback values from SDK-generated properties.
+  const suppliedRoute = event.event === "$pageview"
+    && typeof raw.route === "string" && !/[?#]/.test(raw.route)
+    ? routeFromPath(raw.route) : null;
+  const safeRoute = suppliedRoute ?? routeFromPath(route) ?? "/unknown";
   const clean: Record<string, string | number | boolean> = sanitizeCustomerAnalyticsProperties(raw);
   for (const [key, value] of Object.entries(raw)) {
     if (!SAFE_SDK_STRINGS.has(key) || typeof value !== "string") {
