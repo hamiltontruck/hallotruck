@@ -2,12 +2,11 @@ import { spawn } from "node:child_process";
 
 const STAGING_REF = "rmnjhdlbhfcmlvzqtblm";
 // Pin the project-specific hostname from Dashboard > Connect > Session pooler.
-const STAGING_POOLER_HOST = null;
+const STAGING_POOLER_HOST = "aws-1-eu-central-1.pooler.supabase.com";
 const STAGING_USER = `hallo_gps_qa_ingest.${STAGING_REF}`;
 const BATCH_SIZE = 250;
 
 export function stagingPoolerTarget() {
-  if (!STAGING_POOLER_HOST) throw new Error("The approved QA staging Session Pooler hostname has not been confirmed");
   return {
     HALLO_GPS_STAGING_PROJECT_REF: STAGING_REF,
     PGHOST: STAGING_POOLER_HOST,

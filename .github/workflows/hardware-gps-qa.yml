@@ -61,3 +61,24 @@ jobs:
       - name: Run Traccar H02 decoder on upstream software fixtures
         run: ./gradlew --no-daemon test --tests org.traccar.protocol.H02ProtocolDecoderTest
 
+  staging-network-probe:
+    # This credential-free observation is independent of the software QA gate.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Observe IPv4 reachability and certificate validation
+        id: tls
+        continue-on-error: true
+        run: node tools/hardware-gps-qa/staging/check-connection.mjs network
+      - name: Report network observation
+        env:
+          TLS_OUTCOME: ${{ steps.tls.outcome }}
+        run: printf 'Credential-free QA Session Pooler IPv4/TLS result = %s\n' "$TLS_OUTCOME" >> "$GITHUB_STEP_SUMMARY"

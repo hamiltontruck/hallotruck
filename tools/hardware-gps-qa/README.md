@@ -122,9 +122,8 @@ and stores the original fix and receipt timestamps. The ledger retains
 seven days of history.
 
 Use the project-specific **Session Pooler** hostname shown in
-**HALLO GPS QA → Connect → Session pooler**. The exporter pins this hostname
-in `staging/replicate.mjs` along with the project ref and port 5432. It fails
-closed until the exact host is confirmed and pinned. The restricted pooler
+**HALLO GPS QA → Connect → Session pooler**. The exporter pins
+`aws-1-eu-central-1.pooler.supabase.com:5432` along with the QA project ref. The restricted pooler
 username is `hallo_gps_qa_ingest.rmnjhdlbhfcmlvzqtblm`. The connection uses
 `sslmode=verify-full` and the system trust store. Direct hosts, transaction
 pooler ports, other projects and other usernames are rejected.
@@ -145,7 +144,7 @@ repository's default branch. It has no ingestion step.
 The separately approved synthetic ingestion procedure uses a protected runner
 with PostgreSQL client 16 or newer. Set `HALLO_GPS_ENV=qa`,
 `HALLO_GPS_STAGING_PROJECT_REF=rmnjhdlbhfcmlvzqtblm`, `PGPORT=5432`,
-`PGHOST` to the pinned Session Pooler host, and
+`PGHOST=aws-1-eu-central-1.pooler.supabase.com`, and
 `PGUSER=hallo_gps_qa_ingest.rmnjhdlbhfcmlvzqtblm`. Supply `PGPASSWORD`
 from the secret store and the protected mapping and SQLite ledger paths.
 
