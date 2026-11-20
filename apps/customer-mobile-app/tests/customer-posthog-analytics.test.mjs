@@ -26,8 +26,11 @@ test("Customer Mobile deployment injects PostHog runtime configuration", () => {
   assert.match(workflow, /Build Customer mobile app[\s\S]*VITE_RELEASE_SHA/);
 });
 
-test("Customer Mobile before_send preserves SDK-required transport properties", () => {
+test("Customer Mobile before_send applies an explicit privacy boundary", () => {
   const analytics = source("src/services/analytics.ts");
-  assert.match(analytics, /const properties:\s*Record<string, unknown>\s*=\s*\{\s*\.\.\.raw\s*\}/);
-  assert.doesNotMatch(analytics, /if \(key\.startsWith\("\\\$"\)\) continue/);
+  const privacy = source("src/services/analytics-privacy.ts");
+  assert.match(analytics, /before_send:\s*\(event: unknown\) => sanitizeCustomerPostHogEvent/);
+  assert.match(privacy, /SAFE_SDK_STRINGS/);
+  assert.match(privacy, /SAFE_CUSTOM_KEYS/);
+  assert.doesNotMatch(analytics, /const properties:\s*Record<string, unknown>\s*=\s*\{\s*\.\.\.raw\s*\}/);
 });
