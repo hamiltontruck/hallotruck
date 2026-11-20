@@ -1,0 +1,111 @@
+/** Fixed, non-identifying surfaces only. Never turn URL content into telemetry. */
+const SAFE_ROUTES = new Set([
+  "/", "/customer-mobile", "/hallotruck/customer-mobile",
+  "/home", "/book", "/orders", "/order", "/track",
+  "/payments", "/profile", "/saved", "/help", "/settings",
+  "/login", "/signup", "/forgot-password",
+]);
+
+function routeFromPath(input: string): string | null {
+  const pathname = input.split(/[?#]/, 1)[0].trim();
+  // Dynamic IDs, encoded secrets, callback parameters and unfamiliar paths
+  // must never be reflected back into analytics.
+  if (!/^\/[a-z/-]*$/i.test(pathname)) return null;
+  const normalized = pathname.replace(/\/+$/, "") || "/";
+  return SAFE_ROUTES.has(normalized) ? normalized : null;
+}
+
+export function safeCustomerAnalyticsRoute(hash: string, pathname: string): string {
+  // Supabase OAuth callbacks use #access_token=...; only known hash-router
+  // paths beginning with #/ may supersede the known hosting pathname.
+  const hashRoute = hash.startsWith("#/") ? routeFromPath(hash.slice(1)) : null;
+  return hashRoute ?? routeFromPath(pathname) ?? "/unknown";
+}
+
+export function safeCustomerAnalyticsUrl(origin: string, route: string): string {
+  // Do not use location.href, pathname, search or hash; they may hold credentials.
+  const normalized = routeFromPath(route) ?? "/unknown";
+  return origin + "/#" + normalized;
+}
+
+const SAFE_EVENT_NAMES = new Set([
+  "$pageview", "login_succeeded", "login_failed", "quote_created", "order_placed",
+  "order_cancelled", "driver_assigned", "trip_started", "trip_completed",
+  "payment_confirmed", "payment_not_received", "permission_denied", "route_not_found",
+]);
+const SAFE_CUSTOM_KEYS = new Set([
+  "environment", "release", "route", "role", "outcome", "workflow", "source",
+  "device_class", "payment_method", "order_state", "reason_code", "error_code",
+  "organization_type",
+]);
+// Explicit SDK transport metadata only; unknown/nested properties fail closed.
+// Retain anonymous distinct/session identifiers so PostHog ingestion still works.
+const SAFE_SDK_STRINGS = new Set([
+  "$lib", "$lib_version", "$browser", "$os", "$device_type",
+  "$session_id", "$window_id", "$insert_id", "$device_id", "distinct_id",
+]);
+const SAFE_SDK_NUMBERS = new Set([
+  "$screen_width", "$screen_height", "$viewport_width", "$viewport_height",
+]);
+const SAFE_SDK_BOOLEANS = new Set(["$is_identified"]);
+const SAFE_VALUE = /^[a-z][a-z0-9_-]{0,31}$/;
+const SAFE_RELEASE = /^(?:local|[a-f0-9]{7,64})$/i;
+const SAFE_IDENTIFIER = /^[A-Za-z0-9_-]{16,128}$/;
+const SAFE_SDK_SCALAR = /^[A-Za-z0-9_. -]{1,64}$/;
+
+function safeCustomValue(key: string, value: unknown): string | number | boolean | undefined {
+  if (!SAFE_CUSTOM_KEYS.has(key)) return undefined;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return undefined;
+  if (key === "release") return SAFE_RELEASE.test(value) ? value : undefined;
+  return SAFE_VALUE.test(value) ? value : undefined;
+}
+
+export function sanitizeCustomerAnalyticsProperties(
+  input: Record<string, unknown>,
+): Record<string, string | number | boolean> {
+  const output: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (key === "route") continue; // only trusted derived route may be sent
+    const cleaned = safeCustomValue(key, value);
+    if (cleaned !== undefined) output[key] = cleaned;
+  }
+  return output;
+}
+
+export function sanitizeCustomerPostHogEvent(input: unknown, route: string, url: string) {
+  if (!input || typeof input !== "object") return null;
+  const event = input as { event?: unknown; properties?: unknown; timestamp?: unknown; uuid?: unknown };
+  if (typeof event.event !== "string" || !SAFE_EVENT_NAMES.has(event.event)) return null;
+  const safeRoute = routeFromPath(route) ?? "/unknown";
+  const raw = event.properties && typeof event.properties === "object" && !Array.isArray(event.properties)
+    ? event.properties as Record<string, unknown> : {};
+  const clean: Record<string, string | number | boolean> = sanitizeCustomerAnalyticsProperties(raw);
+  for (const [key, value] of Object.entries(raw)) {
+    if (!SAFE_SDK_STRINGS.has(key) || typeof value !== "string") {
+      if (SAFE_SDK_NUMBERS.has(key) && typeof value === "number" && Number.isFinite(value)) clean[key] = value;
+      else if (SAFE_SDK_BOOLEANS.has(key) && typeof value === "boolean") clean[key] = value;
+      continue;
+    }
+    if (key === "distinct_id" || key.endsWith("_id")) {
+      if (SAFE_IDENTIFIER.test(value)) clean[key] = value;
+    } else if (SAFE_SDK_SCALAR.test(value)) clean[key] = value;
+  }
+  clean.route = safeRoute;
+  clean.$pathname = safeRoute;
+  // url is constructed from window.location.origin by safeCustomerAnalyticsUrl.
+  // No previously captured URL or referrer is reintroduced.
+  clean.$current_url = url.endsWith("#" + safeRoute) ? url : url.split("#", 1)[0] + "#" + safeRoute;
+  clean.$referrer = "";
+
+  const result: { event: string; properties: typeof clean; timestamp?: string; uuid?: string } = {
+    event: event.event,
+    properties: clean,
+  };
+  if (typeof event.timestamp === "string" && /^\d{4}-\d\d-\d\dT[\d:.+-]+Z?$/.test(event.timestamp)) {
+    result.timestamp = event.timestamp;
+  }
+  if (typeof event.uuid === "string" && SAFE_IDENTIFIER.test(event.uuid)) result.uuid = event.uuid;
+  return result;
+}
