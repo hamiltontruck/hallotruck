@@ -30,3 +30,8 @@ test("rejects replay beyond 24 hours and future drift", () => {
   assert.throws(() => convert(simulatedPosition({time:new Date("2026-10-30T10:00:00.000Z")})), /timestamp_out_of_range/);
   assert.throws(() => convert(simulatedPosition({time:new Date("2026-11-01T10:07:00.000Z")})), /timestamp_out_of_range/);
 });
+
+test("rejects absent or nonnumeric coordinates", () => {
+  assert.throws(() => convert(simulatedPosition({ lat: null })), /invalid_coordinates/);
+  assert.throws(() => convert(simulatedPosition({ lng: "" })), /invalid_coordinates/);
+});

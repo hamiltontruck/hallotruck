@@ -5,16 +5,17 @@ export function normalizeTraccarPosition(position, devices, truckMappings, now =
   if (!device || typeof device.uniqueId !== "string") throw new Error("unknown_device");
   const matches = truckMappings.filter((m) => m.gps_provider === "traccar" && m.gps_external_id === device.uniqueId);
   if (matches.length !== 1 || !matches[0].truck_id) throw new Error("invalid_truck_mapping");
-  const latitude = Number(position.latitude), longitude = Number(position.longitude);
+  const { latitude, longitude } = position;
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
       !Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw new Error("invalid_coordinates");
-  const fixTime = new Date(position.fixTime);
+  const fixTime = new Date(typeof position.fixTime === "string" ? position.fixTime : NaN);
   if (!Number.isFinite(fixTime.getTime())) throw new Error("invalid_timestamp");
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new Error("invalid_clock");
   const ageMs = now.getTime() - fixTime.getTime();
   if (ageMs < -300000 || ageMs > 86400000) throw new Error("timestamp_out_of_range");
-  const speedKmh = position.speed == null ? null : Number(position.speed) * 1.852; // Traccar speed is knots
+  const speedKmh = position.speed == null ? null : Number.isFinite(position.speed) ? position.speed * 1.852 : NaN; // Traccar speed is knots
   if (speedKmh !== null && (!Number.isFinite(speedKmh) || speedKmh < 0 || speedKmh > 250)) throw new Error("invalid_speed");
-  const heading = position.course == null ? null : Number(position.course);
+  const heading = position.course ?? null;
   if (heading !== null && (!Number.isFinite(heading) || heading < 0 || heading >= 360)) throw new Error("invalid_heading");
   const ignition = position.attributes?.ignition;
   return Object.freeze({
