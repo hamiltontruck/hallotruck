@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { CustomerIdentity } from "./auth/CustomerAuthBoundary";
 import { CustomerBookingJourney } from "./CustomerBookingJourney";
 import { CustomerHomePage } from "./CustomerHomePage";
@@ -12,6 +12,7 @@ import { useCustomerLanguage } from "./customer-language";
 import { loadCustomerRoutePreview, type CustomerPlaceOption, type CustomerRoutePreview } from "./customer-quote.service";
 import type { CreatedCustomerOrder } from "./customer-order.service-v2";
 import { customerTruckByKey } from "./customer-vehicle-catalog";
+import { captureAnalyticsEvent, captureAnalyticsVirtualPageview } from "./services/analytics";
 import "./customer-v4-parity.css";
 
 type Page = "home" | "orders" | "order" | "track" | "payments" | "profile" | "saved" | "help" | "settings";
@@ -57,8 +58,16 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
   const [routePreview, setRoutePreview] = useState<CustomerRoutePreview | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
+  const previousAnalyticsView = useRef("home");
 
   const truck = customerTruckByKey(selectedTruck);
+
+  useEffect(() => {
+    const view = bookingOpen ? "book" : page;
+    if (previousAnalyticsView.current === view) return;
+    previousAnalyticsView.current = view;
+    captureAnalyticsVirtualPageview("/" + view);
+  }, [bookingOpen, page]);
 
   useEffect(() => {
     if (!pickupPlace || !dropoffPlace) {
@@ -81,6 +90,7 @@ export default function App({ identity }: { identity: CustomerIdentity }) {
     }).catch((error: unknown) => {
       if (controller.signal.aborted || (error as Error).name === "AbortError") return;
       setRouteError(error instanceof Error ? error.message : "Truck route could not be calculated.");
+      captureAnalyticsEvent("route_not_found", { outcome: "failed", workflow: "customer_booking", reason_code: "route_preview_unavailable" });
     }).finally(() => {
       if (!controller.signal.aborted) setRouteLoading(false);
     });
