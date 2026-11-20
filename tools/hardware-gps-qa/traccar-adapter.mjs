@@ -24,8 +24,12 @@ export function normalizeTraccarPosition(position, devices, truckMappings, now =
     latitude, longitude, speed_kmh: speedKmh, heading,
     ignition: typeof ignition === "boolean" ? ignition : null,
     source_recorded_at: fixTime.toISOString(),
-    freshness: ageMs <= 60000 ? "LIVE" : ageMs <= 300000 ? "STALE" : "OFFLINE",
+    freshness: positionStatus(ageMs),
   });
 }
 // Pure QA adapter: deliberately does not create tracking_pings, start trips,
 // call record_driver_tracking_ping, or publish any GPS data.
+
+export function positionStatus(ageMs) {
+  return ageMs <= 60_000 ? "LIVE" : ageMs <= 300_000 ? "STALE" : "OFFLINE";
+}

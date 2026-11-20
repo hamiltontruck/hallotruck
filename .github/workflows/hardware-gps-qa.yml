@@ -21,4 +21,42 @@ jobs:
         with:
           node-version: '22'
       - name: Test isolated ST-906L simulator and Traccar adapter
-        run: node --test tools/hardware-gps-qa/adapter.test.mjs
+        run: node --test tools/hardware-gps-qa/*.test.mjs
+      - name: Check QA runner syntax
+        run: node --check tools/hardware-gps-qa/run-qa.mjs
+  staging-schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test staging schema and permissions in disposable PostgreSQL
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker exec -i "$PG_CONTAINER" psql -X -U postgres -v ON_ERROR_STOP=1 < tools/hardware-gps-qa/staging/install.sql
+          docker exec -i "$PG_CONTAINER" psql -X -U postgres -v ON_ERROR_STOP=1 < tools/hardware-gps-qa/staging/test.sql
+  h02-upstream-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: traccar/traccar
+          ref: v6.16.0
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Run Traccar H02 decoder on upstream software fixtures
+        run: ./gradlew --no-daemon test --tests org.traccar.protocol.H02ProtocolDecoderTest
+
