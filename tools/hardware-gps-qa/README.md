@@ -20,7 +20,13 @@ The standalone adapter has no TCP listener, trip linkage, tenant authorization, 
 The runner uses Node.js 22+, a protected persistent SQLite file, and the
 Railway Traccar QA origin `https://traccar-qa-qa.up.railway.app`. It has four
 commands. `verify` and `register` can run without position data. The ingestion
-commands fetch records already saved by Traccar.
+commands fetch records already saved by Traccar. The read-only `verify`
+command requires the device list to match the approved mapping exactly and
+checks position history access for each approved device. It prints counts
+and access flags only. An empty history is valid before hardware testing.
+A server-side write-denial test requires a separately approved disposable QA
+object and the scoped token. An authenticated read does not establish write
+denial.
 
 ```sh
 node tools/hardware-gps-qa/run-qa.mjs verify

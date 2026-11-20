@@ -1,7 +1,7 @@
 import { readFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { createTraccarClient, ensureRegistered, resolveDevice, validateMappings } from "./qa-client.mjs";
+import { createTraccarClient, ensureRegistered, validateMappings, verifyReadAccess } from "./qa-client.mjs";
 import { openPositionStore, syncPositions } from "./position-store.mjs";
 
 process.umask(0o077);
@@ -28,9 +28,8 @@ async function main() {
     return;
   }
   if (mode === "verify") {
-    const devices = await api.devices();
-    const registered = mappings.map((mapping) => resolveDevice(devices, mapping));
-    console.log(JSON.stringify({ authenticated: true, registered: registered.length }));
+    const registered = await verifyReadAccess(api, mappings);
+    console.log(JSON.stringify({ authenticated: true, registered, historyReadable: true }));
     return;
   }
   const file = process.env.HALLO_GPS_DB_FILE;
@@ -66,7 +65,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  const safe = /^(Set |Could not read valid QA mappings|Only the approved Traccar|Traccar QA token|Missing or ambiguous QA device registration|QA device registration name conflict|Traccar API HTTP \d{3}$|Traccar QA request failed$)/;
+  const safe = /^(Set |Could not read valid QA mappings|Only the approved Traccar|Traccar QA token|Unexpected Traccar QA (device|history) scope|Missing or ambiguous QA device registration|QA device registration name conflict|Traccar API HTTP \d{3}$|Traccar QA request failed$)/;
   console.error(safe.test(error.message) ? error.message : "QA command failed");
   process.exitCode = 1;
 });

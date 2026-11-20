@@ -90,3 +90,18 @@ export async function ensureRegistered(operator, input) {
   if (device.name !== mapping.name) throw new Error("QA device registration name conflict");
   return device;
 }
+
+export async function verifyReadAccess(api, input, now = Date.now()) {
+  const mappings = validateMappings(input);
+  const devices = await api.devices();
+  if (devices.length !== mappings.length) throw new Error("Unexpected Traccar QA device scope");
+  for (const mapping of mappings) {
+    const device = resolveDevice(devices, mapping);
+    if (device.name !== mapping.name) throw new Error("QA device registration name conflict");
+    const history = await api.history(device.id, now - 3_600_000, now);
+    if (history.some((position) => position?.deviceId !== device.id)) {
+      throw new Error("Unexpected Traccar QA history scope");
+    }
+  }
+  return devices.length;
+}

@@ -124,3 +124,28 @@ test("offsets normalize to UTC, impossible dates are rejected and skew cannot ma
     store.close();
   }
 });
+
+test("credential verification requires exactly the approved devices and a readable history", async () => {
+  const { verifyReadAccess } = await import("./qa-client.mjs");
+  const queried = [];
+  const api = {
+    devices: async () => [device],
+    history: async (id) => {
+      queried.push(id);
+      return [];
+    },
+  };
+  assert.equal(await verifyReadAccess(api, [mapping], now), 1);
+  assert.deepEqual(queried, [device.id]);
+  api.devices = async () => [device, { id: 99, uniqueId: "unexpected" }];
+  await assert.rejects(verifyReadAccess(api, [mapping], now), /device scope/);
+  api.devices = async () => [device];
+  api.history = async () => { throw new Error("Traccar API HTTP 403"); };
+  await assert.rejects(verifyReadAccess(api, [mapping], now), /403/);
+});
+
+test("credential verification rejects a history response containing another device", async () => {
+  const { verifyReadAccess } = await import("./qa-client.mjs");
+  const api = { devices: async () => [device], history: async () => [position(1, 1000, { deviceId: 99 })] };
+  await assert.rejects(verifyReadAccess(api, [mapping], now), /history scope/);
+});
