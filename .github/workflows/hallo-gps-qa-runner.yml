@@ -1,0 +1,70 @@
+name: HALLO GPS QA runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      verify_writer:
+        description: Verify the restricted writer after separate activation approval
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  QA_HOST: aws-1-eu-central-1.pooler.supabase.com
+  QA_PORT: '5432'
+  QA_CA: tools/hardware-gps-qa/staging/supabase-root-2021.crt
+
+jobs:
+  verify-network:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'hamiltontruck/hallotruck' && github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify IPv4 reachability and the TLS certificate
+        shell: bash
+        run: |
+          timeout 15s openssl s_client -4 -starttls postgres \
+            -connect "$QA_HOST:$QA_PORT" -servername "$QA_HOST" \
+            -verify_hostname "$QA_HOST" -verify_return_error \
+            -CAfile "$QA_CA" -no-CApath -no-CAstore -brief </dev/null
+
+  verify-writer:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'hamiltontruck/hallotruck' && github.ref == 'refs/heads/main' && github.ref_protected && inputs.verify_writer
+    needs: verify-network
+    environment: hallo-gps-qa
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify restricted writer authentication with a read-only query
+        shell: bash
+        env:
+          PGPASSWORD: ${{ secrets.HALLO_GPS_QA_WRITER_PASSWORD }}
+        run: |
+          if [[ -z "$PGPASSWORD" ]]; then
+            echo 'The protected QA writer secret is missing' >&2
+            exit 1
+          fi
+          while IFS= read -r variable; do
+            if [[ "$variable" != PGPASSWORD ]]; then unset "$variable"; fi
+          done < <(compgen -e PG)
+          export PGHOST="$QA_HOST" PGPORT="$QA_PORT" PGDATABASE=postgres
+          export PGUSER=hallo_gps_qa_ingest.rmnjhdlbhfcmlvzqtblm
+          export PGSSLMODE=verify-full PGSSLROOTCERT="$GITHUB_WORKSPACE/$QA_CA"
+          export PGCONNECT_TIMEOUT=10 PGAPPNAME=hallo-gps-qa-runner
+          if ! result=$(timeout 20s psql -XAtq --no-password -v ON_ERROR_STOP=1 -c \
+            "SELECT current_user = 'hallo_gps_qa_ingest' AND current_database() = 'postgres'" 2>/dev/null) \
+            || [[ "$result" != t ]]; then
+            echo 'TLS-verified writer authentication or role check failed' >&2
+            exit 1
+          fi
+          echo 'TLS-verified writer authentication passed'
