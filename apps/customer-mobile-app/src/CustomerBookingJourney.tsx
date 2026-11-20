@@ -22,6 +22,7 @@ import {
 } from "./customer-order.service-v2";
 import { CUSTOMER_TRUCKS, customerTruckByKey, customerTruckDisplayLabel, type CustomerTruckOption } from "./customer-vehicle-catalog";
 import { useCustomerLanguage } from "./customer-language";
+import { isValidCustomerServiceDate, todayInAddisAbaba } from "./customer-service-date";
 import { getCustomerFinalCopy } from "./customer-final-copy";
 
 type BookingStep = "route" | "truck" | "cargo" | "quote" | "review" | "success";
@@ -92,7 +93,7 @@ export function CustomerBookingJourney({
   const [cargoNotes, setCargoNotes] = useState("");
   const [specialRequirements, setSpecialRequirements] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<CustomerPaymentMethod>("cash");
-  const todayServiceDate = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Addis_Ababa" });
+  const todayServiceDate = todayInAddisAbaba();
   const [serviceDate, setServiceDate] = useState(todayServiceDate);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [quote, setQuote] = useState<CustomerQuotePreview | null>(null);
@@ -113,6 +114,7 @@ export function CustomerBookingJourney({
   const cargoReady = Boolean(cargoCategory && packagingType && cargoTons > 0 && !cargoDetailsError);
   const truckFitsCargo = cargoTons <= 0 || cargoTons <= truck.capacityTons;
   const truckReady = cargoReady && truckFitsCargo;
+  const serviceDateReady = isValidCustomerServiceDate(serviceDate);
   const quoteReady = Boolean(quote && quote.total_quote_etb > 0 && !quoteLoading && !quoteError);
   const note = [cargoNotes.trim(), specialRequirements.trim()].filter(Boolean).join(" · ");
   const activeIndex = step === "success" ? STEPS.length : STEPS.indexOf(step);
@@ -189,6 +191,10 @@ export function CustomerBookingJourney({
 
   async function confirm() {
     if (!termsAccepted || !quoteReady || !quote || !routePreview || !pickupPlace || !dropoffPlace || submitting || submitLock.current) return;
+    if (!isValidCustomerServiceDate(serviceDate)) {
+      setSubmitError(c.invalidServiceDate);
+      return;
+    }
     submitLock.current = true;
     setSubmitting(true);
     setSubmitError("");
@@ -305,6 +311,8 @@ export function CustomerBookingJourney({
       {step === "cargo" && (
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepCargoHelp}</p>
+          <label className="customer-final-service-date"><span>{c.serviceDate}</span><input type="date" min={todayServiceDate} value={serviceDate} required onChange={(event) => { setServiceDate(event.target.value); setSubmitError(""); }} /></label>
+          {!serviceDateReady && <p className="customer-final-error" role="alert">{c.invalidServiceDate}</p>}
           <label className="customer-final-select-row"><span><b>{c.cargoType}</b><small>{cargoCopy.categories[cargoCategory]}</small></span><select value={cargoCategory} onChange={(event) => setCargoCategory(event.target.value as CustomerCargoCategory)}>{CUSTOMER_CARGO_CATEGORIES.map((value) => <option value={value} key={value}>{cargoCopy.categories[value]}</option>)}</select></label>
           <div className="customer-final-weight-row">
             <label><span>{c.totalWeight}</span><input type="number" value={rawAmount} readOnly aria-readonly="true" /></label>
@@ -316,7 +324,7 @@ export function CustomerBookingJourney({
           {cargoDetailsError && <p className="customer-final-error">{cargoCopy.errors[cargoDetailsError]}</p>}
           {cargoQuantity && cargoTons <= 0 && <p className="customer-final-error">{c.weightRequired}</p>}
           {cargoReady && !truckFitsCargo && <p className="customer-final-error">{c.weightExceeds}</p>}
-          <button type="button" className="customer-final-primary" disabled={!truckReady} onClick={() => void goToQuote()}>{c.next} →</button>
+          <button type="button" className="customer-final-primary" disabled={!truckReady || !serviceDateReady} onClick={() => void goToQuote()}>{c.next} →</button>
         </main>
       )}
 
@@ -358,12 +366,11 @@ export function CustomerBookingJourney({
       {step === "review" && routePreview && quote && (
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepReviewHelp}</p>
-              <label className="customer-final-service-date"><span>Order Date</span><input type="date" min={todayServiceDate} value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
           <section className="customer-final-review-card">
             <div><span>⌖</span><p><small>{c.route}</small><strong>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong><em>{routePreview.distance_km.toFixed(1)} km · {routeDuration}</em></p></div>
             <div><span>▣</span><p><small>{c.cargo}</small><strong>{cargoCopy.categories[cargoCategory]} · {rawAmount.toLocaleString(undefined,{maximumFractionDigits:2})} {cargoUnit === "quintal" ? c.quintal : c.ton}</strong><em>{cargoCopy.packagingTypes[packagingType]}</em></p></div>
             <div><span>🚚</span><p><small>{c.truck}</small><strong>{truckDisplayLabel}</strong></p></div>
-                <div><span>◷</span><p><small>Order Date</small><strong>{serviceDate}</strong></p></div>
+                <div><span>◷</span><p><small>{c.serviceDate}</small><strong>{serviceDate}</strong></p></div>
             <div className="total"><p><small>{c.total}</small><strong>{formatEtb(quote.total_quote_etb)}</strong></p></div>
           </section>
           <fieldset className="customer-final-payment-choice">
@@ -374,7 +381,7 @@ export function CustomerBookingJourney({
           <label className="customer-final-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} /><span>{c.termsAgree}</span></label>
           {!termsAccepted && <small className="customer-final-muted">{c.termsRequired}</small>}
           {submitError && <p className="customer-final-error" role="alert">{submitError}</p>}
-          <button type="button" className="customer-final-primary" disabled={!termsAccepted || submitting} onClick={() => void confirm()}>{submitting ? c.creatingOrder : c.confirmBooking}</button>
+          <button type="button" className="customer-final-primary" disabled={!termsAccepted || !serviceDateReady || submitting} onClick={() => void confirm()}>{submitting ? c.creatingOrder : c.confirmBooking}</button>
         </main>
       )}
     </section>
