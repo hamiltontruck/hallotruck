@@ -1,3 +1,5 @@
+import { safeCustomerAnalyticsRoute, safeCustomerAnalyticsUrl, sanitizeCustomerAnalyticsProperties, sanitizeCustomerPostHogEvent } from "./analytics-privacy";
+
 export type AnalyticsEventName =
   | "login_succeeded"
   | "login_failed"
@@ -28,50 +30,9 @@ declare global {
   interface Window { posthog?: PostHogStub; }
 }
 
-const SAFE_KEYS = new Set([
-  "environment", "release", "route", "role", "outcome",
-  "workflow", "source", "device_class", "payment_method",
-  "order_state", "reason_code", "error_code", "organization_type",
-]);
 const SCRIPT_ID = "hallo-customer-posthog-sdk";
 const SDK_METHODS = ["capture"] as const;
 let initialized = false;
-
-function safeRoute(input: string) {
-  let route = input.trim();
-  const hashIndex = route.indexOf("#");
-  if (hashIndex >= 0) route = route.slice(hashIndex + 1);
-  route = route.split("?", 1)[0] || "/";
-  if (!route.startsWith("/")) route = `/${route}`;
-  return route.slice(0, 160);
-}
-
-function sanitizeProperties(properties: AnalyticsProperties) {
-  const clean: Record<string, string | number | boolean> = {};
-  for (const [key, value] of Object.entries(properties)) {
-    if (!SAFE_KEYS.has(key)) continue;
-    if (["string", "number", "boolean"].includes(typeof value)) {
-      clean[key] = value as string | number | boolean;
-    }
-  }
-  return clean;
-}
-
-function sanitizePostHogEvent(input: unknown, route: string, safeUrl: string) {
-  if (!input || typeof input !== "object") return null;
-  const event = input as { event?: unknown; properties?: unknown };
-  const eventName = typeof event.event === "string" ? event.event : "";
-  if (["$autocapture", "$snapshot", "$exception"].includes(eventName)) return null;
-
-  const raw = event.properties && typeof event.properties === "object"
-    ? event.properties as Record<string, unknown>
-    : {};
-  const properties: Record<string, unknown> = { ...raw };
-  properties.$pathname = route;
-  properties.$current_url = safeUrl;
-  properties.$referrer = "";
-  return { ...event, properties };
-}
 
 function addQueuedMethod(target: PostHogStub, method: string) {
   target[method] = (...args: unknown[]) => target.push([method, ...args]);
@@ -110,11 +71,11 @@ function environmentProperties() {
 }
 
 function currentRoute() {
-  return safeRoute(window.location.hash || window.location.pathname);
+  return safeCustomerAnalyticsRoute(window.location.hash, window.location.pathname);
 }
 
 function currentSafeUrl(route = currentRoute()) {
-  return `${window.location.origin}${window.location.pathname}#${route}`;
+  return safeCustomerAnalyticsUrl(window.location.origin, route);
 }
 
 function deviceClass() {
@@ -141,7 +102,7 @@ export function captureAnalyticsEvent(event: AnalyticsEventName, properties: Ana
     ...environmentProperties(),
     route: currentRoute(),
     device_class: deviceClass(),
-    ...sanitizeProperties(properties),
+    ...sanitizeCustomerAnalyticsProperties(properties),
   });
 }
 
@@ -163,7 +124,7 @@ export function initializeAnalytics() {
     persistence: "memory",
     ip: false,
     advanced_disable_flags: true,
-    before_send: (event: unknown) => sanitizePostHogEvent(event, currentRoute(), currentSafeUrl()),
+    before_send: (event: unknown) => sanitizeCustomerPostHogEvent(event, currentRoute(), currentSafeUrl()),
   });
 
   initialized = true;
