@@ -84,9 +84,7 @@ function deviceClass() {
   return "desktop";
 }
 
-export function captureAnalyticsPageview() {
-  if (!initialized) return;
-  const route = currentRoute();
+function emitAnalyticsPageview(route: string) {
   window.posthog?.capture?.("$pageview", {
     ...environmentProperties(),
     route,
@@ -94,6 +92,18 @@ export function captureAnalyticsPageview() {
     $pathname: route,
     $current_url: currentSafeUrl(route),
   });
+}
+
+export function captureAnalyticsPageview() {
+  if (!initialized) return;
+  emitAnalyticsPageview(currentRoute());
+}
+
+/** React state-navigation does not change location.hash. Track only fixed page names. */
+export function captureAnalyticsVirtualPageview(pageRoute: string) {
+  if (!initialized) return;
+  const route = safeCustomerAnalyticsRoute("#" + pageRoute, window.location.pathname);
+  emitAnalyticsPageview(route);
 }
 
 export function captureAnalyticsEvent(event: AnalyticsEventName, properties: AnalyticsProperties = {}) {

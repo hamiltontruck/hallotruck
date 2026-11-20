@@ -29,6 +29,7 @@ import {
   sanitizeEthiopianPhoneInput,
 } from "./customer-auth-validation";
 import { beginCustomerGoogleSignIn } from "./google-sign-in";
+import { captureAnalyticsEvent } from "../services/analytics";
 
 export type CustomerIdentity = {
   userId: string;
@@ -592,9 +593,11 @@ export function CustomerAuthBoundary({ children }: CustomerAuthBoundaryProps) {
       const { data, error } = await client.auth.signInWithPassword({ email, password });
       if (error) throw error;
       await resolveSession(data.session);
+      captureAnalyticsEvent("login_succeeded", { outcome: "success", source: "email_login" });
     } catch (error) {
       const message = error instanceof Error ? error.message : undefined;
       const localValidation = message && [text.emailInvalid, text.passwordInvalid].includes(message as never);
+      captureAnalyticsEvent("login_failed", { outcome: "failed", source: "email_login", reason_code: "login_unavailable" });
       setState({ kind: "signed-out", error: localValidation ? message! : friendlyAuthError(message, language), notice: null });
     } finally { loginLockRef.current = false; setAuthenticating(false); }
   }
