@@ -8,12 +8,16 @@ function internationalPhone(value: string): string {
   return `+251${national.slice(1)}`;
 }
 
-export async function requestCustomerPhoneVerification(phone: string): Promise<string> {
+async function requireCustomerAccount(): Promise<void> {
   const { data: userResult, error: userError } = await supabase.auth.getUser();
   if (userError || !userResult.user) throw new Error("Sign in to verify your phone.");
   const { data: profile, error: profileError } = await supabase.from("profiles")
     .select("role").eq("id", userResult.user.id).maybeSingle();
   if (profileError || profile?.role !== "customer") throw new Error("Customer account required.");
+}
+
+export async function requestCustomerPhoneVerification(phone: string): Promise<string> {
+  await requireCustomerAccount();
   const normalized = internationalPhone(phone);
   const { error } = await supabase.auth.updateUser({ phone: normalized });
   if (error) throw error;
@@ -22,8 +26,7 @@ export async function requestCustomerPhoneVerification(phone: string): Promise<s
 
 export async function confirmCustomerPhoneVerification(phone: string, code: string): Promise<void> {
   if (!/^\d{6}$/.test(code)) throw new Error("Enter the 6-digit SMS code.");
-  const { data: userResult, error: userError } = await supabase.auth.getUser();
-  if (userError || !userResult.user) throw new Error("Sign in to verify your phone.");
+  await requireCustomerAccount();
   const { error } = await supabase.auth.verifyOtp({
     phone: internationalPhone(phone),
     token: code,
