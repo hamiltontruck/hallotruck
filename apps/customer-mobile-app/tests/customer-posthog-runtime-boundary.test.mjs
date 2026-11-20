@@ -71,6 +71,15 @@ test("Customer V4 PostHog initialization sanitizes an OAuth callback through the
     assert.equal(cleanPageview.properties.$current_url, location.origin + "/#/hallotruck/customer-mobile");
     assert.equal(cleanPageview.properties.$referrer, "");
 
+    analytics.captureAnalyticsVirtualPageview("/orders");
+    const virtualPage = sdk.at(-1);
+    assert.equal(virtualPage[0], "capture");
+    assert.equal(virtualPage[1], "$pageview");
+    const cleanVirtualPage = config.before_send({ event: virtualPage[1], properties: virtualPage[2] });
+    assert.equal(cleanVirtualPage.properties.route, "/orders");
+    assert.equal(cleanVirtualPage.properties.$pathname, "/orders");
+    assert.equal(cleanVirtualPage.properties.$current_url, location.origin + "/#/orders");
+
     analytics.captureAnalyticsEvent("login_failed", {
       outcome: "failed",
       reason_code: "login_unavailable",
@@ -87,7 +96,7 @@ test("Customer V4 PostHog initialization sanitizes an OAuth callback through the
     assert.equal("role" in cleanLogin.properties, false);
     assert.equal("email" in cleanLogin.properties, false);
 
-    const payload = JSON.stringify([cleanPageview, cleanLogin]);
+    const payload = JSON.stringify([cleanPageview, cleanVirtualPage, cleanLogin]);
     for (const secret of [token, refresh, "access_token=", "refresh_token=", "private_user_id", "secret@example.test"]) {
       assert.equal(payload.includes(secret), false, secret);
     }
