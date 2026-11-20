@@ -19,14 +19,42 @@ export function createTraccarClient({ baseUrl, token, email, password, fetchImpl
     async latestAuthorized({ deviceUniqueId, truckMapping }) {
       if (!deviceUniqueId || !truckMapping || truckMapping.gps_provider !== "traccar" || truckMapping.gps_external_id !== deviceUniqueId || !truckMapping.truck_id) throw new Error("Unapproved truck mapping");
       const devices = await this.devices();
-      const matches = devices.filter(d => d.uniqueId === deviceUniqueId);
+      const matches = devices.filter(d => d?.uniqueId === deviceUniqueId);
       if (matches.length !== 1) throw new Error("Device not found or duplicate");
       const positions = await this.positions();
-      const p = positions.filter(p => p.deviceId === matches[0].id && p.valid !== false).sort((a,b)=>Date.parse(b.fixTime)-Date.parse(a.fixTime))[0];
-      if (!p) return null;
-      const lat=Number(p.latitude),lng=Number(p.longitude),knots=Number(p.speed),course=p.course==null?null:Number(p.course),time=Date.parse(p.fixTime);
-      if(!Number.isFinite(lat)||lat < -90||lat > 90||!Number.isFinite(lng)||lng < -180||lng > 180||!Number.isFinite(knots)||knots<0||knots*1.852>250||!Number.isFinite(time)||time>Date.now()+300000||course!==null&&(!Number.isFinite(course)||course<0||course>=360)) throw new Error("Invalid GPS payload");
-      return {truck_id:truckMapping.truck_id,device_unique_id:deviceUniqueId,latitude:lat,longitude:lng,speed_kmh:knots*1.852,heading:course,ignition:typeof p.attributes?.ignition==="boolean"?p.attributes.ignition:null,fix_time:new Date(time).toISOString(),source:"traccar",stale:Date.now()-time>60000};
+      const position = latestValidFix(positions, matches[0].id);
+      if (!position) return null;
+      return {
+        ...position,
+        truck_id: truckMapping.truck_id,
+        device_unique_id: deviceUniqueId,
+        source: "traccar",
+      };
     }
   };
+}
+
+export function latestValidFix(positions, deviceId, now = Date.now()) {
+  if (!Number.isInteger(deviceId) || deviceId <= 0) return null;
+  let latest = null;
+  let latestTime = -Infinity;
+  for (const row of positions) {
+    if (row?.deviceId !== deviceId || row.valid !== true) continue;
+    const time = typeof row.fixTime === "string" ? Date.parse(row.fixTime) : NaN;
+    if (!Number.isFinite(time) || time > now + 300000 || time <= latestTime) continue;
+    const { latitude, longitude, speed, course = null } = row;
+    if (!Number.isFinite(latitude) || Math.abs(latitude) > 90 ||
+        !Number.isFinite(longitude) || Math.abs(longitude) > 180 ||
+        !Number.isFinite(speed) || speed < 0 || speed * 1.852 > 250 ||
+        (course !== null && (!Number.isFinite(course) || course < 0 || course >= 360))) continue;
+    const ignition = row.attributes?.ignition;
+    latest = {
+      latitude, longitude, speed_kmh: speed * 1.852, heading: course,
+      ignition: typeof ignition === "boolean" ? ignition : null,
+      fix_time: new Date(time).toISOString(),
+      stale: now - time > 60000,
+    };
+    latestTime = time;
+  }
+  return latest;
 }

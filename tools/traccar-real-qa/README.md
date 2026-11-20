@@ -9,10 +9,11 @@ Use an isolated authorized Traccar server and environment variables, never commi
 ```sh
 export TRACCAR_URL=https://your-qa-traccar.example
 export TRACCAR_TOKEN=your_private_user_token
+export TRACCAR_DEVICE_UNIQUE_ID=your_qa_tracker_id
 node tools/traccar-real-qa/smoke.mjs
 ```
 
-Or use TRACCAR_EMAIL and TRACCAR_PASSWORD instead of the token. Local HTTP is accepted only on loopback. No credentials or GPS coordinates are printed. A server with zero valid device fixes is **not** a successful hardware test.
+Or use TRACCAR_EMAIL and TRACCAR_PASSWORD instead of the token. Local HTTP is accepted only on loopback. No credentials or GPS coordinates are printed. The smoke requires a valid fix no older than 60 seconds for the configured tracker. Confirm the tracker hardware and SIM independently.
 
 Traccar API reference: https://www.traccar.org/api-reference/
 
