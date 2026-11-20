@@ -1,21 +1,33 @@
 import { spawn } from "node:child_process";
 
 const STAGING_REF = "rmnjhdlbhfcmlvzqtblm";
-const STAGING_HOST = "db.rmnjhdlbhfcmlvzqtblm.supabase.co";
+// Pin the project-specific hostname from Dashboard > Connect > Session pooler.
+const STAGING_POOLER_HOST = null;
+const STAGING_USER = `hallo_gps_qa_ingest.${STAGING_REF}`;
 const BATCH_SIZE = 250;
 
+export function stagingPoolerTarget() {
+  if (!STAGING_POOLER_HOST) throw new Error("The approved QA staging Session Pooler hostname has not been confirmed");
+  return {
+    HALLO_GPS_STAGING_PROJECT_REF: STAGING_REF,
+    PGHOST: STAGING_POOLER_HOST,
+    PGPORT: "5432",
+    PGUSER: STAGING_USER,
+  };
+}
+
 export function stagingConnection(env) {
-  const ref = env.HALLO_GPS_STAGING_PROJECT_REF;
-  if (env.HALLO_GPS_ENV !== "qa" || ref !== STAGING_REF || env.PGHOST !== STAGING_HOST ||
-      env.PGUSER !== "hallo_gps_qa_ingest" || !env.PGPASSWORD) {
-    throw new Error("Confirmed staging project, matching direct host, and dedicated staging login required");
+  const target = stagingPoolerTarget();
+  if (env.HALLO_GPS_ENV !== "qa" || env.HALLO_GPS_STAGING_PROJECT_REF !== target.HALLO_GPS_STAGING_PROJECT_REF ||
+      env.PGHOST !== target.PGHOST || env.PGPORT !== target.PGPORT || env.PGUSER !== target.PGUSER || !env.PGPASSWORD) {
+    throw new Error("Confirmed staging project, exact Session Pooler host and port, and dedicated staging login required");
   }
   return {
     PATH: env.PATH,
-    PGHOST: STAGING_HOST,
-    PGPORT: "5432",
+    PGHOST: target.PGHOST,
+    PGPORT: target.PGPORT,
     PGDATABASE: "postgres",
-    PGUSER: env.PGUSER,
+    PGUSER: target.PGUSER,
     PGPASSWORD: env.PGPASSWORD,
     PGSSLMODE: "verify-full",
     PGSSLROOTCERT: "system",

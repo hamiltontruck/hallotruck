@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { stagingConnection, replicatePositions } from "./staging/replicate.mjs";
+import { stagingConnection, stagingPoolerTarget, replicatePositions } from "./staging/replicate.mjs";
 
 const ref = "rmnjhdlbhfcmlvzqtblm";
 const config = {
@@ -8,15 +8,13 @@ const config = {
   PGHOST: `db.${ref}.supabase.co`, PGUSER: "hallo_gps_qa_ingest", PGPASSWORD: "fixture",
 };
 
-test("staging connection rejects production, a mismatched host, and privileged credentials", () => {
-  assert.equal(stagingConnection(config).PGSSLMODE, "verify-full");
-  for (const bad of [
-    { HALLO_GPS_ENV: "production" },
-    { HALLO_GPS_STAGING_PROJECT_REF: "febgayjolfrooaqenlje", PGHOST: "db.febgayjolfrooaqenlje.supabase.co" },
-    { HALLO_GPS_STAGING_PROJECT_REF: "abcdefghijklmnopqrst", PGHOST: "db.abcdefghijklmnopqrst.supabase.co" },
-    { PGHOST: "other.example" }, { PGUSER: "postgres" }, { PGPASSWORD: "" },
-  ]) assert.throws(() => stagingConnection({ ...config, ...bad }), /staging/i);
-  assert.equal(stagingConnection({ ...config, TRACCAR_TOKEN: "fixture" }).TRACCAR_TOKEN, undefined);
+test("staging connections stay closed until the exact QA pooler host is confirmed", () => {
+  assert.throws(() => stagingPoolerTarget(), /hostname has not been confirmed/);
+  for (const input of [
+    config,
+    { ...config, PGHOST: "aws-0-eu-central-1.pooler.supabase.com", PGPORT: "5432", PGUSER: `hallo_gps_qa_ingest.${ref}` },
+    { ...config, HALLO_GPS_STAGING_PROJECT_REF: "febgayjolfrooaqenlje" },
+  ]) assert.throws(() => stagingConnection(input), /hostname has not been confirmed/);
 });
 
 test("a failed batch is replayable and receipts remain unchanged", async () => {

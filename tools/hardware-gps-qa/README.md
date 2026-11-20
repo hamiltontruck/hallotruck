@@ -121,24 +121,41 @@ lost response or failed batch can be retried. PostgreSQL ignores duplicates
 and stores the original fix and receipt timestamps. The ledger retains
 seven days of history.
 
-After the project owner approves the exact SQL and target, apply
-`staging/install.sql`, then `staging/prepare-writer.sql`, then the rollback-only
-`staging/test.sql` while the login is disabled. Provision its password through
-a secure administrator session and enable login only after separate access
-approval. Use PostgreSQL client 16 or newer and network access to the direct
-QA database endpoint. Inject `PGPASSWORD` from the QA runner's secret store.
-Set `HALLO_GPS_ENV=qa`, `HALLO_GPS_STAGING_PROJECT_REF=rmnjhdlbhfcmlvzqtblm`,
-`PGHOST=db.rmnjhdlbhfcmlvzqtblm.supabase.co`, `PGUSER=hallo_gps_qa_ingest`,
-and the existing mapping and ledger paths. The exporter requires TLS
-verification and rejects every other project ref and host.
+Use the project-specific **Session Pooler** hostname shown in
+**HALLO GPS QA → Connect → Session pooler**. The exporter pins this hostname
+in `staging/replicate.mjs` along with the project ref and port 5432. It fails
+closed until the exact host is confirmed and pinned. The restricted pooler
+username is `hallo_gps_qa_ingest.rmnjhdlbhfcmlvzqtblm`. The connection uses
+`sslmode=verify-full` and the system trust store. Direct hosts, transaction
+pooler ports, other projects and other usernames are rejected.
+
+### Protected manual connectivity checks
+
+After review, the manual workflow must be present on the repository's
+default branch before dispatch. In **Settings → Environments**, prepare
+`hallo-gps-qa`, add a required reviewer, prevent self-review, and allow
+deployments only from the `main` branch. Then use the workflow's default
+mode for a credential-free IPv4 and TLS probe. Only after separate writer
+activation approval, store the temporary writer password as the environment
+secret `HALLO_GPS_QA_WRITER_PASSWORD` and select **verify_writer** for the
+read-only authentication check. The secret is injected only into that step.
+The workflow has no pull request trigger and runs only against this
+repository's default branch. It has no ingestion step.
+
+The separately approved synthetic ingestion procedure uses a protected runner
+with PostgreSQL client 16 or newer. Set `HALLO_GPS_ENV=qa`,
+`HALLO_GPS_STAGING_PROJECT_REF=rmnjhdlbhfcmlvzqtblm`, `PGPORT=5432`,
+`PGHOST` to the pinned Session Pooler host, and
+`PGUSER=hallo_gps_qa_ingest.rmnjhdlbhfcmlvzqtblm`. Supply `PGPASSWORD`
+from the secret store and the protected mapping and SQLite ledger paths.
 
 ```sh
 node tools/hardware-gps-qa/staging/run.mjs
 ```
 
 CI exercises the SQLite-to-PostgreSQL SQL on a disposable PostgreSQL service
-using synthetic telemetry. Live staging must be activated and independently
-verified after project and credential confirmation.
+using synthetic telemetry. Live staging authentication and ingestion require
+separate approval.
 
 ### Remaining physical acceptance
 

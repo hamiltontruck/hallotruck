@@ -1,0 +1,47 @@
+name: HALLO GPS QA staging connectivity
+
+on:
+  workflow_dispatch:
+    inputs:
+      verify_writer:
+        description: Verify writer authentication after separate activation approval
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  network:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'hamiltontruck/hallotruck' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify IPv4 and PostgreSQL TLS without credentials
+        run: node tools/hardware-gps-qa/staging/check-connection.mjs network
+
+  writer-authentication:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'hamiltontruck/hallotruck' && github.ref == 'refs/heads/main' && inputs.verify_writer
+    needs: network
+    environment: hallo-gps-qa
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify TLS and restricted writer authentication with a read-only query
+        env:
+          PGPASSWORD: ${{ secrets.HALLO_GPS_QA_WRITER_PASSWORD }}
+        run: node tools/hardware-gps-qa/staging/check-connection.mjs writer
