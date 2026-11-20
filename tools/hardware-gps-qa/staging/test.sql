@@ -16,7 +16,7 @@ BEGIN
   END IF;
   BEGIN
     INSERT INTO hallo_gps_qa.positions (source_id, device_key, truck_id, fix_time, latitude, longitude)
-    VALUES (3, '0012345678', 'unapproved-truck', now(), 9, 38);
+    VALUES (3, '0012345678', 'unapproved-truck', now(), 9.1, 38);
     RAISE EXCEPTION 'Expected mismatched mapping rejection';
   EXCEPTION WHEN foreign_key_violation THEN NULL;
   END;
