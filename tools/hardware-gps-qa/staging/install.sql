@@ -24,7 +24,7 @@ CREATE TABLE hallo_gps_qa.positions (
   ignition boolean,
   FOREIGN KEY (device_key, truck_id) REFERENCES hallo_gps_qa.device_mapping (device_key, truck_id),
   UNIQUE (device_key, fix_time, latitude, longitude),
-  CHECK (isfinite(fix_time) AND fix_time <= received_at + interval '5 minutes'
+  CHECK (isfinite(fix_time) AND isfinite(received_at) AND fix_time <= received_at + interval '5 minutes'
     AND fix_time >= received_at - interval '1 day')
 );
 ALTER TABLE hallo_gps_qa.device_mapping ENABLE ROW LEVEL SECURITY;
@@ -32,7 +32,7 @@ ALTER TABLE hallo_gps_qa.positions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON ALL TABLES IN SCHEMA hallo_gps_qa FROM PUBLIC;
 GRANT SELECT ON hallo_gps_qa.device_mapping TO hallo_gps_qa_writer;
 GRANT SELECT ON hallo_gps_qa.positions TO hallo_gps_qa_writer;
-GRANT INSERT (source_id, device_key, truck_id, fix_time, latitude, longitude, speed_kmh, heading, ignition)
+GRANT INSERT (source_id, device_key, truck_id, fix_time, received_at, latitude, longitude, speed_kmh, heading, ignition)
   ON hallo_gps_qa.positions TO hallo_gps_qa_writer;
 CREATE POLICY writer_read_mapping ON hallo_gps_qa.device_mapping
   FOR SELECT TO hallo_gps_qa_writer USING (true);

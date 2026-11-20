@@ -7,9 +7,9 @@ const FUTURE_TOLERANCE = 300_000;
 const MAX_REPORT_ROWS = 50_000;
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):?[0-5]\d)$/;
 
-export function openPositionStore(filename) {
-  const db = new DatabaseSync(filename);
-  db.exec(`
+export function openPositionStore(filename, { readOnly = false } = {}) {
+  const db = new DatabaseSync(filename, { readOnly });
+  if (!readOnly) db.exec(`
     PRAGMA busy_timeout = 5000;
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS points (
@@ -27,7 +27,7 @@ export function openPositionStore(filename) {
     ) STRICT;
     CREATE INDEX IF NOT EXISTS points_latest ON points (device_key, truck_id, fix_ms DESC, source_id DESC);
   `);
-  const insert = db.prepare(`
+  const insert = readOnly ? null : db.prepare(`
     INSERT INTO points VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
   `);
   const latest = db.prepare(`
@@ -35,9 +35,20 @@ export function openPositionStore(filename) {
     WHERE device_key = ? AND truck_id = ? AND fix_ms <= ?
     ORDER BY fix_ms DESC, source_id DESC LIMIT 1
   `);
-  const trim = db.prepare("DELETE FROM points WHERE fix_ms < ?");
+  const trim = readOnly ? null : db.prepare("DELETE FROM points WHERE fix_ms < ?");
+  const exportRows = db.prepare(`
+    SELECT source_id, device_key, truck_id, fix_ms, received_ms, latitude, longitude,
+           speed_kmh, heading, ignition
+    FROM points
+    WHERE source_id > ?
+      AND EXISTS (SELECT 1 FROM json_each(?) AS mapping
+        WHERE json_extract(mapping.value, '$.uniqueId') = points.device_key
+          AND json_extract(mapping.value, '$.truckId') = points.truck_id)
+    ORDER BY source_id LIMIT ?
+  `);
   return {
     commit(key, points, now) {
+      if (readOnly) throw new Error("QA ledger is read-only");
       db.exec("BEGIN IMMEDIATE");
       try {
         let inserted = 0;
@@ -63,6 +74,18 @@ export function openPositionStore(filename) {
         fixTime: new Date(fix_ms).toISOString(),
         location: { ...location, ignition: ignition === null ? null : Boolean(ignition) },
       };
+    },
+    exportBatch(mappings, after, limit) {
+      return exportRows.all(after, JSON.stringify(mappings), limit).map((row) => {
+        const { fix_ms, received_ms, ignition, ...point } = row;
+        return {
+          ...point,
+          ledger_id: row.source_id,
+          fix_time: new Date(fix_ms).toISOString(),
+          received_at: new Date(received_ms).toISOString(),
+          ignition: ignition === null ? null : Boolean(ignition),
+        };
+      });
     },
     close: () => db.close(),
   };

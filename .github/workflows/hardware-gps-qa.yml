@@ -38,12 +38,16 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Test staging schema and permissions in disposable PostgreSQL
         env:
           PG_CONTAINER: ${{ job.services.postgres.id }}
         run: |
           docker exec -i "$PG_CONTAINER" psql -X -U postgres -v ON_ERROR_STOP=1 < tools/hardware-gps-qa/staging/install.sql
           docker exec -i "$PG_CONTAINER" psql -X -U postgres -v ON_ERROR_STOP=1 < tools/hardware-gps-qa/staging/test.sql
+          node tools/hardware-gps-qa/staging/postgres-fixtures.mjs
   h02-upstream-fixtures:
     runs-on: ubuntu-latest
     timeout-minutes: 15

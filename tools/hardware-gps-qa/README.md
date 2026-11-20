@@ -106,9 +106,31 @@ read approved mappings and insert telemetry with `ON CONFLICT DO NOTHING`.
 Database constraints enforce the exact mapping and telemetry checks. The
 schema has no public grants, enables RLS, and stays outside the Data API's
 exposed schemas. `staging/test.sql` uses synthetic values and verifies
-permissions and deduplication in a rollback-only transaction. The current
-runner writes its SQLite ledger. Staging provisioning and activation of a
-Postgres transport are separate integration steps.
+permissions and deduplication in a rollback-only transaction. The optional PostgreSQL exporter reads the runner's local SQLite ledger.
+It filters by the approved device/truck mapping and sends bounded transactions
+under the dedicated writer login. Each run resubmits retained history, so a
+lost response or failed batch can be retried. PostgreSQL ignores duplicates
+and stores the original fix and receipt timestamps. The ledger retains
+seven days of history.
+
+After the project owner confirms the isolated staging project, apply
+`staging/install.sql` there with a staging administrator, seed approved QA
+mappings, and create the `hallo_gps_qa_ingest` login with membership only in
+`hallo_gps_qa_writer`. Use PostgreSQL client 16 or newer and network access to
+the staging project's direct database endpoint. Inject `PGPASSWORD` from
+the approved staging runner's secret store. In the QA runner set
+`HALLO_GPS_ENV=qa`, `HALLO_GPS_STAGING_PROJECT_REF`, `PGHOST` to the matching
+`db.<project-ref>.supabase.co` host, `PGUSER=hallo_gps_qa_ingest`, and the
+existing mapping and ledger paths. The exporter verifies TLS and rejects
+the known production project ref, mismatched hosts, and privileged usernames.
+
+```sh
+node tools/hardware-gps-qa/staging/run.mjs
+```
+
+CI exercises the SQLite-to-PostgreSQL SQL on a disposable PostgreSQL service
+using synthetic telemetry. Live staging must be activated and independently
+verified after project and credential confirmation.
 
 ### Remaining physical acceptance
 
