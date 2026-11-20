@@ -53,12 +53,12 @@ test("known fixed routes are retained, dynamic IDs and unknown paths fail closed
 
 test("custom properties reject PII, invalid codes, raw routes and nested values", () => {
   assert.deepEqual(sanitizeCustomerAnalyticsProperties({
-    outcome: "success", reason_code: "route_not_found", email: "private@example.com",
+    outcome: "success", reason_code: "route_preview_unavailable", email: "private@example.com",
     phone: "0911223344", payload: { access_token: TOKEN },
     route: "/access_token=" + TOKEN, password: TOKEN, source: [TOKEN],
     release: "08f546007808a28053b968377761f6c4cbaa7eb2",
   }), {
-    outcome: "success", reason_code: "route_not_found",
+    outcome: "success", reason_code: "route_preview_unavailable",
     release: "08f546007808a28053b968377761f6c4cbaa7eb2",
   });
 });
@@ -104,4 +104,66 @@ test("unknown events and automatic capture are rejected", () => {
   }, "/orders", origin + "/#/orders");
   assert.equal(ok.properties.outcome, "success");
   assert.equal(JSON.stringify(ok).includes("0911223344"), false);
+});
+
+
+test("metadata values are a finite vocabulary, not arbitrary short identifiers", () => {
+  const sanitized = sanitizeCustomerAnalyticsProperties({
+    role: "customer",
+    environment: "production",
+    workflow: "customer_booking",
+    reason_code: "route_preview_unavailable",
+    source: "email_login",
+    device_class: "mobile",
+    payment_method: "cash",
+    order_state: "placed",
+    outcome: "success",
+    error_code: "unknown_error",
+    organization_type: "individual",
+  });
+  assert.deepEqual(sanitized, {
+    role: "customer",
+    environment: "production",
+    workflow: "customer_booking",
+    reason_code: "route_preview_unavailable",
+    source: "email_login",
+    device_class: "mobile",
+    payment_method: "cash",
+    order_state: "placed",
+    outcome: "success",
+    error_code: "unknown_error",
+    organization_type: "individual",
+  });
+  for (const key of [
+    "role", "environment", "workflow", "reason_code", "source",
+    "device_class", "payment_method", "order_state", "outcome",
+    "error_code", "organization_type",
+  ]) {
+    for (const value of ["john_doe", "private_email", "private_token", "0911223344", "alice", "user_1234"]) {
+      assert.deepEqual(sanitizeCustomerAnalyticsProperties({ [key]: value }), {}, key + " " + value);
+    }
+  }
+  assert.deepEqual(sanitizeCustomerAnalyticsProperties({ release: "my-secret-build" }), {});
+  assert.deepEqual(sanitizeCustomerAnalyticsProperties({ outcome: true, role: 22 }), {});
+});
+
+test("before_send cannot reinstate PII through curated custom metadata properties", () => {
+  const event = sanitizeCustomerPostHogEvent({
+    event: "login_failed",
+    properties: {
+      outcome: "failed",
+      role: "user_1234",
+      reason_code: "customer_email",
+      source: "john_doe",
+      environment: "production",
+      $current_url: "https://example.org/?access_token=secret",
+    },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"));
+  assert.ok(event);
+  assert.equal(event.properties.outcome, "failed");
+  assert.equal(event.properties.environment, "production");
+  assert.equal("role" in event.properties, false);
+  assert.equal("reason_code" in event.properties, false);
+  assert.equal("source" in event.properties, false);
+  assert.equal(JSON.stringify(event).includes("secret"), false);
 });
