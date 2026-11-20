@@ -18,6 +18,7 @@ test("active Customer V4 journey owns service-date entry on Cargo, read-only Rev
   assert.match(cargoStep, /type="date"/);
   assert.match(cargoStep, /required/);
   assert.doesNotMatch(reviewStep, /type="date"/);
+  assert.match(reviewStep, /!serviceDateReady && <p[^>]*role="alert">\{c.invalidServiceDate\}/);
   assert.ok(reviewStep.includes("<small>{c.serviceDate}</small>"));
   assert.ok(journey.includes("isValidCustomerServiceDate(serviceDate)"));
   assert.ok(order.includes("isValidCustomerServiceDate(input.serviceDate)"));

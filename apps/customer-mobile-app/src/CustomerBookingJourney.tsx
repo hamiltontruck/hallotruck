@@ -184,7 +184,7 @@ export function CustomerBookingJourney({
   }
 
   async function goToQuote() {
-    if (!truckReady) return;
+    if (!truckReady || !isValidCustomerServiceDate(serviceDate)) return;
     setStep("quote");
     await calculateQuote();
   }
@@ -380,7 +380,8 @@ export function CustomerBookingJourney({
           </fieldset>
           <label className="customer-final-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} /><span>{c.termsAgree}</span></label>
           {!termsAccepted && <small className="customer-final-muted">{c.termsRequired}</small>}
-          {submitError && <p className="customer-final-error" role="alert">{submitError}</p>}
+          {!serviceDateReady && <p className="customer-final-error" role="alert">{c.invalidServiceDate}</p>}
+          {serviceDateReady && submitError && <p className="customer-final-error" role="alert">{submitError}</p>}
           <button type="button" className="customer-final-primary" disabled={!termsAccepted || !serviceDateReady || submitting} onClick={() => void confirm()}>{submitting ? c.creatingOrder : c.confirmBooking}</button>
         </main>
       )}
