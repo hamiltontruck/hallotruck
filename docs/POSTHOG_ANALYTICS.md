@@ -83,6 +83,31 @@ The approved event names are:
 
 Workflow code must call `captureAnalyticsEvent` rather than the PostHog global directly. New events or properties require an update to this contract and focused privacy regression coverage.
 
+## Customer Mobile V4 workflow instrumentation
+
+The active React Customer Mobile V4 journey emits these event names only through the
+allowlisted `captureAnalyticsEvent` API (separate staged change after the OAuth privacy fix):
+
+- `login_succeeded`: Supabase password sign-in succeeded. This does not establish
+  the Customer role gate or completion of profile setup.
+- `login_failed`: a password sign-in attempt was rejected/unavailable, with
+  controlled `reason_code=login_unavailable`, never the email/password or error text.
+- `quote_created`: a server quote preview returned successfully, not a completed order.
+- `order_placed`: the create-order service returned a confirmed persisted order;
+  no order ID, tracking ID, price, location or customer details are sent.
+- `order_cancelled`: server-confirmed cancellation; the free-text reason and order ID
+  are not included in analytics.
+- `route_not_found`: route-preview fetch failed; `reason_code=route_preview_unavailable`
+  means this also covers network/service failures, not necessarily no geographic route.
+- Manual `$pageview`: React state navigation emits fixed routes including Home, Book,
+  Orders, Track, Payments, Profile, Help and Settings. No dynamic order identifiers,
+  OAuth hash, raw query or URLs may be transmitted.
+
+A successful local/CI test is **not** proof that a production event has been received.
+Verify new event ingestion in PostHog after a separately approved deployment, and do
+not calculate a funnel until events, denominators and release cohorts are validated.
+Do not enable session replay, click/field autocapture or raw exception capture.
+
 ## Session replay
 
 Session replay remains disabled. It must not be enabled until masking, sensitive-route exclusions, data retention and a separate privacy review are completed.
