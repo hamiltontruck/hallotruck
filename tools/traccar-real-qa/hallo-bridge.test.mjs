@@ -22,3 +22,8 @@ test("rejects invalid telemetry and future timestamps", async () => {
   await assert.rejects(readHalloTruckLocation({ client: client({...point(),latitude:999}), truck, now }), /coordinates/);
   await assert.rejects(readHalloTruckLocation({ client: client(point(now+360000)), truck, now }), /timestamp/);
 });
+
+test("rejects invalid heading and null coordinates", async () => {
+  await assert.rejects(readHalloTruckLocation({ client: client({ ...point(), heading: 360 }), truck, now }), /heading/);
+  await assert.rejects(readHalloTruckLocation({ client: client({ ...point(), latitude: null }), truck, now }), /coordinates/);
+});

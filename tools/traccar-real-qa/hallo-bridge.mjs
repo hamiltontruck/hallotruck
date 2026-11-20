@@ -14,14 +14,15 @@ export async function readHalloTruckLocation({ client, truck, now = Date.now() }
   if (point.truck_id !== truck.id || point.device_unique_id !== truck.gps_external_id || point.source !== "traccar") throw new Error("GPS mapping mismatch");
   const timestamp = Date.parse(point.fix_time);
   if (!Number.isFinite(timestamp) || timestamp > now + 300000) throw new Error("Invalid GPS timestamp");
-  const lat = Number(point.latitude), lng = Number(point.longitude), speed = Number(point.speed_kmh);
+  const { latitude: lat, longitude: lng, speed_kmh: speed, heading = null } = point;
   if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180 || !Number.isFinite(speed) || speed < 0 || speed > 250) throw new Error("Invalid GPS coordinates or speed");
+  if (heading !== null && (!Number.isFinite(heading) || heading < 0 || heading >= 360)) throw new Error("Invalid GPS heading");
   const age = Math.max(0, now - timestamp);
   return {
     truck_id: truck.id,
     plate_number: truck.plate_number,
     status: age <= 60000 ? "LIVE" : age <= 900000 ? "STALE" : "OFFLINE",
-    location: { latitude: lat, longitude: lng, speed_kmh: speed, heading: point.heading ?? null },
+    location: { latitude: lat, longitude: lng, speed_kmh: speed, heading },
     recorded_at: new Date(timestamp).toISOString(),
     source: "traccar"
   };
