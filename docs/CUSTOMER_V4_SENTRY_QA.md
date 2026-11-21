@@ -43,7 +43,7 @@ its DSN for Customer V4.
   raw URLs, headers, request bodies, breadcrumbs, browser metadata or
   application contexts are forwarded by this sanitizer.
 - `sendDefaultPii=false`, `defaultIntegrations=false`, no automatic
-  HTTP instrumentation, session replay, tracing or auto sessions.
+  HTTP instrumentation, session replay or tracing.
 - Do not attach manual Sentry contexts, user identities or custom errors
   without an approved privacy review and corresponding tests.
 - PostHog OAuth exposure documented separately in security Draft PR #536;
