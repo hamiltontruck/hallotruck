@@ -61,7 +61,7 @@ test("selected details are stored in existing cargo notes with no new category o
     category: "construction_materials", item: "cement", notes: "  Secure bags  ",
   }), "Cargo item: Cement · Secure bags");
   assert.equal(validateCustomerCargoItem({
-    category: "grain_rice", item: "teff", notes: "x".repeat(480),
+    category: "grain_rice", item: "teff", notes: "x".repeat(490),
   }), "cargo_notes_too_long");
   assert.equal(validateCustomerCargoItem({
     category: "general_goods", item: "", notes: "x".repeat(500),
