@@ -1,4 +1,5 @@
 """Owner-run Termux recovery rehearsal. Separate test role, no telemetry writes."""
+import ctypes.util
 import getpass
 import os
 from pathlib import Path
@@ -151,16 +152,42 @@ def rehearse(observer, owner, password):
         print("PASS cleanup: test role absent, jobs 0, writer locked, sessions 0, GPS counts 0/0")
 
 
+def load_termux_pq():
+    # Psycopg's pure Python wrapper asks ctypes for "pq". Android's library
+    # search can miss the private Termux prefix even when dlopen succeeds.
+    lib = Path("/data/data/com.termux/files/usr/lib/libpq.so")
+    require(lib.is_file(), "Termux libpq.so missing")
+    original = ctypes.util.find_library
+
+    def locate(name):
+        if name == "pq":
+            return str(lib)
+        if name == "c":
+            return "libc.so"  # Android's Bionic libc.
+        return original(name)
+
+    try:
+        ctypes.util.find_library = locate
+        from psycopg import pq
+        require(pq.version() >= 160000, "libpq 16 or newer required")
+        return pq.version()
+    finally:
+        ctypes.util.find_library = original
+
+
 def main():
     runner["guard"]()
     require(sys.flags.isolated and sys.stdin.isatty() and not any(
         k.startswith(("LD_", "DYLD_")) or k in {"DATABASE_URL","SUPABASE_DB_URL"} for k in os.environ
     ), "isolated interactive Termux required")
+    require(sys.argv[1:] in ([], ["--check-client"]), "unexpected arguments")
     try:
-        from psycopg import pq
-    except ImportError:
+        version = load_termux_pq()
+    except (ImportError, OSError):
         raise RuntimeError("Termux requires Psycopg 3 and libpq") from None
-    require(pq.version() >= 160000, "libpq 16 or newer required")
+    if sys.argv[1:]:
+        print(f"PASS | Psycopg client | libpq {version}")
+        return
     warnings.simplefilter("error", getpass.GetPassWarning)
     password = getpass.getpass("QA owner database password: ")
     with open_session("postgres", password) as observer, open_session("postgres", password) as owner:
