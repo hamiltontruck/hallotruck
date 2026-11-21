@@ -253,3 +253,28 @@ test("safe SDK UUID and finite descriptive metadata survive privacy boundary", (
   assert.equal(clean.properties.$device_type, "Mobile");
   assert.equal(clean.properties.$screen_width, 390);
 });
+
+
+test("PostHog project token is reconstructed from trusted init config, not event properties", () => {
+  const publicToken = "phc_syntheticPublicProjectToken12345";
+  const oauthSecret = "syntheticOAuthAccessTokenShouldNeverBeEmitted";
+  const clean = sanitizeCustomerPostHogEvent({
+    event: "$pageview",
+    properties: {
+      token: oauthSecret,
+      access_token: oauthSecret,
+      $current_url: origin + "/#access_token=" + oauthSecret,
+    },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"), publicToken);
+  assert.ok(clean);
+  assert.equal(clean.properties.token, publicToken);
+  assert.equal(JSON.stringify(clean).includes(oauthSecret), false);
+  const missing = sanitizeCustomerPostHogEvent({
+    event: "$pageview", properties: { token: oauthSecret },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"));
+  assert.equal("token" in missing.properties, false);
+  const invalid = sanitizeCustomerPostHogEvent({
+    event: "$pageview", properties: { token: oauthSecret },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"), oauthSecret);
+  assert.equal("token" in invalid.properties, false);
+});
