@@ -124,7 +124,7 @@ export function initializeAnalytics() {
     persistence: "memory",
     ip: false,
     advanced_disable_flags: true,
-    before_send: (event: unknown) => sanitizeCustomerPostHogEvent(event, currentRoute(), currentSafeUrl()),
+    before_send: (event: unknown) => sanitizeCustomerPostHogEvent(event, currentRoute(), currentSafeUrl(), token),
   });
 
   initialized = true;
