@@ -29,7 +29,7 @@ its DSN for Customer V4.
    before preview deploy; Vite embeds `VITE_*` values into browser bundles.
 5. Preview code paths run only when Vite's `PROD` build flag is true and
    the environment is `qa` or `staging`. Local Vite dev stays disabled.
-   This does not mean it is safe to point a QA build at live customer data.
+   Additionally the browser hostname must be localhost, 127.0.0.1 or a Netlify `deploy-preview-<PR>--<site>.netlify.app` hostname.\n   Other hosts (including GitHub Pages and production Netlify hosts) fail closed.\n   This does not mean it is safe to point a QA build at live customer data.
 
 ## Privacy design
 
@@ -51,7 +51,7 @@ its DSN for Customer V4.
 
 - [ ] Customer V4 Sentry project created by organization owner; new DSN verified.
 - [ ] Customer V4 typecheck, unit tests and production build PASS in CI.
-- [ ] Confirm no Sentry transport in ordinary production build (missing opt-in).
+- [ ] Confirm no Sentry transport on ordinary production build **or production hosts** even if QA opt-in variables are mistakenly set.
 - [ ] QA preview has the exact new Customer V4 project DSN and environment.
 - [ ] Anonymous/test-account QA smoke: create a controlled synthetic
       `throw new Error("HALLO_CUSTOMER_V4_QA_SENTINEL")` from a
