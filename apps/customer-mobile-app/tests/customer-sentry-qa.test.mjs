@@ -33,7 +33,9 @@ test("Customer V4 Sentry is opt-in for QA and staging only", () => {
   assert.match(init, /VITE_CUSTOMER_SENTRY_ENABLED/);
   assert.match(init, /VITE_CUSTOMER_SENTRY_ENVIRONMENT/);
   assert.match(init, /VITE_CUSTOMER_SENTRY_DSN/);
-  assert.match(init, /import\.meta\.env\.PROD/);\n  assert.match(init, /isQAHost\(window\.location\.hostname\)/);\n  assert.match(init, /deploy-preview-/);
+  assert.match(init, /import\.meta\.env\.PROD/);
+  assert.match(init, /isQAHost\(window\.location\.hostname\)/);
+  assert.match(init, /deploy-preview-/);
   assert.match(init, /env === "qa" \|\| env === "staging"/);
   assert.match(init, /defaultIntegrations: false/);
   assert.match(init, /sendDefaultPii: false/);
