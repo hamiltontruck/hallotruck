@@ -130,18 +130,17 @@ The [Supabase CA download](https://supabase-downloads.s3-ap-southeast-1.amazonaw
 is pinned by SHA-256 fingerprint in the guard tests. Direct hosts, transaction
 pooler ports, other projects and other usernames are rejected.
 
-### Protected manual connectivity checks
+### Solo-maintainer connectivity checks
 
-After review, the manual workflow must be present on the repository's
-default branch before dispatch. In **Settings → Environments**, prepare
-`hallo-gps-qa`, add a required reviewer, prevent self-review, and allow
-deployments only from the `main` branch. Then use the workflow's default
-mode for a credential-free IPv4 and TLS probe. Only after separate writer
-activation approval, store the temporary writer password as the environment
-secret `HALLO_GPS_QA_WRITER_PASSWORD` and select **verify_writer** for the
-read-only authentication check. The secret is injected only into that step.
-The workflow has no pull request trigger and runs only against this
-repository's default branch. It has no ingestion step.
+The separate manual workflow proposed in [PR #539](https://github.com/hamiltontruck/hallotruck/pull/539)
+runs a credential-free IPv4 and TLS probe on protected `main` only. Before
+dispatch, the workflow must be present on the default branch. The
+`hallo-gps-qa` GitHub environment permits only `main` and disables
+administrator bypass. With a sole maintainer, there is no independent
+reviewer. The workflow has no writer step and requires no environment secret.
+
+Any owner-controlled writer authentication and synthetic ingestion must be
+reviewed and approved separately. Keep the writer disabled until that approval.
 
 The separately approved synthetic ingestion procedure uses a protected runner
 with PostgreSQL client 16 or newer. Set `HALLO_GPS_ENV=qa`,
