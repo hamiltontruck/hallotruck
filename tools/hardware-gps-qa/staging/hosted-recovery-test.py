@@ -1,5 +1,4 @@
 """Owner-run Termux recovery rehearsal. Separate test role, no telemetry writes."""
-import ctypes.util
 import getpass
 import ipaddress
 import os
@@ -167,27 +166,7 @@ def rehearse(observer, owner, password):
         print("PASS cleanup: test role absent, jobs 0, writer locked, sessions 0, GPS counts 0/0")
 
 
-def load_termux_pq():
-    # Psycopg's pure Python wrapper asks ctypes for "pq". Android's library
-    # search can miss the private Termux prefix even when dlopen succeeds.
-    lib = Path("/data/data/com.termux/files/usr/lib/libpq.so")
-    require(lib.is_file(), "Termux libpq.so missing")
-    original = ctypes.util.find_library
-
-    def locate(name):
-        if name == "pq":
-            return str(lib)
-        if name == "c":
-            return "libc.so"  # Android's Bionic libc.
-        return original(name)
-
-    try:
-        ctypes.util.find_library = locate
-        from psycopg import pq
-        require(pq.version() >= 160000, "libpq 16 or newer required")
-        return pq.version()
-    finally:
-        ctypes.util.find_library = original
+load_termux_pq = runner["load_termux_pq"]
 
 
 def main():

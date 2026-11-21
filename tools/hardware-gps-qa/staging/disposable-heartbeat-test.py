@@ -60,8 +60,7 @@ def exercise(directory):
                 print("PASS rejected", failure)
 
 
-if __name__ == "__main__":
-    binaries = Path(sys.argv[1]).resolve(strict=True)
+def disposable_cluster(binaries, test):
     with tempfile.TemporaryDirectory(prefix="gps-heartbeat-",dir="/tmp") as tmp:
         data = Path(tmp)/"db"
         subprocess.run([binaries/"initdb","-D",data,"-A","trust","-U","postgres","--no-locale",
@@ -70,6 +69,10 @@ if __name__ == "__main__":
                 "-c cron.database_name=postgres -c cron.use_background_workers=on")
         subprocess.run([binaries/"pg_ctl","-D",data,"-l",Path(tmp)/"server.log","-o",opts,"start"],check=True)
         try:
-            exercise(tmp)
+            test(tmp)
         finally:
             subprocess.run([binaries/"pg_ctl","-D",data,"stop","-m","immediate"],check=True)
+
+
+if __name__ == "__main__":
+    disposable_cluster(Path(sys.argv[1]).resolve(strict=True), exercise)

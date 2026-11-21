@@ -1,4 +1,8 @@
-"""Termux Phase 2 candidate. The activation gate stays closed pending recovery testing."""
+"""Interactive owner-controlled, bounded HALLO GPS QA writer rehearsal."""
+import ctypes.util
+import getpass
+import time
+import warnings
 import hashlib
 import ipaddress
 import re
@@ -188,8 +192,27 @@ def positions(c):
                      f"(3,'{DEVICE}','{truck}',{fix},now(),9,38)", code)
 
 
-def activation_gate():
-    raise RuntimeError("activation locked pending independent recovery and pooler tests")
+def load_termux_pq():
+    # Psycopg's pure Python wrapper asks ctypes for "pq". Android's library
+    # search can miss the private Termux prefix even when dlopen succeeds.
+    lib = Path("/data/data/com.termux/files/usr/lib/libpq.so")
+    require(lib.is_file(), "Termux libpq.so missing")
+    original = ctypes.util.find_library
+
+    def locate(name):
+        if name == "pq":
+            return str(lib)
+        if name == "c":
+            return "libc.so"  # Android's Bionic libc.
+        return original(name)
+
+    try:
+        ctypes.util.find_library = locate
+        from psycopg import pq
+        require(pq.version() >= 160000, "libpq 16 or newer required")
+        return pq.version()
+    finally:
+        ctypes.util.find_library = original
 
 
 def writer_backend(writer):
@@ -208,10 +231,7 @@ def terminate_original(admin, backend):
     return result == (True,)
 
 
-def run(admin):
-    guard()
-    activation_gate()
-    from psycopg import sql
+def owner_peer(admin):
     from psycopg.pq import TransactionStatus
     require(admin.autocommit and admin.info.transaction_status == TransactionStatus.IDLE, "owner transaction active")
     conn = admin.pgconn
@@ -220,7 +240,41 @@ def run(admin):
             (HOST.encode(), f"postgres.{REF}".encode(), b"5432", b"postgres", b"verify-full", str(CA).encode()),
             "owner QA transport mismatch")
     require(conn.ssl_in_use, "owner TLS required")
-    address = str(ipaddress.ip_address(admin.info.hostaddr))
+    return str(ipaddress.IPv4Address(admin.info.hostaddr))
+
+
+def run(admin, observer):
+    from psycopg import sql
+    address = owner_peer(admin)
+    require(owner_peer(observer) == address, "owner peer mismatch")
+    for session in (admin, observer):
+        require(session.execute("""SELECT current_user,session_user,current_database(),
+                obj_description('hallo_gps_qa'::regnamespace,'pg_namespace')""").fetchone()
+                == ("postgres", "postgres", "postgres", "HALLO GPS QA schema v1"), "QA identity mismatch")
+        session.execute("SET statement_timeout='8s'")
+        session.execute("SET lock_timeout='2s'")
+    require(scalar(admin, "SELECT pg_backend_pid()") != scalar(observer, "SELECT pg_backend_pid()"),
+            "independent cleanup session required")
+    require(scalar(admin, "SELECT pg_try_advisory_lock(hashtextextended(%s,0))", (JOB,)), "concurrent run")
+    require(scalar(admin, "SELECT count(*) FROM pg_stat_activity WHERE usename=%s", (ROLE,)) == 0,
+            "existing writer session")
+    require(scalar(admin, """SELECT NOT EXISTS (SELECT FROM pg_auth_members
+        WHERE member=to_regrole(%s) AND (roleid <> 'hallo_gps_qa_writer'::regrole OR admin_option))
+        AND pg_has_role(%s,'hallo_gps_qa_writer','USAGE')
+        AND NOT has_schema_privilege(%s,'hallo_gps_qa','CREATE')""", (ROLE, ROLE, ROLE)),
+        "writer privileges differ")
+    require(scalar(admin, """SELECT count(*)=2 AND bool_and(relrowsecurity
+        AND NOT has_table_privilege(%s,oid,'DELETE,TRUNCATE,TRIGGER,REFERENCES')
+        AND NOT has_any_column_privilege(%s,oid,'UPDATE')
+        AND NOT pg_has_role(%s,relowner,'USAGE')) FROM pg_class
+        WHERE oid IN ('hallo_gps_qa.device_mapping'::regclass,'hallo_gps_qa.positions'::regclass)""",
+        (ROLE, ROLE, ROLE)), "QA table protection mismatch")
+    require(not scalar(admin, """SELECT has_any_column_privilege(%s,'hallo_gps_qa.device_mapping','INSERT')
+        OR EXISTS (SELECT FROM pg_auth_members WHERE member='hallo_gps_qa_writer'::regrole)""",
+        (ROLE,)), "unexpected mapping or inherited privilege")
+    require(scalar(admin, """SELECT EXISTS (SELECT FROM pg_extension WHERE extname='pg_cron')
+        AND current_setting('cron.database_name')=current_database()"""), "scheduler unavailable")
+    started = time.monotonic()
     marker = "HALLO GPS QA exporter login v1"
     oid = scalar(admin, """SELECT (SELECT oid FROM pg_authid WHERE rolname=%s AND NOT rolcanlogin
                  AND rolpassword IS NULL AND shobj_description(oid,'pg_authid')=%s)""", (ROLE, marker))
@@ -258,28 +312,42 @@ def run(admin):
     finally:
         try:
             if activated:
-                admin.execute("ALTER ROLE hallo_gps_qa_ingest NOLOGIN PASSWORD NULL")
-                killed_original = backend is not None and terminate_original(admin, backend)
-                admin.execute("SELECT pg_terminate_backend(pid,2000) FROM pg_stat_activity WHERE usename=%s", (ROLE,))
-                require(scalar(admin, "SELECT count(*) FROM pg_stat_activity WHERE usename=%s", (ROLE,)) == 0,
+                observer.execute("ALTER ROLE hallo_gps_qa_ingest NOLOGIN PASSWORD NULL")
+                killed_original = backend is not None and terminate_original(observer, backend)
+                observer.execute("SELECT pg_terminate_backend(pid,2000) FROM pg_stat_activity WHERE usename=%s", (ROLE,))
+                require(scalar(observer, "SELECT count(*) FROM pg_stat_activity WHERE usename=%s", (ROLE,)) == 0,
                         "writer sessions remain")
                 require(killed_original, "original writer termination unverified")
-                fresh_denial(admin, ROLE, password, address, marker, oid)
-                admin.execute("SELECT cron.unschedule(jobid) FROM cron.job WHERE jobid=%s AND jobname=%s AND command=%s",
+                fresh_denial(observer, ROLE, password, address, marker, oid)
+                observer.execute("SELECT cron.unschedule(jobid) FROM cron.job WHERE jobid=%s AND jobname=%s AND command=%s",
                               (job_id, JOB, WATCH))
-                require(scalar(admin, "SELECT count(*) FROM cron.job WHERE jobname=%s", (JOB,)) == 0,
+                require(scalar(observer, "SELECT count(*) FROM cron.job WHERE jobname=%s", (JOB,)) == 0,
                         "writer recovery job remains")
-                print("Post-cleanup mapping and position counts", counts(admin))
+                print("Post-cleanup mapping and position counts", counts(observer))
         finally:
             if writer is not None:
                 writer.close()
             del password
-    require(counts(admin) == (1, 2), "final counts differ")
+    require(counts(observer) == (1, 2), "final counts differ")
+    require(time.monotonic() - started <= 900, "cleanup deadline exceeded")
 
 
 def main():
     guard()
-    activation_gate()
+    require(sys.flags.isolated and sys.stdin.isatty() and sys.stderr.isatty()
+            and not any(k.startswith(("LD_", "DYLD_")) for k in os.environ),
+            "clean isolated interactive Termux required")
+    require(sys.argv[1:] == ["--live", REF], "explicit live QA project required")
+    load_termux_pq()
+    require(input("Confirm approved Free QA run by typing the project ref: ") == REF,
+            "confirmation mismatch")
+    warnings.simplefilter("error", getpass.GetPassWarning)
+    password = getpass.getpass("QA owner database password: ")
+    with open_session("postgres", password) as admin:
+        with open_session("postgres", password, address=owner_peer(admin)) as observer:
+            del password
+            run(admin, observer)
+    print("PASS | bounded synthetic ingestion and verified cleanup")
 
 
 if __name__ == "__main__":
