@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { PartnerWorkspace } from "./pages/PartnerWorkspace";
 import { PartnerDriverGate } from "./components/auth/PartnerDriverGate";
 import { PartnerDriverLogin } from "./pages/PartnerDriverLogin";
@@ -124,8 +125,11 @@ function CustomerWorkspace({ section }: { section: "home" | "profile" | "orders"
 }
 function RuntimeLocalization(){const {selectedLanguage}=useLanguage();const runtimeLanguage=selectedLanguage==="so"||selectedLanguage==="ti"?selectedLanguage:null;useRuntimePageTranslation(runtimeLanguage);useRuntimeAdminTranslation(runtimeLanguage);useRuntimeCustomerOperationalTranslation(selectedLanguage);return null;}
 
+const QaGpsSnapshot = lazy(() => import("./components/admin/QaGpsSnapshot"));
 export default function App(){return <LanguageProvider><RuntimeLocalization /><PasswordRecoveryGate><HashRouter><Routes>
 <Route path="/" element={<PortalLanding />} />
+{import.meta.env.DEV && import.meta.env.VITE_SUPABASE_URL === "https://rmnjhdlbhfcmlvzqtblm.supabase.co" &&
+  <Route path="/admin/gps-qa" element={<AdminGate><Suspense fallback={null}><QaGpsSnapshot /></Suspense></AdminGate>} />}
 <Route path="/admin" element={<AdminGate><AdminWorkspace /></AdminGate>} />
 <Route path="/admin/operations" element={<AdminGate><AdminOperationsWorkspace /></AdminGate>} />
 <Route path="/admin/reports" element={<AdminGate><AdminToolShell><AdminReports /></AdminToolShell></AdminGate>} />
