@@ -1,5 +1,6 @@
 import { formatCargoLoad, validateCargoLoad, type CargoUnit } from "../../../src/domain/cargo-load";
 import { customerSupabase } from "./auth/customer-supabase";
+import { isValidCustomerServiceDate } from "./customer-service-date";
 import {
   buildCustomerCargoNotes,
   customerCargoItemCopy,
@@ -70,6 +71,7 @@ export async function createCustomerMobileOrder(input: {
     throw new Error("Choose a valid pickup and drop-off route first.");
   }
 
+  if (!isValidCustomerServiceDate(input.serviceDate)) throw new Error("Choose a valid service date (today or later).");
   const distanceKm = positiveNumber(input.distanceKm, "Route distance");
   const cargoTons = validateCargoLoad(input.vehicleType, input.cargoQuantity, input.cargoUnit);
   const cargoDetailsError = validateCustomerCargoDetails({ packagingType: input.packagingType, vehicleType: input.vehicleType });
