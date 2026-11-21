@@ -4,7 +4,6 @@ import getpass
 import ipaddress
 import os
 from pathlib import Path
-import re
 import runpy
 import secrets
 import sys
@@ -28,15 +27,8 @@ def job_count(owner):
     return scalar(owner, "SELECT count(*) FROM cron.job")
 
 
-def open_session(role, password, *, address=None, app="hallo-gps-recovery-rehearsal"):
-    import psycopg
-    return psycopg.connect(host=runner["HOST"], port=5432, dbname="postgres", hostaddr=address,
-                           user=role+"."+runner["REF"], password=password,
-                           sslmode="verify-full", sslrootcert=str(runner["CA"]),
-                           require_auth="scram-sha-256", sslcertmode="disable",
-                           gssencmode="disable", passfile="/dev/null", connect_timeout=8,
-                           tcp_user_timeout=5000, keepalives_idle=5, keepalives_interval=2, keepalives_count=2,
-                           application_name=app, autocommit=True)
+open_session = runner["open_session"]
+fresh_denial = runner["fresh_denial"]
 
 
 def ensure_owner(c):
@@ -45,63 +37,6 @@ def ensure_owner(c):
         == ("postgres", "postgres", "postgres", "HALLO GPS QA schema v1"), "QA identity")
     c.execute("SET statement_timeout='8s'")
     c.execute("SET lock_timeout='2s'")
-
-
-def attributed_rejection(exc, address, attempt):
-    # Attribute the response on the failed startup socket itself. Generic
-    # Supavisor FATALs do not name a role. Never classify pasted/logged text.
-    conn = exc.pgconn
-    if conn is None:
-        return False
-    user = f"{ROLE}.{runner['REF']}".encode()
-    if (conn.user, conn.host, conn.hostaddr, conn.port, conn.db) != (
-            user, runner["HOST"].encode(), address.encode(), b"5432", b"postgres"):
-        return False
-    opts = {item.keyword: item.val for item in conn.info}
-    if (opts.get(b"application_name"), opts.get(b"sslmode"), opts.get(b"sslrootcert")) != (
-            attempt.encode(), b"verify-full", str(runner["CA"]).encode()):
-        return False
-    # PQerrorMessage can include a connection prefix. Reject combined failures,
-    # DETAIL/HINT text, and different EAUTHQUERY causes (including timeouts).
-    line = conn.error_message.rstrip(b"\n")
-    if b"\n" in line or b"\r" in line:
-        return False
-    prefix, fatal, reason = line.partition(b"FATAL:")
-    if not fatal or (prefix and not re.fullmatch(rb"connection to server at [^\r\n]+ failed: ", prefix)):
-        return False
-    role = ROLE.encode()
-    return reason.strip() in {
-        b"(EAUTHQUERY) user not found in the database",
-        b'password authentication failed for user "' + role + b'"',
-        b'role "' + role + b'" is not permitted to log in',
-        b'password authentication failed for user "' + user + b'"',
-        b'role "' + user + b'" is not permitted to log in',
-    }
-
-
-def fresh_denial(observer, password, address, marker):
-    from psycopg import OperationalError
-    # Independent autocommit reads bracket this one TLS-verified reconnect.
-    # The original login succeeded with the same credentials and peer address.
-    from psycopg.pq import TransactionStatus
-    require(observer.autocommit and observer.info.transaction_status == TransactionStatus.IDLE,
-            "independent revocation observation required")
-    def revoked_oid():
-        return scalar(observer, """SELECT (SELECT oid FROM pg_authid
-            WHERE rolname=%s AND NOT rolcanlogin AND rolpassword IS NULL
-            AND shobj_description(oid,'pg_authid')=%s)""", (ROLE, marker))
-
-    oid = revoked_oid()
-    require(oid is not None, "committed revocation missing")
-    attempt = "hallo-gps-denial-" + secrets.token_hex(12)
-    try:
-        with open_session(ROLE, password, address=address, app=attempt):
-            pass
-    except OperationalError as exc:
-        require(attributed_rejection(exc, address, attempt), "fresh authentication rejection inconclusive")
-        require(revoked_oid() == oid, "revoked role changed during fresh login")
-        return
-    raise RuntimeError("revoked pooler credential accepted")
 
 
 def verify_no_grants(owner):
@@ -194,6 +129,7 @@ def rehearse(observer, owner, password):
             owner.execute(sql.SQL("CREATE ROLE {} NOLOGIN CONNECTION LIMIT 1").format(sql.Identifier(ROLE)))
             owner.execute(sql.SQL("COMMENT ON ROLE {} IS {}").format(sql.Identifier(ROLE),
                                                                      sql.Literal(marker)))
+            oid = scalar(owner, "SELECT oid FROM pg_roles WHERE rolname=%s", (ROLE,))
             verify_no_grants(owner)
             job_id = scalar(owner, "SELECT cron.schedule(%s,'* * * * *',%s)", (JOB, watchdog))
             expiry = scalar(owner, "SELECT clock_timestamp()+interval '10 minutes'")
@@ -220,7 +156,7 @@ def rehearse(observer, owner, password):
         runs = scalar(observer, """SELECT count(*) FROM cron.job_run_details
                       WHERE jobid=%s AND username='postgres' AND status='succeeded'""", (job_id,))
         require(runs >= 3, "scheduler history incomplete")
-        fresh_denial(observer, password, address, marker)
+        fresh_denial(observer, ROLE, password, address, marker, oid)
         print(f"PASS recovery {elapsed:.1f}s, cron terminated backend {identity}, NOLOGIN, password NULL, sessions 0, jobs 0, fresh login denied")
     finally:
         if writer is not None:

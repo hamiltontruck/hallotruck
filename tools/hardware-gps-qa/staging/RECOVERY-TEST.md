@@ -59,10 +59,14 @@ application name. It brackets the attempt with independent reads of the marked
 role's OID, NOLOGIN and null password. The PID/start-time termination proof is
 still required. The revised classifier has not been run against hosted QA.
 
-The writer entry point remains locked. Before execution, separately review the
-owner entry point and wire equivalent fresh-login attribution for the real QA
-writer (its candidate currently checks SQLSTATE alone). Obtain explicit owner
-approval for the following scope on Free project rmnjhdlbhfcmlvzqtblm only:
+The writer and rehearsal share the same fixed-target libpq connector and denial
+classifier. The writer checks the original managed role OID and marker, verifies
+its authenticated backend PID and start time, commits revocation before ending
+sessions, and checks the failed socket against the unique attempt. Both roles
+are covered by disposable TLS/SCRAM and Supavisor diagnostic regression tests.
+The real-writer CLI remains locked. Prepare and review the owner-controlled
+activation entry point only with separate explicit authorization
+for the following scope on Free project rmnjhdlbhfcmlvzqtblm only:
 
 1. From the verified Termux runner confirm target/TLS, plan, restricted grants,
    disabled writer, null password, no writer sessions or recovery job, and empty QA tables.

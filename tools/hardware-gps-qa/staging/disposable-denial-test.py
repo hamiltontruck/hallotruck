@@ -11,11 +11,11 @@ import psycopg
 from psycopg import sql
 
 probe = runpy.run_path(str(Path(__file__).with_name("hosted-recovery-test.py")))
-role, config = probe["ROLE"], probe["runner"]
+config = probe["runner"]
 address = "127.0.0.1"
 tag = "hallo-gps-denial-fixture"
 marker = "disposable fixture"
-scoped_user = f"{role}.{config['REF']}"
+
 
 
 def rejected(callback):
@@ -26,7 +26,8 @@ def rejected(callback):
     raise AssertionError("unexpected PASS")
 
 
-def exercise(path):
+def exercise(path, role):
+    scoped_user = f"{role}.{config['REF']}"
     pw = secrets.token_urlsafe(48)
     with psycopg.connect(host=str(path), dbname="postgres", user="postgres", autocommit=True) as owner:
         # Real PostgreSQL receives the scoped startup username literally. The
@@ -38,7 +39,20 @@ def exercise(path):
         owner.execute(sql.SQL("COMMENT ON ROLE {} IS {}").format(sql.Identifier(role),sql.Literal(marker)))
         with probe["open_session"](role,pw,address=address) as first:
             assert first.info.hostaddr == address
-        check = lambda: probe["fresh_denial"](owner,pw,address,marker)
+        oid = owner.execute("SELECT oid FROM pg_roles WHERE rolname=%s", (role,)).fetchone()[0]
+        check = lambda: config["fresh_denial"](owner,role,pw,address,marker,oid)
+        if role == config["ROLE"]:
+            with psycopg.connect(host=str(path),dbname="postgres",user=role,autocommit=True) as session:
+                backend = config["writer_backend"](session)
+                assert not config["terminate_original"](owner,(backend[0],None))
+                assert config["writer_backend"](session) == backend
+                assert config["terminate_original"](owner,backend)
+                try:
+                    session.execute("SELECT 1")
+                except psycopg.OperationalError as exc:
+                    assert exc.sqlstate == "57P01"
+                else:
+                    raise AssertionError("original writer session survived")
         rejected(check)  # still LOGIN, password present
         owner.execute(sql.SQL("ALTER ROLE {} NOLOGIN PASSWORD NULL").format(sql.Identifier(role)))
         rejected(check)  # revoked catalog role but fresh socket was actually accepted
@@ -55,19 +69,23 @@ def exercise(path):
         # Replay just the Supavisor-specific wire message on the real failed
         # libpq connection snapshot. Do not pretend PostgreSQL emitted EAUTHQUERY.
         conn.error_message = b'connection to server at "local", port 5432 failed: FATAL:  (EAUTHQUERY) user not found in the database\n'
-        classify = lambda: probe["attributed_rejection"](failure,address,tag)
+        classify = lambda: config["attributed_rejection"](failure,role,address,tag)
         assert classify()
+        for key, wrong in [(b"sslrootcert",b"/wrong-ca"), (b"sslmode",b"prefer")]:
+            changed = [item._replace(val=wrong) if item.keyword==key else item for item in conn.info]
+            with patch.object(conn,"info",changed):
+                assert not classify()
         for field, value in (("user",role.encode()),("user",b"another.project"),
                              ("host",b"other"),("hostaddr",b"127.0.0.2"),("port",b"6543"),("db",b"other")):
             with patch.object(conn,field,value):
                 assert not classify()
-        assert not probe["attributed_rejection"](failure,address,"different-attempt")
+        assert not config["attributed_rejection"](failure,role,address,"different-attempt")
         for msg in (b"timeout", b"FATAL: (EAUTHQUERY) auth_query secret check timed out",
                     b"FATAL: user not found", b'FATAL: password authentication failed for user "other"',
                     conn.error_message+b"connection timed out"):
             with patch.object(conn,"error_message",msg):
                 assert not classify()
-        assert not probe["attributed_rejection"](psycopg.OperationalError("timeout"),address,tag)
+        assert not config["attributed_rejection"](psycopg.OperationalError("timeout"),role,address,tag)
         # Drive the full bracketing logic with this same attributed attempt.
         with patch.dict(probe["fresh_denial"].__globals__,open_session=lambda *a,**kw: raise_failure(kw)), patch.object(secrets,"token_hex",return_value="fixture"):
             def raise_failure(kw):
@@ -76,8 +94,14 @@ def exercise(path):
             check()
             with owner.transaction():
                 rejected(check)  # autocommit connection inside an explicit transaction
-            rejected(lambda: probe["fresh_denial"](owner,pw,address,"wrong rehearsal"))
-        print("PASS real TLS/SCRAM setup and rejection, EAUTHQUERY fixture, role state, login acceptance, target/attempt mismatches, ambiguous errors and timeouts")
+            rejected(lambda: config["fresh_denial"](owner,role,pw,address,"wrong rehearsal",oid))
+            rejected(lambda: config["fresh_denial"](owner,role,pw,address,marker,oid+1))
+        def change_marker_then_reject(*args, **kwargs):
+            owner.execute(sql.SQL("COMMENT ON ROLE {} IS 'changed'").format(sql.Identifier(role)))
+            raise failure
+        with patch.dict(config["fresh_denial"].__globals__,open_session=change_marker_then_reject), patch.object(secrets,"token_hex",return_value="fixture"):
+            rejected(check)
+        print(role, "PASS real TLS/SCRAM setup and rejection, EAUTHQUERY fixture, role state, login acceptance, target/attempt mismatches, ambiguous errors and timeouts")
 
 
 if __name__ == "__main__":
@@ -94,7 +118,8 @@ if __name__ == "__main__":
         opts = f"-k {tmp} -p 5432 -c listen_addresses=127.0.0.1 -c ssl=on -c ssl_cert_file={ca} -c ssl_key_file={key}"
         subprocess.run([binaries/"pg_ctl","-D",data,"-l",path/"log","-o",opts,"start"],check=True)
         try:
-            with patch.dict(config,CA=ca):
-                exercise(path)
+            with patch.dict(config["open_session"].__globals__,CA=ca):
+                for role in (config["TEST_ROLE"], config["ROLE"]):
+                    exercise(path,role)
         finally:
             subprocess.run([binaries/"pg_ctl","-D",data,"stop","-m","immediate"],check=True)
