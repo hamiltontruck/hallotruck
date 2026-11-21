@@ -75,9 +75,9 @@ test("active Customer V4 journey uses optional item choices, category reset and 
   const journey = readFileSync(new URL("../src/CustomerBookingJourney.tsx", import.meta.url), "utf8");
   const service = readFileSync(new URL("../src/customer-order.service-v2.ts", import.meta.url), "utf8");
   const legacyContract = readFileSync(new URL("../src/customer-cargo-contract.ts", import.meta.url), "utf8");
-  assert.match(journey, /const \[cargoItem, setCargoItem\] = useState<CustomerCargoItem \| "">\("">\)/);
+  assert.ok(journey.includes('const [cargoItem, setCargoItem] = useState<CustomerCargoItem | "">("");'));
   assert.match(journey, /getCustomerCargoItems\(cargoCategory, language\)\.map/);
-  assert.match(journey, /setCargoCategory\(event\.target\.value as CustomerCargoCategory\); setCargoItem\("">\)/);
+  assert.ok(journey.includes('setCargoCategory(event.target.value as CustomerCargoCategory); setCargoItem("");'));
   assert.match(journey, /validateCustomerCargoItem\(\{ category: cargoCategory, item: cargoItem, notes: note \}\)/);
   assert.match(journey, /cargoItem,\s*packagingType,\s*cargoNotes: note/);
   assert.match(service, /validateCustomerCargoItem\(\{/);
