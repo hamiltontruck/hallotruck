@@ -40,7 +40,7 @@ export function sanitizeCustomerSentryEvent(event: SentryErrorEvent): SentryErro
 
   return {
     event_id: safeId,
-    type: "error",
+    type: undefined,
     level: "error",
     platform: "javascript",
     exception: {
