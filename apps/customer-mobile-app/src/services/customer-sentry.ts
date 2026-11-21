@@ -51,7 +51,6 @@ export function initializeCustomerSentry(): boolean {
     tracesSampleRate: 0,
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
-    autoSessionTracking: false,
   });
   return true;
 }
