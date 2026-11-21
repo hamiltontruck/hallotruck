@@ -12,6 +12,7 @@
     "test:ci": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
+    "@sentry/react": "^10.70.0",
     "@supabase/supabase-js": "^2.45.0",
     "lucide-react": "^1.47.0",
     "maplibre-gl": "^4.5.0",
