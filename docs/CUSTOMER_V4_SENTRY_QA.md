@@ -29,7 +29,9 @@ its DSN for Customer V4.
    before preview deploy; Vite embeds `VITE_*` values into browser bundles.
 5. Preview code paths run only when Vite's `PROD` build flag is true and
    the environment is `qa` or `staging`. Local Vite dev stays disabled.
-   Additionally the browser hostname must be localhost, 127.0.0.1 or a Netlify `deploy-preview-<PR>--<site>.netlify.app` hostname.\n   Other hosts (including GitHub Pages and production Netlify hosts) fail closed.\n   This does not mean it is safe to point a QA build at live customer data.
+   Additionally the browser hostname must be localhost, 127.0.0.1 or a Netlify `deploy-preview-<PR>--<site>.netlify.app` hostname.
+   Other hosts (including GitHub Pages and production Netlify hosts) fail closed.
+   This does not mean it is safe to point a QA build at live customer data.
 
 ## Privacy design
 
