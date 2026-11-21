@@ -1,0 +1,31 @@
+name: HALLO GPS QA runner
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  QA_HOST: aws-1-eu-central-1.pooler.supabase.com
+  QA_PORT: '5432'
+  QA_CA: tools/hardware-gps-qa/staging/supabase-root-2021.crt
+
+jobs:
+  verify-network:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'hamiltontruck/hallotruck' && github.ref == 'refs/heads/main' && github.ref_protected
+    environment: hallo-gps-qa
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify IPv4 reachability and the TLS certificate
+        shell: bash
+        run: |
+          timeout 15s openssl s_client -4 -starttls postgres \
+            -connect "$QA_HOST:$QA_PORT" -servername "$QA_HOST" \
+            -verify_hostname "$QA_HOST" -verify_return_error \
+            -CAfile "$QA_CA" -no-CApath -no-CAstore -brief </dev/null
