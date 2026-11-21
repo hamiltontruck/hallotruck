@@ -1,4 +1,4 @@
-import type { Event } from "@sentry/react";
+import type { ErrorEvent as SentryErrorEvent } from "@sentry/react";
 
 // Deliberately emit an allowlisted error envelope. Never forward the SDK's raw
 // request URL, auth fragments, exception message, breadcrumbs, contexts, user,
@@ -20,7 +20,7 @@ function safeLocation(value: unknown): number | undefined {
     value > 0 && value <= 10000000 ? value : undefined;
 }
 
-export function sanitizeCustomerSentryEvent(event: Event): Event | null {
+export function sanitizeCustomerSentryEvent(event: SentryErrorEvent): SentryErrorEvent | null {
   const firstException = event.exception?.values?.[0];
   // Only unexpected exceptions are in scope; no raw messages or HTTP bodies.
   if (!firstException) return null;
