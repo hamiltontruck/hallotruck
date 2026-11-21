@@ -49,3 +49,32 @@ Never drop dependencies or delete run history. Verify zero jobs and test roles,
 zero real-writer sessions, and the original GPS row counts. Report the run
 incomplete if the old credential's explicit authentication rejection could not
 be observed.
+
+## Phase 2 readiness after the denial attribution fix
+
+The disposable TLS/SCRAM test uses a private PostgreSQL instance and a simulated
+Supavisor FATAL payload. The runner binds a fresh failure to the same verified
+QA host and IP, scoped startup user, database, port, CA and a per-attempt
+application name. It brackets the attempt with independent reads of the marked
+role's OID, NOLOGIN and null password. The PID/start-time termination proof is
+still required. The revised classifier has not been run against hosted QA.
+
+The writer entry point remains locked. Before execution, separately review the
+owner entry point and wire equivalent fresh-login attribution for the real QA
+writer (its candidate currently checks SQLSTATE alone). Obtain explicit owner
+approval for the following scope on Free project rmnjhdlbhfcmlvzqtblm only:
+
+1. From the verified Termux runner confirm target/TLS, plan, restricted grants,
+   disabled writer, null password, no writer sessions or recovery job, and empty QA tables.
+2. Commit the server-side recovery schedule, ten-minute temporary writer
+   credential and one synthetic device-to-truck mapping together. Keep an
+   independent owner cleanup connection available; maximum recovery window is
+   fifteen minutes.
+3. Commit two synthetic positions, checking both original timestamps and
+   mapping. Replay both; require zero additional rows and unchanged values.
+   Roll back permission-denial and invalid-mapping probes.
+4. On success or failure, commit NOLOGIN and PASSWORD NULL first, then close
+   writer sessions. Independently verify zero sessions, rejected fresh login,
+   no remaining recovery job, original grants, and disposal of temporary secrets.
+   Report exact retained synthetic IDs and counts (success: one mapping, two
+   positions); no deletes. Stop if any safety check is inconclusive.
