@@ -95,6 +95,46 @@ def cleanup(owner, marker):
         owner.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(ROLE)))
 
 
+def heartbeat(writer):
+    # Keep this connection alive and detect any pooler backend replacement.
+    return scalar(writer, """SELECT pid::text || '/' || extract(epoch FROM backend_start)::text
+                  FROM pg_stat_activity WHERE pid=pg_backend_pid() AND usename=current_user""")
+
+
+def prove_termination(observer, writer, job_id, identity, deadline):
+    from psycopg import OperationalError
+    alive_after_revoke = False
+    while time.monotonic() < deadline:
+        revoked = state(observer, ROLE) == (True, True, 1)
+        try:
+            require(heartbeat(writer) == identity, "pooler backend changed")
+        except OperationalError as exc:
+            require(alive_after_revoke and exc.sqlstate == "57P01",
+                    "early disconnect or unconfirmed server termination")
+            break
+        alive_after_revoke |= revoked
+        time.sleep(2)
+    else:
+        raise RuntimeError("heartbeat deadline exceeded")
+
+    notifications = observer.notifies(timeout=5, stop_after=1)
+    try:
+        event = next(notifications, None)
+    finally:
+        notifications.close()  # Release the Psycopg connection lock before querying history.
+    if event is not None:
+        require(event.channel == "hallo_gps_recovery_evidence" and event.payload == identity,
+                "termination PID or start time mismatch")
+        while time.monotonic() < deadline:
+            if scalar(observer, """SELECT EXISTS (SELECT FROM cron.job_run_details
+                      WHERE jobid=%s AND job_pid=%s AND username='postgres' AND status='succeeded'
+                      AND start_time >= to_timestamp(%s::numeric))""",
+                      (job_id, event.pid, identity.split("/")[1])):
+                return
+            time.sleep(0.5)
+    raise RuntimeError("missing confirmed recovery job termination evidence")
+
+
 def rehearse(observer, owner, password):
     from psycopg import OperationalError, sql
     marker = "HALLO GPS recovery test " + secrets.token_hex(12)
@@ -119,10 +159,14 @@ def rehearse(observer, owner, password):
             verifier = owner.pgconn.encrypt_password(password.encode(), ROLE.encode(), b"scram-sha-256")
             owner.execute(sql.SQL("ALTER ROLE {} LOGIN PASSWORD {} VALID UNTIL {}").format(
                 sql.Identifier(ROLE), sql.Literal(verifier.decode()), sql.Literal(expiry.isoformat())))
+        observer.execute("LISTEN hallo_gps_recovery_evidence")
         writer = open_session(ROLE, password)
         require(scalar(writer, "SELECT current_user") == ROLE, "test session identity")
         require(state(observer, ROLE) == (False, False, 1), "test backend visibility")
+        identity = heartbeat(writer)
+        require(identity is not None, "original backend identity missing")
         owner.close()  # Disconnect activation client, leaving independent backend and observer.
+        prove_termination(observer, writer, job_id, identity, started + 895)
         while time.monotonic() - started < 895:
             if state(observer, ROLE) == (True, True, 0) and job_count(observer) == 0:
                 break
@@ -134,15 +178,8 @@ def rehearse(observer, owner, password):
         runs = scalar(observer, """SELECT count(*) FROM cron.job_run_details
                       WHERE jobid=%s AND username='postgres' AND status='succeeded'""", (job_id,))
         require(runs >= 3, "scheduler history incomplete")
-        try:
-            writer.execute("SELECT 1")
-        except OperationalError:
-            # Server-side disappearance was verified independently before this probe.
-            require(writer.broken or writer.closed, "original session status inconclusive")
-        else:
-            raise RuntimeError("original pooler session survived")
         fresh_denial(password)
-        print(f"PASS recovery {elapsed:.1f}s, NOLOGIN, password NULL, sessions 0, jobs 0, fresh login denied")
+        print(f"PASS recovery {elapsed:.1f}s, cron terminated backend {identity}, NOLOGIN, password NULL, sessions 0, jobs 0, fresh login denied")
     finally:
         if writer is not None:
             writer.close()

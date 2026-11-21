@@ -54,9 +54,22 @@ TEST_JOB = "hallo-gps-qa-recovery-test"
 
 def recovery_sql(role, job):
     require((role, job) in {(ROLE, JOB), (TEST_ROLE, TEST_JOB)}, "unexpected recovery target")
+    terminate = f"""PERFORM pg_catalog.pg_terminate_backend(pid, 2000) FROM pg_catalog.pg_stat_activity
+    WHERE usename='{role}' AND pid<>pg_backend_pid();"""
+    declaration = ""
+    if role == TEST_ROLE:
+        declaration = "DECLARE target record;"
+        terminate = f"""FOR target IN SELECT pid, extract(epoch FROM backend_start)::text AS started
+           FROM pg_catalog.pg_stat_activity WHERE usename='{role}' AND pid<>pg_backend_pid()
+         LOOP
+           IF pg_catalog.pg_terminate_backend(target.pid, 2000) THEN
+             PERFORM pg_catalog.pg_notify('hallo_gps_recovery_evidence',target.pid::text || '/' || target.started);
+           END IF;
+         END LOOP;"""
     # Each cron invocation commits exactly one stage. A failed final stage is retryable.
     return f"""
 DO $watch$
+{declaration}
 BEGIN
  PERFORM set_config('lock_timeout','2s',true);
  IF NOT EXISTS (SELECT FROM pg_catalog.pg_authid WHERE rolname='{role}'
@@ -67,8 +80,7 @@ BEGIN
    RETURN;
  END IF;
  IF EXISTS (SELECT FROM pg_catalog.pg_stat_activity WHERE usename='{role}') THEN
-   PERFORM pg_catalog.pg_terminate_backend(pid, 2000) FROM pg_catalog.pg_stat_activity
-    WHERE usename='{role}' AND pid<>pg_backend_pid();
+   {terminate}
    RETURN;
  END IF;
  IF NOT cron.unschedule('{job}') THEN RAISE EXCEPTION 'unschedule failed'; END IF;
