@@ -45,7 +45,7 @@ test("booking is a real Route Truck Cargo Quote Review Success state machine", (
   assert.doesNotMatch(booking, /Math\.random\(\).*quote|hardcoded quote/i);
   assert.match(booking, /const truckFitsCargo = cargoTons <= 0 \|\| cargoTons <= truck\.capacityTons/);
   assert.match(booking, /const fits = cargoTons <= 0 \|\| cargoTons <= option\.capacityTons/);
-  assert.match(booking, /disabled=\{!truckReady\}/);
+  assert.match(booking, /disabled=\{!truckReady \|\| !serviceDateReady\}/);
 });
 
 test("home and order details are wired to real Customer-owned data services", () => {
