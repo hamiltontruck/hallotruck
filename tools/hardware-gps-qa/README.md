@@ -157,6 +157,38 @@ CI exercises the SQLite-to-PostgreSQL SQL on a disposable PostgreSQL service
 using synthetic telemetry. Live staging authentication and ingestion require
 separate approval.
 
+### Owner-controlled Termux runner readiness
+
+Use an owner-controlled Android device and the official Termux packages.
+Clone or unpack the reviewed branch into Termux's private home directory.
+Keep the checkout, temporary directory, SQLite ledger and any future secrets
+out of shared Android storage.
+
+```sh
+pkg install nodejs openssl-tool gnupg postgresql
+node tools/hardware-gps-qa/staging/owner-readiness.mjs
+```
+
+The probe requires a PostgreSQL client version of at least 16, checks the pinned
+Session Pooler over IPv4 with the checked-in Supabase CA and hostname
+verification, and tests the local GnuPG encryption/decryption path with a
+public fixture. The fixture passphrase is public and is never used for real
+secrets. The probe cleans up its temporary files. It does not authenticate,
+provision credentials, or change database state. All three checks must pass on
+the owner device before using it for any authenticated QA run.
+
+If explicitly approved later, store only the expiring QA writer credential in
+an encrypted GnuPG file in Termux private storage. Use an owner-entered
+passphrase via Pinentry and decrypt only into the short-lived runner process.
+Avoid placing the writer password in command arguments, shell history,
+plaintext files, GitHub Actions or logs. Use the exact QA project, role,
+pinned host and `sslmode=verify-full`. Run a bounded synthetic ingestion and
+replay, check timestamps and deduplication, and verify denial of unauthorized
+mapping changes, updates, deletes and DDL. In cleanup close the runner session,
+restore `NOLOGIN`, revoke the password, remove the encrypted local secret,
+and verify the resulting role state. Report retained synthetic rows. Owner
+authorization does not provide independent review.
+
 ### Remaining physical acceptance
 
 1. Record the purchased ST-906L firmware variant and its actual protocol and
