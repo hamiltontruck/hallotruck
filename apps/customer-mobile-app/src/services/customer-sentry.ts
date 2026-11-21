@@ -16,10 +16,17 @@ function allowedQADsn(raw: string): boolean {
   }
 }
 
+// A QA env flag is not enough: never initialize on HALLO production hosts.
+function isQAHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" ||
+    /^deploy-preview-[0-9]+--[a-z0-9-]+\.netlify\.app$/.test(hostname);
+}
+
 export function initializeCustomerSentry(): boolean {
   const env = String(import.meta.env.VITE_CUSTOMER_SENTRY_ENVIRONMENT ?? "").toLowerCase();
   const dsn = String(import.meta.env.VITE_CUSTOMER_SENTRY_DSN ?? "").trim();
   const enabled = import.meta.env.PROD &&
+    isQAHost(window.location.hostname) &&
     import.meta.env.VITE_CUSTOMER_SENTRY_ENABLED === "true" &&
     (env === "qa" || env === "staging") &&
     allowedQADsn(dsn);
