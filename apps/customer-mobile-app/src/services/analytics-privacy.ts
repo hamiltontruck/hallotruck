@@ -94,7 +94,7 @@ export function sanitizeCustomerAnalyticsProperties(
   return output;
 }
 
-export function sanitizeCustomerPostHogEvent(input: unknown, route: string, url: string) {
+export function sanitizeCustomerPostHogEvent(input: unknown, route: string, url: string, trustedProjectToken?: string) {
   if (!input || typeof input !== "object") return null;
   const event = input as { event?: unknown; properties?: unknown; timestamp?: unknown; uuid?: unknown };
   if (typeof event.event !== "string" || !SAFE_EVENT_NAMES.has(event.event)) return null;
@@ -119,6 +119,12 @@ export function sanitizeCustomerPostHogEvent(input: unknown, route: string, url:
     } else if (key === "$lib_version" ? SAFE_SDK_VERSION.test(value) : SAFE_SDK_VALUES[key]?.has(value)) {
       clean[key] = value;
     }
+  }
+  // PostHog ingestion uses a PUBLIC project token. Reconstruct it exclusively
+  // from trusted initialization config, never copy an event's untrusted token
+  // property (which could be an OAuth credential).
+  if (typeof trustedProjectToken === "string" && /^phc_[A-Za-z0-9_-]{10,128}$/.test(trustedProjectToken)) {
+    clean.token = trustedProjectToken;
   }
   clean.route = safeRoute;
   clean.$pathname = safeRoute;
