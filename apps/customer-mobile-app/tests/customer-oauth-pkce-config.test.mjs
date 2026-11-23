@@ -17,7 +17,7 @@ async function configuredCustomerClient(config) {
     plugins: [{
       name: "mock-supabase-client",
       setup(builder) {
-        builder.onResolve({ filter: /^@supabase\\/supabase-js$/ }, () => ({
+        builder.onResolve({ filter: /^@supabase\/supabase-js$/ }, () => ({
           path: "supabase-client", namespace: "qa-stub",
         }));
         builder.onLoad({ filter: /.*/, namespace: "qa-stub" }, () => ({
