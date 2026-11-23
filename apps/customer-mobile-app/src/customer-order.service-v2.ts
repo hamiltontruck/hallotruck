@@ -1,5 +1,6 @@
 import { formatCargoLoad, validateCargoLoad, type CargoUnit } from "../../../src/domain/cargo-load";
 import { customerSupabase } from "./auth/customer-supabase";
+import { isValidCustomerServiceDate } from "./customer-service-date";
 import {
   buildCustomerCargoDescription,
   customerCargoCopy,
@@ -63,6 +64,7 @@ export async function createCustomerMobileOrder(input: {
     throw new Error("Choose a valid pickup and drop-off route first.");
   }
 
+  if (!isValidCustomerServiceDate(input.serviceDate)) throw new Error("Choose a valid service date (today or later).");
   const distanceKm = positiveNumber(input.distanceKm, "Route distance");
   const cargoTons = validateCargoLoad(input.vehicleType, input.cargoQuantity, input.cargoUnit);
   const cargoNotes = input.cargoNotes?.trim() || null;
@@ -96,6 +98,9 @@ export async function createCustomerMobileOrder(input: {
     load: formatCargoLoad(input.cargoQuantity, input.cargoUnit),
     notes: cargoNotes,
   });
+
+  // Quote/profile requests can finish after Ethiopia midnight. Recheck at insert.
+  if (!isValidCustomerServiceDate(input.serviceDate)) throw new Error("Choose a valid service date (today or later).");
 
   const { data: order, error } = await client
     .from("orders")
