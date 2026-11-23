@@ -52,6 +52,11 @@ try{
   const category=page.locator('select').filter({has:page.locator('option[value=grain_rice]')});await category.selectOption('grain_rice');
   const item=page.locator('.customer-final-select-row--cargo-item select');await item.selectOption('teff');const itemLabel=await item.locator('option:checked').textContent();
   await category.selectOption('food');assert.equal(await item.inputValue(),'');await category.selectOption('grain_rice');await item.selectOption('teff');
+  for (const [group, product] of [['food','soft_drinks'],['food','bottled_water'],['food','sugar'],['grain_rice','beans'],['metal_steel','metal_products'],['metal_steel','scrap_metal'],['construction_materials','construction_supplies'],['general_goods','empty_barrels'],['general_goods','wooden_products'],['general_goods','assorted_goods'],['general_goods','industrial_equipment']]) {
+   await category.selectOption(group);await item.selectOption(product);assert.equal(await item.inputValue(),product);await check();
+  }
+  if(width===320){await category.selectOption('food');await item.selectOption('bottled_water');await page.screenshot({path:`verification/customer-release/${language}-cargo-320.png`,fullPage:true});}
+  await category.selectOption('grain_rice');await item.selectOption('teff');
   await page.locator('textarea').first().fill('Keep dry');await page.locator('textarea').last().fill('Handle carefully');
   await page.locator('.customer-final-primary').last().click();await page.locator('.customer-final-quote-truck').waitFor();await check();assert((await page.locator('.customer-final-quote-truck').textContent()).includes(itemLabel));
   await page.locator('.customer-final-back').click();assert.equal(await date.inputValue(),'2099-01-01');assert.equal(await item.inputValue(),'teff');assert.equal(await page.locator('textarea').first().inputValue(),'Keep dry');

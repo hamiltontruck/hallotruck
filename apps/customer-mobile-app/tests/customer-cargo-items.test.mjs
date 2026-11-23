@@ -87,3 +87,25 @@ test("active Customer V4 journey uses optional item choices, category reset and 
   assert.doesNotMatch(legacyContract.match(/CUSTOMER_CARGO_CATEGORIES = \[([\s\S]*?)\] as const;/)?.[1] || "", /"other"/);
   assert.match(legacyContract, /container_requires_trailer/);
 });
+
+test("requested transport products are selectable, localized and persist within existing categories", () => {
+  const requested = {
+    food: ["soft_drinks", "bottled_water", "sugar", "packaged_food"],
+    grain_rice: ["teff", "beans", "barley", "wheat"],
+    cooking_oil: ["bottled_oil", "jerrycan_oil", "drum_oil", "bulk_oil"],
+    metal_steel: ["metal_products", "scrap_metal"],
+    construction_materials: ["construction_supplies", "cement", "timber"],
+    general_goods: ["retail_goods", "empty_barrels", "wooden_products", "assorted_goods", "industrial_equipment"],
+  };
+  for (const [category, items] of Object.entries(requested)) {
+    for (const item of items) {
+      for (const language of supportedLanguages) {
+        assert.ok(getCustomerCargoItems(category, language).some(entry => entry.id === item), `${category}/${item}/${language}`);
+      }
+      assert.equal(validateCustomerCargoItem({ category, item, notes: "Handle carefully" }), null);
+      const notes = buildCustomerCargoNotes({ category, item, notes: "Handle carefully" });
+      assert.match(notes, /^Cargo item: .+ · Handle carefully$/);
+      assert.equal(validateCustomerCargoItem({ category, item, notes: "x".repeat(500) }), "cargo_notes_too_long");
+    }
+  }
+});

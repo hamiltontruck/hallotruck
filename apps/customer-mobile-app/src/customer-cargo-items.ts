@@ -11,6 +11,9 @@ import {
  */
 export const CUSTOMER_CARGO_ITEM_OPTIONS = {
   food: [
+    { id: "soft_drinks", en: "Soft drinks", om: "Dhugaatii lallaafaa (Soft drink)", am: "ለስላሳ መጠጦች" },
+    { id: "bottled_water", en: "Bottled drinking water (Highland)", om: "Bishaan qaruuraa (Highland)", am: "የታሸገ ውሃ (ሃይላንድ)" },
+    { id: "sugar", en: "Sugar", om: "Sukkaara", am: "ስኳር" },
     { id: "fresh_vegetables", en: "Fresh vegetables", om: "Kuduraa haaraa", am: "ትኩስ አትክልት" },
     { id: "fresh_fruit", en: "Fresh fruit", om: "Fuduraalee haaraa", am: "ትኩስ ፍራፍሬ" },
     { id: "frozen_food", en: "Frozen food", om: "Nyaata qabbanaa'e", am: "የቀዘቀዘ ምግብ" },
@@ -21,6 +24,7 @@ export const CUSTOMER_CARGO_ITEM_OPTIONS = {
     { id: "sugar_flour", en: "Sugar / flour", om: "Sukkaara / daakuu", am: "ስኳር / ዱቄት" },
   ],
   grain_rice: [
+    { id: "beans", en: "Haricot beans", om: "Boloqqee", am: "ቦሎቄ" },
     { id: "teff", en: "Teff", om: "Xaafii", am: "ጤፍ" },
     { id: "wheat", en: "Wheat", om: "Qamadii", am: "ስንዴ" },
     { id: "maize", en: "Maize / corn", om: "Boqqolloo", am: "በቆሎ" },
@@ -38,14 +42,16 @@ export const CUSTOMER_CARGO_ITEM_OPTIONS = {
     { id: "bulk_oil", en: "Bulk edible oil", om: "Zayita nyaataa baay'inaan", am: "የጅምላ የምግብ ዘይት" },
   ],
   metal_steel: [
+    { id: "metal_products", en: "Metal products", om: "Bu'aalee / meeshaalee sibiilaa", am: "የብረት ውጤቶች / እቃዎች" },
     { id: "rebar", en: "Reinforcement bars (rebar)", om: "Sibiila ijaarsaa (rebar)", am: "የማጠናከሪያ ብረት" },
     { id: "steel_coils", en: "Steel coils", om: "Sibiila maramaa", am: "የተጠቀለለ ስቲል" },
     { id: "steel_sheets", en: "Steel sheets", om: "Sibiila diriiraa", am: "የስቲል ሉሆች" },
     { id: "steel_pipes", en: "Steel pipes", om: "Ujummoo sibiilaa", am: "የብረት ቧንቧዎች" },
     { id: "aluminum", en: "Aluminium products", om: "Oomisha aluminiyeemii", am: "የአሉሚኒየም ምርቶች" },
-    { id: "scrap_metal", en: "Scrap metal", om: "Sibiila hafe", am: "የተረፈ ብረት" },
+    { id: "scrap_metal", en: "Scrap metal", om: "Sibiila iskiraappii (hafe)", am: "የተረፈ ብረት" },
   ],
   construction_materials: [
+    { id: "construction_supplies", en: "Construction supplies", om: "Meeshaalee ijaarsaa", am: "የግንባታ እቃዎች" },
     { id: "cement", en: "Cement", om: "Simintoo", am: "ሲሚንቶ" },
     { id: "sand", en: "Sand", om: "Cirracha", am: "አሸዋ" },
     { id: "gravel", en: "Gravel / aggregate", om: "Dhagaa caccabaa", am: "ጠጠር" },
@@ -58,12 +64,16 @@ export const CUSTOMER_CARGO_ITEM_OPTIONS = {
     { id: "building_pipes", en: "Construction pipes", om: "Ujummoo ijaarsaa", am: "የግንባታ ቧንቧዎች" },
   ],
   general_goods: [
+    { id: "empty_barrels", en: "Empty barrels / drums", om: "Barmila / dramii duwwaa", am: "ባዶ በርሜሎች / ድረሞች" },
+    { id: "wooden_products", en: "Wooden products", om: "Meeshaalee mukaa", am: "የእንጨት እቃዎች" },
+    { id: "assorted_goods", en: "Assorted goods", om: "Meeshaalee adda addaa", am: "የተለያዩ እቃዎች" },
+    { id: "industrial_equipment", en: "Factory / industrial equipment", om: "Meeshaalee warshaa fi industirii", am: "የፋብሪካ / የኢንዱስትሪ መሳሪያዎች" },
     { id: "household_goods", en: "Household goods", om: "Meeshaa mana keessaa", am: "የቤት እቃዎች" },
     { id: "furniture", en: "Furniture", om: "Meeshaa manaa", am: "ፈርኒቸር" },
     { id: "electronics", en: "Electronics", om: "Meeshaa elektirooniksii", am: "ኤሌክትሮኒክስ" },
     { id: "appliances", en: "Home appliances", om: "Meeshaalee elektirikii manaa", am: "የቤት ኤሌክትሪክ መሳሪያዎች" },
     { id: "clothing_textiles", en: "Clothing / textiles", om: "Uffata / huccuu", am: "ልብስ / ጨርቃጨርቅ" },
-    { id: "retail_goods", en: "Retail merchandise", om: "Meeshaalee daldalaa", am: "የንግድ እቃዎች" },
+    { id: "retail_goods", en: "Retail merchandise", om: "Sheqaxa adda addaa", am: "የንግድ እቃዎች" },
     { id: "auto_parts", en: "Vehicle spare parts", om: "Qodaa konkolaataa", am: "የመኪና መለዋወጫ" },
     { id: "machinery_parts", en: "Machinery / parts", om: "Maashinii / qooda isaa", am: "ማሽነሪ / መለዋወጫ" },
     { id: "paper_products", en: "Paper / stationery", om: "Waraqaa / meeshaa barreeffamaa", am: "ወረቀት / የጽሕፈት መሣሪያ" },

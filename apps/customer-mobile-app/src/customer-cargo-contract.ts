@@ -37,7 +37,7 @@ const ENGLISH_CATEGORY_LABELS: Record<CustomerCargoCategory, string> = {
 
 const ENGLISH_PACKAGING_LABELS: Record<CustomerPackagingType, string> = {
   bagged: "Bagged",
-  drum_tank: "Drum / tank",
+  drum_tank: "Barrel / drum / tank",
   pallet: "Pallet",
   loose_bulk: "Loose / bulk",
   container_20ft: "20 ft container",
@@ -69,7 +69,7 @@ export const customerCargoCopy: Record<CustomerLanguage, {
     },
     packagingTypes: {
       bagged: "Korojoodhaan",
-      drum_tank: "Drum / taankii",
+      drum_tank: "Barmila / dramii / taankii",
       pallet: "Pallet",
       loose_bulk: "Laafaa / baayʼinaan",
       container_20ft: "Container 20 ft",
@@ -90,7 +90,7 @@ export const customerCargoCopy: Record<CustomerLanguage, {
     },
     packagingTypes: {
       bagged: "በከረጢት",
-      drum_tank: "ድረም / ታንክ",
+      drum_tank: "በርሜል / ድረም / ታንክ",
       pallet: "ፓሌት",
       loose_bulk: "ልቅ / በጅምላ",
       container_20ft: "20 ጫማ ኮንቴነር",
