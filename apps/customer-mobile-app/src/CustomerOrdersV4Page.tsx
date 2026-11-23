@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CustomerAssignmentCard } from "./CustomerAssignmentCard";
 import { CustomerOrderLiveTrackingPreview } from "./CustomerOrderLiveTrackingPreview";
+import { captureAnalyticsEvent } from "./services/analytics";
 import { loadCustomerAssignments, type CustomerMobileAssignment } from "./customer-assignment.service";
 import { subscribeCustomerOrderChanges } from "./customer-orders-realtime.service";
 import {
@@ -147,6 +148,7 @@ function OrderCard({ userId, order, payments, assignment, expanded, onToggle, on
     setActionError("");
     try {
       await cancelCustomerMobileOrder(userId, order.id, cleanCancelReason);
+      captureAnalyticsEvent("order_cancelled", { outcome: "success", workflow: "customer_orders" });
       setCancelOpen(false);
       setCancelReason("");
       await onReload();

@@ -1,5 +1,12 @@
 import { formatCargoLoad, validateCargoLoad, type CargoUnit } from "../../../src/domain/cargo-load";
 import { customerSupabase } from "./auth/customer-supabase";
+import { isValidCustomerServiceDate } from "./customer-service-date";
+import {
+  buildCustomerCargoNotes,
+  customerCargoItemCopy,
+  validateCustomerCargoItem,
+  type CustomerCargoItem,
+} from "./customer-cargo-items";
 import {
   buildCustomerCargoDescription,
   customerCargoCopy,
@@ -45,6 +52,7 @@ export async function createCustomerMobileOrder(input: {
   cargoQuantity: number;
   cargoUnit: CargoUnit;
   cargoCategory: CustomerCargoCategory;
+  cargoItem?: CustomerCargoItem | "";
   packagingType: CustomerPackagingType;
   cargoNotes?: string;
   paymentMethod: CustomerPaymentMethod;
@@ -63,11 +71,22 @@ export async function createCustomerMobileOrder(input: {
     throw new Error("Choose a valid pickup and drop-off route first.");
   }
 
+  if (!isValidCustomerServiceDate(input.serviceDate)) throw new Error("Choose a valid service date (today or later).");
   const distanceKm = positiveNumber(input.distanceKm, "Route distance");
   const cargoTons = validateCargoLoad(input.vehicleType, input.cargoQuantity, input.cargoUnit);
-  const cargoNotes = input.cargoNotes?.trim() || null;
   const cargoDetailsError = validateCustomerCargoDetails({ packagingType: input.packagingType, vehicleType: input.vehicleType });
   if (cargoDetailsError) throw new Error(customerCargoCopy.en.errors[cargoDetailsError]);
+  const cargoItemError = validateCustomerCargoItem({
+    category: input.cargoCategory,
+    item: input.cargoItem,
+    notes: input.cargoNotes,
+  });
+  if (cargoItemError) throw new Error(customerCargoItemCopy.en.errors[cargoItemError]);
+  const cargoNotes = buildCustomerCargoNotes({
+    category: input.cargoCategory,
+    item: input.cargoItem,
+    notes: input.cargoNotes,
+  }) || null;
 
   const { data: quoteData, error: quoteError } = await client.rpc("calculate_transport_quote_v2", {
     p_distance_km: distanceKm,
@@ -96,6 +115,9 @@ export async function createCustomerMobileOrder(input: {
     load: formatCargoLoad(input.cargoQuantity, input.cargoUnit),
     notes: cargoNotes,
   });
+
+  // Quote/profile requests can finish after Ethiopia midnight. Recheck at insert.
+  if (!isValidCustomerServiceDate(input.serviceDate)) throw new Error("Choose a valid service date (today or later).");
 
   const { data: order, error } = await client
     .from("orders")

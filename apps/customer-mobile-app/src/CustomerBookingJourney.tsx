@@ -10,6 +10,12 @@ import {
   type CustomerPackagingType,
 } from "./customer-cargo-contract";
 import {
+  customerCargoItemCopy,
+  getCustomerCargoItems,
+  validateCustomerCargoItem,
+  type CustomerCargoItem,
+} from "./customer-cargo-items";
+import {
   loadCustomerQuotePreview,
   type CustomerPlaceOption,
   type CustomerQuotePreview,
@@ -22,7 +28,9 @@ import {
 } from "./customer-order.service-v2";
 import { CUSTOMER_TRUCKS, customerTruckByKey, customerTruckDisplayLabel, type CustomerTruckOption } from "./customer-vehicle-catalog";
 import { useCustomerLanguage } from "./customer-language";
+import { isValidCustomerServiceDate, todayInAddisAbaba } from "./customer-service-date";
 import { getCustomerFinalCopy } from "./customer-final-copy";
+import { captureAnalyticsEvent } from "./services/analytics";
 
 type BookingStep = "route" | "truck" | "cargo" | "quote" | "review" | "success";
 const STEPS: Exclude<BookingStep, "success">[] = ["route", "truck", "cargo", "quote", "review"];
@@ -84,15 +92,17 @@ export function CustomerBookingJourney({
   const { language } = useCustomerLanguage();
   const c = getCustomerFinalCopy(language);
   const cargoCopy = customerCargoCopy[language];
+  const itemCopy = customerCargoItemCopy[language];
   const [step, setStep] = useState<BookingStep>("route");
   const [cargoCategory, setCargoCategory] = useState<CustomerCargoCategory>("general_goods");
+  const [cargoItem, setCargoItem] = useState<CustomerCargoItem | "">("");
   const [packagingType, setPackagingType] = useState<CustomerPackagingType>("loose_bulk");
   const [cargoQuantity, setCargoQuantity] = useState("");
   const [cargoUnit, setCargoUnit] = useState<CargoUnit>("ton");
   const [cargoNotes, setCargoNotes] = useState("");
   const [specialRequirements, setSpecialRequirements] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<CustomerPaymentMethod>("cash");
-  const todayServiceDate = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Addis_Ababa" });
+  const todayServiceDate = todayInAddisAbaba();
   const [serviceDate, setServiceDate] = useState(todayServiceDate);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [quote, setQuote] = useState<CustomerQuotePreview | null>(null);
@@ -110,11 +120,13 @@ export function CustomerBookingJourney({
   const cargoTons = cargoToTons(rawAmount, cargoUnit);
   const routeReady = Boolean(pickupPlace && dropoffPlace && routePreview && routePreview.distance_km > 0 && !routeLoading && !routeError);
   const cargoDetailsError = validateCustomerCargoDetails({ packagingType, vehicleType: truck.label });
-  const cargoReady = Boolean(cargoCategory && packagingType && cargoTons > 0 && !cargoDetailsError);
+  const note = [cargoNotes.trim(), specialRequirements.trim()].filter(Boolean).join(" · ");
+  const cargoItemError = validateCustomerCargoItem({ category: cargoCategory, item: cargoItem, notes: note });
+  const cargoReady = Boolean(cargoCategory && packagingType && cargoTons > 0 && !cargoDetailsError && !cargoItemError);
   const truckFitsCargo = cargoTons <= 0 || cargoTons <= truck.capacityTons;
   const truckReady = cargoReady && truckFitsCargo;
+  const serviceDateReady = isValidCustomerServiceDate(serviceDate);
   const quoteReady = Boolean(quote && quote.total_quote_etb > 0 && !quoteLoading && !quoteError);
-  const note = [cargoNotes.trim(), specialRequirements.trim()].filter(Boolean).join(" · ");
   const activeIndex = step === "success" ? STEPS.length : STEPS.indexOf(step);
 
   useEffect(() => {
@@ -170,6 +182,7 @@ export function CustomerBookingJourney({
         language,
       });
       setQuote(result);
+      captureAnalyticsEvent("quote_created", { outcome: "success", workflow: "customer_booking" });
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Quote could not be calculated.";
@@ -182,13 +195,17 @@ export function CustomerBookingJourney({
   }
 
   async function goToQuote() {
-    if (!truckReady) return;
+    if (!truckReady || !isValidCustomerServiceDate(serviceDate)) return;
     setStep("quote");
     await calculateQuote();
   }
 
   async function confirm() {
     if (!termsAccepted || !quoteReady || !quote || !routePreview || !pickupPlace || !dropoffPlace || submitting || submitLock.current) return;
+    if (!isValidCustomerServiceDate(serviceDate)) {
+      setSubmitError(c.invalidServiceDate);
+      return;
+    }
     submitLock.current = true;
     setSubmitting(true);
     setSubmitError("");
@@ -218,6 +235,7 @@ export function CustomerBookingJourney({
         cargoQuantity: rawAmount,
         cargoUnit,
         cargoCategory,
+        cargoItem,
         packagingType,
         cargoNotes: note,
         paymentMethod,
@@ -225,6 +243,7 @@ export function CustomerBookingJourney({
         serviceDate,
       });
       setCreatedOrder(order);
+      captureAnalyticsEvent("order_placed", { outcome: "success", workflow: "customer_booking", payment_method: paymentMethod });
       setStep("success");
       onCreated(order);
     } catch (error) {
@@ -239,6 +258,7 @@ export function CustomerBookingJourney({
     setCreatedOrder(null);
     setStep("route");
     setCargoQuantity("");
+    setCargoItem("");
     setCargoNotes("");
     setSpecialRequirements("");
     setQuote(null);
@@ -305,7 +325,16 @@ export function CustomerBookingJourney({
       {step === "cargo" && (
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepCargoHelp}</p>
-          <label className="customer-final-select-row"><span><b>{c.cargoType}</b><small>{cargoCopy.categories[cargoCategory]}</small></span><select value={cargoCategory} onChange={(event) => setCargoCategory(event.target.value as CustomerCargoCategory)}>{CUSTOMER_CARGO_CATEGORIES.map((value) => <option value={value} key={value}>{cargoCopy.categories[value]}</option>)}</select></label>
+          <label className="customer-final-service-date"><span>{c.serviceDate}</span><input type="date" min={todayServiceDate} value={serviceDate} required onChange={(event) => { setServiceDate(event.target.value); setSubmitError(""); }} /></label>
+          {!serviceDateReady && <p className="customer-final-error" role="alert">{c.invalidServiceDate}</p>}
+          <label className="customer-final-select-row"><span><b>{c.cargoType}</b><small>{cargoCopy.categories[cargoCategory]}</small></span><select value={cargoCategory} onChange={(event) => { setCargoCategory(event.target.value as CustomerCargoCategory); setCargoItem(""); }}>{CUSTOMER_CARGO_CATEGORIES.map((value) => <option value={value} key={value}>{cargoCopy.categories[value]}</option>)}</select></label>
+          <label className="customer-final-select-row customer-final-select-row--cargo-item">
+            <span><b>{itemCopy.itemLabel}</b><small>{itemCopy.itemHelp}</small></span>
+            <select value={cargoItem} onChange={(event) => setCargoItem(event.target.value as CustomerCargoItem | "")}>
+              <option value="">{itemCopy.itemPlaceholder}</option>
+              {getCustomerCargoItems(cargoCategory, language).map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}
+            </select>
+          </label>
           <div className="customer-final-weight-row">
             <label><span>{c.totalWeight}</span><input type="number" value={rawAmount} readOnly aria-readonly="true" /></label>
             <label><span>{c.unit}</span><select value={cargoUnit} onChange={(event) => setCargoUnit(event.target.value as CargoUnit)}><option value="ton">{c.ton}</option><option value="quintal">{c.quintal}</option></select></label>
@@ -314,9 +343,10 @@ export function CustomerBookingJourney({
           <label className="customer-final-field"><span>{c.loadDescription}</span><textarea rows={3} maxLength={300} value={cargoNotes} onChange={(event) => setCargoNotes(event.target.value)} placeholder={c.loadPlaceholder} /></label>
           <label className="customer-final-field"><span>{c.specialRequirements}</span><textarea rows={3} maxLength={200} value={specialRequirements} onChange={(event) => setSpecialRequirements(event.target.value)} placeholder={c.requirementsPlaceholder} /></label>
           {cargoDetailsError && <p className="customer-final-error">{cargoCopy.errors[cargoDetailsError]}</p>}
+          {cargoItemError && <p className="customer-final-error" role="alert">{itemCopy.errors[cargoItemError]}</p>}
           {cargoQuantity && cargoTons <= 0 && <p className="customer-final-error">{c.weightRequired}</p>}
           {cargoReady && !truckFitsCargo && <p className="customer-final-error">{c.weightExceeds}</p>}
-          <button type="button" className="customer-final-primary" disabled={!truckReady} onClick={() => void goToQuote()}>{c.next} →</button>
+          <button type="button" className="customer-final-primary" disabled={!truckReady || !serviceDateReady} onClick={() => void goToQuote()}>{c.next} →</button>
         </main>
       )}
 
@@ -343,7 +373,7 @@ export function CustomerBookingJourney({
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepQuoteHelp}</p>
           {routePreview && <section className="customer-final-route-summary"><span>●</span><div><strong>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong><small>{routePreview.distance_km.toFixed(1)} km · {routeDuration}</small></div></section>}
-          <section className="customer-final-quote-truck"><TruckImage truck={truck} alt={truckDisplayLabel}/><div><strong>{truckDisplayLabel}</strong><small>{cargoCopy.categories[cargoCategory]} · {rawAmount.toLocaleString(undefined,{maximumFractionDigits:2})} {cargoUnit === "quintal" ? c.quintal : c.ton}</small></div></section>
+          <section className="customer-final-quote-truck"><TruckImage truck={truck} alt={truckDisplayLabel}/><div><strong>{truckDisplayLabel}</strong><small>{cargoCopy.categories[cargoCategory]}{cargoItem ? ` · ${getCustomerCargoItems(cargoCategory, language).find((item) => item.id === cargoItem)?.label ?? ""}` : ""} · {rawAmount.toLocaleString(undefined,{maximumFractionDigits:2})} {cargoUnit === "quintal" ? c.quintal : c.ton}</small></div></section>
           <section className="customer-final-price-card">
             <div><span>{c.authoritativeQuote}</span><strong>{quote ? formatEtb(quote.total_quote_etb) : "—"}</strong></div>
             <div className="total"><span>{c.total}</span><strong>{quote ? formatEtb(quote.total_quote_etb) : "—"}</strong></div>
@@ -358,12 +388,11 @@ export function CustomerBookingJourney({
       {step === "review" && routePreview && quote && (
         <main className="customer-final-step-body">
           <p className="customer-final-step-help">{c.stepReviewHelp}</p>
-              <label className="customer-final-service-date"><span>Order Date</span><input type="date" min={todayServiceDate} value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
           <section className="customer-final-review-card">
             <div><span>⌖</span><p><small>{c.route}</small><strong>{routePreview.pickup_label} → {routePreview.dropoff_label}</strong><em>{routePreview.distance_km.toFixed(1)} km · {routeDuration}</em></p></div>
-            <div><span>▣</span><p><small>{c.cargo}</small><strong>{cargoCopy.categories[cargoCategory]} · {rawAmount.toLocaleString(undefined,{maximumFractionDigits:2})} {cargoUnit === "quintal" ? c.quintal : c.ton}</strong><em>{cargoCopy.packagingTypes[packagingType]}</em></p></div>
+            <div><span>▣</span><p><small>{c.cargo}</small><strong>{cargoCopy.categories[cargoCategory]} · {rawAmount.toLocaleString(undefined,{maximumFractionDigits:2})} {cargoUnit === "quintal" ? c.quintal : c.ton}</strong><em>{cargoCopy.packagingTypes[packagingType]}{cargoItem ? ` · ${getCustomerCargoItems(cargoCategory, language).find((item) => item.id === cargoItem)?.label ?? ""}` : ""}</em></p></div>
             <div><span>🚚</span><p><small>{c.truck}</small><strong>{truckDisplayLabel}</strong></p></div>
-                <div><span>◷</span><p><small>Order Date</small><strong>{serviceDate}</strong></p></div>
+                <div><span>◷</span><p><small>{c.serviceDate}</small><strong>{serviceDate}</strong></p></div>
             <div className="total"><p><small>{c.total}</small><strong>{formatEtb(quote.total_quote_etb)}</strong></p></div>
           </section>
           <fieldset className="customer-final-payment-choice">
@@ -373,8 +402,9 @@ export function CustomerBookingJourney({
           </fieldset>
           <label className="customer-final-terms"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} /><span>{c.termsAgree}</span></label>
           {!termsAccepted && <small className="customer-final-muted">{c.termsRequired}</small>}
-          {submitError && <p className="customer-final-error" role="alert">{submitError}</p>}
-          <button type="button" className="customer-final-primary" disabled={!termsAccepted || submitting} onClick={() => void confirm()}>{submitting ? c.creatingOrder : c.confirmBooking}</button>
+          {!serviceDateReady && <p className="customer-final-error" role="alert">{c.invalidServiceDate}</p>}
+          {serviceDateReady && submitError && <p className="customer-final-error" role="alert">{submitError}</p>}
+          <button type="button" className="customer-final-primary" disabled={!termsAccepted || !serviceDateReady || submitting} onClick={() => void confirm()}>{submitting ? c.creatingOrder : c.confirmBooking}</button>
         </main>
       )}
     </section>
