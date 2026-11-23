@@ -1,6 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
 import { customerSupabase } from "./auth/customer-supabase";
 import type { CustomerLanguage } from "./customer-language";
+import { mapTilerSearchLanguage } from "./customer-geocode-language";
 import { selectGeocodeCandidates as selectProviderIdentityCandidates } from "./customer-geocoder-selection";
 import type { GeocodeFeature } from "./customer-geocoder-selection";
 import { isCoordinate, isRouteCoordinates } from "../../../shared/geocoder-routing.js";
@@ -146,7 +147,7 @@ async function fetchLocalityGeocodeFeatures(query: string, autocomplete: boolean
   const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
   url.searchParams.set("key", mapTilerKey);
   url.searchParams.set("limit", "6");
-  url.searchParams.set("language", language);
+  url.searchParams.set("language", mapTilerSearchLanguage(clean, language));
   url.searchParams.set("autocomplete", autocomplete ? "true" : "false");
   url.searchParams.set("country", "et,dj,so");
   url.searchParams.set("types", LOCALITY_GEOCODE_TYPES.join(","));
@@ -165,7 +166,7 @@ async function fetchGeocodeFeatures(query: string, autocomplete: boolean, langua
   const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
   url.searchParams.set("key", mapTilerKey);
   url.searchParams.set("limit", "6");
-  url.searchParams.set("language", language);
+  url.searchParams.set("language", mapTilerSearchLanguage(clean, language));
   url.searchParams.set("autocomplete", autocomplete ? "true" : "false");
   url.searchParams.set("country", "et,dj,so");
   url.searchParams.set("types", [...NON_ROUTABLE_PLACE_TYPES].join(","));
