@@ -99,6 +99,9 @@ export async function createCustomerMobileOrder(input: {
     notes: cargoNotes,
   });
 
+  // Quote/profile requests can finish after Ethiopia midnight. Recheck at insert.
+  if (!isValidCustomerServiceDate(input.serviceDate)) throw new Error("Choose a valid service date (today or later).");
+
   const { data: order, error } = await client
     .from("orders")
     .insert({
