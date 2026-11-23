@@ -40,6 +40,10 @@ export function sanitizeCustomerSentryEvent(event: SentryErrorEvent): SentryErro
 
   return {
     event_id: safeId,
+    // beforeSend runs after the SDK assigns its configured environment.
+    // Keep only our fixed QA labels so filtering does not fall back to production.
+    environment: event.environment === "customer-v4-qa" ||
+      event.environment === "customer-v4-staging" ? event.environment : undefined,
     type: undefined,
     level: "error",
     platform: "javascript",

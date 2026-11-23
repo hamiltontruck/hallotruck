@@ -36,7 +36,8 @@ its DSN for Customer V4.
 ## Privacy design
 
 - Fail-closed event projection: only generic allowlisted exception types,
-  numeric stack line/column locations, constant app tags and optional valid
+  numeric stack line/column locations, fixed QA/staging environment labels,
+  constant app tags and optional valid
   event IDs survive. Raw exception text and filenames are replaced.
 - No Sentry user identity, email, phone, PIN, OTP, auth or refresh tokens,
   OAuth URL hash/query, order/driver IDs, coordinates, payment details,

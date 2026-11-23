@@ -106,3 +106,37 @@ test("Sentry sanitizer fails closed for arbitrary messages and malformed fields"
   assert.equal(clean.exception.values[0].stacktrace, undefined);
   assert.equal(JSON.stringify(clean).includes("person@example.org"), false);
 });
+
+test("Sentry outgoing error retains only the configured QA environment", async () => {
+  const { BrowserClient, Scope, defaultStackParser } = await import("@sentry/react");
+  const { sanitizeCustomerSentryEvent } = await loadPrivacyModule();
+  for (const environment of ["customer-v4-qa", "customer-v4-staging"]) {
+    const envelopes = [];
+    const client = new BrowserClient({
+      dsn: "https://abcdef@o123.ingest.de.sentry.io/123",
+      environment,
+      integrations: [],
+      stackParser: defaultStackParser,
+      beforeSend: sanitizeCustomerSentryEvent,
+      transport: () => ({
+        send: async (envelope) => { envelopes.push(envelope); return { statusCode: 200 }; },
+        flush: async () => true,
+      }),
+    });
+    const scope = new Scope();
+    scope.setClient(client);
+    scope.captureException(new Error("synthetic private payload"));
+    await client.flush(1000);
+    const event = envelopes.flatMap((envelope) => envelope[1])
+      .find(([header]) => header.type === "event")?.[1];
+    assert.ok(event, "expected an error event in the local transport");
+    assert.equal(event.environment, environment);
+    assert.equal(JSON.stringify(event).includes("synthetic private payload"), false);
+    await client.close();
+  }
+  const clean = sanitizeCustomerSentryEvent({
+    environment: "private@example.org",
+    exception: { values: [{ type: "Error" }] },
+  });
+  assert.equal(clean.environment, undefined);
+});
