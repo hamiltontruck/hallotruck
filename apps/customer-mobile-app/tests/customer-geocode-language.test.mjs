@@ -29,8 +29,9 @@ test("English selected language and ASCII query remain English", () => {
 });
 
 test("both forward geocoder requests share the locale rule; reverse labels are left alone", () => {
-  const matches = quoteService.match(/url\.searchParams\.set\("language", mapTilerSearchLanguage\(clean, language\)\);/g) ?? [];
-  assert.equal(matches.length, 2);
+  assert.match(quoteService, /url\.searchParams\.set\("language", providerLanguageOverride \?\? mapTilerSearchLanguage\(clean, language\)\)/);
+  assert.match(quoteService, /url\.searchParams\.set\("language", mapTilerSearchLanguage\(clean, language\)\)/);
+  assert.match(quoteService, /fetchLocalityGeocodeFeatures\(clean, false, language, signal, language !== "en" \? language : undefined\)/);
   assert.match(quoteService, /export async function reverseCustomerPlace[\s\S]*?url\.searchParams\.set\("language", language\)/);
   assert.match(quoteService, /body: JSON\.stringify\(\{ pickup: input\.pickup\.coordinates, dropoff: input\.dropoff\.coordinates, vehicleType: input\.vehicleType \}\)/);
 });
