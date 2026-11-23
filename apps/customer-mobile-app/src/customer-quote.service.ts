@@ -139,7 +139,7 @@ function featureToPlace(feature: GeocodeFeature): CustomerPlaceOption | null {
   return label ? { label, coordinates } : null;
 }
 
-async function fetchLocalityGeocodeFeatures(query: string, autocomplete: boolean, language: CustomerLanguage = "en", signal?: AbortSignal) {
+async function fetchLocalityGeocodeFeatures(query: string, autocomplete: boolean, language: CustomerLanguage = "en", signal?: AbortSignal, providerLanguageOverride?: CustomerLanguage) {
   const clean = query.trim();
   if (clean.length < 2) return [] as GeocodeFeature[];
   if (!mapTilerKey) throw new Error("Map search is not configured.");
@@ -147,7 +147,7 @@ async function fetchLocalityGeocodeFeatures(query: string, autocomplete: boolean
   const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(clean)}.json`);
   url.searchParams.set("key", mapTilerKey);
   url.searchParams.set("limit", "6");
-  url.searchParams.set("language", mapTilerSearchLanguage(clean, language));
+  url.searchParams.set("language", providerLanguageOverride ?? mapTilerSearchLanguage(clean, language));
   url.searchParams.set("autocomplete", autocomplete ? "true" : "false");
   url.searchParams.set("country", "et,dj,so");
   url.searchParams.set("types", LOCALITY_GEOCODE_TYPES.join(","));
@@ -182,7 +182,7 @@ export async function searchCustomerPlaces(query: string, language: CustomerLang
   const clean = query.trim();
   const [autocompleteLocalityFeatures, exactLocalityFeatures, generalFeatures] = await Promise.all([
     fetchLocalityGeocodeFeatures(clean, true, language, signal),
-    fetchLocalityGeocodeFeatures(clean, false, language, signal),
+    fetchLocalityGeocodeFeatures(clean, false, language, signal, language !== "en" ? language : undefined),
     fetchGeocodeFeatures(clean, true, language, signal),
   ]);
   const localityFeatures = [...exactLocalityFeatures, ...autocompleteLocalityFeatures];
@@ -191,7 +191,9 @@ export async function searchCustomerPlaces(query: string, language: CustomerLang
     // never provider identity or coordinates. Match either name, display the
     // localized result, and retain the canonical city rather than its districts.
     const canonical = await fetchLocalityGeocodeFeatures(clean, false, "en", signal);
-    const localized = new Map([...localityFeatures, ...generalFeatures].map(feature => [feature.id, feature]));
+    // Keep translated labels from the exact native-language lookup; English autocomplete
+    // and POI results must never override those labels for the same provider ID.
+    const localized = new Map([...generalFeatures, ...autocompleteLocalityFeatures, ...exactLocalityFeatures].map(feature => [feature.id, feature]));
     const candidates = [...canonical, ...localityFeatures, ...generalFeatures];
     const matches = candidates.filter(feature => {
       const translated = localized.get(feature.id);
