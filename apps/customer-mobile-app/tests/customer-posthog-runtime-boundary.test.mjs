@@ -13,7 +13,7 @@ test("Customer V4 PostHog initialization sanitizes an OAuth callback through the
     define: {
       "import.meta.env": JSON.stringify({
         MODE: "production",
-        VITE_POSTHOG_PROJECT_TOKEN: "test-public-project-token",
+        VITE_POSTHOG_PROJECT_TOKEN: "phc_syntheticPublicProjectToken12345",
         VITE_POSTHOG_HOST: "https://us.i.posthog.com",
         VITE_RELEASE_SHA: "a".repeat(40),
       }),
@@ -76,9 +76,12 @@ test("Customer V4 PostHog initialization sanitizes an OAuth callback through the
     assert.equal(virtualPage[0], "capture");
     assert.equal(virtualPage[1], "$pageview");
     const cleanVirtualPage = config.before_send({ event: virtualPage[1], properties: virtualPage[2] });
+    assert.equal(cleanVirtualPage.properties.token, "phc_syntheticPublicProjectToken12345");
     assert.equal(cleanVirtualPage.properties.route, "/orders");
     assert.equal(cleanVirtualPage.properties.$pathname, "/orders");
     assert.equal(cleanVirtualPage.properties.$current_url, location.origin + "/#/orders");
+    assert.equal(cleanPageview.properties.token, "phc_syntheticPublicProjectToken12345");
+    assert.equal(JSON.stringify(cleanPageview).includes("synthetic.access-token.signature"), false);
 
     analytics.captureAnalyticsEvent("login_failed", {
       outcome: "failed",

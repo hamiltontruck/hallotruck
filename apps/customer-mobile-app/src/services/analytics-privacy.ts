@@ -64,8 +64,17 @@ const SAFE_CUSTOM_VALUES: Record<string, ReadonlySet<string>> = {
   organization_type: new Set(["individual", "business", "partner", "unknown"]),
 };
 const SAFE_RELEASE = /^(?:local|[a-f0-9]{7,64})$/i;
-const SAFE_IDENTIFIER = /^[A-Za-z0-9_-]{16,128}$/;
-const SAFE_SDK_SCALAR = /^[A-Za-z0-9_. -]{1,64}$/;
+// Strict SDK-generated UUIDs only. Free-form identifier strings could themselves
+// be OAuth credentials, even when the property name is allowlisted.
+const SAFE_IDENTIFIER = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// SDK descriptive fields are also untrusted input: never accept arbitrary scalars.
+const SAFE_SDK_VALUES: Record<string, ReadonlySet<string>> = {
+  "$lib": new Set(["web", "posthog-js"]),
+  "$browser": new Set(["Chrome", "Chrome iOS", "Chrome Mobile", "Firefox", "Firefox iOS", "Safari", "Mobile Safari", "Edge", "Opera", "Samsung Internet", "Unknown"]),
+  "$os": new Set(["iOS", "Android", "Windows", "Mac OS X", "Linux", "Chrome OS", "Ubuntu", "Unknown"]),
+  "$device_type": new Set(["Mobile", "Desktop", "Tablet", "mobile", "desktop", "tablet"]),
+};
+const SAFE_SDK_VERSION = /^\d{1,3}\.\d{1,3}\.\d{1,3}(?:-[a-z0-9.-]{1,24})?$/i;
 
 function safeCustomValue(key: string, value: unknown): string | number | boolean | undefined {
   if (!SAFE_CUSTOM_KEYS.has(key) || typeof value !== "string") return undefined;
@@ -85,7 +94,7 @@ export function sanitizeCustomerAnalyticsProperties(
   return output;
 }
 
-export function sanitizeCustomerPostHogEvent(input: unknown, route: string, url: string) {
+export function sanitizeCustomerPostHogEvent(input: unknown, route: string, url: string, trustedProjectToken?: string) {
   if (!input || typeof input !== "object") return null;
   const event = input as { event?: unknown; properties?: unknown; timestamp?: unknown; uuid?: unknown };
   if (typeof event.event !== "string" || !SAFE_EVENT_NAMES.has(event.event)) return null;
@@ -107,7 +116,15 @@ export function sanitizeCustomerPostHogEvent(input: unknown, route: string, url:
     }
     if (key === "distinct_id" || key.endsWith("_id")) {
       if (SAFE_IDENTIFIER.test(value)) clean[key] = value;
-    } else if (SAFE_SDK_SCALAR.test(value)) clean[key] = value;
+    } else if (key === "$lib_version" ? SAFE_SDK_VERSION.test(value) : SAFE_SDK_VALUES[key]?.has(value)) {
+      clean[key] = value;
+    }
+  }
+  // PostHog ingestion uses a PUBLIC project token. Reconstruct it exclusively
+  // from trusted initialization config, never copy an event's untrusted token
+  // property (which could be an OAuth credential).
+  if (typeof trustedProjectToken === "string" && /^phc_[A-Za-z0-9_-]{10,128}$/.test(trustedProjectToken)) {
+    clean.token = trustedProjectToken;
   }
   clean.route = safeRoute;
   clean.$pathname = safeRoute;

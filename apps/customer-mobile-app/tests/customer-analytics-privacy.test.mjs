@@ -194,3 +194,87 @@ test("trusted static SPA pageview routes are retained without accepting raw quer
     assert.equal(JSON.stringify(clean).includes(TOKEN), false);
   }
 });
+
+
+test("SDK metadata is fail-closed against token-like strings even under allowed keys", () => {
+  const secret = "syntheticTokenBearerValueAcrossAllowedTransportFields1234567";
+  const leaked = sanitizeCustomerPostHogEvent({
+    event: "$pageview",
+    uuid: secret,
+    properties: {
+      distinct_id: secret,
+      $session_id: secret,
+      $window_id: secret,
+      $insert_id: secret,
+      $device_id: secret,
+      $lib: secret,
+      $browser: secret,
+      $os: secret,
+      $device_type: secret,
+      $lib_version: secret,
+      environment: "production",
+    },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"));
+  assert.ok(leaked);
+  assert.equal(JSON.stringify(leaked).includes(secret), false);
+  for (const key of ["distinct_id", "$session_id", "$window_id", "$insert_id", "$device_id",
+    "$lib", "$browser", "$os", "$device_type", "$lib_version"]) {
+    assert.equal(key in leaked.properties, false, key);
+  }
+  assert.equal("uuid" in leaked, false);
+  assert.equal(leaked.properties.environment, "production");
+});
+
+test("safe SDK UUID and finite descriptive metadata survive privacy boundary", () => {
+  const uuid = "550e8400-e29b-41d4-a716-446655440000";
+  const clean = sanitizeCustomerPostHogEvent({
+    event: "$pageview",
+    uuid,
+    properties: {
+      distinct_id: uuid,
+      $session_id: uuid,
+      $device_id: uuid,
+      $lib: "web",
+      $lib_version: "1.223.0",
+      $browser: "Mobile Safari",
+      $os: "iOS",
+      $device_type: "Mobile",
+      $screen_width: 390,
+    },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"));
+  assert.ok(clean);
+  assert.equal(clean.uuid, uuid);
+  assert.equal(clean.properties.distinct_id, uuid);
+  assert.equal(clean.properties.$session_id, uuid);
+  assert.equal(clean.properties.$lib, "web");
+  assert.equal(clean.properties.$lib_version, "1.223.0");
+  assert.equal(clean.properties.$browser, "Mobile Safari");
+  assert.equal(clean.properties.$os, "iOS");
+  assert.equal(clean.properties.$device_type, "Mobile");
+  assert.equal(clean.properties.$screen_width, 390);
+});
+
+
+test("PostHog project token is reconstructed from trusted init config, not event properties", () => {
+  const publicToken = "phc_syntheticPublicProjectToken12345";
+  const oauthSecret = "syntheticOAuthAccessTokenShouldNeverBeEmitted";
+  const clean = sanitizeCustomerPostHogEvent({
+    event: "$pageview",
+    properties: {
+      token: oauthSecret,
+      access_token: oauthSecret,
+      $current_url: origin + "/#access_token=" + oauthSecret,
+    },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"), publicToken);
+  assert.ok(clean);
+  assert.equal(clean.properties.token, publicToken);
+  assert.equal(JSON.stringify(clean).includes(oauthSecret), false);
+  const missing = sanitizeCustomerPostHogEvent({
+    event: "$pageview", properties: { token: oauthSecret },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"));
+  assert.equal("token" in missing.properties, false);
+  const invalid = sanitizeCustomerPostHogEvent({
+    event: "$pageview", properties: { token: oauthSecret },
+  }, "/login", safeCustomerAnalyticsUrl(origin, "/login"), oauthSecret);
+  assert.equal("token" in invalid.properties, false);
+});
