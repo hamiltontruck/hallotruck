@@ -75,3 +75,14 @@ jobs:
         run: npm run test:e2e-smoke
         env:
           VITE_PARTNER_SMART_ORDER_V2: "false"
+
+      - name: Customer V4 authenticated fixture integration and Android viewport smoke
+        run: node scripts/customer-v4-release-browser-test.mjs
+
+      - name: Customer V4 release fixture screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-v4-release-fixture-screenshots
+          path: verification/customer-release/*.png
+          if-no-files-found: ignore
