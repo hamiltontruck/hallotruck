@@ -92,7 +92,7 @@ export function openPositionStore(filename, { readOnly = false } = {}) {
 }
 
 function normalizePosition(row, device, mapping, now) {
-  if (!row || row.deviceId !== device.id || row.protocol !== "h02" || row.valid !== true ||
+  if (!row || row.deviceId !== device.id || row.protocol !== (mapping.verifiedProtocol ?? "h02") || row.valid !== true ||
       !Number.isSafeInteger(row.id) || row.id < 1 || typeof row.fixTime !== "string" ||
       !TIMESTAMP.test(row.fixTime)) return null;
   const fix = new Date(row.fixTime);
@@ -118,6 +118,8 @@ export async function syncPositions({ api, store, mappings: input, now = Date.no
   let inserted = 0;
   let rejected = 0;
   for (const [mapping, device] of registrations) {
+    // Registration is available while the C32 firmware protocol is investigated.
+    if (mapping.model === "secumore-c32" && !mapping.verifiedProtocol) continue;
     // Traccar filters history by fix time. Rescan the bounded replay window to
     // catch late reports even when their fix time precedes the last API poll.
     const windows = [[now - DAY, now + FUTURE_TOLERANCE]];

@@ -6,17 +6,37 @@ export function validateMappings(value) {
   }
   const uniqueIds = new Set();
   const truckIds = new Set();
+  const plates = new Set();
   return value.map((entry) => {
-    const { uniqueId, name, truckId } = entry ?? {};
+    const { uniqueId, name, truckId, model, plateNumber, verifiedProtocol } = entry ?? {};
     if (typeof uniqueId !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(uniqueId) ||
         typeof truckId !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(truckId) ||
         typeof name !== "string" || !name.trim() || name.length > 100) {
       throw new Error("Invalid QA device mapping");
     }
     if (uniqueIds.has(uniqueId) || truckIds.has(truckId)) throw new Error("Duplicate QA device or truck mapping");
+    if (model !== undefined && !["sinotrack-st-906l", "secumore-c32"].includes(model)) {
+      throw new Error("Unknown QA tracker model");
+    }
+    if (verifiedProtocol !== undefined && (model !== "secumore-c32" || verifiedProtocol !== "gt06")) {
+      throw new Error("Invalid verified QA protocol");
+    }
+    if (model !== undefined || plateNumber !== undefined) {
+      if (typeof plateNumber !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 -]{0,31}$/.test(plateNumber.trim())) {
+        throw new Error("Invalid QA truck plate");
+      }
+      const plate = plateNumber.trim().toUpperCase();
+      if (plates.has(plate)) throw new Error("Duplicate QA truck plate");
+      plates.add(plate);
+    }
     uniqueIds.add(uniqueId);
     truckIds.add(truckId);
-    return { uniqueId, truckId, name: name.trim() };
+    return {
+      uniqueId, truckId, name: name.trim(),
+      ...(verifiedProtocol === undefined ? {} : { verifiedProtocol }),
+      ...(model === undefined ? {} : { model }),
+      ...(plateNumber === undefined ? {} : { plateNumber: plateNumber.trim().toUpperCase() }),
+    };
   });
 }
 
