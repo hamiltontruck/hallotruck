@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { CustomerLiveTripMap } from "../tracking/CustomerLiveTripMap";
 import { AdminOperationsControl } from "./AdminOperationsControl";
 import { AdminDispatchMatchModal } from "./AdminDispatchMatchModal";
-import { AdminPaymentCollectionControl } from "./AdminPaymentCollectionControl";
 import { AdminOnlineDriversMap } from "./AdminOnlineDriversMap";
 import { classifyTrackingFreshness, type TrackingFreshness } from "../../domain/tracking-freshness";
 import { supabase } from "../../services/supabase.client";
@@ -65,7 +64,6 @@ export function AdminLiveTripsPanel({ orders, trucks, drivers }: AdminLiveTripsP
   const selectedSplit = splitHalloCommission(Number(selected?.price_etb ?? 0));
 
   return <>
-    <AdminPaymentCollectionControl orders={orders} onOpenControl={setControlOrderId} />
     <AdminOnlineDriversMap orders={orders} drivers={drivers} trucks={trucks} />
     {activeOrders.length ? <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
       <div className="overflow-hidden rounded-2xl border border-asphalt/10 bg-white"><div className="border-b border-asphalt/10 p-5 sm:px-6"><div className="flex items-center justify-between gap-3"><h2 className="font-display text-lg font-semibold">Active trips</h2><span className="rounded-full bg-emerald-50 px-3 py-1.5 font-mono text-[10px] font-semibold text-emerald-700">{activeOrders.length} ACTIVE</span></div><p className="mt-1 text-xs text-steel">Select a shipment to follow the assigned driver, truck and GPS.</p></div><div className="divide-y divide-asphalt/10">{activeOrders.map((order) => { const truck = order.truck_id ? trucks.find((item) => item.id === order.truck_id) : undefined; const driver = order.driver_id ? drivers.find((item) => item.id === order.driver_id) : undefined; return <button key={order.id} type="button" onClick={() => setSelectedId(order.id)} className={`w-full p-4 text-left transition sm:px-6 ${order.id === selected?.id ? "bg-amber/10" : "hover:bg-bone"}`}><div className="flex items-center justify-between gap-3"><span className="font-mono text-xs font-semibold">{order.tracking_id}</span><span className="text-[10px] font-semibold capitalize text-emerald-700">{order.status.replace("_", " ")}</span></div><p className="mt-2 text-sm font-medium">{order.pickup_address} → {order.dropoff_address}</p><p className="mt-2 text-[11px] text-steel">{truck?.plate_number ?? order.vehicle_type} · {driver?.full_name ?? driver?.phone ?? "Driver assigned"}</p></button>; })}</div></div>

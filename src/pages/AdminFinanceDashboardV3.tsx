@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AdminFinancePaymentCollection } from "../components/admin/AdminFinancePaymentCollection";
 import { formatEtb } from "../utils/currency";
 import {
   computeFinanceSummary,
@@ -229,6 +230,8 @@ export function AdminFinanceDashboardV3({ fixture }: Props) {
         </div>
         <p className="mt-5 font-mono text-[9px] tracking-wide text-white/35">LIVE · updated {updatedAt.toLocaleTimeString()}</p>
       </section>
+
+      <AdminFinancePaymentCollection />
 
       <section className="mt-5 grid gap-3 border border-asphalt/10 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <label className="text-[10px] font-semibold uppercase tracking-wide">Date range<select value={range} onChange={(event) => resetPage(setRange, event.target.value as FinanceRange)} className="mt-2 min-h-11 w-full border border-asphalt/15 px-3 text-xs normal-case"><option value="today">Today</option><option value="7d">7 days</option><option value="30d">30 days</option><option value="90d">90 days</option><option value="all">All time</option></select></label>
