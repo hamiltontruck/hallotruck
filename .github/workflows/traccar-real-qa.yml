@@ -1,0 +1,23 @@
+name: Traccar real API code checks
+on:
+  pull_request:
+    paths:
+      - 'tools/traccar-real-qa/**'
+      - '.github/workflows/traccar-real-qa.yml'
+  push:
+    branches:
+      - feat/hallo-traccar-real-api-qa-20261101
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check tools/traccar-real-qa/client.mjs
+      - run: node --check tools/traccar-real-qa/smoke.mjs
+      - name: Assert no configured live endpoint in CI
+        run: '! grep -E "TRACCAR_(URL|TOKEN)=" tools/traccar-real-qa/*.mjs'
