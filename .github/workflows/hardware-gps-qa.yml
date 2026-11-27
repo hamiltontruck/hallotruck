@@ -1,0 +1,84 @@
+name: Hardware GPS QA isolated tests
+on:
+  push:
+    branches:
+      - feat/hallo-hardware-gps-v1-qa
+    paths:
+      - 'tools/hardware-gps-qa/**'
+      - '.github/workflows/hardware-gps-qa.yml'
+  pull_request:
+    paths:
+      - 'tools/hardware-gps-qa/**'
+      - '.github/workflows/hardware-gps-qa.yml'
+permissions:
+  contents: read
+jobs:
+  hardware-gps-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test isolated ST-906L simulator and Traccar adapter
+        run: node --test tools/hardware-gps-qa/*.test.mjs
+      - name: Check QA runner syntax
+        run: node --check tools/hardware-gps-qa/run-qa.mjs
+  staging-schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test staging schema and permissions in disposable PostgreSQL
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: node tools/hardware-gps-qa/staging/postgres-fixtures.mjs
+  h02-upstream-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: traccar/traccar
+          ref: v6.16.0
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Run Traccar H02 decoder on upstream software fixtures
+        run: ./gradlew --no-daemon test --tests org.traccar.protocol.H02ProtocolDecoderTest
+
+  staging-network-probe:
+    # This credential-free observation is independent of the software QA gate.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Observe IPv4 reachability and certificate validation
+        id: tls
+        continue-on-error: true
+        run: node tools/hardware-gps-qa/staging/check-connection.mjs network
+      - name: Report network observation
+        env:
+          TLS_OUTCOME: ${{ steps.tls.outcome }}
+        run: printf 'Credential-free QA Session Pooler IPv4/TLS result = %s\n' "$TLS_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
