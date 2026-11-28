@@ -73,7 +73,7 @@ document.documentElement.dataset.overflow=String(document.documentElement.scroll
 document.documentElement.dataset.ready='true';
 `;
 await writeFile(entryFile, fixtureSource, "utf8");
-const bundled = spawnSync(esbuildBinary, [entryFile, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120", `--outfile=${bundleFile}`, "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"", "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\""], { cwd: root, encoding: "utf8" });
+const bundled = spawnSync(esbuildBinary, [entryFile, "--bundle", "--platform=browser", "--format=esm", "--target=chrome120", `--outfile=${bundleFile}`, '--define:import.meta.env.VITE_MAPTILER_KEY=""', "--define:import.meta.env.VITE_SUPABASE_URL=\"https://example.supabase.co\"", "--define:import.meta.env.VITE_SUPABASE_ANON_KEY=\"ci-anon-key\""], { cwd: root, encoding: "utf8" });
 if (bundled.status !== 0) throw new Error(bundled.stderr || "Finance Dashboard V3 fixture bundle failed.");
 await writeFile(htmlFile, `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="./assets/${cssFile}"></head><body><div id="root"></div><script type="module" src="./finance-dashboard-v3-e2e.js"></script></body></html>`, "utf8");
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import type { AdminOrder, Payment } from "../../services/admin.service";
 import { supabase } from "../../services/supabase.client";
 import { calculatePaymentSummary, type PaymentSummary } from "../../utils/paymentSummary";
@@ -209,6 +210,7 @@ function PaymentOrderRow({
   onRefresh: () => void | Promise<void>;
 }) {
   const { order, summary, state, deliveredAction } = row;
+  const canVerifyPayment = state !== "anomaly" && deliveredAction && summary.pendingVerification > 0;
   const actionLabel = state === "anomaly"
     ? "Review ledger anomaly"
     : deliveredAction
@@ -249,9 +251,15 @@ function PaymentOrderRow({
           <MoneyCell label={state === "anomaly" ? "Anomaly" : summary.customerCredit > 0 ? "Credit" : "Balance"} value={state === "anomaly" ? summary.ledgerAnomaly : summary.customerCredit > 0 ? summary.customerCredit : summary.balanceToPay} danger={state === "anomaly" || (summary.balanceToPay > 0 && order.status === "delivered")} />
         </div>
 
-        <button type="button" onClick={onOpen} className={`min-h-12 rounded-xl px-5 py-3 text-xs font-semibold ${state === "anomaly" || deliveredAction ? "bg-route text-white" : "border border-asphalt bg-white text-asphalt"}`}>
-          {actionLabel} →
-        </button>
+        {canVerifyPayment ? (
+          <Link to={`/admin/operations?section=Finance&payment_status=initiated&q=${encodeURIComponent(order.tracking_id)}`} className="flex min-h-12 items-center rounded-xl bg-route px-5 py-3 text-xs font-semibold text-white">
+            {actionLabel} →
+          </Link>
+        ) : (
+          <button type="button" onClick={onOpen} className={`min-h-12 rounded-xl px-5 py-3 text-xs font-semibold ${state === "anomaly" || deliveredAction ? "bg-route text-white" : "border border-asphalt bg-white text-asphalt"}`}>
+            {actionLabel} →
+          </button>
+        )}
       </div>
 
       {state === "anomaly" && legacyRefundSources.length > 0 && <div className="mt-4 border-t border-route/20 pt-4">
