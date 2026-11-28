@@ -106,6 +106,14 @@ export async function createFleetBranch(partnerId: string | null, name: string, 
   throwIfError(error); return data as string;
 }
 
+export async function linkFleetGps(plateNumber: string, imei: string) {
+  const { error } = await supabase.rpc("admin_link_fleet_gps", {
+    p_plate_number: plateNumber,
+    p_imei: imei,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function createFleetVehicle(input: NewFleetVehicle) {
   const { data, error } = await supabase.rpc("create_fleet_vehicle", { p_partner_id: input.partnerId ?? null, p_plate_number: input.plateNumber.trim().toUpperCase(), p_vehicle_type: input.vehicleType.trim(), p_capacity_tons: input.capacityTons, p_ownership_type: input.ownershipType, p_fuel_type: input.fuelType, p_branch_id: input.branchId });
   throwIfError(error); return data as string;
