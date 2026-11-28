@@ -6,7 +6,6 @@ import {
   createFleetVehicle,
   createMaintenanceRecord,
   getFleetEnterpriseData,
-  linkFleetGps,
   setTruckOperationalStatus,
   updateFleetVehicleProfile,
   updateMaintenanceStatus,
@@ -44,7 +43,7 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
   const [status, setStatus] = useState<"all" | TruckOperationalStatus>("all");
   const [health, setHealth] = useState<"all" | FleetHealthStatus>("all");
   const [branch, setBranch] = useState("all");
-  const [modal, setModal] = useState<"vehicle" | "branch" | "maintenance" | "profile" | "gps" | null>(null);
+  const [modal, setModal] = useState<"vehicle" | "branch" | "maintenance" | "profile" | null>(null);
   const [selected, setSelected] = useState<FleetVehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeAction, setActiveAction] = useState<null | { key: string; message: string }>(null);
@@ -96,7 +95,6 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <button type="button" onClick={() => void load()} disabled={loading || saving} aria-describedby={saving ? "admin-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Refresh fleet data"} className="min-h-12 border border-asphalt px-4 py-3 text-xs font-semibold disabled:opacity-50">{loading ? "Refreshing…" : "Refresh"}</button>
           <button type="button" onClick={() => setModal("branch")} disabled={saving} aria-describedby={saving ? "admin-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Add fleet branch"} className="min-h-12 border border-asphalt px-4 py-3 text-xs font-semibold disabled:opacity-40">Add branch</button>
-          <button type="button" onClick={() => setModal("gps")} disabled={saving} className="min-h-12 border border-asphalt px-4 py-3 text-xs font-semibold disabled:opacity-40">Link GPS</button>
           <button type="button" onClick={() => setModal("vehicle")} disabled={saving} aria-describedby={saving ? "admin-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Add fleet vehicle"} className="col-span-2 min-h-12 bg-asphalt px-5 py-3 text-xs font-semibold text-white disabled:opacity-40 sm:col-auto">Add vehicle</button>
         </div>
       </header>
@@ -142,21 +140,6 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
         {data.audit.length ? <div className="divide-y divide-asphalt/10">{data.audit.slice(0, 40).map((event) => <article key={event.id} className="grid gap-2 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5"><div className="min-w-0"><p className="break-words text-sm font-semibold">{label(event.event_type)} · {event.source}</p><p className="mt-1 break-words text-xs text-steel">{event.reason ?? "System-recorded fleet event"}</p></div><time className="text-xs text-steel">{dateTime(event.created_at)}</time></article>)}</div> : <p className="p-8 text-center text-sm text-steel">No fleet audit events yet.</p>}
       </section>
 
-      {modal === "gps" && (
-        <Modal title="Link GPS" detail="Link a registered plate to its 15-digit device IMEI. Live tracking requires a separately configured Traccar connection and incoming GPS pings." saving={saving} busyMessage={busyMessage} busyLabel="Linking GPS…" onClose={() => setModal(null)} onSubmit={(form) => run(
-          "link_gps",
-          "Linking GPS to the vehicle.",
-          () => linkFleetGps(text(form, "plate"), text(form, "imei")),
-          "GPS device linked. Live location appears after tracking is connected and a GPS ping is received.",
-        )}>
-          {error && <p className="col-span-full text-sm text-route">{error}</p>}
-          <Field name="plate" label="Plate number" required />
-          <label className="grid gap-1 text-xs font-semibold">
-            GPS IMEI
-            <input name="imei" inputMode="numeric" pattern="[0-9]{15}" maxLength={15} required className="min-h-11 w-full border border-asphalt/20 px-3" title="Enter the 15-digit IMEI" />
-          </label>
-        </Modal>
-      )}
       {modal === "vehicle" && <VehicleModal branches={data.branches} saving={saving} busyMessage={busyMessage} onClose={() => setModal(null)} onSubmit={(form) => run("register_vehicle", "Registering a fleet vehicle. Other fleet actions are temporarily locked until this update finishes.", () => createFleetVehicle({ plateNumber: text(form, "plate"), vehicleType: text(form, "vehicleType"), capacityTons: numberOrNull(form, "capacity"), ownershipType: text(form, "ownership") as FleetOwnershipType, fuelType: (text(form, "fuel") || null) as FleetFuelType | null, branchId: text(form, "branch") || null }), "Fleet vehicle registered.")} />}
       {modal === "branch" && <BranchModal saving={saving} busyMessage={busyMessage} onClose={() => setModal(null)} onSubmit={(form) => run("create_branch", "Creating a fleet branch. Other fleet actions are temporarily locked until this update finishes.", () => createFleetBranch(null, text(form, "name"), text(form, "code"), text(form, "address")), "Fleet branch created.")} />}
       {modal === "maintenance" && <MaintenanceModal vehicles={data.vehicles} selected={selected} saving={saving} busyMessage={busyMessage} onClose={() => { setModal(null); setSelected(null); }} onSubmit={(form) => run("create_maintenance", "Recording fleet maintenance. Other fleet actions are temporarily locked until this update finishes.", () => createMaintenanceRecord({ truckId: text(form, "truck"), maintenanceType: text(form, "type") as MaintenanceType, status: text(form, "status") as MaintenanceStatus, serviceDate: text(form, "serviceDate"), odometerKm: numberOrNull(form, "odometer"), costEtb: numberOrNull(form, "cost") ?? 0, vendor: text(form, "vendor"), notes: text(form, "notes"), nextServiceDate: text(form, "nextDate"), nextServiceOdometerKm: numberOrNull(form, "nextOdometer") }), "Maintenance record created.")} />}
