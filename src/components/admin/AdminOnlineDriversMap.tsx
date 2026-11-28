@@ -149,7 +149,7 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders, hardwarePositio
       const index = phonePoints.findIndex(point => point.driver_id === driverId);
       const phone = phonePoints[index];
       if (!preferHardware(position, phone?.telemetry?.recordedAt ?? phone?.updated_at)) continue;
-      const row: DriverPoint = { driver_id: driverId, is_available: phone?.is_available ?? false, accuracy_m: null, updated_at: position.recorded_at, location: null, lng: position.location.longitude, lat: position.location.latitude, freshness: classifyTrackingFreshness(position.recorded_at), telemetry: { recordedAt: position.recorded_at, speedKmh: position.location.speed_kmh, heading: position.location.heading }, source: 'Hardware GPS' };
+      const row: DriverPoint = { driver_id: driverId, is_available: Boolean(phone?.is_available) && classifyTrackingFreshness(phone?.updated_at) !== "OFFLINE", accuracy_m: null, updated_at: position.recorded_at, location: null, lng: position.location.longitude, lat: position.location.latitude, freshness: classifyTrackingFreshness(position.recorded_at), telemetry: { recordedAt: position.recorded_at, speedKmh: position.location.speed_kmh, heading: position.location.heading }, source: 'Hardware GPS' };
       if (index >= 0) phonePoints[index] = row; else phonePoints.push(row);
     }
     return phonePoints;
