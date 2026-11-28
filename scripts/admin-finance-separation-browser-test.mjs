@@ -13,7 +13,7 @@ const result = await build({
     import {AdminFleetMaintenance} from './src/pages/AdminFleetMaintenance';
     window.queries=[]; window.recorded=[]; window.rpcCalls=[];
     const order={id:'qa-order',tracking_id:'QA-549',pickup_address:'Addis',dropoff_address:'Adama',vehicle_type:'Truck',price_etb:100,status:'placed',payment_status:'unpaid',created_at:'2026-11-28T00:00:00Z'};
-    const fixture={vehicles:[],records:[],branches:[],audit:[],drivers:[],summary:{total:0,available:0,assigned:0,on_trip:0,maintenance:0,suspended:0,inactive:0,expiry_alerts:0,service_alerts:0,dispatch_ready:0}};
+    const fixture={vehicles:[{vehicle_id:"qa-truck",plate_number:"AA-123",assigned_driver_name:"QA Driver",status:"available",health_status:"healthy",ownership_type:"company",maintenance_status:"clear",vehicle_type:"Truck",gps_provider:null},{vehicle_id:"linked-truck",plate_number:"BB-456",assigned_driver_name:"Other Driver",status:"available",health_status:"healthy",ownership_type:"company",maintenance_status:"clear",vehicle_type:"Truck",gps_provider:"traccar",gps_external_id:"223456789012345"}],records:[],branches:[],audit:[],drivers:[],summary:{total:0,available:0,assigned:0,on_trip:0,maintenance:0,suspended:0,inactive:0,expiry_alerts:0,service_alerts:0,dispatch_ready:0}};
     createRoot(document.getElementById('root')).render(new URL(location.href).searchParams.has('fleet') ? <AdminFleetMaintenance fixture={fixture}/> : <AdminOperationsControl view={new URL(location.href).searchParams.get('view')} order={order} allOrders={[order]} trucks={[]} drivers={[]} onClose={()=>{}}/>);
   `, resolveDir: process.cwd(), loader: "tsx" },
   bundle: true, write: false, format: "iife", jsx: "automatic",
@@ -60,8 +60,12 @@ try {
   assert.equal((await page.evaluate(()=>window.recorded))[0].amount_etb,40);
   console.log('PASS asynchronous payment records once, resets form, and reloads ledger');
   await page.goto(`${url}?fleet`);
+  await page.getByText('Device identifier: 223456789012345',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Link GPS for BB-456',exact:true}).count(),0,'Existing links cannot be replaced from the card');
   await page.getByRole('button',{name:'Link GPS',exact:true}).click();
-  await page.getByLabel('Plate number',{exact:true}).fill('AA-123');
+  await page.getByLabel('Registered vehicle',{exact:true}).selectOption('AA-123');
+  assert.equal(await page.getByRole('option',{name:/AA-123.*QA Driver/}).count(),1,'Registered vehicle selection includes the driver');
+  assert.equal(await page.getByRole('option',{name:/BB-456/}).count(),0,'Already-linked vehicles are excluded');
   await page.getByLabel('GPS IMEI',{exact:true}).fill('123');
   await page.getByRole('button',{name:'Save',exact:true}).click();
   assert.equal((await page.evaluate(()=>window.rpcCalls)).length,0,'Invalid IMEI must not submit');
@@ -77,6 +81,8 @@ try {
   assert.equal(calls.length,2);
   assert.deepEqual(calls[1],{name:'admin_link_fleet_gps',args:{p_plate_number:'AA-123',p_imei:'123456789012345'}});
   assert.equal(await page.getByLabel('GPS IMEI',{exact:true}).count(),0,'Successful link closes modal');
+  await page.getByRole('button',{name:'Link GPS for AA-123',exact:true}).click();
+  assert.equal(await page.getByLabel('Registered vehicle',{exact:true}).inputValue(),'AA-123','Truck card prefills the registered vehicle');
   assert.deepEqual(externalRequests,[],'Fixture QA must never contact external services');
   console.log('PASS mobile GPS form validates IMEI, preserves rejected input and retries the authorized RPC');
 

@@ -6,6 +6,7 @@ import {
   createFleetVehicle,
   createMaintenanceRecord,
   getFleetEnterpriseData,
+  getAdminFleetGpsLinks,
   linkFleetGps,
   setTruckOperationalStatus,
   updateFleetVehicleProfile,
@@ -55,7 +56,15 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setData(fixture ?? await getFleetEnterpriseData()); setError(""); }
+    try {
+      if (fixture) setData(fixture);
+      else {
+        const [fleet, links] = await Promise.all([getFleetEnterpriseData(), getAdminFleetGpsLinks()]);
+        const identifiers = new Map(links.map((link) => [link.id, link.gps_external_id]));
+        setData({ ...fleet, vehicles: fleet.vehicles.map((vehicle) => ({ ...vehicle, gps_external_id: identifiers.get(vehicle.vehicle_id) ?? null, has_truck_record: identifiers.has(vehicle.vehicle_id) })) });
+      }
+      setError("");
+    }
     catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Fleet control data could not be loaded."); }
     finally { setLoading(false); }
   }, [fixture]);
@@ -96,7 +105,7 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <button type="button" onClick={() => void load()} disabled={loading || saving} aria-describedby={saving ? "admin-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Refresh fleet data"} className="min-h-12 border border-asphalt px-4 py-3 text-xs font-semibold disabled:opacity-50">{loading ? "Refreshing…" : "Refresh"}</button>
           <button type="button" onClick={() => setModal("branch")} disabled={saving} aria-describedby={saving ? "admin-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Add fleet branch"} className="min-h-12 border border-asphalt px-4 py-3 text-xs font-semibold disabled:opacity-40">Add branch</button>
-          <button type="button" onClick={() => setModal("gps")} disabled={saving} className="min-h-12 border border-asphalt px-4 py-3 text-xs font-semibold disabled:opacity-40">Link GPS</button>
+          <button type="button" onClick={() => { setSelected(null); setError(""); setModal("gps"); }} disabled={saving || loading} className="min-h-12 border border-asphalt px-4 py-3 text-xs font-semibold disabled:opacity-40">Link GPS</button>
           <button type="button" onClick={() => setModal("vehicle")} disabled={saving} aria-describedby={saving ? "admin-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Add fleet vehicle"} className="col-span-2 min-h-12 bg-asphalt px-5 py-3 text-xs font-semibold text-white disabled:opacity-40 sm:col-auto">Add vehicle</button>
         </div>
       </header>
@@ -127,7 +136,7 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
         <div className="border-b border-asphalt/10 p-5"><p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">AVAILABILITY BOARD</p><h2 className="mt-1 font-display text-xl font-semibold">Vehicle health and assignment</h2></div>
         {loading ? <p className="p-12 text-center font-mono text-xs text-steel">Loading fleet…</p> : visible.length ? (
           <div className="grid gap-4 p-3 sm:p-5 md:grid-cols-2 xl:grid-cols-3">
-            {visible.map((vehicle) => <VehicleCard key={vehicle.vehicle_id} vehicle={vehicle} drivers={data.drivers} activeAction={activeAction} busyMessage={busyMessage} records={recordsByTruck.get(vehicle.vehicle_id) ?? []} onProfile={() => openProfile(vehicle)} onMaintenance={() => openMaintenance(vehicle)} onStatus={(next, reason) => run(`status:${vehicle.vehicle_id}`, `Updating ${vehicle.plate_number} operational status. Other fleet actions are temporarily locked until this update finishes.`, () => setTruckOperationalStatus(vehicle.vehicle_id, next, reason), `${vehicle.plate_number} status updated.`)} onAssign={(driverId, reason) => run(`driver:${vehicle.vehicle_id}`, `Updating ${vehicle.plate_number} driver assignment. Other fleet actions are temporarily locked until this update finishes.`, () => assignFleetDriver(vehicle.vehicle_id, driverId, reason), `${vehicle.plate_number} driver assignment updated.`)} />)}
+            {visible.map((vehicle) => <VehicleCard key={vehicle.vehicle_id} vehicle={vehicle} drivers={data.drivers} activeAction={activeAction} busyMessage={busyMessage} records={recordsByTruck.get(vehicle.vehicle_id) ?? []} onProfile={() => openProfile(vehicle)} onGps={() => { setSelected(vehicle); setError(""); setModal("gps"); }} onMaintenance={() => openMaintenance(vehicle)} onStatus={(next, reason) => run(`status:${vehicle.vehicle_id}`, `Updating ${vehicle.plate_number} operational status. Other fleet actions are temporarily locked until this update finishes.`, () => setTruckOperationalStatus(vehicle.vehicle_id, next, reason), `${vehicle.plate_number} status updated.`)} onAssign={(driverId, reason) => run(`driver:${vehicle.vehicle_id}`, `Updating ${vehicle.plate_number} driver assignment. Other fleet actions are temporarily locked until this update finishes.`, () => assignFleetDriver(vehicle.vehicle_id, driverId, reason), `${vehicle.plate_number} driver assignment updated.`)} />)}
           </div>
         ) : <p className="p-10 text-center text-sm text-steel">No vehicles match the selected filters.</p>}
       </section>
@@ -143,14 +152,20 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
       </section>
 
       {modal === "gps" && (
-        <Modal title="Link GPS" detail="Link a registered plate to its 15-digit device IMEI. Live tracking requires a separately configured Traccar connection and incoming GPS pings." saving={saving} busyMessage={busyMessage} busyLabel="Linking GPS…" onClose={() => setModal(null)} onSubmit={(form) => run(
+        <Modal title="Link GPS" detail="Choose a registered vehicle and enter its existing Traccar device identifier (15-digit IMEI). Linking saves the association in HALLO; live location requires valid GPS updates." saving={saving} busyMessage={busyMessage} busyLabel="Linking GPS…" onClose={() => setModal(null)} onSubmit={(form) => run(
           "link_gps",
           "Linking GPS to the vehicle.",
           () => linkFleetGps(text(form, "plate"), text(form, "imei")),
           "GPS device linked. Live location appears after tracking is connected and a GPS ping is received.",
         )}>
           {error && <p className="col-span-full text-sm text-route">{error}</p>}
-          <Field name="plate" label="Plate number" required />
+          <label className="grid gap-1 text-xs font-semibold">
+            Registered vehicle
+            <select name="plate" aria-label="Registered vehicle" required defaultValue={selected?.plate_number ?? ""} className="min-h-11 w-full border border-asphalt/20 bg-white px-3">
+              <option value="">Choose vehicle and driver</option>
+              {data.vehicles.filter((vehicle) => !vehicle.gps_provider && !vehicle.gps_external_id && (vehicle.has_truck_record ?? !vehicle.partner_vehicle_id)).map((vehicle) => <option key={vehicle.vehicle_id} value={vehicle.plate_number}>{vehicle.plate_number} · {vehicle.assigned_driver_name ?? "No driver assigned"}</option>)}
+            </select>
+          </label>
           <label className="grid gap-1 text-xs font-semibold">
             GPS IMEI
             <input name="imei" inputMode="numeric" pattern="[0-9]{15}" maxLength={15} required className="min-h-11 w-full border border-asphalt/20 px-3" title="Enter the 15-digit IMEI" />
@@ -165,7 +180,7 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
   );
 }
 
-function VehicleCard({ vehicle, drivers, activeAction, busyMessage, records, onProfile, onMaintenance, onStatus, onAssign }: { vehicle: FleetVehicle; drivers: FleetEnterpriseData["drivers"]; activeAction: { key: string; message: string } | null; busyMessage: string; records: FleetEnterpriseData["records"]; onProfile: () => void; onMaintenance: () => void; onStatus: (status: TruckOperationalStatus, reason: string) => Promise<unknown>; onAssign: (driverId: string | null, reason: string) => Promise<unknown> }) {
+function VehicleCard({ vehicle, drivers, activeAction, busyMessage, records, onProfile, onGps, onMaintenance, onStatus, onAssign }: { vehicle: FleetVehicle; drivers: FleetEnterpriseData["drivers"]; activeAction: { key: string; message: string } | null; busyMessage: string; records: FleetEnterpriseData["records"]; onProfile: () => void; onGps: () => void; onMaintenance: () => void; onStatus: (status: TruckOperationalStatus, reason: string) => Promise<unknown>; onAssign: (driverId: string | null, reason: string) => Promise<unknown> }) {
   const saving = activeAction !== null;
   const [nextStatus, setNextStatus] = useState<TruckOperationalStatus>(vehicle.status);
   const [driver, setDriver] = useState(vehicle.assigned_driver_id ?? "");
@@ -189,7 +204,9 @@ function VehicleCard({ vehicle, drivers, activeAction, busyMessage, records, onP
     <div className="mt-4 grid grid-cols-2 gap-2 text-xs"><Info name="Branch" value={vehicle.branch_name ?? "Unassigned"} /><Info name="Driver" value={vehicle.assigned_driver_name ?? "Unassigned"} /><Info name="Odometer" value={vehicle.current_odometer_km === null ? "Not recorded" : `${Number(vehicle.current_odometer_km).toLocaleString()} km`} /><Info name="Ownership" value={label(vehicle.ownership_type)} /><Info name="Insurance" value={date(vehicle.insurance_expiry)} /><Info name="Roadworthy" value={date(vehicle.roadworthiness_expiry)} /></div>
     {vehicle.active_trip_id && <p className="mt-3 rounded-xl bg-sky-50 p-3 text-xs font-semibold text-sky-800">Active trip: {vehicle.active_trip_reference ?? vehicle.active_trip_id}</p>}
     <p className="mt-3 text-xs text-steel">Last service: {date(vehicle.last_service_date)} · Next: {date(vehicle.next_service_date)}</p>
-    <p className="mt-1 text-xs text-steel">GPS: {vehicle.gps_provider ? `${vehicle.gps_provider} · ${vehicle.last_location_at ? dateTime(vehicle.last_location_at) : "No recent ping"}` : "Integration ready; provider not connected"}</p>
+    <p className="mt-1 break-all text-xs text-steel">GPS: {vehicle.gps_provider ? `${vehicle.gps_provider} · ${vehicle.last_location_at ? dateTime(vehicle.last_location_at) : "No recent ping"}` : "Device not linked"}</p>
+    {vehicle.gps_external_id && <p className="mt-1 break-all font-mono text-xs text-steel">Device identifier: {vehicle.gps_external_id}</p>}
+    {!vehicle.gps_provider && !vehicle.gps_external_id && (vehicle.has_truck_record ?? !vehicle.partner_vehicle_id) && <button type="button" onClick={onGps} disabled={saving} className="mt-3 min-h-11 border border-asphalt px-3 text-xs font-semibold disabled:opacity-40" aria-label={`Link GPS for ${vehicle.plate_number}`}>Link GPS</button>}
     <div className="mt-4 grid grid-cols-2 gap-2"><button onClick={onProfile} disabled={saving} aria-describedby={saving ? "admin-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Edit compliance profile"} className="min-h-11 border border-asphalt px-3 text-xs font-semibold disabled:opacity-40">Edit profile</button><button onClick={onMaintenance} disabled={saving} aria-describedby={saving ? "admin-fleet-action-guidance" : undefined} title={saving ? busyMessage : "Add maintenance record"} className="min-h-11 bg-asphalt px-3 text-xs font-semibold text-white disabled:opacity-40">Maintenance</button></div>
     <div className="mt-4 border-t border-asphalt/10 pt-4"><label className="text-[10px] font-semibold uppercase tracking-wide text-steel">Reason<input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} disabled={saving} title={saving ? busyMessage : "Required audit reason"} aria-describedby={guidanceId} className="mt-2 min-h-11 w-full rounded-xl border border-asphalt/15 bg-white px-3 text-xs normal-case tracking-normal" placeholder="Required for audited changes" /></label><p id={guidanceId} className={`mt-2 text-[11px] leading-5 ${sharedDisabledReason ? "text-route" : "text-steel"}`}>{sharedDisabledReason || "Reason ready. Choose a changed status or driver assignment before applying."}</p><div className="mt-2 grid gap-2 sm:grid-cols-2"><select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as TruckOperationalStatus)} disabled={saving} title={saving ? busyMessage : "Choose operational status"} aria-describedby={guidanceId} className="min-h-11 min-w-0 rounded-xl border border-asphalt/15 bg-white px-2 text-xs">{statuses.map((item) => <option key={item} value={item}>{label(item)}</option>)}</select><button disabled={Boolean(statusDisabledReason)} title={statusDisabledReason || "Apply audited status change"} aria-describedby={guidanceId} onClick={() => void onStatus(nextStatus, reason)} className="min-h-11 bg-emerald-700 px-3 text-xs font-semibold text-white disabled:opacity-35">{activeAction?.key === `status:${vehicle.vehicle_id}` ? "Updating status…" : "Apply status"}</button><select value={driver} onChange={(event) => setDriver(event.target.value)} disabled={saving} title={saving ? busyMessage : "Choose assigned driver"} aria-describedby={guidanceId} className="min-h-11 min-w-0 rounded-xl border border-asphalt/15 bg-white px-2 text-xs"><option value="">No driver</option>{drivers.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select><button disabled={Boolean(driverDisabledReason)} title={driverDisabledReason || "Apply audited driver assignment"} aria-describedby={guidanceId} onClick={() => void onAssign(driver || null, reason)} className="min-h-11 border border-emerald-700 px-3 text-xs font-semibold text-emerald-800 disabled:opacity-35">{activeAction?.key === `driver:${vehicle.vehicle_id}` ? "Updating driver…" : "Apply driver"}</button></div></div>
     {latest && <p className="mt-3 text-[11px] text-steel">Latest record: {label(latest.maintenance_type)} · {date(latest.service_date)} · {money(latest.cost_etb)}</p>}
