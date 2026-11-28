@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import http from "node:http";
+import { spawnSync } from "node:child_process";
 import { build } from "esbuild";
 import { chromium } from "playwright-core";
 
@@ -31,9 +32,12 @@ const result = await build({
 const server = http.createServer((req,res)=>{res.setHeader('Content-Type','text/html');res.end(`<div id="root"></div><script>${result.outputFiles[0].text}</script>`)});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const url=`http://127.0.0.1:${server.address().port}`;
+const chromePath = [process.env.CHROME_BIN, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser']
+  .filter(Boolean).find(candidate => spawnSync(candidate, ['--version'], { encoding: 'utf8' }).status === 0);
 let browser;
 try {
-  browser=await chromium.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+  assert.ok(chromePath, 'Install Chrome/Chromium or set CHROME_BIN for browser QA');
+  browser=await chromium.launch({executablePath:chromePath,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const page=await browser.newPage({viewport:{width:390,height:844}});
   const externalRequests=[];
   await page.route('**/*',route=>{if(new URL(route.request().url()).hostname==='127.0.0.1') return route.continue(); externalRequests.push(route.request().url()); return route.abort();});
