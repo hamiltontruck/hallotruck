@@ -5,6 +5,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { classifyTrackingFreshness, type TrackingFreshness } from "../../domain/tracking-freshness";
 import { supabase } from "../../services/supabase.client";
 
+import { preferHardware, type HardwareGpsPosition } from "../../domain/admin-hardware-gps";
+
 interface LiveTripRow {
   order_id: string;
   status: string;
@@ -123,18 +125,25 @@ export function CustomerLiveTripMap({
   totalDistanceKm,
   standalone = false,
   showCustomerDetailsLink = true,
+  hardwarePosition,
 }: {
   orderId: string;
   totalDistanceKm: number | null;
   standalone?: boolean;
   showCustomerDetailsLink?: boolean;
+  hardwarePosition?: HardwareGpsPosition;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const truckMarker = useRef<maplibregl.Marker | null>(null);
   const endpointMarkers = useRef<maplibregl.Marker[]>([]);
   const fittedBounds = useRef(false);
-  const [trip, setTrip] = useState<LiveTripRow | null>(null);
+  const [phoneTrip, setTrip] = useState<LiveTripRow | null>(null);
+  const trip = useMemo(() => {
+    if (phoneTrip?.order_id !== orderId) return null;
+    if (!preferHardware(hardwarePosition, phoneTrip.recorded_at)) return phoneTrip;
+    return { ...phoneTrip, truck_lng: hardwarePosition.location.longitude, truck_lat: hardwarePosition.location.latitude, speed_kmh: hardwarePosition.location.speed_kmh, heading: hardwarePosition.location.heading, recorded_at: hardwarePosition.recorded_at };
+  }, [phoneTrip, hardwarePosition, orderId]);
   const [remainingKm, setRemainingKm] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [error, setError] = useState("");

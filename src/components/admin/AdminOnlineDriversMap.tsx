@@ -5,6 +5,8 @@ import { classifyTrackingFreshness, type TrackingFreshness } from "../../domain/
 import { supabase } from "../../services/supabase.client";
 import type { AdminOrder, Driver, Truck } from "../../services/admin.service";
 
+import { preferHardware, type HardwareGpsPosition } from "../../domain/admin-hardware-gps";
+
 type PresenceRow = {
   driver_id: string;
   is_available: boolean;
@@ -14,7 +16,7 @@ type PresenceRow = {
 };
 type DriverTruckRow = Pick<Truck, "id" | "plate_number" | "vehicle_type"> & { driver_id: string | null };
 type TripTelemetry = { recordedAt: string | null; speedKmh: number | null; heading: number | null };
-type DriverPoint = PresenceRow & { lng: number; lat: number; freshness: TrackingFreshness; telemetry: TripTelemetry | null };
+type DriverPoint = PresenceRow & { lng: number; lat: number; freshness: TrackingFreshness; telemetry: TripTelemetry | null; source?: string };
 
 const mapTilerKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
 const mapStyle = `https://api.maptiler.com/maps/basic-v2/style.json?key=${mapTilerKey ?? ""}`;
@@ -86,7 +88,7 @@ function telemetryText(telemetry: TripTelemetry | null) {
   return `Speed ${speed} · Heading ${heading}`;
 }
 
-export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Driver[]; trucks: Truck[]; orders: AdminOrder[] }) {
+export function AdminOnlineDriversMap({ drivers, trucks, orders, hardwarePositions = [] }: { drivers: Driver[]; trucks: Truck[]; orders: AdminOrder[]; hardwarePositions?: HardwareGpsPosition[] }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
@@ -131,13 +133,27 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Dr
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [orders]);
 
-  const points = useMemo<DriverPoint[]>(() => presence.flatMap((row) => {
+  const points = useMemo<DriverPoint[]>(() => {
+    const phonePoints: DriverPoint[] = presence.flatMap((row) => {
     const point = coordinates(row.location);
     if (!point) return [];
     const telemetry = telemetryByDriver[row.driver_id] ?? null;
     const freshnessAt = telemetry?.recordedAt ?? row.updated_at;
     return [{ ...row, lng: point[0], lat: point[1], freshness: classifyTrackingFreshness(freshnessAt), telemetry }];
-  }), [presence, telemetryByDriver]);
+    });
+    for (const position of hardwarePositions) {
+      const assignments = orders.filter(order => order.truck_id === position.truck_id && order.driver_id && ["accepted", "in_transit"].includes(order.status));
+      if (assignments.length !== 1) continue;
+      const driverId = assignments[0].driver_id!;
+      if (orders.filter(order => order.driver_id === driverId && ["accepted", "in_transit"].includes(order.status)).length !== 1) continue;
+      const index = phonePoints.findIndex(point => point.driver_id === driverId);
+      const phone = phonePoints[index];
+      if (!preferHardware(position, phone?.telemetry?.recordedAt ?? phone?.updated_at)) continue;
+      const row: DriverPoint = { driver_id: driverId, is_available: phone?.is_available ?? false, accuracy_m: null, updated_at: position.recorded_at, location: null, lng: position.location.longitude, lat: position.location.latitude, freshness: classifyTrackingFreshness(position.recorded_at), telemetry: { recordedAt: position.recorded_at, speedKmh: position.location.speed_kmh, heading: position.location.heading }, source: 'Hardware GPS' };
+      if (index >= 0) phonePoints[index] = row; else phonePoints.push(row);
+    }
+    return phonePoints;
+  }, [presence, telemetryByDriver, hardwarePositions, orders]);
   const visible = points.filter((point) => point.freshness !== "OFFLINE");
   const liveCount = visible.filter((point) => point.freshness === "LIVE").length;
   const availableCount = visible.filter((point) => point.is_available).length;
@@ -159,9 +175,10 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Dr
       const truck = assignedTruck(point.driver_id, orders, trucks, driverTrucks);
       const activeOrder = activeOrderForDriver(point.driver_id, orders);
       const updateAt = point.telemetry?.recordedAt ?? point.updated_at;
-      const popup = new maplibregl.Popup({ offset: 18 }).setHTML(
-        `<strong>${driver?.full_name ?? "Driver"}</strong><br/>${driver?.phone ?? "Phone unavailable"}<br/>${truck?.plate_number ?? truck?.vehicle_type ?? "Truck unavailable"}<br/>GPS ${point.freshness} · ${ageLabel(updateAt)}<br/>${telemetryText(point.telemetry)}<br/>${activeOrder ? `Trip ${activeOrder.tracking_id}` : "No active trip"}<br/>${point.is_available ? "Available for dispatch" : "Not available"}`,
-      );
+      const content = document.createElement('div');
+      content.style.whiteSpace = 'pre-line';
+      content.textContent = [driver?.full_name ?? 'Driver', driver?.phone ?? 'Phone unavailable', truck?.plate_number ?? truck?.vehicle_type ?? 'Truck unavailable', `${point.source ?? 'Driver app'} · ${point.freshness} · ${ageLabel(updateAt)}`, telemetryText(point.telemetry), activeOrder ? `Trip ${activeOrder.tracking_id}` : 'No active trip', point.is_available ? 'Available for dispatch' : 'Not available'].join('\n');
+      const popup = new maplibregl.Popup({ offset: 18 }).setDOMContent(content);
       return new maplibregl.Marker({ element: markerElement(point.freshness), anchor: "center" }).setLngLat([point.lng, point.lat]).setPopup(popup).addTo(map);
     });
     if (visible.length) {
@@ -173,7 +190,7 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Dr
 
   return <section className="mb-5 overflow-hidden rounded-2xl border border-asphalt/10 bg-white" aria-label="Online drivers live fleet">
     <div className="flex flex-col gap-3 border-b border-asphalt/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <div><p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">LIVE FLEET</p><h2 className="mt-1 font-display text-lg font-semibold">Online drivers</h2><p className="mt-1 text-xs text-steel">Current and recently active driver presence. Active-trip speed and heading use the existing secured live-trip telemetry.</p></div>
+      <div><p className="font-mono text-[10px] tracking-[.18em] text-emerald-700">LIVE FLEET</p><h2 className="mt-1 font-display text-lg font-semibold">Online drivers</h2><p className="mt-1 text-xs text-steel">Driver presence and assigned vehicle GPS. Hardware GPS does not make a driver available for dispatch.</p></div>
       <div className="flex flex-wrap gap-2 text-[10px] font-semibold"><span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">{liveCount} LIVE</span><span className="rounded-full bg-amber/15 px-3 py-1.5 text-amber-dim">{availableCount} AVAILABLE</span><span className="rounded-full bg-bone px-3 py-1.5 text-steel">{visible.length} ON MAP</span></div>
     </div>
     {error && <p role="alert" className="border-b border-route/20 bg-route/5 p-4 text-xs text-route">Unable to load driver presence: {error}</p>}
@@ -184,7 +201,7 @@ export function AdminOnlineDriversMap({ drivers, trucks, orders }: { drivers: Dr
         const truck = assignedTruck(point.driver_id, orders, trucks, driverTrucks);
         const activeOrder = activeOrderForDriver(point.driver_id, orders);
         const updateAt = point.telemetry?.recordedAt ?? point.updated_at;
-        return <div key={point.driver_id} className="rounded-xl bg-bone p-3 text-xs"><div className="flex items-center justify-between gap-2"><strong className="truncate">{driver?.full_name ?? driver?.phone ?? "Driver"}</strong><span className={point.freshness === "LIVE" ? "text-emerald-700" : "text-amber-dim"}>{point.freshness}</span></div><p className="mt-1 truncate text-steel">{truck?.plate_number ?? truck?.vehicle_type ?? "Truck unavailable"} · {ageLabel(updateAt)}</p><p className="mt-1 text-steel">{telemetryText(point.telemetry)}</p><p className="mt-1 truncate text-steel">{activeOrder ? `Trip ${activeOrder.tracking_id}` : "No active trip"} · {point.is_available ? "Available for dispatch" : "Not available"}</p></div>;
+        return <div key={point.driver_id} className="rounded-xl bg-bone p-3 text-xs"><div className="flex items-center justify-between gap-2"><strong className="truncate">{driver?.full_name ?? driver?.phone ?? "Driver"}</strong><span className={point.freshness === "LIVE" ? "text-emerald-700" : "text-amber-dim"}>{point.freshness}</span></div><p className="mt-1 truncate text-steel">{truck?.plate_number ?? truck?.vehicle_type ?? "Truck unavailable"} · {ageLabel(updateAt)}</p><p className="mt-1 text-steel">{point.source ?? "Driver app"} · {telemetryText(point.telemetry)}</p><p className="mt-1 truncate text-steel">{activeOrder ? `Trip ${activeOrder.tracking_id}` : "No active trip"} · {point.is_available ? "Available for dispatch" : "Not available"}</p></div>;
       })}
       {!visible.length && !error && <p className="text-sm text-steel">No current or recently active driver locations.</p>}
     </div>
