@@ -50,8 +50,8 @@ begin
   ) values (
     'truck', v_truck.id, v_truck.id, v_truck.partner_id, v_truck.driver_id,
     'profile_updated', 'GPS device linked',
-    jsonb_build_object('gps_provider', v_truck.gps_provider, 'gps_external_id', v_truck.gps_external_id),
-    jsonb_build_object('gps_provider', 'traccar', 'gps_external_id', v_imei),
+    jsonb_build_object('gps_provider', v_truck.gps_provider, 'gps_imei_last4', pg_catalog.right(v_truck.gps_external_id, 4)),
+    jsonb_build_object('gps_provider', 'traccar', 'gps_imei_last4', pg_catalog.right(v_imei, 4)),
     auth.uid(), 'admin'
   );
 exception when unique_violation then

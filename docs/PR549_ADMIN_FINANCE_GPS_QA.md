@@ -14,7 +14,8 @@ Admin/CEO GPS linking normalizes the registered plate, validates a 15-digit IMEI
 locks the truck, rejects replacement of existing links and uses a unique index to
 prevent reuse of a device. An identical retry succeeds without another write.
 Each new link also writes a `profile_updated` fleet audit event, including actor,
-truck and old/new GPS metadata, in the same transaction. Existing immutable audit
+truck and old/new GPS metadata, in the same transaction. The audit stores only
+the last four IMEI digits because drivers and partner members can read some events. Existing immutable audit
 history and its access policies remain in effect.
 
 ## Repeatable verification
@@ -22,7 +23,7 @@ history and its access policies remain in effect.
 - `npm run lint`
 - `npm run build`
 - `npm run test:regression` (includes the new disposable GPS database test)
-- `npm run test:admin-finance-gps` (21 database assertions and four browser scenarios)
+- `npm run test:admin-finance-gps` (22 database assertions and four browser scenarios)
 
 The database test uses PGlite with synthetic principals/tables and executes the
 actual GPS migration. It verifies anonymous/customer/driver/partner denials,

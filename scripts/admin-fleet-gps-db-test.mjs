@@ -47,6 +47,7 @@ try {
   assert.equal(audit[0].event_type,'profile_updated'); checks++;
   assert.equal(audit[0].source,'admin'); checks++;
   assert.equal(audit[0].actor_id,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'); checks++;
-  assert.equal(audit[0].new_values.gps_external_id,'123456789012345'); checks++;
+  assert.deepEqual(audit[0].old_values, { gps_provider: null, gps_imei_last4: null }); checks++;
+  assert.deepEqual(audit[0].new_values, { gps_provider: 'traccar', gps_imei_last4: '2345' }); checks++;
   console.log(`PASS Admin GPS linking: ${checks} authorization, validation, uniqueness, retry and audit checks`);
 } finally {await db.close();}
