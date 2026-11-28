@@ -1,8 +1,5 @@
-create unique index trucks_traccar_device_unique
-  on public.trucks (btrim(gps_external_id))
-  where gps_provider = 'traccar' and gps_external_id is not null;
-
-create function public.admin_link_fleet_gps(p_plate_number text, p_imei text)
+-- Forward fix: keep full device identifiers out of general fleet audit metadata.
+create or replace function public.admin_link_fleet_gps(p_plate_number text, p_imei text)
 returns void
 language plpgsql
 security definer

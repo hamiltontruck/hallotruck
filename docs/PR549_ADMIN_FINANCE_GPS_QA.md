@@ -17,7 +17,7 @@ activate SIMs or synthesize valid location fixes. Current Live trips data source
 are unchanged. Saving the association does not imply live telemetry ingestion.
 
 Verification:
-- 21 disposable PGlite authorization, validation, uniqueness and audit assertions.
+- 22 disposable PGlite authorization, validation, uniqueness and audit assertions.
 - Real React/Chromium browser checks for registered plate/driver selection,
   linked-device display, existing-link exclusion, per-card preselection, invalid
   IMEI, server rejection/retry and RPC arguments. External requests are blocked.
@@ -31,3 +31,14 @@ server-side active Admin/CEO authorization. A live unauthenticated negative test
 was rejected before any truck mapping write. No actual device/truck association
 was selected or changed by the assistant; ordinary Admins perform that action
 through the app. HALLO GPS QA was not modified.
+
+Migration filenames match the versions recorded by Supabase during this release:
+20261128015726 (link RPC/index) and 20261128015948 (forward audit masking fix).
+Fresh installations apply the masking forward fix before Admins use the UI.
+The local CLI could not initialize its read-only home profile; filenames therefore
+use the actual server-generated migration versions rather than guessed times.
+
+Supabase advisors report the new authenticated SECURITY DEFINER endpoint as
+expected for this privileged RPC. Its explicit active Admin/CEO check, empty
+search_path and anon denial were verified. Existing unrelated advisories were
+left unchanged. Advisory reference: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable

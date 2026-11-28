@@ -21,7 +21,8 @@ try {
       ('00000000-0000-4000-8000-000000000001','AA123'),
       ('00000000-0000-4000-8000-000000000002','AA456');
   `);
-  await db.exec(await readFile('supabase/migrations/20261127233000_admin_link_fleet_gps.sql','utf8'));
+  await db.exec(await readFile('supabase/migrations/20261128015726_admin_link_fleet_gps.sql','utf8'));
+  await db.exec(await readFile('supabase/migrations/20261128015948_mask_fleet_gps_audit_identifiers.sql','utf8'));
   const principal=async role=>db.query(`select set_config('qa.uid',$1,false),set_config('qa.role',$2,false)`,[role==='anonymous'?'':'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',role]);
   const link=(plate,imei)=>db.query('select public.admin_link_fleet_gps($1,$2)',[plate,imei]);
   for(const role of ['anonymous','customer','driver','partner']) {
