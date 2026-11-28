@@ -149,3 +149,89 @@ test("credential verification rejects a history response containing another devi
   const api = { devices: async () => [device], history: async () => [position(1, 1000, { deviceId: 99 })] };
   await assert.rejects(verifyReadAccess(api, [mapping], now), /history scope/);
 });
+
+test("C32 can be registered but cannot ingest until its protocol is verified", async () => {
+  const c32 = { uniqueId: "synthetic-c32", truckId: "qa-c32", name: "QA C32",
+    model: "secumore-c32", plateNumber: "qa-32" };
+  const registered = { id: 43, uniqueId: c32.uniqueId, name: c32.name };
+  const devices = [];
+  const api = {
+    devices: async () => devices,
+    register: async () => devices.push(registered),
+    history: async () => assert.fail("C32 history must not feed ingestion"),
+  };
+  assert.equal(validateMappings([c32])[0].plateNumber, "QA-32");
+  assert.throws(() => validateMappings([c32, { ...mapping, plateNumber: "QA-32" }]), /Duplicate QA truck plate/);
+  assert.throws(() => validateMappings([{ ...c32, model: "gt06" }]), /Unknown/);
+  assert.equal(await ensureRegistered(api, c32), registered);
+  assert.equal(await ensureRegistered(api, c32), registered);
+  assert.equal(devices.length, 1);
+  assert.deepEqual(await syncPositions({ api, mappings: [c32], now,
+    store: { commit: () => assert.fail("C32 must not reach the store") },
+  }), { inserted: 0, rejected: 0 });
+});
+
+test("confirmed GT06 and existing H02 use separate mappings and deduplicate replay", async () => {
+  const c32 = { uniqueId: "synthetic-c32", truckId: "qa-c32", name: "QA C32",
+    model: "secumore-c32", plateNumber: "QA-32", verifiedProtocol: "gt06" };
+  const registered = { id: 43, uniqueId: c32.uniqueId, name: c32.name };
+  const api = {
+    devices: async () => [device, registered],
+    history: async (id) => id === device.id ? [position(1, 1000)] : [
+      position(2, 1000, { deviceId: id, protocol: "gt06" }),
+      position(3, 1000, { deviceId: id, protocol: "h02" }),
+      position(4, 1000, { deviceId: device.id, protocol: "gt06" }),
+    ],
+  };
+  const store = openPositionStore(":memory:");
+  try {
+    const sync = () => syncPositions({ api, store, mappings: [mapping, c32], now });
+    assert.deepEqual(await sync(), { inserted: 2, rejected: 2 });
+    assert.deepEqual(await sync(), { inserted: 0, rejected: 2 });
+    assert.equal(store.latest(c32, now).status, "LIVE");
+  } finally {
+    store.close();
+  }
+});
+
+test("plate uniqueness ignores case, spaces and hyphens while retaining the display plate", () => {
+  const first = { ...mapping, model: "sinotrack-st-906l", plateNumber: " aa-123 " };
+  assert.equal(validateMappings([first])[0].plateNumber, "AA-123");
+  for (const plateNumber of ["AA 123", "aa123", "AA--123", "AA  123"]) {
+    assert.throws(() => validateMappings([first, {
+      ...first, uniqueId: "another-device", truckId: "another-truck", plateNumber,
+    }]), /Duplicate QA truck plate/);
+  }
+  assert.equal(validateMappings([first, {
+    ...first, uniqueId: "another-device", truckId: "another-truck", plateNumber: "AA-124",
+  }]).length, 2);
+});
+
+test("removing C32 verification hides stored fixes and prevents staging export without deleting history", async () => {
+  const { replicatePositions } = await import("./staging/replicate.mjs");
+  const confirmed = { uniqueId: "synthetic-c32", truckId: "qa-c32", name: "QA C32",
+    model: "secumore-c32", plateNumber: "QA-C32", verifiedProtocol: "gt06" };
+  const { verifiedProtocol, ...pending } = confirmed;
+  const c32Device = { id: 43, uniqueId: confirmed.uniqueId, name: confirmed.name };
+  const api = {
+    devices: async () => [device, c32Device],
+    history: async (id) => [position(id, 1000, {
+      deviceId: id, protocol: id === c32Device.id ? "gt06" : "h02",
+    })],
+  };
+  const store = openPositionStore(":memory:");
+  try {
+    assert.equal((await syncPositions({ api, store, mappings: [mapping, confirmed], now })).inserted, 2);
+    assert.equal(store.latest(confirmed, now).status, "LIVE");
+    assert.deepEqual(store.latest(pending, now), { status: "OFFLINE", fixTime: null, location: null });
+    assert.deepEqual(store.exportBatch([pending], 0, 250), []);
+    const sent = [];
+    assert.equal(await replicatePositions({ store, mappings: [mapping, pending],
+      writeBatch: async (batch) => sent.push(...batch),
+    }), 1);
+    assert.equal(sent[0].device_key, mapping.uniqueId);
+    assert.equal(store.exportBatch([confirmed], 0, 250).length, 1, "Historical fixes are preserved");
+  } finally {
+    store.close();
+  }
+});

@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { normalizeTraccarPosition, positionStatus } from "./traccar-adapter.mjs";
-import { resolveDevice, validateMappings } from "./qa-client.mjs";
+import { hasVerifiedProtocol, resolveDevice, validateMappings } from "./qa-client.mjs";
 
 const DAY = 86_400_000;
 const FUTURE_TOLERANCE = 300_000;
@@ -66,6 +66,8 @@ export function openPositionStore(filename, { readOnly = false } = {}) {
       }
     },
     latest(mapping, now = Date.now()) {
+      const [approved] = validateMappings([mapping]);
+      if (!hasVerifiedProtocol(approved)) return { status: "OFFLINE", fixTime: null, location: null };
       const row = latest.get(mapping.uniqueId, mapping.truckId, now);
       if (!row) return { status: "OFFLINE", fixTime: null, location: null };
       const { fix_ms, ignition, ...location } = row;
@@ -76,7 +78,8 @@ export function openPositionStore(filename, { readOnly = false } = {}) {
       };
     },
     exportBatch(mappings, after, limit) {
-      return exportRows.all(after, JSON.stringify(mappings), limit).map((row) => {
+      const approved = validateMappings(mappings).filter(hasVerifiedProtocol);
+      return exportRows.all(after, JSON.stringify(approved), limit).map((row) => {
         const { fix_ms, received_ms, ignition, ...point } = row;
         return {
           ...point,
@@ -92,7 +95,7 @@ export function openPositionStore(filename, { readOnly = false } = {}) {
 }
 
 function normalizePosition(row, device, mapping, now) {
-  if (!row || row.deviceId !== device.id || row.protocol !== "h02" || row.valid !== true ||
+  if (!row || row.deviceId !== device.id || row.protocol !== (mapping.verifiedProtocol ?? "h02") || row.valid !== true ||
       !Number.isSafeInteger(row.id) || row.id < 1 || typeof row.fixTime !== "string" ||
       !TIMESTAMP.test(row.fixTime)) return null;
   const fix = new Date(row.fixTime);
@@ -118,6 +121,8 @@ export async function syncPositions({ api, store, mappings: input, now = Date.no
   let inserted = 0;
   let rejected = 0;
   for (const [mapping, device] of registrations) {
+    // Registration is available while the C32 firmware protocol is investigated.
+    if (!hasVerifiedProtocol(mapping)) continue;
     // Traccar filters history by fix time. Rescan the bounded replay window to
     // catch late reports even when their fix time precedes the last API poll.
     const windows = [[now - DAY, now + FUTURE_TOLERANCE]];

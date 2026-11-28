@@ -1,7 +1,7 @@
 import { readFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { createTraccarClient, ensureRegistered, validateMappings, verifyReadAccess } from "./qa-client.mjs";
+import { createTraccarClient, ensureRegistered, hasVerifiedProtocol, validateMappings, verifyReadAccess } from "./qa-client.mjs";
 import { openPositionStore, syncPositions } from "./position-store.mjs";
 
 process.umask(0o077);
@@ -18,18 +18,20 @@ async function main() {
   } catch {
     throw new Error("Could not read valid QA mappings");
   }
+  const awaitsProtocol = (mapping) => !hasVerifiedProtocol(mapping);
+  const pendingProtocol = mappings.filter(awaitsProtocol).length;
   const api = createTraccarClient({
     baseUrl: process.env.TRACCAR_URL,
     token: mode === "register" ? process.env.TRACCAR_REGISTRATION_TOKEN : process.env.TRACCAR_TOKEN,
   });
   if (mode === "register") {
     for (const mapping of mappings) await ensureRegistered(api, mapping);
-    console.log(JSON.stringify({ registered: mappings.length }));
+    console.log(JSON.stringify({ registered: mappings.length, pendingProtocol }));
     return;
   }
   if (mode === "verify") {
     const registered = await verifyReadAccess(api, mappings);
-    console.log(JSON.stringify({ authenticated: true, registered, historyReadable: true }));
+    console.log(JSON.stringify({ authenticated: true, registered, historyReadable: true, pendingProtocol }));
     return;
   }
   const file = process.env.HALLO_GPS_DB_FILE;
@@ -45,8 +47,11 @@ async function main() {
       try {
         const result = await syncPositions({ api, store, mappings });
         const statuses = { LIVE: 0, STALE: 0, OFFLINE: 0 };
-        for (const mapping of mappings) statuses[store.latest(mapping).status]++;
-        console.log(JSON.stringify({ ...result, statuses }));
+        for (const mapping of mappings) {
+          const status = awaitsProtocol(mapping) ? "OFFLINE" : store.latest(mapping).status;
+          statuses[status]++;
+        }
+        console.log(JSON.stringify({ ...result, statuses, pendingProtocol }));
         delay = 30_000;
       } catch (error) {
         if (mode === "once" || /HTTP (400|401|403|404)\b/.test(error.message)) throw error;
