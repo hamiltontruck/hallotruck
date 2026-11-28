@@ -21,6 +21,7 @@ export function createHardwareGpsHandler(deps: Dependencies): (request: Request)
     if (origin && !allowed(origin)) return reply(403, { error: 'Origin denied' });
     if (request.method === 'OPTIONS') return reply(200, {});
     if (request.method !== 'POST') return reply(405, { error: 'POST required' });
+    let phase = "authentication";
     try {
       const token = request.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];
       if (!token) return reply(401, { error: 'Authentication required' });
@@ -33,9 +34,12 @@ export function createHardwareGpsHandler(deps: Dependencies): (request: Request)
       try { body = JSON.parse(text); } catch { return reply(400, { error: 'Invalid request' }); }
       if (!body || Object.keys(body).length !== 1 || !Array.isArray(body.truckIds) || body.truckIds.length > 20 || !body.truckIds.every((id: unknown) => typeof id === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))) return reply(400, { error: 'Invalid request' });
       const ids: string[] = [...new Set<string>(body.truckIds)];
+      phase = "mapping";
       const trucks = (await deps.loadTrucks(ids)).filter(t => ids.includes(String(t.id)) && t.gps_provider === 'traccar' && typeof t.gps_external_id === 'string' && /^\d{15}$/.test(t.gps_external_id));
       if (!trucks.length) return reply(200, { positions: [] });
+      phase = "upstream";
       const { devices, positions } = await deps.readSnapshot();
+      phase = "validation";
       if (!Array.isArray(devices) || !Array.isArray(positions) || devices.length > 1000 || positions.length > 1000) throw new Error('Invalid snapshot');
       const now = deps.now();
       const result = trucks.map(truck => {
@@ -52,6 +56,6 @@ export function createHardwareGpsHandler(deps: Dependencies): (request: Request)
         return { ...base, recorded_at: new Date(timestamp).toISOString(), status: age <= 120000 ? 'LIVE' : age <= 1800000 ? 'STALE' : 'OFFLINE', location: { latitude: fix.latitude as number, longitude: fix.longitude as number, speed_kmh: Math.round((fix.speed as number) * 1852) / 1000, heading: (fix.course as number | null) ?? null } };
       });
       return reply(200, { positions: result });
-    } catch { return reply(503, { error: 'Hardware GPS unavailable. Retry shortly.' }); }
+    } catch { console.warn(`hardware_gps:failed_phase:${phase}`); return reply(503, { error: 'Hardware GPS unavailable. Retry shortly.' }); }
   };
 }
