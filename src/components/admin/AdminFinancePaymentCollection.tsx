@@ -46,6 +46,7 @@ function PaymentCollection() {
   return <div className="mt-3">
     <AdminPaymentCollectionControl orders={data.orders} onOpenControl={setSelectedId} />
     {selected && <AdminOperationsControl
+      view="payments"
       order={selected}
       allOrders={data.orders}
       trucks={data.trucks}

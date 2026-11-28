@@ -20,6 +20,7 @@ interface Props {
   trucks: Truck[];
   drivers: Driver[];
   onClose: () => void;
+  view?: "all" | "operations" | "payments";
 }
 
 type PaymentWithReceipt = Payment & { receipt_path: string | null };
@@ -36,7 +37,9 @@ function dateTime(value?: string | null) {
   return value ? new Date(value).toLocaleString() : "—";
 }
 
-export function AdminOperationsControl({ order, allOrders, trucks, drivers, onClose }: Props) {
+export function AdminOperationsControl({ order, allOrders, trucks, drivers, onClose, view = "all" }: Props) {
+  const showOperations = view !== "payments";
+  const showPayments = view !== "operations";
   const [payments, setPayments] = useState<PaymentWithReceipt[]>([]);
   const [proof, setProof] = useState<DeliveryProof | null>(null);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
@@ -187,8 +190,8 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
             <div className="space-y-5">
               <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <Metric label="Trip status" value={label(order.status)} />
-                <Metric label="Payment" value={label(order.payment_status)} />
-                <Metric label="Invoice balance" value={money(balance)} />
+                {showPayments && <Metric label="Payment" value={label(order.payment_status)} />}
+                {showPayments && <Metric label="Invoice balance" value={money(balance)} />}
                 <Metric label="Vehicle" value={currentTruck?.plate_number ?? order.vehicle_type} />
               </section>
 
@@ -204,7 +207,7 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
                     <Info label="Truck" value={currentTruck?.plate_number ?? "Unassigned"} detail={currentTruck ? `${currentTruck.vehicle_type} · ${currentTruck.capacity_tons ?? "—"} tons` : order.vehicle_type} />
                   </div>
                 </div>
-                <div className="border border-asphalt/10 bg-white p-5 sm:p-6">
+                {showPayments && <div className="border border-asphalt/10 bg-white p-5 sm:p-6">
                   <h3 className="font-display text-lg font-semibold">Invoice</h3>
                   <div className="mt-4 space-y-3 text-sm">
                     <MoneyRow label="Invoice total" value={invoiceTotal} />
@@ -214,10 +217,10 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
                     <MoneyRow label="Balance" value={balance} strong />
                   </div>
                   <button type="button" onClick={() => printInvoice(order, currentTruck, currentDriver, payments)} className="mt-5 w-full bg-asphalt px-4 py-3 text-sm font-semibold text-white">Invoice / receipt</button>
-                </div>
+                </div>}
               </section>
 
-              {activeTrip && (
+              {showOperations && activeTrip && (
                 <section className="border border-asphalt/10 bg-white p-4 sm:p-6">
                   <div className="mb-4">
                     <p className="font-mono text-[10px] tracking-[.18em] text-amber-dim">LIVE OPERATIONS</p>
@@ -228,7 +231,7 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
               )}
 
               <section className="grid gap-5 xl:grid-cols-2">
-                <div className="border border-asphalt/10 bg-white p-5 sm:p-6">
+                {showOperations && <div className="border border-asphalt/10 bg-white p-5 sm:p-6">
                   <h3 className="font-display text-lg font-semibold">Dispatch</h3>
                   {order.status === "placed" ? (
                     <form onSubmit={handleAssign} className="mt-5 space-y-4">
@@ -253,9 +256,9 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
                       <p className="mt-1 text-xs text-steel">Truck/driver reassignment is intentionally blocked here while a trip is active or completed.</p>
                     </div>
                   )}
-                </div>
+                </div>}
 
-                <div className="border border-asphalt/10 bg-white p-5 sm:p-6">
+                {showPayments && <div className="border border-asphalt/10 bg-white p-5 sm:p-6">
                   <h3 className="font-display text-lg font-semibold">Record customer payment</h3>
                   <p className="mt-1 text-xs text-steel">New payments enter Finance as Initiated. Escrow/release remains a Finance action.</p>
                   {remainingToRecord > 0 ? (
@@ -275,10 +278,10 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
                       <button disabled={saving} className="w-full border border-asphalt bg-white px-4 py-3 text-sm font-semibold disabled:opacity-40">{saving ? "Saving…" : "Record as initiated"}</button>
                     </form>
                   ) : <p className="mt-5 text-sm text-emerald-700">Invoice value is fully recorded in the payment ledger.</p>}
-                </div>
+                </div>}
               </section>
 
-              <section className="grid gap-5 xl:grid-cols-[.8fr_1.2fr]">
+              {showOperations && <section className="grid gap-5 xl:grid-cols-[.8fr_1.2fr]">
                 <div className="border border-asphalt/10 bg-white p-5 sm:p-6">
                   <h3 className="font-display text-lg font-semibold">Proof of delivery</h3>
                   {proof ? (
@@ -298,9 +301,9 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
                     {timeline.map((item) => <TimelineItem key={item.title} {...item} />)}
                   </div>
                 </div>
-              </section>
+              </section>}
 
-              <section className="border border-asphalt/10 bg-white">
+              {showPayments && <section className="border border-asphalt/10 bg-white">
                 <div className="border-b border-asphalt/10 p-5 sm:px-6">
                   <h3 className="font-display text-lg font-semibold">Payment history</h3>
                   <p className="mt-1 text-xs text-steel">Customer-uploaded receipts are private and open with a short-lived Admin/CEO link.</p>
@@ -316,7 +319,7 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
                     <span className="text-xs font-semibold capitalize text-amber-dim">{label(payment.event)}</span>
                   </div>
                 )) : <p className="p-6 text-sm text-steel">No payment records yet.</p>}
-              </section>
+              </section>}
             </div>
           )}
         </div>
