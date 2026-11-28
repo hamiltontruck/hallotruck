@@ -1,35 +1,44 @@
-# PR #549: Separate Finance from Live trips
+# Admin GPS registration and linking
 
-Payment collection belongs in Finance. Live trips starts with the fleet map and
-opens operations without querying the payment ledger. Finance payment details do
-not depend on delivery proofs or trip geometry. The default combined operations
-view remains available to existing callers.
+Admin → Fleet → Link GPS selects a registered vehicle by plate and driver and
+saves its existing Traccar device identifier. Vehicle cards open the form with
+the current plate selected. Linked identifiers are read back from the existing
+RLS-protected trucks table and shown on the Admin card. Already linked vehicles
+are excluded; replacing devices is not silently permitted.
 
-A successful asynchronous payment retains the form element before awaiting
-its RPC, resets the form and reloads the ledger. Previously React cleared
-`event.currentTarget`, causing a saved payment to show an error and stale totals.
+The Admin/CEO-only RPC normalizes plates, validates the 15-digit identifier,
+locks the truck and prevents reuse of the device. Identical retries are
+idempotent. A new association writes an actor-attributed fleet audit event in
+the same transaction, storing only the identifier’s final four digits in audit metadata. The flow uses no Traccar password or browser-side secret.
 
-## Verification
+This is HALLO device-to-truck registration, for devices already registered in
+Traccar. It does not create remote Traccar devices, send configuration SMS,
+activate SIMs or synthesize valid location fixes. Current Live trips data sources
+are unchanged. Saving the association does not imply live telemetry ingestion.
 
-- `npm run lint`
-- `npm run test:regression`
-- `npm run build`
-- `npm run test:admin-finance-separation`
-- `node scripts/verify-production-migration-parity.mjs`
+Verification:
+- 22 disposable PGlite authorization, validation, uniqueness and audit assertions.
+- Real React/Chromium browser checks for registered plate/driver selection,
+  linked-device display, existing-link exclusion, per-card preselection, invalid
+  IMEI, server rejection/retry and RPC arguments. External requests are blocked.
+- Finance/Live trips separation and successful asynchronous payment form checks.
+- Lint, build and complete business regression suite passed locally.
 
-The focused browser test runs real React components with synthetic external I/O
-and blocks external requests. It checks operations independence from payments,
-Finance independence from delivery proofs, and successful payment reset/refresh.
-It is also included in the browser CI suite.
+Production prerequisite applied on 2026-11-28: admin_link_fleet_gps migration.
+The unique index is valid, anon execute permission is denied, authenticated
+execute permission is granted, and the function uses an empty search_path plus
+server-side active Admin/CEO authorization. A live unauthenticated negative test
+was rejected before any truck mapping write. No actual device/truck association
+was selected or changed by the assistant; ordinary Admins perform that action
+through the app. HALLO GPS QA was not modified.
 
-Admin Operations, Finance V3 and Fleet Enterprise smoke assertions previously
-passed using a temporary Playwright Chromium adapter in the managed sandbox.
-The Finance fixture explicitly supplies an empty public MapTiler setting for its
-new imported map module.
+Migration filenames match the versions recorded by Supabase during this release:
+20261128015726 (link RPC/index) and 20261128015948 (forward audit masking fix).
+Fresh installations apply the masking forward fix before Admins use the UI.
+The local CLI could not initialize its read-only home profile; filenames therefore
+use the actual server-generated migration versions rather than guessed times.
 
-## Release scope
-
-This release changes only the Finance/Live trips frontend and its tests. GPS IMEI
-linking UI, RPC, migration, audit and related QA tests are preserved separately
-on `qa/admin-fleet-gps-linking` for isolated backend QA. No database migration or
-production migration marker change is required for this release.
+Supabase advisors report the new authenticated SECURITY DEFINER endpoint as
+expected for this privileged RPC. Its explicit active Admin/CEO check, empty
+search_path and anon denial were verified. Existing unrelated advisories were
+left unchanged. Advisory reference: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable

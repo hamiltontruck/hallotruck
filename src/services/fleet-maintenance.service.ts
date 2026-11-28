@@ -34,6 +34,8 @@ export interface FleetVehicle {
   health_status: FleetHealthStatus;
   dispatch_ready: boolean;
   gps_provider: string | null;
+  gps_external_id?: string | null;
+  has_truck_record?: boolean;
   last_location_at: string | null;
   updated_at: string;
 }
@@ -104,6 +106,20 @@ export async function getFleetEnterpriseData(partnerId: string | null = null): P
 export async function createFleetBranch(partnerId: string | null, name: string, code: string, address: string) {
   const { data, error } = await supabase.rpc("create_fleet_branch", { p_partner_id: partnerId, p_name: name.trim(), p_code: code.trim().toUpperCase(), p_address: address.trim() || null });
   throwIfError(error); return data as string;
+}
+
+export async function getAdminFleetGpsLinks(): Promise<{ id: string; gps_external_id: string | null }[]> {
+  const { data, error } = await supabase.from("trucks").select("id,gps_external_id");
+  throwIfError(error);
+  return data ?? [];
+}
+
+export async function linkFleetGps(plateNumber: string, imei: string) {
+  const { error } = await supabase.rpc("admin_link_fleet_gps", {
+    p_plate_number: plateNumber,
+    p_imei: imei,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function createFleetVehicle(input: NewFleetVehicle) {
