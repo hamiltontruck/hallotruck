@@ -26,8 +26,9 @@ export function validateMappings(value) {
         throw new Error("Invalid QA truck plate");
       }
       const plate = plateNumber.trim().toUpperCase();
-      if (plates.has(plate)) throw new Error("Duplicate QA truck plate");
-      plates.add(plate);
+      const plateKey = plate.replace(/[ -]/g, "");
+      if (plates.has(plateKey)) throw new Error("Duplicate QA truck plate");
+      plates.add(plateKey);
     }
     uniqueIds.add(uniqueId);
     truckIds.add(truckId);
@@ -38,6 +39,12 @@ export function validateMappings(value) {
       ...(plateNumber === undefined ? {} : { plateNumber: plateNumber.trim().toUpperCase() }),
     };
   });
+}
+
+// Callers validate mappings before applying this gate. Legacy mappings retain
+// their established H02 behavior; C32 requires explicit per-device GT06 approval.
+export function hasVerifiedProtocol(mapping) {
+  return mapping.model !== "secumore-c32" || mapping.verifiedProtocol === "gt06";
 }
 
 export function createTraccarClient({ token, baseUrl = QA_ORIGIN, fetchImpl = fetch }) {

@@ -193,3 +193,45 @@ test("confirmed GT06 and existing H02 use separate mappings and deduplicate repl
     store.close();
   }
 });
+
+test("plate uniqueness ignores case, spaces and hyphens while retaining the display plate", () => {
+  const first = { ...mapping, model: "sinotrack-st-906l", plateNumber: " aa-123 " };
+  assert.equal(validateMappings([first])[0].plateNumber, "AA-123");
+  for (const plateNumber of ["AA 123", "aa123", "AA--123", "AA  123"]) {
+    assert.throws(() => validateMappings([first, {
+      ...first, uniqueId: "another-device", truckId: "another-truck", plateNumber,
+    }]), /Duplicate QA truck plate/);
+  }
+  assert.equal(validateMappings([first, {
+    ...first, uniqueId: "another-device", truckId: "another-truck", plateNumber: "AA-124",
+  }]).length, 2);
+});
+
+test("removing C32 verification hides stored fixes and prevents staging export without deleting history", async () => {
+  const { replicatePositions } = await import("./staging/replicate.mjs");
+  const confirmed = { uniqueId: "synthetic-c32", truckId: "qa-c32", name: "QA C32",
+    model: "secumore-c32", plateNumber: "QA-C32", verifiedProtocol: "gt06" };
+  const { verifiedProtocol, ...pending } = confirmed;
+  const c32Device = { id: 43, uniqueId: confirmed.uniqueId, name: confirmed.name };
+  const api = {
+    devices: async () => [device, c32Device],
+    history: async (id) => [position(id, 1000, {
+      deviceId: id, protocol: id === c32Device.id ? "gt06" : "h02",
+    })],
+  };
+  const store = openPositionStore(":memory:");
+  try {
+    assert.equal((await syncPositions({ api, store, mappings: [mapping, confirmed], now })).inserted, 2);
+    assert.equal(store.latest(confirmed, now).status, "LIVE");
+    assert.deepEqual(store.latest(pending, now), { status: "OFFLINE", fixTime: null, location: null });
+    assert.deepEqual(store.exportBatch([pending], 0, 250), []);
+    const sent = [];
+    assert.equal(await replicatePositions({ store, mappings: [mapping, pending],
+      writeBatch: async (batch) => sent.push(...batch),
+    }), 1);
+    assert.equal(sent[0].device_key, mapping.uniqueId);
+    assert.equal(store.exportBatch([confirmed], 0, 250).length, 1, "Historical fixes are preserved");
+  } finally {
+    store.close();
+  }
+});

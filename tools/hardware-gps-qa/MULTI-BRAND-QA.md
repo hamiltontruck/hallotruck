@@ -19,9 +19,9 @@ Use the existing runner and private HALLO_GPS_MAPPINGS_FILE. Keep identifiers as
 ]
 ```
 
-Use HALLO_GPS_ENV=qa and the existing run-qa.mjs register, verify and once modes. Keep the registration token and scoped reader token in the owner runner’s secret store. Authorize only the intended device set. Keep the same unique device-to-truck pairing in the protected staging mapping. The plate belongs to the QA mapping JSON. The existing database transport continues to use the device and truck keys.
+Use HALLO_GPS_ENV=qa and the existing run-qa.mjs register, verify and once modes. Keep the registration token and scoped reader token in the owner runner’s secret store. Authorize only the intended device set. Keep the same unique device-to-truck pairing in the protected staging mapping. Plate duplicate detection ignores case, spaces and hyphens (for example, AA-123 and AA 123 conflict), while the display plate retains its formatting. The plate belongs to the QA mapping JSON. The existing database transport continues to use the device and truck keys.
 
-Add `"verifiedProtocol":"gt06"` to the C32 mapping only after confirming the purchased unit emits GT06 and Traccar associates it with the registered identifier. With the field absent, registration works, ingestion skips the device, and the runner reports it as pending and OFFLINE. Use a fresh protected QA SQLite file when switching a device’s protocol or assignment to avoid displaying historic rows under a new configuration.
+Add `"verifiedProtocol":"gt06"` to the C32 mapping only after confirming the purchased unit emits GT06 and Traccar associates it with the registered identifier. With the field absent, registration works, ingestion skips the device, and both the runner and stored-position reader report it as OFFLINE. Existing ledger rows for that device are retained privately but excluded from staging export until the mapping is verified. The gate is enforced in the storage reader/exporter as well as ingestion. Use a fresh protected QA SQLite file when switching a device’s protocol or assignment to avoid displaying historic rows under a new configuration.
 
 ## Windows, SIM, and physical acceptance
 
@@ -31,3 +31,17 @@ Add `"verifiedProtocol":"gt06"` to the C32 mapping only after confirming the pur
 4. In Traccar QA verify the exact device, protocol, server receipt time and a valid outdoor fix. Compare coordinates and fix time with a known location. Confirm normalized speed, heading, LIVE / STALE / OFFLINE transitions, and correct truck and plate association.
 5. Interrupt and restore connectivity on the bench. Verify the tracker’s observed buffering behavior, preservation of GPS timestamps, newest fix selection and no duplicate staging rows. Exercise unauthorized device reads and write denial with a scoped reader. Any staging ingestion requires separately approved QA writer activation and cleanup.
 6. Record evidence by model. Report a SIM that cannot attach, a mismatched protocol, missing valid fix, or missing replay as a hardware blocker. Automated fixtures cover the software path.
+
+## Review follow-up — 2026-11-28
+
+The owner reports that the physical hardware is working. This is owner-reported
+hardware confirmation, not a new observed bench/packet or hosted-staging test by
+this review. No device settings, Railway routes, credentials or hosted database
+were changed as part of the software fixes.
+
+Regression coverage now removes C32 verification after actual SQLite ingestion
+and verifies OFFLINE reads, no pending-device export, continued export of the
+verified H02 device, and preservation of private historical rows. Plate variants
+with case, spaces and hyphens cannot create a second device/truck mapping for
+the same normalized plate. Existing registration, replay and protocol rejection
+tests remain in place.

@@ -1,7 +1,7 @@
 import { readFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { createTraccarClient, ensureRegistered, validateMappings, verifyReadAccess } from "./qa-client.mjs";
+import { createTraccarClient, ensureRegistered, hasVerifiedProtocol, validateMappings, verifyReadAccess } from "./qa-client.mjs";
 import { openPositionStore, syncPositions } from "./position-store.mjs";
 
 process.umask(0o077);
@@ -18,7 +18,7 @@ async function main() {
   } catch {
     throw new Error("Could not read valid QA mappings");
   }
-  const awaitsProtocol = ({ model, verifiedProtocol }) => model === "secumore-c32" && !verifiedProtocol;
+  const awaitsProtocol = (mapping) => !hasVerifiedProtocol(mapping);
   const pendingProtocol = mappings.filter(awaitsProtocol).length;
   const api = createTraccarClient({
     baseUrl: process.env.TRACCAR_URL,
