@@ -65,7 +65,13 @@ try {
   devices = [{ id: 3, uniqueId: link.gps_external_id }, { id: 4, uniqueId: link.gps_external_id }]; positions = [fix];
   assert.equal((await (await status(request(), 200)).json()).positions[0].location, null); checks++;
   upstreamError = true;
-  const unavailable = await status(request(), 503);
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => warnings.push(args.join(' '));
+  let unavailable;
+  try { unavailable = await status(request(), 503); } finally { console.warn = originalWarn; }
+  assert.deepEqual(warnings, ['hardware_gps:failed_phase:upstream']); checks++;
+  assert.equal(warnings.join('').includes('SECRET'), false); checks++;
   assert.equal((await unavailable.text()).includes('SECRET'), false); checks++;
   const preflight = await handler(new Request('https://example', { method: 'OPTIONS', headers: { Origin: 'https://hamiltontruck.github.io' } }));
   assert.equal(preflight.status, 200); checks++;
