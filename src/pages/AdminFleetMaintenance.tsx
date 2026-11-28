@@ -143,11 +143,11 @@ export function AdminFleetMaintenance({ fixture, executeAction = (action) => act
       </section>
 
       {modal === "gps" && (
-        <Modal title="Link GPS" detail="Enter the plate of a registered vehicle and the GPS device IMEI." saving={saving} busyMessage={busyMessage} busyLabel="Linking GPS…" onClose={() => setModal(null)} onSubmit={(form) => run(
+        <Modal title="Link GPS" detail="Link a registered plate to its 15-digit device IMEI. Live tracking requires a separately configured Traccar connection and incoming GPS pings." saving={saving} busyMessage={busyMessage} busyLabel="Linking GPS…" onClose={() => setModal(null)} onSubmit={(form) => run(
           "link_gps",
           "Linking GPS to the vehicle.",
           () => linkFleetGps(text(form, "plate"), text(form, "imei")),
-          "GPS linked to the vehicle.",
+          "GPS device linked. Live location appears after tracking is connected and a GPS ping is received.",
         )}>
           {error && <p className="col-span-full text-sm text-route">{error}</p>}
           <Field name="plate" label="Plate number" required />

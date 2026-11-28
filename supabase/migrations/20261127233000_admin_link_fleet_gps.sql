@@ -41,6 +41,19 @@ begin
   update public.trucks
   set gps_provider = 'traccar', gps_external_id = v_imei
   where id = v_truck.id;
+
+  -- The enterprise truck trigger audits status/driver/profile fields, but does
+  -- not include GPS columns. Record this privileged change in the same transaction.
+  insert into public.fleet_audit_events (
+    entity_type, entity_id, truck_id, partner_id, subject_driver_id,
+    event_type, reason, old_values, new_values, actor_id, source
+  ) values (
+    'truck', v_truck.id, v_truck.id, v_truck.partner_id, v_truck.driver_id,
+    'profile_updated', 'GPS device linked',
+    jsonb_build_object('gps_provider', v_truck.gps_provider, 'gps_external_id', v_truck.gps_external_id),
+    jsonb_build_object('gps_provider', 'traccar', 'gps_external_id', v_imei),
+    auth.uid(), 'admin'
+  );
 exception when unique_violation then
   raise exception 'This GPS IMEI is already linked to another vehicle' using errcode = '23505';
 end;

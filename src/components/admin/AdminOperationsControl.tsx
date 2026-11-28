@@ -72,17 +72,17 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
   async function loadDetails() {
     setLoading(true);
     const [paymentsResult, proofResult, distanceResult] = await Promise.all([
-      supabase
+      showPayments ? supabase
         .from("payments")
         .select("id,order_id,provider,provider_ref,amount_etb,event,receipt_path,created_at")
         .eq("order_id", order.id)
-        .order("created_at", { ascending: false }),
-      supabase
+        .order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+      showOperations ? supabase
         .from("delivery_proofs")
         .select("id,order_id,recipient_name,delivery_note,photo_path,signature_path,delivered_at")
         .eq("order_id", order.id)
-        .maybeSingle(),
-      supabase.from("orders").select("distance_km").eq("id", order.id).single(),
+        .maybeSingle() : Promise.resolve({ data: null, error: null }),
+      showOperations ? supabase.from("orders").select("distance_km").eq("id", order.id).single() : Promise.resolve({ data: null, error: null }),
     ]);
     const queryError = paymentsResult.error || proofResult.error || distanceResult.error;
     if (queryError) setError(queryError.message);
@@ -98,7 +98,7 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
 
   useEffect(() => {
     void loadDetails();
-  }, [order.id]);
+  }, [order.id, view]);
 
   async function openPaymentReceipt(path: string) {
     setError("");
@@ -133,7 +133,8 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
 
   async function handlePayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const provider = String(form.get("provider") ?? "");
     const providerRef = String(form.get("providerRef") ?? "").trim();
     const amountEtb = Number(form.get("amountEtb") ?? 0);
@@ -153,7 +154,7 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
     setError("");
     try {
       await recordPayment({ orderId: order.id, provider, providerRef, amountEtb, event: "initiated" });
-      event.currentTarget.reset();
+      formElement.reset();
       await loadDetails();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment could not be recorded.");
@@ -175,7 +176,7 @@ export function AdminOperationsControl({ order, allOrders, trucks, drivers, onCl
       <div className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden bg-[#f5f3ed] shadow-2xl sm:h-[calc(100vh-40px)]">
         <header className="flex items-start justify-between gap-4 border-b border-asphalt/10 bg-asphalt px-5 py-5 text-white sm:px-7">
           <div className="min-w-0">
-            <p className="font-mono text-[10px] tracking-[.2em] text-amber">OPERATIONS CONTROL</p>
+            <p className="font-mono text-[10px] tracking-[.2em] text-amber">{view === "payments" ? "PAYMENT COLLECTION" : "OPERATIONS CONTROL"}</p>
             <h2 className="mt-2 font-display text-2xl font-bold">{order.tracking_id}</h2>
             <p className="mt-1 truncate text-xs text-white/55">{order.pickup_address} → {order.dropoff_address}</p>
           </div>
