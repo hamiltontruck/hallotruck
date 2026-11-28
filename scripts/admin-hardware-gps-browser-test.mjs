@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import { spawnSync } from 'node:child_process';
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 const result = await build({ stdin: { contents: `
@@ -18,7 +19,9 @@ const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/ht
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 let browser;
 try{
- browser=await chromium.launch({executablePath:process.env.CHROME_BIN??'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ const chromePath=[process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].filter(Boolean).find(path=>spawnSync(path,['--version'],{encoding:'utf8'}).status===0);
+ assert.ok(chromePath,'Install Chrome/Chromium or set CHROME_BIN');
+ browser=await chromium.launch({executablePath:chromePath,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
  const page=await browser.newPage({viewport:{width:390,height:844}}); const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`http://127.0.0.1:${server.address().port}`);
  await page.getByText(/Hardware GPS · Updated/).waitFor();
